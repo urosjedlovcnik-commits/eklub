@@ -344,7 +344,23 @@ sre-18:00-19:00,3,18:00,19:00,"01 / 09 / 2024","31 / 05 / 2025"
     </div>
   </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="./script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+	
+	    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+      const SUPABASE_URL = "https://tizjimlwfkoniixbetgr.supabase.co";
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpemppbWx3ZmtvbmlpeGJldGdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzNDgyNzgsImV4cCI6MjA3MDkyNDI3OH0.Oess7TCevLH3mO0aWxfL5M0Kb_XHEKUBYRYRXKQkdgk";
+
+      // globalno: window.supabase
+      const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+      (async () => {
+        const { data, error } = await supabase.from("plavalci").select("*").limit(1);
+        console.log("Data:", data, "Error:", error);
+      })();
+    </script>
+	
+	<script src="./script.js"></script>
 </body>
 </html>
