@@ -278,8 +278,11 @@ document.addEventListener('DOMContentLoaded', () => {
       <span class="chip">${formatDate(iso(date))}</span>
       <span class="chip">${DAYNAME[t.day]}</span>
     `;
-
+    
     const ymd = iso(date);
+    
+    // Ključni popravek: zagotovitev svežih podatkov ob odprtju modala
+    await refreshDayData(date);
     
     // Asinhrono pridobivanje prisotnosti za ta termin na ta dan
     const { data, error } = await supabase
@@ -420,28 +423,50 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     elToggleEventBtn.onclick = async ()=>{
+      console.log('Klik na gumb za aktivacijo/deaktivacijo.');
       const currentStatus = getTermStatus(date, termId).status;
+      console.log('Status ob kliku:', currentStatus);
+
       if (currentStatus === "active") {
         const note = prompt("Prosim, vnesite opombo za deaktivacijo:");
-        if (note === null) return;
-        const { error } = await supabase
-          .from('term_status')
-          .upsert({ date: ymd, term_id: termId, status: "inactive", note }, { onConflict: ['date', 'term_id'] });
-        if (error) { 
-          console.error('Napaka pri posodabljanju statusa:', error); 
-          alert('Napaka pri deaktivaciji. Preverite konzolo.');
+        if (note === null) {
+          console.log('Uporabnik je preklical vnos opombe.');
           return;
         }
+        console.log('Izvajam deaktivacijo...');
+        try {
+          const { error } = await supabase
+            .from('term_status')
+            .upsert({ date: ymd, term_id: termId, status: "inactive", note }, { onConflict: ['date', 'term_id'] });
+          if (error) { 
+            console.error('Napaka pri posodabljanju statusa:', error); 
+            alert('Napaka pri deaktivaciji. Preverite konzolo.');
+            return;
+          }
+          console.log('Deaktivacija uspešna. Osvežujem prikaz...');
+        } catch (e) {
+            console.error('Nepričakovana napaka pri deaktivaciji:', e);
+            alert('Nepričakovana napaka pri deaktivaciji. Preverite konzolo.');
+            return;
+        }
       } else {
-        const { error } = await supabase
-          .from('term_status')
-          .delete()
-          .eq('date', ymd)
-          .eq('term_id', termId);
-        if (error) { 
-          console.error('Napaka pri brisanju statusa:', error); 
-          alert('Napaka pri aktivaciji. Preverite konzolo.');
-          return;
+        console.log('Izvajam aktivacijo...');
+        try {
+          const { error } = await supabase
+            .from('term_status')
+            .delete()
+            .eq('date', ymd)
+            .eq('term_id', termId);
+          if (error) { 
+            console.error('Napaka pri brisanju statusa:', error); 
+            alert('Napaka pri aktivaciji. Preverite konzolo.');
+            return;
+          }
+          console.log('Aktivacija uspešna. Osvežujem prikaz...');
+        } catch (e) {
+            console.error('Nepričakovana napaka pri aktivaciji:', e);
+            alert('Nepričakovana napaka pri aktivaciji. Preverite konzolo.');
+            return;
         }
       }
       
@@ -1048,8 +1073,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (statusError) { console.error('Napaka pri nalaganju statusa terminov:', statusError); return; }
     
     termStatus = statusData.reduce((acc, row) => {
-      acc[row.date] = acc[row.date] || {};
-      acc[row.date][row.term_id] = { status: row.status, note: row.note };
+      acc[row.term_id] = { status: row.status, note: row.note };
       return acc;
     }, {});
   }
