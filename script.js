@@ -297,7 +297,9 @@ document.addEventListener('DOMContentLoaded', () => {
         acc[row.swimmer_id] = row.status;
         return acc;
     }, {});
-    attendance[ymd] = { [termId]: termAtt };
+    
+    // KRUCIALNA SPREMEMBA: Namesto, da prepišemo, podatke združimo.
+    attendance[ymd] = { ...attendance[ymd], [termId]: termAtt };
 
     const assigned = swimmers.filter(s => s.terms.includes(termId));
     const assignedIds = new Set(assigned.map(s => s.id));
@@ -804,7 +806,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (idxFirst === -1 || idxLast === -1 || termIdx === -1) {
       alert("CSV mora imeti stolpce 'first_name', 'last_name' in 'terms'.");
-      return;
     }
     
     const today = iso(new Date());
