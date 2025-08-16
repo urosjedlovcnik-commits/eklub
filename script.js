@@ -1004,7 +1004,6 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshSwimmerPanel();
     populateExportSelects();
     renderMonth();
-    elSummaryBox.textContent = "Ni podatkov."
   }
 
   init();
