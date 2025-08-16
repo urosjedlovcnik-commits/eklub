@@ -240,8 +240,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // ===== MODAL: odpiranje dogodka =====
   let modalCtx = { date:null, termId:null };
 
-  async function openEvent(date, termId){
-    modalCtx = { date:new Date(date), termId };
+  async function openEvent(date, termId) {
+    modalCtx = { date: new Date(date), termId };
     const t = termById(termId);
     elModalTitle.textContent = `${t.label}`;
     elModalMeta.innerHTML = `
@@ -277,16 +277,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const allSwimmersForEvent = [...new Set([...assigned, ...oneDaySwimmers])];
 
     elAttendanceTable.innerHTML = "";
-    if(allSwimmersForEvent.length===0){
-      const tr=document.createElement("tr");
-      const td=document.createElement("td"); td.colSpan=2; td.className="muted"; td.textContent="Ni dodeljenih plavalcev za ta termin.";
+    if (allSwimmersForEvent.length === 0) {
+      const tr = document.createElement("tr");
+      const td = document.createElement("td"); td.colSpan = 2; td.className = "muted"; td.textContent = "Ni dodeljenih plavalcev za ta termin.";
       tr.appendChild(td); elAttendanceTable.appendChild(tr);
     } else {
-      allSwimmersForEvent.sort((a,b)=> (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name)).forEach(s=>{
-        const tr=document.createElement("tr");
-        const td1=document.createElement("td"); td1.textContent = `${s.first_name} ${s.last_name}`;
+      allSwimmersForEvent.sort((a, b) => (a.last_name + a.first_name).localeCompare(b.last_name + b.first_name)).forEach(s => {
+        const tr = document.createElement("tr");
+        const td1 = document.createElement("td"); td1.textContent = `${s.first_name} ${s.last_name}`;
         
-        const td2=document.createElement("td");
+        const td2 = document.createElement("td");
         td2.style.display = "flex"; td2.style.gap = "4px";
         td2.style.alignItems = "center";
 
@@ -296,11 +296,14 @@ document.addEventListener('DOMContentLoaded', () => {
         btnPresent.className = "btn";
         if (isInactive(date, termId)) { btnPresent.disabled = true; }
         if (status === true) { btnPresent.classList.add("ok"); } else { btnPresent.classList.add("neutral"); }
-        btnPresent.addEventListener("click", async ()=>{
+        btnPresent.addEventListener("click", async () => {
           const { error } = await supabase
             .from('attendance')
             .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: true }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
           if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
+            attendance[ymd] = attendance[ymd] || {};
+            attendance[ymd][termId] = attendance[ymd][termId] || {};
+            attendance[ymd][termId][s.id] = true;
             openEvent(date, termId);
             renderMonth();
           }
@@ -311,39 +314,108 @@ document.addEventListener('DOMContentLoaded', () => {
         btnAbsent.className = "btn";
         if (isInactive(date, termId)) { btnAbsent.disabled = true; }
         if (status === false) { btnAbsent.classList.add("warn"); } else { btnAbsent.classList.add("neutral"); }
-        btnRemove.addEventListener("click", async ()=>{
-  const { error } = await supabase
-    .from('attendance')
-    .delete()
-    .eq('date', ymd)
-    .eq('term_id', termId)
-    .eq('swimmer_id', s.id);
-  if (error) { console.error('Napaka pri brisanju prisotnosti:', error); } else {
-    // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
-    if (attendance[ymd] && attendance[ymd][termId]) {
-        delete attendance[ymd][termId][s.id];
-    }
-    openEvent(date, termId);
-    renderMonth();
-  }
-});
+        btnAbsent.addEventListener("click", async () => {
+          const { error } = await supabase
+            .from('attendance')
+            .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: false }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
+          if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
+            attendance[ymd] = attendance[ymd] || {};
+            attendance[ymd][termId] = attendance[ymd][termId] || {};
+            attendance[ymd][termId][s.id] = false;
+            openEvent(date, termId);
+            renderMonth();
+          }
+        });
         
         const btnRemove = document.createElement("button");
         btnRemove.innerHTML = "✖";
         btnRemove.className = "btn remove-btn";
         if (isInactive(date, termId)) { btnRemove.disabled = true; }
-        btnRemove.addEventListener("click", async ()=>{
-            const { error } = await supabase
-              .from('attendance')
-              .delete()
-              .eq('date', ymd)
-              .eq('term_id', termId)
-              .eq('swimmer_id', s.id);
-            if (error) { console.error('Napaka pri brisanju prisotnosti:', error); } else {
-                openEvent(date, termId);
-                renderMonth();
+        btnRemove.addEventListener("click", async () => {
+          const { error } = await supabase
+            .from('attendance')
+            .delete()
+            .eq('date', ymd)
+            .eq('term_id', termId)
+            .eq('swimmer_id', s.id);
+          if (error) { console.error('Napaka pri brisanju prisotnosti:', error); } else {
+            if (attendance[ymd] && attendance[ymd][termId]) {
+                delete attendance[ymd][termId][s.id];
             }
+            openEvent(date, termId);
+            renderMonth();
+          }
         });
+        
+        tr.appendChild(td1); tr.appendChild(td2); 
+        
+        td2.appendChild(btnPresent);
+        td2.appendChild(btnAbsent);
+        td2.appendChild(btnRemove);
+        
+        elAttendanceTable.appendChild(tr);
+      });
+    }
+
+    elModalSwimmerSelect.innerHTML = "";
+    const currentEventSwimmerIds = allSwimmersForEvent.map(s => s.id);
+    const unassigned = swimmers.filter(s => !currentEventSwimmerIds.includes(s.id))
+      .sort((a, b) => (a.last_name + a.first_name).localeCompare(b.last_name + b.first_name));
+    
+    if (unassigned.length > 0) {
+      unassigned.forEach(s => {
+        const o = document.createElement("option");
+        o.value = s.id;
+        o.textContent = `${s.first_name} ${s.last_name}`;
+        elModalSwimmerSelect.appendChild(o);
+      });
+      elAddToEventBtn.style.display = "inline-block";
+      elModalSwimmerSelect.style.display = "inline-block";
+    } else {
+      const o = document.createElement("option");
+      o.textContent = "Vsi plavalci so že dodeljeni.";
+      elModalSwimmerSelect.appendChild(o);
+      elAddToEventBtn.style.display = "none";
+      elModalSwimmerSelect.style.display = "none";
+    }
+
+    const termStatusObj = getTermStatus(date, termId);
+    if (termStatusObj.status === "inactive") {
+      elToggleEventBtn.textContent = "Aktiviraj trening";
+      elInactiveNoteText.textContent = termStatusObj.note;
+      elInactiveNote.style.display = "block";
+    } else {
+      elToggleEventBtn.textContent = "Deaktiviraj trening";
+      elInactiveNoteText.textContent = "";
+      elInactiveNote.style.display = "none";
+    }
+
+    elToggleEventBtn.onclick = async () => {
+      const currentStatus = getTermStatus(date, termId).status;
+      if (currentStatus === "active") {
+        const note = prompt("Prosim, vnesite opombo za deaktivacijo:");
+        if (note === null) return;
+        const { error } = await supabase
+          .from('term_status')
+          .upsert({ date: ymd, term_id: termId, status: "inactive", note }, { onConflict: ['date', 'term_id'] });
+        if (error) { console.error('Napaka pri posodabljanju statusa:', error); return; }
+        termStatus[ymd] = termStatus[ymd] || {};
+        termStatus[ymd][termId] = { status: "inactive", note };
+      } else {
+        const { error } = await supabase
+          .from('term_status')
+          .delete()
+          .eq('date', ymd)
+          .eq('term_id', termId);
+        if (error) { console.error('Napaka pri brisanju statusa:', error); return; }
+        if (termStatus[ymd]) delete termStatus[ymd][termId];
+      }
+      openEvent(date, termId);
+      renderMonth();
+    };
+
+    openModal(elModal);
+}
         
         tr.appendChild(td1); tr.appendChild(td2); 
         
