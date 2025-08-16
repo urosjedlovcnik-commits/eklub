@@ -1,4 +1,3 @@
-
 // Počakamo, da se celotna stran naloži
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -240,8 +239,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // ===== MODAL: odpiranje dogodka =====
   let modalCtx = { date:null, termId:null };
 
-async function openEvent(date, termId) {
-    modalCtx = { date: new Date(date), termId };
+  async function openEvent(date, termId){
+    modalCtx = { date:new Date(date), termId };
     const t = termById(termId);
     elModalTitle.textContent = `${t.label}`;
     elModalMeta.innerHTML = `
@@ -277,16 +276,16 @@ async function openEvent(date, termId) {
     const allSwimmersForEvent = [...new Set([...assigned, ...oneDaySwimmers])];
 
     elAttendanceTable.innerHTML = "";
-    if (allSwimmersForEvent.length === 0) {
-      const tr = document.createElement("tr");
-      const td = document.createElement("td"); td.colSpan = 2; td.className = "muted"; td.textContent = "Ni dodeljenih plavalcev za ta termin.";
+    if(allSwimmersForEvent.length===0){
+      const tr=document.createElement("tr");
+      const td=document.createElement("td"); td.colSpan=2; td.className="muted"; td.textContent="Ni dodeljenih plavalcev za ta termin.";
       tr.appendChild(td); elAttendanceTable.appendChild(tr);
     } else {
-      allSwimmersForEvent.sort((a, b) => (a.last_name + a.first_name).localeCompare(b.last_name + b.first_name)).forEach(s => {
-        const tr = document.createElement("tr");
-        const td1 = document.createElement("td"); td1.textContent = `${s.first_name} ${s.last_name}`;
+      allSwimmersForEvent.sort((a,b)=> (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name)).forEach(s=>{
+        const tr=document.createElement("tr");
+        const td1=document.createElement("td"); td1.textContent = `${s.first_name} ${s.last_name}`;
         
-        const td2 = document.createElement("td");
+        const td2=document.createElement("td");
         td2.style.display = "flex"; td2.style.gap = "4px";
         td2.style.alignItems = "center";
 
@@ -296,11 +295,12 @@ async function openEvent(date, termId) {
         btnPresent.className = "btn";
         if (isInactive(date, termId)) { btnPresent.disabled = true; }
         if (status === true) { btnPresent.classList.add("ok"); } else { btnPresent.classList.add("neutral"); }
-        btnPresent.addEventListener("click", async () => {
+        btnPresent.addEventListener("click", async ()=>{
           const { error } = await supabase
             .from('attendance')
             .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: true }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
           if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
+            // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
             attendance[ymd] = attendance[ymd] || {};
             attendance[ymd][termId] = attendance[ymd][termId] || {};
             attendance[ymd][termId][s.id] = true;
@@ -314,11 +314,12 @@ async function openEvent(date, termId) {
         btnAbsent.className = "btn";
         if (isInactive(date, termId)) { btnAbsent.disabled = true; }
         if (status === false) { btnAbsent.classList.add("warn"); } else { btnAbsent.classList.add("neutral"); }
-        btnAbsent.addEventListener("click", async () => {
+        btnAbsent.addEventListener("click", async ()=>{
           const { error } = await supabase
             .from('attendance')
             .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: false }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
           if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
+            // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
             attendance[ymd] = attendance[ymd] || {};
             attendance[ymd][termId] = attendance[ymd][termId] || {};
             attendance[ymd][termId][s.id] = false;
@@ -331,20 +332,21 @@ async function openEvent(date, termId) {
         btnRemove.innerHTML = "✖";
         btnRemove.className = "btn remove-btn";
         if (isInactive(date, termId)) { btnRemove.disabled = true; }
-        btnRemove.addEventListener("click", async () => {
-          const { error } = await supabase
-            .from('attendance')
-            .delete()
-            .eq('date', ymd)
-            .eq('term_id', termId)
-            .eq('swimmer_id', s.id);
-          if (error) { console.error('Napaka pri brisanju prisotnosti:', error); } else {
-            if (attendance[ymd] && attendance[ymd][termId]) {
-                delete attendance[ymd][termId][s.id];
+        btnRemove.addEventListener("click", async ()=>{
+            const { error } = await supabase
+              .from('attendance')
+              .delete()
+              .eq('date', ymd)
+              .eq('term_id', termId)
+              .eq('swimmer_id', s.id);
+            if (error) { console.error('Napaka pri brisanju prisotnosti:', error); } else {
+                // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
+                if (attendance[ymd] && attendance[ymd][termId]) {
+                    delete attendance[ymd][termId][s.id];
+                }
+                openEvent(date, termId);
+                renderMonth();
             }
-            openEvent(date, termId);
-            renderMonth();
-          }
         });
         
         tr.appendChild(td1); tr.appendChild(td2); 
@@ -360,7 +362,7 @@ async function openEvent(date, termId) {
     elModalSwimmerSelect.innerHTML = "";
     const currentEventSwimmerIds = allSwimmersForEvent.map(s => s.id);
     const unassigned = swimmers.filter(s => !currentEventSwimmerIds.includes(s.id))
-      .sort((a, b) => (a.last_name + a.first_name).localeCompare(b.last_name + b.first_name));
+      .sort((a,b)=> (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name));
     
     if (unassigned.length > 0) {
       unassigned.forEach(s => {
@@ -390,7 +392,7 @@ async function openEvent(date, termId) {
       elInactiveNote.style.display = "none";
     }
 
-    elToggleEventBtn.onclick = async () => {
+    elToggleEventBtn.onclick = async ()=>{
       const currentStatus = getTermStatus(date, termId).status;
       if (currentStatus === "active") {
         const note = prompt("Prosim, vnesite opombo za deaktivacijo:");
@@ -415,22 +417,22 @@ async function openEvent(date, termId) {
     };
 
     openModal(elModal);
-}
+  }
 
   function openModal(modalEl){ modalEl.style.display="flex"; modalEl.setAttribute("aria-hidden","false"); }
   function closeModal(modalEl){ modalEl.style.display="none"; modalEl.setAttribute("aria-hidden","true"); }
-
-elCloseModalBtn.addEventListener("click", () => {
-  closeModal(elModal);
-  renderMonth(); // Dodano: Osveži koledar
-});
-
-elModal.addEventListener("click", (e)=>{ 
-  if(e.target === elModal) {
+  
+  elCloseModalBtn.addEventListener("click", () => {
     closeModal(elModal);
-    renderMonth(); // Dodano: Osveži koledar
-  }
-});
+    renderMonth();
+  });
+  
+  elModal.addEventListener("click", (e)=>{ 
+    if(e.target === elModal) {
+      closeModal(elModal);
+      renderMonth();
+    }
+  });
 
   elAddToEventBtn.addEventListener("click", async ()=>{
     const swimmerId = elModalSwimmerSelect.value;
@@ -902,122 +904,98 @@ elModal.addEventListener("click", (e)=>{
         await loadDataFromSupabase();
         refreshSwimmerPanel();
         renderMonth();
-        alert(`Uvoz končan. Uvoženih terminov: ${importedTerms.length}.`);
+        alert("Termini uspešno uvoženi in posodobljeni!");
     }
     e.target.value = "";
   });
 
-
-  function splitCsvLine(line){
-    const out=[]; let cur=""; let q=false;
-    for(let i=0;i<line.length;i++){
-      const c=line[i];
-      if(c==='\"'){ if(q && line[i+1]==='\"'){ cur+='\"'; i++; } else q=!q; }
-      else if(c===',' && !q){ out.push(cur); cur=""; }
-      else cur+=c;
+  // Dodatna funkcija za pravilno branje CSV vrstic z vejicami v poljih
+  function splitCsvLine(line) {
+    const result = [];
+    let inQuotes = false;
+    let currentField = '';
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        result.push(currentField.trim());
+        currentField = '';
+      } else {
+        currentField += char;
+      }
     }
-    out.push(cur); return out;
+    result.push(currentField.trim());
+    return result;
   }
+  
+  // ===== UPRAVLJANJE DATUMA =====
+  elPrev.addEventListener("click", ()=>{ viewDate.setMonth(viewDate.getMonth()-1); renderMonth(); });
+  elNext.addEventListener("click", ()=>{ viewDate.setMonth(viewDate.getMonth()+1); renderMonth(); });
 
-  // ===== CSV: izvoz mesečne evidence - SPREMENJENA FUNKCIJA =====
-  function populateExportSelects() {
-    elExportMonthSelect.innerHTML = "";
-    const monthNames = ["januar", "februar", "marec", "april", "maj", "junij", "julij", "avgust", "september", "oktober", "november", "december"];
-    monthNames.forEach((name, i) => {
-      const option = document.createElement("option");
-      option.value = i;
-      option.textContent = name;
-      elExportMonthSelect.appendChild(option);
-    });
-
-    elExportYearSelect.innerHTML = "";
-    const currentYear = new Date().getFullYear();
-    for (let y = currentYear - 2; y <= currentYear + 2; y++) {
-      const option = document.createElement("option");
-      option.value = y;
-      option.textContent = y;
-      elExportYearSelect.appendChild(option);
-    }
-    elExportYearSelect.value = currentYear;
+  // ===== EXPORT CSV - DODANA FUNKCIJA =====
+  function populateExportSelects(){
+    const year = new Date().getFullYear();
+    elExportYearSelect.innerHTML = `<option>${year}</option><option>${year-1}</option>`;
+    const months = ["Januar", "Februar", "Marec", "April", "Maj", "Junij", "Julij", "Avgust", "September", "Oktober", "November", "December"];
+    elExportMonthSelect.innerHTML = months.map((m,i)=>`<option value="${i}">${m}</option>`).join("");
     elExportMonthSelect.value = new Date().getMonth();
   }
 
   elExportCsvBtn.addEventListener("click", ()=>{
-    const year = parseInt(elExportYearSelect.value, 10);
     const month = parseInt(elExportMonthSelect.value, 10);
-    const summaryData = calculateSummaryData(year, month);
+    const year = parseInt(elExportYearSelect.value, 10);
+    const summary = calculateSummaryData(year, month);
     
-    const rows = [["Plavalec","Obiskani","Možni","Delež (%)"]];
-    const data = Object.values(summaryData).sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first));
-    
-    data.forEach(r=>{
+    let csv = "first_name,last_name,attended,possible,percentage\n";
+    Object.values(summary).sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first)).forEach(r=>{
       const pct = r.pos > 0 ? (r.att/r.pos*100).toFixed(1) : "0.0";
-      rows.push([`${r.first} ${r.last}`, r.att, r.pos, pct]);
+      csv += `${r.first},${r.last},${r.att},${r.pos},${pct}\n`;
     });
-
-    const csv = rows.map(r=> r.map(v=>{
-      const s=(v??"").toString(); return /[",\n]/.test(s)? `"${s.replace(/"/g,'""')}"` : s;
-    }).join(",")).join("\n");
-
-    const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
-    const a=document.createElement("a");
-    a.href=URL.createObjectURL(blob);
-    const monthName = String(month+1).padStart(2,'0');
-    const fname=`povzetek_${year}-${monthName}.csv`;
-    a.download=fname; document.body.appendChild(a); a.click(); a.remove();
+    
+    const filename = `prisostnost_${year}-${String(month+1).padStart(2,'0')}.csv`;
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   });
 
-  // ===== Navigacija meseca =====
-  elPrev.addEventListener("click", ()=>{ viewDate.setMonth(viewDate.getMonth()-1); renderMonth(); });
-  elNext.addEventListener("click", ()=>{ viewDate.setMonth(viewDate.getMonth()+1); renderMonth(); });
+  // ===== ZAČETNA INICIALIZACIJA =====
+  async function loadDataFromSupabase(){
+    const { data: termsData, error: termsError } = await supabase.from('terms').select('*');
+    if (termsError) { console.error('Napaka pri nalaganju terminov:', termsError); return; }
+    TERMS = termsData;
 
-  // ===== Init (asinhrono nalaganje podatkov) =====
-  async function loadDataFromSupabase() {
-    // Nalaganje terminov
-    const { data: termsData, error: termsError } = await supabase
-        .from('terms')
-        .select('*');
-    if (termsError) { console.error('Napaka pri nalaganju terminov:', termsError); } else { TERMS = termsData; }
+    const { data: swimmersData, error: swimmersError } = await supabase.from('swimmers').select('*');
+    if (swimmersError) { console.error('Napaka pri nalaganju plavalcev:', swimmersError); return; }
+    swimmers = swimmersData;
 
-    // Nalaganje plavalcev
-    const { data: swimmersData, error: swimmersError } = await supabase
-      .from('swimmers')
-      .select('*');
-    if (swimmersError) { console.error('Napaka pri nalaganju plavalcev:', swimmersError); } else { swimmers = swimmersData; }
+    const { data: attendanceData, error: attError } = await supabase.from('attendance').select('*');
+    if (attError) { console.error('Napaka pri nalaganju prisotnosti:', attError); return; }
+    
+    attendance = attendanceData.reduce((acc, row) => {
+      acc[row.date] = acc[row.date] || {};
+      acc[row.date][row.term_id] = acc[row.date][row.term_id] || {};
+      acc[row.date][row.term_id][row.swimmer_id] = row.status;
+      return acc;
+    }, {});
 
-    // Nalaganje evidence prisotnosti
-    const { data: attendanceData, error: attendanceError } = await supabase
-      .from('attendance')
-      .select('*');
-    if (attendanceError) {
-      console.error('Napaka pri nalaganju evidence:', attendanceError);
-    } else {
-      attendance = attendanceData.reduce((acc, row) => {
-          const { date, term_id, swimmer_id, status } = row;
-          if (!acc[date]) acc[date] = {};
-          if (!acc[date][term_id]) acc[date][term_id] = {};
-          acc[date][term_id][swimmer_id] = status;
-          return acc;
-      }, {});
-    }
-
-    // Nalaganje statusov terminov
-    const { data: termStatusData, error: termStatusError } = await supabase
-      .from('term_status')
-      .select('*');
-    if (termStatusError) {
-      console.error('Napaka pri nalaganju statusov terminov:', termStatusError);
-    } else {
-      termStatus = termStatusData.reduce((acc, row) => {
-          const { date, term_id, status, note } = row;
-          if (!acc[date]) acc[date] = {};
-          acc[date][term_id] = { status, note };
-          return acc;
-      }, {});
-    }
+    const { data: statusData, error: statusError } = await supabase.from('term_status').select('*');
+    if (statusError) { console.error('Napaka pri nalaganju statusa terminov:', statusError); return; }
+    
+    termStatus = statusData.reduce((acc, row) => {
+      acc[row.date] = acc[row.date] || {};
+      acc[row.date][row.term_id] = { status: row.status, note: row.note };
+      return acc;
+    }, {});
   }
 
-  async function init() {
+  async function init(){
     await loadDataFromSupabase();
     refreshSwimmerPanel();
     populateExportSelects();
