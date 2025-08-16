@@ -343,7 +343,22 @@ sre-18:00-19:00,3,18:00,19:00,"01 / 09 / 2024","31 / 05 / 2025"
       </div>
     </div>
   </div>
-
+<div id="noteModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title">Deaktivacija treninga</h5>
+            <span class="close-btn" id="closeNoteModalBtn">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p>Prosim, vnesite opombo za deaktivacijo:</p>
+            <textarea id="noteInput" rows="4"></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn neutral" id="cancelNoteBtn">Prekliči</button>
+            <button class="btn ok" id="confirmNoteBtn">Potrdi</button>
+        </div>
+    </div>
+</div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 	
 	    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
