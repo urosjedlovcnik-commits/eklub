@@ -427,17 +427,27 @@ document.addEventListener('DOMContentLoaded', () => {
         const { error } = await supabase
           .from('term_status')
           .upsert({ date: ymd, term_id: termId, status: "inactive", note }, { onConflict: ['date', 'term_id'] });
-        if (error) { console.error('Napaka pri posodabljanju statusa:', error); return; }
+        if (error) { 
+          console.error('Napaka pri posodabljanju statusa:', error); 
+          alert('Napaka pri deaktivaciji. Preverite konzolo.');
+          return;
+        }
       } else {
         const { error } = await supabase
           .from('term_status')
           .delete()
           .eq('date', ymd)
           .eq('term_id', termId);
-        if (error) { console.error('Napaka pri brisanju statusa:', error); return; }
+        if (error) { 
+          console.error('Napaka pri brisanju statusa:', error); 
+          alert('Napaka pri aktivaciji. Preverite konzolo.');
+          return;
+        }
       }
+      
+      // Dodana osvežitev podatkov in ponovni prikaz, ki bi morala odpraviti težavo
       await refreshDayData(date);
-      openEvent(date, termId);
+      await openEvent(date, termId);
       renderMonth();
     };
 
