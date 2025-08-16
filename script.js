@@ -240,7 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ===== MODAL: odpiranje dogodka =====
   let modalCtx = { date:null, termId:null };
 
-  async function openEvent(date, termId) {
+async function openEvent(date, termId) {
     modalCtx = { date: new Date(date), termId };
     const t = termById(termId);
     elModalTitle.textContent = `${t.label}`;
@@ -416,76 +416,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     openModal(elModal);
 }
-        
-        tr.appendChild(td1); tr.appendChild(td2); 
-        
-        td2.appendChild(btnPresent);
-        td2.appendChild(btnAbsent);
-        td2.appendChild(btnRemove);
-        
-        elAttendanceTable.appendChild(tr);
-      });
-    }
-
-    elModalSwimmerSelect.innerHTML = "";
-    const currentEventSwimmerIds = allSwimmersForEvent.map(s => s.id);
-    const unassigned = swimmers.filter(s => !currentEventSwimmerIds.includes(s.id))
-      .sort((a,b)=> (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name));
-    
-    if (unassigned.length > 0) {
-      unassigned.forEach(s => {
-        const o = document.createElement("option");
-        o.value = s.id;
-        o.textContent = `${s.first_name} ${s.last_name}`;
-        elModalSwimmerSelect.appendChild(o);
-      });
-      elAddToEventBtn.style.display = "inline-block";
-      elModalSwimmerSelect.style.display = "inline-block";
-    } else {
-      const o = document.createElement("option");
-      o.textContent = "Vsi plavalci so že dodeljeni.";
-      elModalSwimmerSelect.appendChild(o);
-      elAddToEventBtn.style.display = "none";
-      elModalSwimmerSelect.style.display = "none";
-    }
-
-    const termStatusObj = getTermStatus(date, termId);
-    if (termStatusObj.status === "inactive") {
-      elToggleEventBtn.textContent = "Aktiviraj trening";
-      elInactiveNoteText.textContent = termStatusObj.note;
-      elInactiveNote.style.display = "block";
-    } else {
-      elToggleEventBtn.textContent = "Deaktiviraj trening";
-      elInactiveNoteText.textContent = "";
-      elInactiveNote.style.display = "none";
-    }
-
-    elToggleEventBtn.onclick = async ()=>{
-      const currentStatus = getTermStatus(date, termId).status;
-      if (currentStatus === "active") {
-        const note = prompt("Prosim, vnesite opombo za deaktivacijo:");
-        if (note === null) return;
-        const { error } = await supabase
-          .from('term_status')
-          .upsert({ date: ymd, term_id: termId, status: "inactive", note }, { onConflict: ['date', 'term_id'] });
-        if (error) { console.error('Napaka pri posodabljanju statusa:', error); return; }
-        termStatus[ymd] = termStatus[ymd] || {};
-        termStatus[ymd][termId] = { status: "inactive", note };
-      } else {
-        const { error } = await supabase
-          .from('term_status')
-          .delete()
-          .eq('date', ymd)
-          .eq('term_id', termId);
-        if (error) { console.error('Napaka pri brisanju statusa:', error); return; }
-        if (termStatus[ymd]) delete termStatus[ymd][termId];
-      }
-      openEvent(date, termId);
-      renderMonth();
-    };
-
-    openModal(elModal);
-  }
 
   function openModal(modalEl){ modalEl.style.display="flex"; modalEl.setAttribute("aria-hidden","false"); }
   function closeModal(modalEl){ modalEl.style.display="none"; modalEl.setAttribute("aria-hidden","true"); }
