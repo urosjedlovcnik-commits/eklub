@@ -311,15 +311,22 @@ document.addEventListener('DOMContentLoaded', () => {
         btnAbsent.className = "btn";
         if (isInactive(date, termId)) { btnAbsent.disabled = true; }
         if (status === false) { btnAbsent.classList.add("warn"); } else { btnAbsent.classList.add("neutral"); }
-        btnAbsent.addEventListener("click", async ()=>{
-          const { error } = await supabase
-            .from('attendance')
-            .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: false }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
-          if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
-            openEvent(date, termId);
-            renderMonth();
-          }
-        });
+        btnRemove.addEventListener("click", async ()=>{
+  const { error } = await supabase
+    .from('attendance')
+    .delete()
+    .eq('date', ymd)
+    .eq('term_id', termId)
+    .eq('swimmer_id', s.id);
+  if (error) { console.error('Napaka pri brisanju prisotnosti:', error); } else {
+    // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
+    if (attendance[ymd] && attendance[ymd][termId]) {
+        delete attendance[ymd][termId][s.id];
+    }
+    openEvent(date, termId);
+    renderMonth();
+  }
+});
         
         const btnRemove = document.createElement("button");
         btnRemove.innerHTML = "✖";
