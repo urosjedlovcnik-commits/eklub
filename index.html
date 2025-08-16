@@ -1,364 +1,690 @@
 <!DOCTYPE html>
 <html lang="sl">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Prisotnost plavalcev – koledar, prisotnost, CSV</title>
-<style>
-  :root{
-    --pri:#2563eb; --ok:#16a34a; --warn:#dc2626; --mut:#6b7280; --bg:#f5f7fa; --border:#e5e7eb;
-    --unfilled:#fecaca; --complete:#bbf7d0;
-  }
-  *{box-sizing:border-box}
-  body{font-family:system-ui, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); color:#0f172a; margin:30px 18px 18px;}
-  h1{margin:0 0 12px;text-align:center}
-  .toolbar{max-width:1200px;margin:0 auto 12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center}
-  .btn{padding:8px 12px;border:1px solid var(--border);border-radius:10px;background:#fff;cursor:pointer;font-size:inherit}
-  .btn.pri{background:var(--pri);border-color:var(--pri);color:#fff}
-  .btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
-  .btn.warn{background:var(--warn);border-color:var(--warn);color:#fff}
-  .btn.neutral{background:#e5e7eb;border-color:#d1d5db;color:#4b5563;}
-  .tag{display:inline-block;background:#eef2ff;border:1px solid #c7d2fe;border-radius:999px;padding:3px 10px;font-size:13px}
-  .grid{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr;gap:12px}
-  /* Koledar (širok, nižji) */
-  .calendar{grid-column:1 / -1;background:#fff;border:1px solid var(--border);border-radius:12px;padding:8px}
-  .calendar-head{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px}
-  .calendar-head div{font-weight:600;text-align:center;padding:6px 0;background:#eff6ff;border-radius:8px}
-  .calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
-  .day{min-height:120px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:6px;display:flex;flex-direction:column;overflow:hidden; cursor:pointer;}
-  .day.disabled{background:#f3f4f6;color:#9ca3af;cursor:default;}
-  .day .num{font-weight:700; margin-bottom:4px}
-  .day.today{outline:3px solid #10b981;background:#ecfeff}
-  .event{font-size:12px;padding:3px 6px;margin:3px 0;border-radius:6px;background:#e3f2fd;border:1px solid #bfdbfe;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:6px}
-  .event .time{font-variant-numeric:tabular-nums}
-  .event.disabled{background:#e5e7eb;color:#6b7280;text-decoration:line-through;border-color:#d1d5db}
-  .event.unfilled{background:var(--unfilled); border-color:#fca5a5}
-  .event.complete{background:var(--complete); border-color:#86efac}
-  .card{background:#fff;border:1px solid var(--border);border-radius:12px}
-  .card h3{margin:0;padding:10px 12px;border-bottom:1px solid var(--border)}
-  .card .inner{padding:12px}
-  .muted{color:var(--mut)}
-  table{width:100%;border-collapse:collapse}
-  th,td{border:1px solid var(--border);padding:6px;text-align:left}
-  th{background:#eff6ff}
-  input[type="text"], input[type="date"], input[type="time"], select, textarea{padding:8px;border:1px solid var(--border);border-radius:8px;width:100%;margin-top:4px}
-  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
-  .flex-col{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
-  /* Modal */
-  .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center;padding:18px;z-index:100}
-  .modal .box{background:#fff;border-radius:12px;max-width:680px;width:100%;border:1px solid var(--border);box-shadow:0 10px 30px rgba(0,0,0,.15); position:fixed; top:10%; left:50%; transform:translate(-50%, 0);}
-  .modal .box-header{display:flex;align-items:center;justify-content:space-between;padding:12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
-  .modal .box-body{padding:12px}
-  .chips{display:flex;gap:6px;flex-wrap:wrap}
-  .chip{background:#f1f5f9;border:1px solid var(--border);border-radius:999px;padding:2px 8px;font-size:12px}
-  .csv-options{max-width:1200px;margin:12px auto;padding:12px;background:#fff;border:1px solid var(--border);border-radius:12px;}
-  .csv-options .inner{padding:12px}
-  .csv-export-controls{
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    margin-top: 12px;
-  }
-  .csv-export-controls > * {
-    flex-grow: 1;
-  }
-  .csv-export-controls .btn {
-    flex-grow: 0;
-  }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Treningi Plavalnega Kluba</title>
+    <style>
+        :root {
+            --primary: #007bff;
+            --secondary: #6c757d;
+            --ok: #28a745;
+            --warn: #dc3545;
+            --neutral: #fff;
+            --border: #dee2e6;
+            --bg-light: #f8f9fa;
+            --font-main: #212529;
+            --font-secondary: #6c757d;
+            --mut: #aaa;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--font-main);
+            background-color: var(--bg-light);
+            margin: 0;
+            padding: 20px;
+        }
 
-  /* Stil za gumb Odstrani/križec */
-  .btn.remove-btn {
-    background: none;
-    border: none;
-    color: var(--warn);
-    line-height: 1;
-    padding: 0;
-  }
-  .btn.remove-btn:hover {
-    color: var(--warn);
-    opacity: 0.8;
-  }
-  .btn.remove-btn:disabled {
-    color: #9ca3af;
-  }
-  .term-list{display:flex;flex-direction:column;gap:6px;padding:8px 0;border-top:1px solid var(--border);margin-top:8px}
-  .term-item{display:flex;justify-content:space-between;align-items:center;background:#f8fafc;border:1px solid #e2e8f0;padding:6px 10px;border-radius:8px}
-  .term-item button { flex-shrink: 0; }
-  .term-item-info { display: flex; flex-direction: column; gap: 2px; }
-  .term-item-label { font-weight: 600; }
-  .term-item-dates { font-size: 12px; color: var(--mut); }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 10px;
+        }
 
-  /* Dodaten modal za izbiro termina na določen dan */
-  .day-modal .day-modal-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
 
-  /* MEDIA QUERIES ZA MOBILNO ODZIVnost */
-  @media (max-width: 768px) {
-    body { margin: 10px; font-size: 14px; }
-    h1 { font-size: 24px; }
-    .toolbar { flex-direction: column; align-items: stretch; gap: 8px; }
-    .toolbar .left, .toolbar .right { display: flex; flex-direction: row; gap: 8px; flex-wrap: wrap; justify-content: center; }
-    .grid { grid-template-columns: 1fr; }
-    .calendar-head { font-size: 12px; }
-    .day { 
-      min-height: 90px; /* Znižana višina za več vsebine na mobilnih napravah */
-      padding: 4px;
-      overflow: hidden;
-    }
-    .day .num { font-size: 14px; }
-    .event { 
-      font-size: 10px; 
-      padding: 2px 4px;
-    }
-    .event .time {
-      font-size: 10px;
-    }
-    .day:not(.disabled) .event:nth-child(n+4) {
-      display: none;
-    }
-    .more-events-indicator {
-      font-size: 12px;
-      text-align: center;
-      margin-top: 4px;
-      color: var(--mut);
-    }
-    .card h3 { font-size: 16px; padding: 8px 10px; }
-    .card .inner { padding: 8px; }
-    .btn { padding: 6px 10px; font-size: 13px; }
-    .modal .box { max-width: 95%; top: 10%; transform: translate(-50%, 0); }
-    .modal .box-header { flex-direction: column; align-items: flex-start; }
-    .modal .box-header .row { flex-wrap: wrap; margin-top: 8px; }
-    input[type="text"], input[type="date"], input[type="time"], select { font-size: 14px; }
-    .csv-options .inner{ flex-direction: column; gap: 8px; }
-    .csv-export-controls{ flex-direction: column; gap: 8px; }
-    .csv-export-controls > * { width: 100%; }
-  }
-</style>
+        h1 {
+            color: var(--primary);
+            font-size: 2.5em;
+        }
+        
+        h2 {
+            font-size: 1.5em;
+            margin-top: 30px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 5px;
+        }
+        
+        p.intro {
+            color: var(--font-secondary);
+            font-size: 1.1em;
+        }
+
+        /* ===== Navigacija & Kalendar ===== */
+        .calendar-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            background-color: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .calendar-nav button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+        
+        .calendar-nav button:hover {
+            opacity: 0.9;
+        }
+
+        #monthLabel {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            background-color: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .weekday {
+            text-align: center;
+            font-weight: bold;
+            color: var(--font-secondary);
+            padding: 10px 0;
+            border-bottom: 2px solid var(--border);
+        }
+        
+        .day {
+            min-height: 120px;
+            padding: 5px;
+            border: 1px solid var(--border);
+            position: relative;
+            background-color: #fff;
+            transition: background-color 0.2s;
+            display: flex;
+            flex-direction: column;
+            border-radius: 4px;
+        }
+        
+        .day:hover:not(.disabled) {
+            background-color: var(--bg-light);
+        }
+
+        .day.disabled {
+            background-color: #f0f0f0;
+            cursor: not-allowed;
+        }
+
+        .day .num {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+        
+        .day.today {
+            border: 2px solid var(--primary);
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+        }
+        
+        .event {
+            background-color: var(--secondary);
+            color: #fff;
+            font-size: 0.8em;
+            padding: 3px 5px;
+            margin: 2px 0;
+            border-radius: 3px;
+            text-align: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .event:hover {
+            opacity: 0.8;
+        }
+
+        .event.ok { background-color: var(--ok); }
+        .event.unfilled { background-color: var(--warn); }
+        .event.complete { background-color: var(--secondary); }
+        .event.disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .event .time {
+            font-weight: bold;
+        }
+
+        /* ===== Sekcije ===== */
+        .section {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-top: 20px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .section-header h2 {
+            margin: 0;
+            border: none;
+        }
+
+        .section-content {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group label {
+            font-size: 0.9em;
+            color: var(--font-secondary);
+            margin-bottom: 5px;
+        }
+        
+        .form-row input, .form-row select, .form-row button, textarea {
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 1em;
+        }
+        
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-size: 1em;
+            white-space: nowrap;
+        }
+        
+        .btn.ok { background-color: var(--ok); color: white; }
+        .btn.warn { background-color: var(--warn); color: white; }
+        .btn.neutral { background-color: var(--secondary); color: white; }
+        .btn.remove-btn { background-color: transparent; color: var(--warn); border: 1px solid var(--warn); font-weight: bold;}
+        .btn.ok:hover { background-color: #218838; }
+        .btn.warn:hover { background-color: #c82333; }
+        .btn.neutral:hover { background-color: #5a6268; }
+        .btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .chip {
+            background-color: var(--secondary);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-right: 5px;
+            white-space: nowrap;
+        }
+        
+        #swimmerInfo {
+            font-size: 0.9em;
+        }
+
+        .term-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            margin-bottom: 5px;
+        }
+
+        .term-item-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .term-item-label {
+            font-weight: bold;
+        }
+
+        .term-item-dates {
+            font-size: 0.9em;
+            color: var(--font-secondary);
+        }
+
+        /* ===== Povzetek ===== */
+        #summaryBox {
+            overflow-x: auto;
+        }
+        
+        #summaryBox table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+        }
+        
+        #summaryBox th, #summaryBox td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        #summaryBox th {
+            background-color: var(--bg-light);
+            font-weight: bold;
+        }
+        
+        .muted {
+            color: var(--mut);
+        }
+
+        /* ===== Modal ===== */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            width: 90%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-body {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .close-btn {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close-btn:hover, .close-btn:focus {
+            color: black;
+            text-decoration: none;
+        }
+        
+        .chip-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        #attendanceTable td {
+            border-bottom: 1px solid var(--border);
+            padding: 8px 0;
+        }
+
+        #attendanceTable tr:last-child td {
+            border-bottom: none;
+        }
+
+        .add-swimmer-to-event {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        #inactiveNote {
+            border: 1px solid var(--warn);
+            background-color: #fff3f4;
+            color: var(--warn);
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+
+        /* Stili za novo modalno okno za opombo */
+        #noteModal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            justify-content: center;
+            align-items: center;
+        }
+
+        #noteModal .modal-content {
+            background-color: #fefefe;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            width: 90%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #noteModal .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        #noteModal .modal-body {
+            margin-bottom: 1rem;
+        }
+
+        #noteModal .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        #noteModal .modal-title {
+            margin: 0;
+        }
+
+        #noteModal .close-btn {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        #noteModal .close-btn:hover,
+        #noteModal .close-btn:focus {
+            color: black;
+            text-decoration: none;
+        }
+
+        #noteModal textarea {
+            width: 100%;
+            border: 1px solid #ccc;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+
+        /* ===== Responsivnost ===== */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .calendar { grid-template-columns: repeat(2, 1fr); }
+            .weekday:nth-child(n+6) { display: none; }
+            .day:nth-child(7n+6), .day:nth-child(7n+7) { display: none; }
+            .day { min-height: 80px; }
+            .day.disabled { display: none; }
+            .event { font-size: 0.7em; }
+            .modal-content { padding: 15px; }
+            .form-row { flex-direction: column; align-items: stretch; }
+            .form-row .form-group { width: 100%; }
+        }
+    </style>
 </head>
 <body>
-  <h1>Prisotnost plavalcev</h1>
+    <div class="container">
+        <header>
+            <h1>Treningi Plavalnega Kluba</h1>
+            <p class="intro">Vzdrževanje terminov in spremljanje prisotnosti.</p>
+        </header>
 
-  <div class="toolbar">
-    <button class="btn" id="prevBtn">◀ Prejšnji mesec</button>
-    <span class="tag" id="monthLabel"></span>
-    <button class="btn" id="nextBtn">Naslednji mesec ▶</button>
-  </div>
+        <div class="section">
+            <div class="calendar-nav">
+                <button id="prevBtn">&lt;</button>
+                <h2 id="monthLabel"></h2>
+                <button id="nextBtn">&gt;</button>
+            </div>
+            <div class="calendar">
+                <div class="weekday">Pon</div>
+                <div class="weekday">Tor</div>
+                <div class="weekday">Sre</div>
+                <div class="weekday">Čet</div>
+                <div class="weekday">Pet</div>
+                <div class="weekday">Sob</div>
+                <div class="weekday">Ned</div>
+                <div id="calendarGrid"></div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-header">
+                <h2>Mesečni povzetek</h2>
+                <div class="form-row" style="margin-top: 0; gap: 5px;">
+                    <div class="form-group">
+                        <select id="exportMonthSelect"></select>
+                    </div>
+                    <div class="form-group">
+                        <select id="exportYearSelect"></select>
+                    </div>
+                    <button class="btn neutral" id="exportCsvBtn">Izvozi CSV</button>
+                </div>
+            </div>
+            <div id="summaryBox"></div>
+        </div>
 
-  <div class="calendar">
-    <div class="calendar-head">
-      <div>Pon</div><div>Tor</div><div>Sre</div><div>Čet</div><div>Pet</div><div>Sob</div><div>Ned</div>
+        <div class="section">
+            <h2>Upravljanje</h2>
+            
+            <h3>Dodaj novega plavalca</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="newFirst">Ime</label>
+                    <input type="text" id="newFirst" placeholder="Ime">
+                </div>
+                <div class="form-group">
+                    <label for="newLast">Priimek</label>
+                    <input type="text" id="newLast" placeholder="Priimek">
+                </div>
+                <button class="btn ok" id="addSwimmerBtn">Dodaj plavalca</button>
+            </div>
+            
+            <h3>Dodeli/odstrani termin plavalcu</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="swimmerSelect">Plavalec</label>
+                    <select id="swimmerSelect"></select>
+                </div>
+                <div class="form-group">
+                    <label for="termSelect">Termin</label>
+                    <select id="termSelect"></select>
+                </div>
+                <button class="btn ok" id="assignTermBtn">Dodeli termin</button>
+                <button class="btn warn" id="removeTermBtn">Odstrani termin</button>
+            </div>
+            <div id="swimmerInfo"></div>
+
+            <h3>Uvoz podatkov (CSV)</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="csvInput">Uvoz plavalcev (first_name,last_name,terms)</label>
+                    <input type="file" id="csvInput" accept=".csv">
+                </div>
+                <div class="form-group">
+                    <label for="csvTermsInput">Uvoz terminov (id,day,start_time,end_time,date_from,date_to)</label>
+                    <input type="file" id="csvTermsInput" accept=".csv">
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Upravljanje terminov</h2>
+            
+            <h3>Dodaj nov termin</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="newTermDay">Dan v tednu</label>
+                    <select id="newTermDay">
+                        <option value="1">Ponedeljek</option>
+                        <option value="2">Torek</option>
+                        <option value="3">Sreda</option>
+                        <option value="4">Četrtek</option>
+                        <option value="5">Petek</option>
+                        <option value="6">Sobota</option>
+                        <option value="7">Nedelja</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="newTermStart">Začetek</label>
+                    <input type="time" id="newTermStart" value="16:00">
+                </div>
+                <div class="form-group">
+                    <label for="newTermEnd">Konec</label>
+                    <input type="time" id="newTermEnd" value="17:00">
+                </div>
+                <div class="form-group">
+                    <label for="newTermDateFrom">Datum od</label>
+                    <input type="text" id="newTermDateFrom" placeholder="dd / mm / yyyy">
+                </div>
+                <div class="form-group">
+                    <label for="newTermDateTo">Datum do</label>
+                    <input type="text" id="newTermDateTo" placeholder="dd / mm / yyyy">
+                </div>
+                <button class="btn ok" id="addTermBtn">Dodaj termin</button>
+            </div>
+
+            <h3 style="margin-top: 20px;">Seznam terminov</h3>
+            <div id="termList"></div>
+        </div>
+
     </div>
-    <div class="calendar-grid" id="calendarGrid"></div>
-  </div>
 
-  <div class="grid" style="margin-top:12px">
-    <div class="card">
-      <h3>Povzetek udeležbe (za prikazani mesec)</h3>
-      <div class="inner" id="summaryBox">Nalaganje podatkov...</div>
-    </div>
-
-    <div class="card">
-      <h3>Upravljanje plavalcev</h3>
-      <div class="inner">
-        <div class="flex-col">
-          <div class="row" style="width:100%;align-items:stretch;gap:4px">
-            <input type="text" id="newFirst" placeholder="Ime">
-            <input type="text" id="newLast" placeholder="Priimek">
-            <button class="btn ok" id="addSwimmerBtn" style="width:auto">Dodaj</button>
-          </div>
-          <div class="row" style="width:100%;align-items:stretch;gap:4px">
-            <select id="swimmerSelect"></select>
-            <select id="termSelect"></select>
-            <button class="btn pri" id="assignTermBtn" style="width:auto">Dodeli</button>
-            <button class="btn warn" id="removeTermBtn" style="width:auto">Odstrani</button>
-          </div>
-        </div>
-        <div id="swimmerInfo" class="muted"></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="grid" style="margin-top:12px">
-    <div class="card">
-      <h3>Dodaj nov termin</h3>
-      <div class="inner">
-        <div class="row">
-          <label for="newTermDay">Dan:</label>
-          <select id="newTermDay">
-            <option value="1">Ponedeljek</option>
-            <option value="2">Torek</option>
-            <option value="3">Sreda</option>
-            <option value="4">Četrtek</option>
-            <option value="5">Petek</option>
-            <option value="6">Sobota</option>
-            <option value="7">Nedelja</option>
-          </select>
-        </div>
-        <div class="row">
-          <label for="newTermStart">Začetna ura:</label>
-          <input type="time" id="newTermStart">
-        </div>
-        <div class="row">
-          <label for="newTermEnd">Končna ura:</label>
-          <input type="time" id="newTermEnd">
-        </div>
-        <div class="row">
-          <label for="newTermDateFrom">Datum trajanja od:</label>
-          <input type="text" id="newTermDateFrom" placeholder="dd / mm / yyyy">
-        </div>
-        <div class="row">
-          <label for="newTermDateTo">do:</label>
-          <input type="text" id="newTermDateTo" placeholder="dd / mm / yyyy">
-        </div>
-        <button class="btn pri" id="addTermBtn">Dodaj termin</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <h3>Upravljanje terminov</h3>
-      <div class="inner">
-        <div class="term-list" id="termList"></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal" id="eventModal" aria-hidden="true">
-    <div class="box">
-      <div class="box-header">
-        <div>
-          <strong id="modalTitle">Trening</strong>
-          <div class="chips" id="modalMeta"></div>
-        </div>
-        <div class="row">
-          <button class="btn warn" id="toggleEventBtn">Deaktiviraj/Aktiviraj</button>
-          <button class="btn" id="closeModalBtn">Zapri</button>
-        </div>
-      </div>
-      <div class="box-body">
-        <div id="inactiveNote" style="display:none; margin-bottom:12px; padding:10px; background:#fef3c7; border-radius:8px; border:1px solid #fcd34d;">
-          <strong style="display:block; margin-bottom:4px;">Opomba:</strong>
-          <span id="inactiveNoteText"></span>
-        </div>
-        <table id="attendanceTable">
-          <thead><tr><th>Plavalec</th><th>Prisotnost</th></tr></thead>
-          <tbody></tbody>
-        </table>
-        <hr style="margin:12px 0;border:none;border-top:1px solid var(--border)">
-        <h4>Dodaj plavalca v ta trening</h4>
-        <div class="row">
-          <select id="modalSwimmerSelect"></select>
-          <button class="btn ok" id="addToEventBtn">Dodaj plavalca</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal day-modal" id="dayModal" aria-hidden="true">
-    <div class="box">
-      <div class="box-header">
-        <strong id="dayModalTitle">Izberi termin</strong>
-        <button class="btn" id="closeDayModalBtn">Zapri</button>
-      </div>
-      <div class="box-body">
-        <div id="dayModalList" class="day-modal-list"></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal" id="editTermModal" aria-hidden="true">
-    <div class="box">
-      <div class="box-header">
-        <strong id="editTermModalTitle">Uredi termin</strong>
-        <button class="btn" id="closeEditTermModalBtn">Zapri</button>
-      </div>
-      <div class="box-body">
-        <div class="row">
-          <label for="editTermDateFrom">Datum trajanja od:</label>
-          <input type="text" id="editTermDateFrom" placeholder="dd / mm / yyyy">
-        </div>
-        <div class="row">
-          <label for="editTermDateTo">do:</label>
-          <input type="text" id="editTermDateTo" placeholder="dd / mm / yyyy">
-        </div>
-        <button class="btn pri" id="saveEditTermBtn">Shrani</button>
-      </div>
-    </div>
-  </div>
-
-
-  <div class="card csv-options">
-    <h3>Uvoz in izvoz CSV</h3>
-    <div class="inner">
-      <h4>Uvoz plavalcev</h4>
-      <p class="muted">
-        Uvožena CSV datoteka mora v glavi vsebovati stolpce <code>first_name</code>, <code>last_name</code> in <code>terms</code>.
-        V stolpec <code>terms</code> lahko vpišete več terminov, ločenih z vejico (npr. <code>pon-17:00-18:00,sre-18:00-19:00</code>).
-        <br><br>
-        <strong>Opomba:</strong> Uvožena datoteka mora uporabljati vejico (`,`) kot ločilo med stolpci.
-        <br>
-        <strong>Primer:</strong>
-        <pre style="background:#f1f5f9; padding:8px; border-radius:6px; overflow-x:auto;">
-first_name,last_name,terms
-Janez,Novak,"pon-17:00-18:00,sre-18:00-19:00,pet-19:00-20:00"
-        </pre>
-      </p>
-      <div class="row" style="margin-top:0">
-        <label class="btn">
-          Uvozi plavalce
-          <input type="file" id="csvInput" accept=".csv" style="display:none">
-        </label>
-      </div>
-      <hr style="border:none; border-top:1px solid var(--border); margin: 12px 0;">
-      
-      <h4>Uvoz terminov</h4>
-      <p class="muted">
-        Uvožena CSV datoteka mora v glavi vsebovati stolpce <code>id</code>, <code>day</code>, <code>start_time</code>, <code>end_time</code>, <code>date_from</code> in <code>date_to</code>.
-        Datum mora biti v formatu <code>dd / mm / yyyy</code>.
-        <br><br>
-        <strong>Opomba:</strong> Obstoječi termini z istim ID-jem bodo prepisani.
-        <br>
-        <strong>Primer:</strong>
-        <pre style="background:#f1f5f9; padding:8px; border-radius:6px; overflow-x:auto;">
-id,day,start_time,end_time,date_from,date_to
-pon-17:00-18:00,1,17:00,18:00,"01 / 09 / 2024","31 / 05 / 2025"
-sre-18:00-19:00,3,18:00,19:00,"01 / 09 / 2024","31 / 05 / 2025"
-        </pre>
-      </p>
-      <div class="row" style="margin-top:0">
-        <label class="btn">
-          Uvozi termine
-          <input type="file" id="csvTermsInput" accept=".csv" style="display:none">
-        </label>
-      </div>
-      <hr style="border:none; border-top:1px solid var(--border); margin: 12px 0;">
-
-      <h4>Izvoz povzetka</h4>
-      <div class="csv-export-controls">
-        <select id="exportMonthSelect"></select>
-        <select id="exportYearSelect"></select>
-        <button class="btn" id="exportCsvBtn">Izvozi</button>
-      </div>
-    </div>
-  </div>
-<div id="noteModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h5 class="modal-title">Deaktivacija treninga</h5>
-            <span class="close-btn" id="closeNoteModalBtn">&times;</span>
-        </div>
-        <div class="modal-body">
-            <p>Prosim, vnesite opombo za deaktivacijo:</p>
-            <textarea id="noteInput" rows="4"></textarea>
-        </div>
-        <div class="modal-footer">
-            <button class="btn neutral" id="cancelNoteBtn">Prekliči</button>
-            <button class="btn ok" id="confirmNoteBtn">Potrdi</button>
+    <div id="eventModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 id="modalTitle"></h5>
+                <span class="close-btn" id="closeModalBtn">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="modalMeta"></div>
+                <div id="inactiveNote" style="display: none;">
+                    <strong>Termin je neaktiven. Opomba:</strong> <span id="inactiveNoteText"></span>
+                </div>
+                <table style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>Plavalec</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attendanceTable"></tbody>
+                </table>
+            </div>
+            <div class="modal-footer" style="flex-direction: column; align-items: stretch;">
+                <button class="btn warn" id="toggleEventBtn">Deaktiviraj trening</button>
+                <div class="add-swimmer-to-event" style="margin-top: 10px;">
+                    <select id="modalSwimmerSelect"></select>
+                    <button class="btn ok" id="addToEventBtn">Dodaj</button>
+                </div>
+            </div>
         </div>
     </div>
-</div>
+    
+    <div id="dayModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 id="dayModalTitle"></h5>
+                <span class="close-btn" id="closeDayModalBtn">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="dayModalList"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="editTermModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 id="editTermModalTitle"></h5>
+                <span class="close-btn" id="closeEditTermModalBtn">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="editTermDateFrom">Datum od</label>
+                    <input type="text" id="editTermDateFrom" placeholder="dd / mm / yyyy">
+                </div>
+                <div class="form-group">
+                    <label for="editTermDateTo">Datum do</label>
+                    <input type="text" id="editTermDateTo" placeholder="dd / mm / yyyy">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn neutral" id="closeEditTermModalBtn">Prekliči</button>
+                <button class="btn ok" id="saveEditTermBtn">Shrani</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="noteModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Deaktivacija treninga</h5>
+                <span class="close-btn" id="closeNoteModalBtn">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>Prosim, vnesite opombo za deaktivacijo:</p>
+                <textarea id="noteInput" rows="4"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn neutral" id="cancelNoteBtn">Prekliči</button>
+                <button class="btn ok" id="confirmNoteBtn">Potrdi</button>
+            </div>
+        </div>
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 	
 	    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
