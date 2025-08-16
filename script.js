@@ -71,6 +71,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const elEditTermDateTo = document.getElementById("editTermDateTo");
   const elSaveEditTermBtn = document.getElementById("saveEditTermBtn");
   const elCloseEditTermModalBtn = document.getElementById("closeEditTermModalBtn");
+  
+  // Modal za opombo
+  const elNoteModal = document.getElementById("noteModal");
+  const elNoteInput = document.getElementById("noteInput");
+  const elCancelNoteBtn = document.getElementById("cancelNoteBtn");
+  const elConfirmNoteBtn = document.getElementById("confirmNoteBtn");
+  const elCloseNoteModalBtn = document.getElementById("closeNoteModalBtn");
 
 
   // ===== Pomožne funkcije =====
@@ -422,62 +429,98 @@ document.addEventListener('DOMContentLoaded', () => {
       elInactiveNote.style.display = "none";
     }
 
-    elToggleEventBtn.onclick = async ()=>{
-      console.log('Klik na gumb za aktivacijo/deaktivacijo.');
-      const currentStatus = getTermStatus(date, termId).status;
-      console.log('Status ob kliku:', currentStatus);
+    elToggleEventBtn.onclick = async () => {
+        console.log('Klik na gumb za aktivacijo/deaktivacijo.');
+        
+        // Dodatna varnostna osvežitev tik pred klikom
+        await refreshDayData(date);
+        const currentStatus = getTermStatus(date, termId).status;
+        console.log('Status ob kliku:', currentStatus);
 
-      if (currentStatus === "active") {
-        const note = prompt("Prosim, vnesite opombo za deaktivacijo:");
-        if (note === null) {
-          console.log('Uporabnik je preklical vnos opombe.');
-          return;
+        if (currentStatus === "active") {
+            // Prikaz prilagojenega modalnega okna namesto prompt()
+            elNoteInput.value = ""; // Počisti vnos
+            openModal(elNoteModal);
+        } else {
+            console.log('Izvajam aktivacijo...');
+            try {
+                const { error } = await supabase
+                    .from('term_status')
+                    .delete()
+                    .eq('date', ymd)
+                    .eq('term_id', termId);
+                if (error) { 
+                    console.error('Napaka pri brisanju statusa:', error); 
+                    alert('Napaka pri aktivaciji. Preverite konzolo.');
+                    return;
+                }
+                console.log('Aktivacija uspešna. Osvežujem prikaz...');
+            } catch (e) {
+                console.error('Nepričakovana napaka pri aktivaciji:', e);
+                alert('Nepričakovana napaka pri aktivaciji. Preverite konzolo.');
+                return;
+            }
+
+            await refreshDayData(date);
+            await openEvent(date, termId);
+            renderMonth();
         }
-        console.log('Izvajam deaktivacijo...');
-        try {
-          const { error } = await supabase
-            .from('term_status')
-            .upsert({ date: ymd, term_id: termId, status: "inactive", note }, { onConflict: ['date', 'term_id'] });
-          if (error) { 
-            console.error('Napaka pri posodabljanju statusa:', error); 
-            alert('Napaka pri deaktivaciji. Preverite konzolo.');
-            return;
-          }
-          console.log('Deaktivacija uspešna. Osvežujem prikaz...');
-        } catch (e) {
-            console.error('Nepričakovana napaka pri deaktivaciji:', e);
-            alert('Nepričakovana napaka pri deaktivaciji. Preverite konzolo.');
-            return;
-        }
-      } else {
-        console.log('Izvajam aktivacijo...');
-        try {
-          const { error } = await supabase
-            .from('term_status')
-            .delete()
-            .eq('date', ymd)
-            .eq('term_id', termId);
-          if (error) { 
-            console.error('Napaka pri brisanju statusa:', error); 
-            alert('Napaka pri aktivaciji. Preverite konzolo.');
-            return;
-          }
-          console.log('Aktivacija uspešna. Osvežujem prikaz...');
-        } catch (e) {
-            console.error('Nepričakovana napaka pri aktivaciji:', e);
-            alert('Nepričakovana napaka pri aktivaciji. Preverite konzolo.');
-            return;
-        }
-      }
-      
-      // Dodana osvežitev podatkov in ponovni prikaz, ki bi morala odpraviti težavo
-      await refreshDayData(date);
-      await openEvent(date, termId);
-      renderMonth();
     };
-
+    
     openModal(elModal);
   }
+  
+  // Dodane funkcije za novo modalno okno za opombo
+  elConfirmNoteBtn.onclick = async () => {
+      const note = elNoteInput.value.trim();
+      if (!note) {
+          alert("Prosim, vnesite opombo pred potrditvijo.");
+          return;
+      }
+      
+      const ymd = iso(modalCtx.date);
+      const termId = modalCtx.termId;
+
+      console.log('Izvajam deaktivacijo s prilagojenim oknom...');
+      try {
+          const { error } = await supabase
+              .from('term_status')
+              .upsert({ date: ymd, term_id: termId, status: "inactive", note }, { onConflict: ['date', 'term_id'] });
+          if (error) { 
+              console.error('Napaka pri posodabljanju statusa:', error); 
+              alert('Napaka pri deaktivaciji. Preverite konzolo.');
+              return;
+          }
+          console.log('Deaktivacija uspešna. Osvežujem prikaz...');
+      } catch (e) {
+          console.error('Nepričakovana napaka pri deaktivaciji:', e);
+          alert('Nepričakovana napaka pri deaktivaciji. Preverite konzolo.');
+          return;
+      }
+
+      closeModal(elNoteModal);
+      await refreshDayData(modalCtx.date);
+      await openEvent(modalCtx.date, modalCtx.termId);
+      renderMonth();
+  };
+
+  elCancelNoteBtn.onclick = () => {
+      console.log('Uporabnik je preklical vnos opombe.');
+      closeModal(elNoteModal);
+  };
+
+  elCloseNoteModalBtn.onclick = () => {
+      console.log('Uporabnik je zaprl okno za opombo.');
+      closeModal(elNoteModal);
+  };
+
+  elNoteModal.addEventListener("click", (e) => {
+      if (e.target === elNoteModal) {
+          console.log('Uporabnik je kliknil zunaj okna za opombo.');
+          closeModal(elNoteModal);
+      }
+  });
+
 
   function openModal(modalEl){ modalEl.style.display="flex"; modalEl.setAttribute("aria-hidden","false"); }
   function closeModal(modalEl){ modalEl.style.display="none"; modalEl.setAttribute("aria-hidden","true"); }
