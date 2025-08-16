@@ -356,7 +356,7 @@ sre-18:00-19:00,3,18:00,19:00,"01 / 09 / 2024","31 / 05 / 2025"
       const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
       (async () => {
-        const { data, error } = await supabase.from("plavalci").select("*").limit(1);
+        const { data, error } = await supabase.from("swimmers").select("*").limit(1);
         console.log("Data:", data, "Error:", error);
       })();
     </script>
