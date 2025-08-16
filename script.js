@@ -411,8 +411,17 @@ document.addEventListener('DOMContentLoaded', () => {
   function openModal(modalEl){ modalEl.style.display="flex"; modalEl.setAttribute("aria-hidden","false"); }
   function closeModal(modalEl){ modalEl.style.display="none"; modalEl.setAttribute("aria-hidden","true"); }
 
-  elCloseModalBtn.addEventListener("click", () => closeModal(elModal));
-  elModal.addEventListener("click", (e)=>{ if(e.target === elModal) closeModal(elModal); });
+elCloseModalBtn.addEventListener("click", () => {
+  closeModal(elModal);
+  renderMonth(); // Dodano: Osveži koledar
+});
+
+elModal.addEventListener("click", (e)=>{ 
+  if(e.target === elModal) {
+    closeModal(elModal);
+    renderMonth(); // Dodano: Osveži koledar
+  }
+});
 
   elAddToEventBtn.addEventListener("click", async ()=>{
     const swimmerId = elModalSwimmerSelect.value;
