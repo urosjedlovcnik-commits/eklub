@@ -533,20 +533,44 @@ document.addEventListener('DOMContentLoaded', () => {
     swimmers.slice().sort((a,b)=> (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name)).forEach(s=>{
       const o=document.createElement("option"); o.value=s.id; o.textContent=`${s.first_name} ${s.last_name}`; elSwimmerSelect.appendChild(o);
     });
-    elTermSelect.innerHTML = "";
-    TERMS.forEach(t=>{
-      const o=document.createElement("option"); o.value=t.id; o.textContent=t.label; elTermSelect.appendChild(o);
-    });
     showSwimmerInfo();
     renderTermsList();
   }
 
+  // SPREMENJENA FUNKCIJA
   function showSwimmerInfo(){
     const sid = elSwimmerSelect.value;
     const s = swimmers.find(x=>x.id===sid);
-    if(!s){ elSwimmerInfo.textContent=""; return; }
+    if(!s){ 
+      elSwimmerInfo.textContent=""; 
+      elTermSelect.innerHTML = "";
+      return; 
+    }
+    
+    // Posodobi seznam plavalčevih terminov
     const chips = s.terms.map(id => `<span class="chip">${termById(id)?.label || id}</span>`).join(" ");
     elSwimmerInfo.innerHTML = `<div><strong>Termini:</strong> ${chips || "<span class='muted'>ni dodeljenih</span>"}</div>`;
+    
+    // Filtriraj spustni seznam terminov
+    elTermSelect.innerHTML = "";
+    const assignedTermIds = new Set(s.terms);
+    const unassignedTerms = TERMS.filter(t => !assignedTermIds.has(t.id));
+    
+    if (unassignedTerms.length > 0) {
+      unassignedTerms.forEach(t=>{
+        const o=document.createElement("option"); 
+        o.value=t.id; 
+        o.textContent=t.label; 
+        elTermSelect.appendChild(o);
+      });
+      elAssignTermBtn.disabled = false;
+    } else {
+      const o = document.createElement("option");
+      o.textContent = "Vsi termini so že dodeljeni.";
+      o.disabled = true;
+      elTermSelect.appendChild(o);
+      elAssignTermBtn.disabled = true;
+    }
   }
   elSwimmerSelect.addEventListener("change", showSwimmerInfo);
   elAddSwimmerBtn.addEventListener("click", async ()=>{
