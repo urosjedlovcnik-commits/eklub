@@ -239,6 +239,37 @@ document.addEventListener('DOMContentLoaded', () => {
   // ===== MODAL: odpiranje dogodka =====
   let modalCtx = { date:null, termId:null };
 
+  // Nova funkcija za osvežitev podatkov za določen dan
+  async function refreshDayData(date) {
+    const ymd = iso(date);
+    
+    const { data: attData, error: attError } = await supabase
+      .from('attendance')
+      .select('*')
+      .eq('date', ymd);
+    
+    if (attError) { console.error('Napaka pri osveževanju prisotnosti za dan:', attError); return; }
+    
+    const { data: statusData, error: statusError } = await supabase
+      .from('term_status')
+      .select('*')
+      .eq('date', ymd);
+
+    if (statusError) { console.error('Napaka pri osveževanju statusa termina za dan:', statusError); return; }
+    
+    attendance[ymd] = attData.reduce((acc, row) => {
+      acc[row.term_id] = acc[row.term_id] || {};
+      acc[row.term_id][row.swimmer_id] = row.status;
+      return acc;
+    }, {});
+
+    termStatus[ymd] = statusData.reduce((acc, row) => {
+      acc[row.term_id] = { status: row.status, note: row.note };
+      return acc;
+    }, {});
+  }
+
+
   async function openEvent(date, termId){
     modalCtx = { date:new Date(date), termId };
     const t = termById(termId);
@@ -301,9 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: true }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
           if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
             // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
-            attendance[ymd] = attendance[ymd] || {};
-            attendance[ymd][termId] = attendance[ymd][termId] || {};
-            attendance[ymd][termId][s.id] = true;
+            await refreshDayData(date);
             openEvent(date, termId);
             renderMonth();
           }
@@ -320,9 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: false }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
           if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
             // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
-            attendance[ymd] = attendance[ymd] || {};
-            attendance[ymd][termId] = attendance[ymd][termId] || {};
-            attendance[ymd][termId][s.id] = false;
+            await refreshDayData(date);
             openEvent(date, termId);
             renderMonth();
           }
@@ -341,9 +368,7 @@ document.addEventListener('DOMContentLoaded', () => {
               .eq('swimmer_id', s.id);
             if (error) { console.error('Napaka pri brisanju prisotnosti:', error); } else {
                 // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
-                if (attendance[ymd] && attendance[ymd][termId]) {
-                    delete attendance[ymd][termId][s.id];
-                }
+                await refreshDayData(date);
                 openEvent(date, termId);
                 renderMonth();
             }
@@ -401,8 +426,6 @@ document.addEventListener('DOMContentLoaded', () => {
           .from('term_status')
           .upsert({ date: ymd, term_id: termId, status: "inactive", note }, { onConflict: ['date', 'term_id'] });
         if (error) { console.error('Napaka pri posodabljanju statusa:', error); return; }
-        termStatus[ymd] = termStatus[ymd] || {};
-        termStatus[ymd][termId] = { status: "inactive", note };
       } else {
         const { error } = await supabase
           .from('term_status')
@@ -410,8 +433,8 @@ document.addEventListener('DOMContentLoaded', () => {
           .eq('date', ymd)
           .eq('term_id', termId);
         if (error) { console.error('Napaka pri brisanju statusa:', error); return; }
-        if (termStatus[ymd]) delete termStatus[ymd][termId];
       }
+      await refreshDayData(date);
       openEvent(date, termId);
       renderMonth();
     };
@@ -445,6 +468,7 @@ document.addEventListener('DOMContentLoaded', () => {
       .upsert({ date: ymd, term_id: modalCtx.termId, swimmer_id: swimmer.id, status: true }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
     
     if (error) { console.error('Napaka pri dodajanju plavalca v trening:', error); } else {
+      await refreshDayData(modalCtx.date);
       openEvent(modalCtx.date, modalCtx.termId);
       refreshSwimmerPanel();
       renderMonth();
