@@ -179,8 +179,11 @@ document.addEventListener('DOMContentLoaded', () => {
           const e = document.createElement("div");
           e.className = "event";
 
-          const dateIsTodayOrPast = isToday(date) || isPast(date);
-          if (dateIsTodayOrPast) {
+          // NOVI POPRAVEK: Barvno kodiranje zdaj deluje za VSE dogodke,
+          // če je vnesen vsaj en podatek o prisotnosti.
+          const ymd = iso(date);
+          const termAtt = attendance[ymd]?.[t.id] || {};
+          if (Object.keys(termAtt).length > 0) {
               const status = getAttendanceStatus(date, t.id);
               e.classList.add(status);
           }
@@ -234,8 +237,9 @@ document.addEventListener('DOMContentLoaded', () => {
           const e = document.createElement("div");
           e.className = "event";
           
-          const dateIsTodayOrPast = isToday(date) || isPast(date);
-          if (dateIsTodayOrPast) {
+          const ymd = iso(date);
+          const termAtt = attendance[ymd]?.[t.id] || {};
+          if (Object.keys(termAtt).length > 0) {
               const status = getAttendanceStatus(date, t.id);
               e.classList.add(status);
           }
