@@ -1,8 +1,6 @@
 // Počakamo, da se celotna stran naloži
 document.addEventListener('DOMContentLoaded', () => {
 
-
-
     // Stanja bodo naložena asinhrono
     let TERMS = [];
     let swimmers = [];
@@ -455,45 +453,45 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       };
 
+      elConfirmNoteBtn.onclick = async () => {
+        const note = elNoteInput.value.trim();
+        if (!note) {
+          alert("Prosim, vnesite opombo pred potrditvijo.");
+          return;
+        }
+        
+        const ymd = iso(modalCtx.date);
+        const termId = modalCtx.termId;
+
+        const { error } = await supabase
+          .from('term_status')
+          .upsert({ date: ymd, term_id: termId, status: "inactive", note }, { onConflict: ['date', 'term_id'] });
+        
+        if (error) {
+          console.error('Napaka pri posodabljanju statusa:', error);
+          alert('Napaka pri deaktivaciji. Preverite konzolo.');
+          return;
+        }
+
+        closeModal(elNoteModal);
+        await refreshDayData(modalCtx.date);
+        await openEvent(modalCtx.date, modalCtx.termId);
+        renderMonth();
+      };
+
+      elCancelNoteBtn.onclick = () => { closeModal(elNoteModal); };
+
+      elCloseNoteModalBtn.onclick = () => { closeModal(elNoteModal); };
+
+      elNoteModal.addEventListener("click", (e) => {
+        if (e.target === elNoteModal) {
+          closeModal(elNoteModal);
+        }
+      });
+
       openModal(elModal);
     }
     
-    elConfirmNoteBtn.onclick = async () => {
-      const note = elNoteInput.value.trim();
-      if (!note) {
-        alert("Prosim, vnesite opombo pred potrditvijo.");
-        return;
-      }
-      
-      const ymd = iso(modalCtx.date);
-      const termId = modalCtx.termId;
-
-      const { error } = await supabase
-        .from('term_status')
-        .upsert({ date: ymd, term_id: termId, status: "inactive", note }, { onConflict: ['date', 'term_id'] });
-      
-      if (error) {
-        console.error('Napaka pri posodabljanju statusa:', error);
-        alert('Napaka pri deaktivaciji. Preverite konzolo.');
-        return;
-      }
-
-      closeModal(elNoteModal);
-      await refreshDayData(modalCtx.date);
-      await openEvent(modalCtx.date, modalCtx.termId);
-      renderMonth();
-    };
-
-    elCancelNoteBtn.onclick = () => { closeModal(elNoteModal); };
-
-    elCloseNoteModalBtn.onclick = () => { closeModal(elNoteModal); };
-
-    elNoteModal.addEventListener("click", (e) => {
-      if (e.target === elNoteModal) {
-        closeModal(elNoteModal);
-      }
-    });
-
     function openModal(modalEl){ modalEl.style.display = "flex"; modalEl.setAttribute("aria-hidden", "false"); }
     function closeModal(modalEl){ modalEl.style.display = "none"; modalEl.setAttribute("aria-hidden", "true"); }
 
@@ -707,7 +705,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // NOVO: Funkcija za brisanje plavalca in njegovih prihodnjih obiskov
     elDeleteSwimmerBtn.addEventListener("click", async () => {
       const sid = elSwimmerSelect.value;
-      if (!sid) return;
+      if (!sid) {
+        console.error("No swimmer selected.");
+        alert("Prosim, izberite plavalca, ki ga želite izbrisati.");
+        return;
+      }
 
       const swimmerName = swimmers.find(s => s.id === sid)?.first_name + " " + swimmers.find(s => s.id === sid)?.last_name;
 
@@ -726,7 +728,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (attError) {
         console.error("Napaka pri brisanju prihodnjih obiskov:", attError);
-        alert("Napaka pri brisanju prihodnjih obiskov.");
+        alert("Napaka pri brisanju prihodnjih obiskov. Preverite konzolo.");
         return;
       }
 
