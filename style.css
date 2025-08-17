@@ -50,8 +50,8 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   justify-content: space-between;
   padding: 4px 8px;
   border-radius: 999px;
-  background-color: var(--grey-light);
-  color: var(--text-dark);
+  background-color: var(--border); /* Uporaba obstoječe sive barve */
+  color: #4b5563; /* Barva teksta, usklajena z gumbom neutral */
   font-size: 0.8rem;
   cursor: pointer;
   transition: background-color 0.2s;
@@ -61,12 +61,12 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   gap: 4px;
 }
 .chip:hover {
-  background-color: var(--grey-medium);
+  background-color: #d1d5db; /* Temnejša siva za hover, usklajena z gumbom neutral */
 }
 .chip .remove-term-btn {
   border: none;
   background: transparent;
-  color: var(--text-dark);
+  color: #4b5563; /* Barva križca, usklajena z besedilom */
   font-weight: bold;
   font-size: 1rem;
   cursor: pointer;
