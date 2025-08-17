@@ -676,8 +676,8 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         swimmers.push(data[0]);
         elNewFirst.value = ""; elNewLast.value = "";
-        refreshSwimmerPanel();
-        renderMonth();
+        await refreshSwimmerPanel();
+        await renderMonth();
         alert("Plavalec uspešno dodan.");
       }
     });
@@ -739,8 +739,8 @@ document.addEventListener('DOMContentLoaded', () => {
         alert("Napaka pri brisanju plavalca. Preverite konzolo.");
       } else {
         swimmers = swimmers.filter(s => s.id !== sid);
-        refreshSwimmerPanel();
-        renderMonth();
+        await refreshSwimmerPanel();
+        await renderMonth();
         alert("Plavalec uspešno izbrisan.");
       }
     });
@@ -786,8 +786,8 @@ document.addEventListener('DOMContentLoaded', () => {
         elNewTermDateFrom.value = "";
         elNewTermDateTo.value = "";
 
-        refreshSwimmerPanel();
-        renderMonth();
+        await refreshSwimmerPanel();
+        await renderMonth();
         alert("Nov termin uspešno dodan!");
       }
     });
@@ -878,8 +878,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         TERMS = TERMS.filter(t => t.id !== termId);
-        refreshSwimmerPanel();
-        renderMonth();
+        await refreshSwimmerPanel();
+        await renderMonth();
         alert("Termin uspešno izbrisan.");
     }
 
@@ -921,8 +921,8 @@ document.addEventListener('DOMContentLoaded', () => {
         term.date_from = newDateFrom;
         term.date_to = newDateTo;
         closeModal(elEditTermModal);
-        renderTermsList();
-        renderMonth();
+        await renderTermsList();
+        await renderMonth();
         alert("Termin uspešno posodobljen.");
       }
     });
@@ -998,8 +998,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       
       await loadDataFromSupabase();
-      refreshSwimmerPanel();
-      renderMonth();
+      await refreshSwimmerPanel();
+      await renderMonth();
       alert(`Uvoz končan. Uvoženih plavalcev: ${importedSwimmers.length}. Vse nastavitve plavalcev so posodobljene.`);
       e.target.value = "";
     });
@@ -1061,8 +1061,8 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error(error);
         } else {
             await loadDataFromSupabase();
-            refreshSwimmerPanel();
-            renderMonth();
+            await refreshSwimmerPanel();
+            await renderMonth();
             alert("Termini uspešno uvoženi in posodobljeni!");
         }
         e.target.value = "";
@@ -1154,8 +1154,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }, {});
 
         populateExportSelects();
-        refreshSwimmerPanel();
-        renderMonth();
+        await refreshSwimmerPanel();
+        await renderMonth();
 
       } catch (error) {
         console.error("Napaka pri nalaganju podatkov:", error);
