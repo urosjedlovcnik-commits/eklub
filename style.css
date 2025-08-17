@@ -1,380 +1,234 @@
-:root {
-  --color-blue: #007bff;
-  --color-green: #28a745;
-  --color-orange: #ffc107;
-  --color-red: #dc3545;
-  --color-light-gray: #f8f9fa;
-  --color-gray: #6c757d;
-  --color-dark-gray: #343a40;
-  --color-white: #fff;
-  --color-font: #343a40;
-  --color-border: #dee2e6;
-  --color-shadow: rgba(0,0,0,.1);
-  --color-bg: #e9ecef;
-  --color-bg-darker: #ced4da;
-
-  --font-family-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+:root{
+  --pri:#2563eb; --ok:#16a34a; --warn:#dc2626; --mut:#6b7280; --bg:#f5f7fa; --border:#e5e7eb;
+  --unfilled:#fecaca; --complete:#bbf7d0;
 }
-
-body {
-  font-family: var(--font-family-sans);
-  margin: 0;
-  padding: 0;
-  background-color: var(--color-bg);
-  color: var(--color-font);
+*{box-sizing:border-box}
+body{font-family:system-ui, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); color:#0f172a; margin:30px 18px 18px;}
+h1{margin:0 0 12px;text-align:center}
+.toolbar{max-width:1200px;margin:0 auto 12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center}
+.btn{padding:8px 12px;border:1px solid var(--border);border-radius:10px;background:#fff;cursor:pointer;font-size:inherit}
+.btn.pri{background:var(--pri);border-color:var(--pri);color:#fff}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn.warn{background:var(--warn);border-color:var(--warn);color:#fff}
+.btn.neutral{background:#e5e7eb;border-color:#d1d5db;color:#4b5563;}
+.tag{display:inline-block;background:#eef2ff;border:1px solid #c7d2fe;border-radius:999px;padding:3px 10px;font-size:13px}
+.grid{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr;gap:12px}
+/* Koledar (širok, nižji) */
+.calendar{grid-column:1 / -1;background:#fff;border:1px solid var(--border);border-radius:12px;padding:8px}
+.calendar-head{
+  display:grid;
+  /* Zožitev sobot in nedelj na namiznem prikazu */
+  grid-template-columns:repeat(5,1fr) 0.5fr 0.5fr;
+  gap:6px;margin-bottom:6px
 }
-
-header {
-  background-color: var(--color-dark-gray);
-  color: var(--color-white);
-  padding: 1rem 2rem;
-  text-align: center;
-  position: relative;
+.calendar-head div{font-weight:600;text-align:center;padding:6px 0;background:#eff6ff;border-radius:8px}
+.calendar-grid{
+  display:grid;
+  /* Zožitev sobot in nedelj na namiznem prikazu */
+  grid-template-columns:repeat(5,1fr) 0.5fr 0.5fr;
+  gap:6px
 }
-
-h1 {
-  margin: 0;
-  font-size: 1.5rem;
-}
-
-.calendar-header {
-  display: flex;
+.day{min-height:120px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:6px;display:flex;flex-direction:column;overflow:hidden; cursor:pointer;}
+.day.disabled{background:#f3f4f6;color:#9ca3af;cursor:default;}
+.day .num{font-weight:700; margin-bottom:4px}
+.day.today{outline:3px solid #10b981;background:#ecfeff}
+.event{font-size:12px;padding:3px 6px;margin:3px 0;border-radius:6px;background:#e3f2fd;border:1px solid #bfdbfe;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:6px}
+.event .time{font-variant-numeric:tabular-nums}
+.event.unfilled{background:var(--unfilled); border-color:#fca5a5}
+.event.complete{background:var(--complete); border-color:#86efac}
+.event.disabled{background:#e5e7eb;color:#6b7280;text-decoration:line-through;border-color:#d1d5db}
+.card{background:#fff;border:1px solid var(--border);border-radius:12px}
+.card h3{margin:0;padding:10px 12px;border-bottom:1px solid var(--border)}
+.card .inner{padding:12px}
+.muted{color:var(--mut)}
+table{width:100%;border-collapse:collapse}
+th,td{border:1px solid var(--border);padding:6px;text-align:left}
+th{background:#eff6ff}
+input[type="text"], input[type="date"], input[type="time"], select, textarea{padding:8px;border:1px solid var(--border);border-radius:8px;width:100%;margin-top:4px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
+.flex-col{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+/* Modal */
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center;padding:18px;z-index:100}
+.modal .box{background:#fff;border:1px solid var(--border);border-radius:12px;max-width:680px;width:100%;box-shadow:0 10px 30px rgba(0,0,0,.15); position:fixed; top:10%; left:50%; transform:translate(-50%, 0);}
+.modal .box-header{display:flex;align-items:center;justify-content:space-between;padding:12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
+.modal .box-body{padding:12px}
+.chips{display:flex;gap:10px; flex-wrap:wrap; margin-bottom: 12px;}
+.chip {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  padding: 1rem;
-  background-color: var(--color-light-gray);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.calendar-header button {
-  background-color: var(--color-blue);
-  color: var(--color-white);
-  border: none;
-  padding: 0.5rem 1rem;
+  justify-content: space-between;
+  padding: 5px 8px;
+  border: 1px solid #ffffff;
+  border-radius: 999px;
+  background-color: #f8fafc;
+  color: #4b5563;
+  font-size: 0.8rem;
   cursor: pointer;
-  border-radius: 4px;
-  margin: 0 1rem;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+  font-family: inherit;
+  gap: 4px;
 }
-
-.calendar-header button:hover {
+.chip:hover {
+  background-color: #e5e7eb;
+}
+.chip .remove-term-btn {
+  border: none;
+  background: transparent;
+  color: #4b5563;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  margin: 0;
+}
+.csv-options{max-width:1200px;margin:12px auto;padding:12px;background:#fff;border:1px solid var(--border);border-radius:12px;}
+.csv-options .inner{padding:12px}
+.csv-export-controls{
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+}
+.csv-export-controls > * {
+  flex-grow: 1;
+}
+.csv-export-controls .btn {
+  flex-grow: 0;
+}
+.btn.remove-btn {
+  background: none;
+  border: none;
+  color: var(--warn);
+  line-height: 1;
+  padding: 0;
+}
+.btn.remove-btn:hover {
+  color: var(--warn);
   opacity: 0.8;
 }
-
-#monthLabel {
-  font-size: 1.25rem;
-  font-weight: bold;
+.btn.remove-btn:disabled {
+  color: #9ca3af;
 }
-
-.calendar-container {
-  max-width: 900px;
-  margin: 2rem auto;
-  padding: 1rem;
-  background-color: var(--color-white);
-  box-shadow: 0 4px 6px var(--color-shadow);
+.term-list{display:flex;flex-direction:column;gap:6px;padding:8px 0;border-top:1px solid var(--border);margin-top:8px}
+.term-item{display:flex;justify-content:space-between;align-items:center;background:#f8fafc;border:1px solid #e2e8f0;padding:6px 10px;border-radius:8px}
+.term-item button { flex-shrink: 0; }
+.term-item-info { display: flex; flex-direction: column; gap: 2px; }
+.term-item-label { font-weight: 600; }
+.term-item-dates { font-size: 12px; color: var(--mut); }
+.day-modal .day-modal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#noteModal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.4);
+  justify-content: center;
+  align-items: center;
+}
+#noteModal .modal-content {
+  background-color: #fefefe;
+  padding: 20px;
   border-radius: 8px;
-}
-
-.calendar-weekdays {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  text-align: center;
-  font-weight: bold;
-  padding: 0.5rem 0;
-  border-bottom: 2px solid var(--color-border);
-}
-
-#calendarGrid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  grid-auto-rows: 100px; /* Fiksna višina celic */
-  gap: 2px;
-  background-color: var(--color-border);
-}
-
-.day {
-  background-color: var(--color-light-gray);
-  padding: 5px;
-  position: relative;
-  overflow: hidden;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  width: 90%;
+  max-width: 400px;
   display: flex;
   flex-direction: column;
 }
-
-.day.today {
-  border: 2px solid var(--color-blue);
-}
-
-.day.disabled {
-  background-color: var(--color-bg-darker);
-  color: var(--color-gray);
-  cursor: not-allowed;
-}
-
-.num {
-  font-weight: bold;
-  margin-bottom: 5px;
-}
-
-.event {
-  background-color: var(--color-blue);
-  color: var(--color-white);
-  border-radius: 4px;
-  padding: 2px 4px;
-  font-size: 0.75rem;
-  margin-bottom: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  cursor: pointer;
-  box-sizing: border-box;
-}
-
-/* Ključni popravki za barvno kodiranje */
-.event.partial {
-  background-color: var(--color-orange);
-}
-
-.event.complete {
-  background-color: var(--color-green);
-}
-
-.event.unfilled {
-  background-color: var(--color-red);
-}
-
-.event.disabled {
-  background-color: var(--color-gray);
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.event .time {
-  font-weight: bold;
-  padding-right: 2px;
-}
-
-.event .end-time {
-  font-weight: normal;
-  font-size: 0.65rem;
-}
-
-.more-events-indicator {
-  font-size: 0.75rem;
-  color: var(--color-gray);
-  text-align: center;
-  margin-top: auto;
-}
-
-/* Modals */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: none;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background-color: var(--color-white);
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px var(--color-shadow);
-  width: 90%;
-  max-width: 600px;
-  position: relative;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.modal-close-btn {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-}
-
-.modal-title {
-  margin-top: 0;
-}
-
-.modal-meta {
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
-  color: var(--color-gray);
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.chip {
-  background-color: var(--color-bg-darker);
-  border-radius: 12px;
-  padding: 4px 8px;
-  font-weight: bold;
-}
-
-#attendanceTable {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 1rem;
-}
-
-#attendanceTable th, #attendanceTable td {
-  padding: 0.5rem;
-  border-bottom: 1px solid var(--color-border);
-  text-align: left;
-}
-
-#attendanceTable td:last-child {
-  text-align: right;
-  white-space: nowrap;
-}
-
-#attendanceTable button {
-  padding: 6px 10px;
-  border: none;
-  cursor: pointer;
-  border-radius: 4px;
-}
-.btn {
-  padding: 8px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  border: none;
-  color: var(--color-white);
-  font-size: 0.9rem;
-}
-
-.btn.ok { background-color: var(--color-green); }
-.btn.warn { background-color: var(--color-orange); }
-.btn.neutral { background-color: var(--color-blue); }
-.btn.remove-btn { background-color: var(--color-red); }
-.btn.muted-btn { background-color: var(--color-gray); }
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.form-group {
-  margin-bottom: 1rem;
-}
-
-label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: bold;
-}
-
-input[type="text"], input[type="date"], input[type="time"], select, textarea {
-  width: 100%;
-  padding: 0.5rem;
-  box-sizing: border-box;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  margin-top: 4px;
-}
-input[type="text"]:focus, input[type="date"]:focus, input[type="time"]:focus, select:focus, textarea:focus {
-  outline: none;
-  border-color: var(--color-blue);
-}
-
-.button-group {
-  margin-top: 1rem;
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
-.button-group.left {
-  justify-content: flex-start;
-}
-
-#dashboard {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
-  max-width: 900px;
-  margin: 2rem auto;
-  padding: 1rem;
-}
-
-.panel {
-  background-color: var(--color-white);
-  padding: 1rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px var(--color-shadow);
-}
-
-h2 {
-  margin-top: 0;
-  font-size: 1.2rem;
-  border-bottom: 1px solid var(--color-border);
-  padding-bottom: 0.5rem;
-}
-
-.muted {
-  color: var(--color-gray);
-}
-
-.term-item {
+#noteModal .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid var(--color-border);
-  padding: 0.5rem 0;
+  margin-bottom: 1rem;
 }
-.term-item:last-child {
-  border-bottom: none;
+#noteModal .modal-body {
+  margin-bottom: 1rem;
 }
-.term-item-info {
+#noteModal .modal-footer {
   display: flex;
-  flex-direction: column;
+  justify-content: flex-end;
+  gap: 8px;
 }
-.term-item-label {
+#noteModal .modal-title {
+  margin: 0;
+}
+#noteModal .close-btn {
+  color: #aaa;
+  font-size: 28px;
   font-weight: bold;
+  cursor: pointer;
 }
-.term-item-dates {
-  font-size: 0.8rem;
-  color: var(--color-gray);
+#noteModal .close-btn:hover,
+#noteModal .close-btn:focus {
+  color: black;
+  text-decoration: none;
 }
-
-/* Dodatni stili za mobilne naprave */
+#noteModal textarea {
+  width: 100%;
+  border: 1px solid #ccc;
+  padding: 8px;
+  box-sizing: border-box;
+}
 @media (max-width: 768px) {
-  .calendar-container {
-    padding: 0;
-    margin: 1rem;
+  #noteModal .modal-content {
+    padding: 15px;
   }
-  .calendar-weekdays {
-    font-size: 0.8rem;
+}
+/* Media Query za mobilni prikaz */
+@media (max-width: 768px) {
+  body { margin: 10px; font-size: 14px; }
+  h1 { font-size: 24px; }
+  .toolbar { flex-direction: column; align-items: stretch; gap: 8px; }
+  .toolbar .left, .toolbar .right { display: flex; flex-direction: row; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .grid { grid-template-columns: 1fr; }
+  .calendar-head { font-size: 12px; }
+  .day { 
+    min-height: 90px;
+    padding: 4px;
+    overflow: hidden;
   }
-  #calendarGrid {
-    grid-auto-rows: 80px;
+  .day .num { font-size: 14px; }
+  .event { 
+    font-size: 10px; 
+    padding: 2px 4px;
   }
-  .day {
-    padding: 3px;
-  }
-  .num {
-    font-size: 0.8rem;
-  }
-  .event {
-    font-size: 0.65rem;
+  .event .time {
+    font-size: 10px;
   }
   .event .end-time {
+    display: none; /* Skrije čas konca termina na mobilnih napravah */
+  }
+  .day:not(.disabled) .event:nth-child(n+4) {
     display: none;
   }
-  .modal-content {
-    padding: 1rem;
+  .more-events-indicator {
+    font-size: 12px;
+    text-align: center;
+    margin-top: 4px;
+    color: var(--mut);
   }
-  .modal-close-btn {
-    font-size: 1.2rem;
-  }
+  .card h3 { font-size: 16px; padding: 8px 10px; }
+  .card .inner { padding: 8px; }
+  .btn { padding: 6px 10px; font-size: 13px; }
+  .modal .box { max-width: 95%; top: 10%; transform: translate(-50%, 0); }
+  .modal .box-header { flex-direction: column; align-items: flex-start; }
+  .modal .box-header .row { flex-wrap: wrap; margin-top: 8px; }
+  input[type="text"], input[type="date"], input[type="time"], select { font-size: 14px; }
+  .csv-options .inner{ flex-direction: column; gap: 8px; }
+  .csv-export-controls{ flex-direction: column; gap: 8px; }
+  .csv-export-controls > * { width: 100%; }
+  .event.partial {
+    background-color: #ff9800; /* Oranžna barva */
+    color: white;
+}
 }
