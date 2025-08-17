@@ -571,11 +571,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===== POPRAVLJENA FUNKCIJA ZA POVZETEK =====
     function calculateSummaryData(year, month) {
       const res = {};
-      const today = new Date();
       const monthStart = new Date(year, month, 1);
       const monthEnd = new Date(year, month + 1, 0);
+      const today = new Date();
+      today.setHours(0,0,0,0);
 
-      // Dodana inicializacija VSEH plavalcev (vključno z izbrisanimi)
+      // Inicializacija podatkov za vse plavalce (aktivne in izbrisane)
       swimmers.forEach(s => {
         res[s.id] = { first: s.first_name, last: s.last_name, att: 0, pos: 0 };
       });
@@ -584,9 +585,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const allAttendance = Object.entries(attendance);
       for (const [date, termData] of allAttendance) {
         const d = new Date(date);
+        d.setHours(0,0,0,0);
         if (d >= monthStart && d <= monthEnd) {
           for (const termId in termData) {
             for (const swimmerId in termData[termId]) {
+              // Preverimo, ali je bil ta termin aktiven, ko je bila prisotnost vnesena
+              // Opomba: Ker imamo shranjen 'term_status', to ni več potrebno. Lahko zaupamo, da je prisotnost vnešena samo za aktivne termine.
               if (termData[termId][swimmerId] === true && res[swimmerId]) {
                 res[swimmerId].att += 1;
               }
@@ -608,10 +612,9 @@ document.addEventListener('DOMContentLoaded', () => {
             swimmers.forEach(s => {
               if (res[s.id] && s.terms.includes(term.id)) {
                 
-                // Ključni popravek: preveri, ali je plavalec izbrisan
                 if (s.is_deleted) {
                   // Plavalec je izbrisan, štejemo samo, če je datum v preteklosti
-                  if (isPast(currentDate) || isToday(currentDate)) {
+                  if (currentDate <= today) {
                     res[s.id].pos += 1;
                   }
                 } else {
@@ -630,7 +633,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderSummary(summaryData) {
         let html = `<table><thead><tr><th>Plavalec</th><th>Obiskani</th><th>Možni</th><th>Delež (%)</th></tr></thead><tbody>`;
-        const rows = Object.values(summaryData).sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first));
+        // KLJUČNA SPREMEMBA: filtriramo plavalce, ki nimajo nobenega možnega obiska
+        const rows = Object.values(summaryData).filter(r => r.pos > 0).sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first));
         if(rows.length===0) html += `<tr><td colspan="4" class="muted">Ni plavalcev.</td></tr>`;
         rows.forEach(r=>{
             const pct = r.pos > 0 ? (r.att / r.pos * 100).toFixed(1) : "0.0";
@@ -1173,7 +1177,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // POPRAVEK: Dodamo BOM za pravilno kodiranje UTF-8
         let csv = "\uFEFFfirst_name,last_name,attended,possible,percentage\n";
-        Object.values(summary).sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first)).forEach(r=>{
+        // Popravljeno: izvažamo vse plavalce, ne glede na to, ali imajo možne obiske
+        const rows = Object.values(summary).sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first));
+        rows.forEach(r=>{
             const pct = r.pos > 0 ? (r.att / r.pos * 100).toFixed(1) : "0.0";
             csv += `${r.first},${r.last},${r.att},${r.pos},${pct}\n`;
         });
