@@ -857,14 +857,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderTermsList() {
       elTermList.innerHTML = "";
-      if(TERMS.length === 0){
-        elTermList.textContent = "Ni dodanih terminov.";
+      
+      const activeTerms = TERMS.filter(t => !isPast(new Date(t.date_to)));
+      
+      if(activeTerms.length === 0){
+        elTermList.textContent = "Ni aktivnih terminov.";
         elTermList.style.color = "var(--mut)";
         return;
       }
       elTermList.style.color = "inherit";
 
-      TERMS.forEach(t => {
+      activeTerms.forEach(t => {
         const div = document.createElement("div");
         div.className = "term-item";
 
@@ -905,16 +908,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function deleteTerm(termId) {
-        if (!confirm("Ali ste prepričani, da želite izbrisati ta termin? To bo izbrisalo tudi vse povezane podatke plavalcev in evidence prisotnosti.")) {
+        if (!confirm("Ali ste prepričani, da želite izbrisati ta termin?")) {
             return;
         }
-
-        const { error: attError } = await supabase
-            .from('attendance')
-            .delete()
-            .eq('term_id', termId);
-        
-        if (attError) { console.error("Napaka pri brisanju prisotnosti:", attError); alert("Napaka pri brisanju evidence prisotnosti. Preverite konzolo."); return; }
 
         const { error: statusError } = await supabase
             .from('term_status')
@@ -940,7 +936,7 @@ document.addEventListener('DOMContentLoaded', () => {
         TERMS = TERMS.filter(t => t.id !== termId);
         await refreshSwimmerPanel();
         await renderMonth();
-        alert("Termin uspešno izbrisan.");
+        alert("Termin uspešno izbrisan. Zgodovina obiskov je ohranjena.");
     }
 
     function openEditTermModal(termId) {
@@ -1134,8 +1130,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const result = [];
       let inQuotes = false;
       let currentField = '';
-      for (let i = 0; i < line.length; i++) {
+      for (let i = 1; i < line.length; i++) {
         const char = line[i];
+        const prevChar = line[i-1];
         if (char === '"') {
           inQuotes = !inQuotes;
         } else if (char === ',' && !inQuotes) {
