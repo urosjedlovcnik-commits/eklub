@@ -676,8 +676,8 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         swimmers.push(data[0]);
         elNewFirst.value = ""; elNewLast.value = "";
-        await refreshSwimmerPanel();
-        await renderMonth();
+        refreshSwimmerPanel();
+        renderMonth();
         alert("Plavalec uspešno dodan.");
       }
     });
@@ -702,7 +702,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
     
-    // Funkcija za brisanje plavalca - POSODOBITEV!
+    // Funkcija za brisanje plavalca - POPRAVLJENO
     elDeleteSwimmerBtn.addEventListener("click", async () => {
       const sid = elSwimmerSelect.value;
       if (!sid) {
@@ -716,32 +716,36 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       
-      const today = iso(new Date());
-      const { error: attError } = await supabase
-        .from('attendance')
-        .delete()
-        .eq('swimmer_id', sid)
-        .gte('date', today);
+      try {
+        const today = iso(new Date());
 
-      if (attError) {
-        console.error("Napaka pri brisanju prihodnjih obiskov:", attError);
-        alert("Napaka pri brisanju prihodnjih obiskov. Preverite konzolo.");
-        return;
-      }
+        // Brisanje prihodnjih obiskov
+        const { error: attError } = await supabase
+          .from('attendance')
+          .delete()
+          .eq('swimmer_id', sid)
+          .gte('date', today);
 
-      const { error: swimmerError } = await supabase
-        .from('swimmers')
-        .delete()
-        .eq('id', sid);
+        if (attError) throw attError;
 
-      if (swimmerError) {
-        console.error("Napaka pri brisanju plavalca:", swimmerError);
-        alert("Napaka pri brisanju plavalca. Preverite konzolo.");
-      } else {
+        // Brisanje plavalca
+        const { error: swimmerError } = await supabase
+          .from('swimmers')
+          .delete()
+          .eq('id', sid);
+
+        if (swimmerError) throw swimmerError;
+
+        // Posodobitev lokalnega stanja
         swimmers = swimmers.filter(s => s.id !== sid);
+        
+        // Ponovno nalaganje vmesnika
         await refreshSwimmerPanel();
         await renderMonth();
         alert("Plavalec uspešno izbrisan.");
+      } catch (error) {
+        console.error("Napaka pri brisanju plavalca:", error);
+        alert("Napaka pri brisanju plavalca. Prosim, preverite konzolo za podrobnosti. Morda gre za težavo z dovolilnicami v Supabase.");
       }
     });
 
@@ -1154,8 +1158,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }, {});
 
         populateExportSelects();
-        await refreshSwimmerPanel();
-        await renderMonth();
+        refreshSwimmerPanel();
+        renderMonth();
 
       } catch (error) {
         console.error("Napaka pri nalaganju podatkov:", error);
