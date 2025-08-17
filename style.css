@@ -15,9 +15,19 @@ h1{margin:0 0 12px;text-align:center}
 .grid{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr;gap:12px}
 /* Koledar (širok, nižji) */
 .calendar{grid-column:1 / -1;background:#fff;border:1px solid var(--border);border-radius:12px;padding:8px}
-.calendar-head{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px}
+.calendar-head{
+  display:grid;
+  /* POPRAVEK: Spremembana, da bodo sobota in nedelja ožja */
+  grid-template-columns:repeat(5,1fr) 0.5fr 0.5fr;
+  gap:6px;margin-bottom:6px
+}
 .calendar-head div{font-weight:600;text-align:center;padding:6px 0;background:#eff6ff;border-radius:8px}
-.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.calendar-grid{
+  display:grid;
+  /* POPRAVEK: Spremembana, da bodo sobota in nedelja ožja */
+  grid-template-columns:repeat(5,1fr) 0.5fr 0.5fr;
+  gap:6px
+}
 .day{min-height:120px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:6px;display:flex;flex-direction:column;overflow:hidden; cursor:pointer;}
 .day.disabled{background:#f3f4f6;color:#9ca3af;cursor:default;}
 .day .num{font-weight:700; margin-bottom:4px}
@@ -39,19 +49,18 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
 .flex-col{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
 /* Modal */
 .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center;padding:18px;z-index:100}
-.modal .box{background:#fff;border-radius:12px;max-width:680px;width:100%;border:1px solid var(--border);box-shadow:0 10px 30px rgba(0,0,0,.15); position:fixed; top:10%; left:50%; transform:translate(-50%, 0);}
+.modal .box{background:#fff;border:1px solid var(--border);border-radius:12px;max-width:680px;width:100%;box-shadow:0 10px 30px rgba(0,0,0,.15); position:fixed; top:10%; left:50%; transform:translate(-50%, 0);}
 .modal .box-header{display:flex;align-items:center;justify-content:space-between;padding:12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
 .modal .box-body{padding:12px}
-.chips{display:flex;gap:10px; /* Povečan razmik med gumbi */ flex-wrap:wrap; margin-bottom: 12px; /* Razmik pod vrstico gumbov */}
-/* Popravek: Dodana obroba za videz, ki ste ga želeli */
+.chips{display:flex;gap:10px; flex-wrap:wrap; margin-bottom: 12px;}
 .chip {
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
   padding: 5px 8px;
-  border: 1px solid #ffffff; /* Dodana bela obroba */
+  border: 1px solid #ffffff;
   border-radius: 999px;
-  background-color: #f8fafc; /* Zelo svetlo siva, ki se zlije z belo */
+  background-color: #f8fafc;
   color: #4b5563;
   font-size: 0.8rem;
   cursor: pointer;
@@ -61,7 +70,7 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   gap: 4px;
 }
 .chip:hover {
-  background-color: #e5e7eb; /* Svetlo siva za hover, ki je malenkost bolj vidna */
+  background-color: #e5e7eb;
 }
 .chip .remove-term-btn {
   border: none;
@@ -88,8 +97,6 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
 .csv-export-controls .btn {
   flex-grow: 0;
 }
-
-/* Stil za gumb Odstrani/križec */
 .btn.remove-btn {
   background: none;
   border: none;
@@ -110,14 +117,11 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
 .term-item-info { display: flex; flex-direction: column; gap: 2px; }
 .term-item-label { font-weight: 600; }
 .term-item-dates { font-size: 12px; color: var(--mut); }
-
-/* Dodaten modal za izbiro termina na določen dan */
 .day-modal .day-modal-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-/* Stili za novo modalno okno za opombo */
 #noteModal {
   display: none;
   position: fixed;
@@ -180,7 +184,6 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
     padding: 15px;
   }
 }
-/* MEDIA QUERIES ZA MOBILNO ODZIVnost */
 @media (max-width: 768px) {
   body { margin: 10px; font-size: 14px; }
   h1 { font-size: 24px; }
@@ -189,7 +192,7 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   .grid { grid-template-columns: 1fr; }
   .calendar-head { font-size: 12px; }
   .day { 
-    min-height: 90px; /* Znižana višina za več vsebine na mobilnih napravah */
+    min-height: 90px;
     padding: 4px;
     overflow: hidden;
   }
