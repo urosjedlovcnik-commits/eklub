@@ -244,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
     elCloseDayModalBtn.addEventListener("click", closeDayModal);
     elDayModal.addEventListener("click", (e) => { if (e.target === elDayModal) closeDayModal(); });
 
-    // ===== MODAL: odpiranje dogodka =====
+    // ===== MODAL: odpranje dogodka =====
     let modalCtx = { date:null, termId:null };
 
     // Nova funkcija za osvežitev podatkov za določen dan
@@ -741,9 +741,8 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error("Napaka pri brisanju plavalca:", swimmerError);
         alert("Napaka pri brisanju plavalca. Preverite konzolo.");
       } else {
-        swimmers = swimmers.filter(s => s.id !== sid);
-        refreshSwimmerPanel();
-        renderMonth();
+        // Ključna sprememba: po uspešnem brisanju osvežimo vse podatke, ne samo panel
+        await loadDataFromSupabase();
         alert("Plavalec uspešno izbrisan.");
       }
     });
