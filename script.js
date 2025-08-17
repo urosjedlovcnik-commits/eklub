@@ -306,8 +306,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       
       const termAtt = data.reduce((acc, row) => {
-          acc[row.swimmer_id] = row.status;
-          return acc;
+        acc[row.swimmer_id] = row.status;
+        return acc;
       }, {});
       
       // KRUCIALNA SPREMENJAVA: Namesto, da prepišemo, podatke združimo.
@@ -380,12 +380,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 .eq('date', ymd)
                 .eq('term_id', termId)
                 .eq('swimmer_id', s.id);
-              if (error) { console.error('Napaka pri brisanju prisotnosti:', error); } else {
-                  // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
-                  await refreshDayData(date);
-                  openEvent(date, termId);
-                  renderMonth();
-              }
+            if (error) { console.error('Napaka pri brisanju prisotnosti:', error); } else {
+                // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
+                await refreshDayData(date);
+                openEvent(date, termId);
+                renderMonth();
+            }
           });
           
           tr.appendChild(td1); tr.appendChild(td2); 
@@ -597,27 +597,28 @@ document.addEventListener('DOMContentLoaded', () => {
         elSwimmerInfo.innerHTML = "";
         elTermSelect.innerHTML = "";
         elAssignTermBtn.disabled = true;
-        elDeleteSwimmerBtn.disabled = true; // Onemogoči gumb, če ni izbranega plavalca
+        elDeleteSwimmerBtn.disabled = true;
         return;
       }
     
-      // Spremenjen prikaz terminov z gumbom za odstranitev
       const chips = s.terms.map(id => {
         const t = termById(id);
         const termLabel = t ? `${DAY_SHORT_NAME[t.day]} ${t.start_time.slice(0, 5)}–${t.end_time.slice(0, 5)}` : id;
         return `
-            <span class="chip">
+            <span class="chip" data-term-id="${id}">
                 ${termLabel} 
-                <button class="remove-term-btn" data-term-id="${id}">✖</button>
+                <button class="remove-term-btn">✖</button>
             </span>
         `;
       }).join(" ");
       elSwimmerInfo.innerHTML = `<div><strong>Termini:</strong> ${chips || "<span class='muted'>ni dodeljenih</span>"}</div>`;
       
-      // Dodajanje dogodkov ob kliku na "✖"
       document.querySelectorAll('.remove-term-btn').forEach(button => {
         button.addEventListener('click', async (event) => {
-          const termIdToRemove = event.target.dataset.termId;
+          const chipElement = event.target.closest('.chip');
+          if (!chipElement) return;
+
+          const termIdToRemove = chipElement.dataset.termId;
           const swimmerToUpdate = swimmers.find(x => x.id === sid);
           if (!swimmerToUpdate) return;
     
@@ -717,7 +718,6 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const today = iso(new Date());
 
-        // Brisanje prihodnjih obiskov
         const { error: attError } = await supabase
           .from('attendance')
           .delete()
@@ -726,7 +726,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (attError) throw attError;
 
-        // "Mehko" brisanje plavalca
         const { error: swimmerError } = await supabase
           .from('swimmers')
           .update({ is_deleted: true })
@@ -734,13 +733,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (swimmerError) throw swimmerError;
         
-        // Posodobitev lokalnega stanja
         const deletedSwimmer = swimmers.find(s => s.id === sid);
         if (deletedSwimmer) {
             deletedSwimmer.is_deleted = true;
         }
         
-        // Ponovno nalaganje vmesnika
         await refreshSwimmerPanel();
         await renderMonth();
         alert("Plavalec uspešno izbrisan.");
