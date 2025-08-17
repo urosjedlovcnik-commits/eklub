@@ -48,7 +48,7 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 8px;
+  padding: 6px 8px; /* Tukaj je popravek: navpični padding je povečan na 6px */
   border-radius: 999px;
   background-color: var(--border); /* Uporaba obstoječe sive barve */
   color: #4b5563; /* Barva teksta, usklajena z gumbom neutral */
