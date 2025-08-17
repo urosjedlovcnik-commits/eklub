@@ -169,7 +169,6 @@ document.addEventListener('DOMContentLoaded', () => {
               e.classList.add("disabled");
           }
           
-          // POSODOBITEV: Uporabite eno samo vrstico, ki jo nato obdeluje CSS
           e.innerHTML = `<span class="time">${t.start_time.slice(0, 5)}<span class="end-time">–${t.end_time.slice(0, 5)}</span></span>`;
 
           e.title = t.label;
@@ -227,7 +226,6 @@ document.addEventListener('DOMContentLoaded', () => {
               e.classList.add("disabled");
           }
 
-          // POSODOBITEV: Uporabite eno samo vrstico, ki jo nato obdeluje CSS
           e.innerHTML = `<span class="time">${t.start_time.slice(0, 5)}<span class="end-time">–${t.end_time.slice(0, 5)}</span></span>`;
           
           e.addEventListener("click", () => {
@@ -383,6 +381,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
                 await refreshDayData(date);
                 openEvent(date, termId);
+                refreshSwimmerPanel();
                 renderMonth();
             }
           });
@@ -527,43 +526,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===== POVZETEK - preimenovana funkcija =====
     function calculateSummaryData(year, month) {
-        const res = {};
-        
-        // Populate res with ALL swimmers (including deleted ones)
-        swimmers.forEach(s => {
-          res[s.id] = { first: s.first_name, last: s.last_name, att: 0, pos: 0 };
-        });
+      const res = {};
+      const monthStart = new Date(year, month, 1);
+      const monthEnd = new Date(year, month + 1, 0);
 
-        const dim = daysInMonth(year, month);
-        for (let d = 1; d <= dim; d++) {
-            const date = new Date(year, month, d);
-            const ymd = iso(date);
-            const todaysTerms = getTermsForDate(date);
-            
-            todaysTerms.forEach(term => {
-                const termStatusObj = getTermStatus(date, term.id);
-                if (termStatusObj.status === "inactive") return;
-                
-                const termAttendees = new Set();
-                swimmers.filter(s => s.terms.includes(term.id) && !s.is_deleted).forEach(s => termAttendees.add(s.id));
-                
-                if (attendance[ymd] && attendance[ymd][term.id]) {
-                    Object.keys(attendance[ymd][term.id]).forEach(sId => termAttendees.add(sId));
-                }
+      // Nova, izboljšana logika: iteriraj čez prisotnost in ne čez vse plavalce
+      const allAttendance = Object.entries(attendance);
+      
+      for (const [date, termData] of allAttendance) {
+        const d = new Date(date);
+        if (d >= monthStart && d <= monthEnd) {
+          for (const [termId, swimmerData] of Object.entries(termData)) {
+            for (const [swimmerId, status] of Object.entries(swimmerData)) {
+              const swimmer = swimmers.find(s => s.id === swimmerId);
+              if (!swimmer || swimmer.is_deleted) continue;
 
-                termAttendees.forEach(swimmerId => {
-                    const s = swimmers.find(sw => sw.id === swimmerId);
-                    if (!s || !res[s.id]) return;
-
-                    res[s.id].pos += 1;
-                    const attStatus = attendance[ymd]?.[term.id]?.[swimmerId];
-                    if (attStatus === true) {
-                        res[s.id].att += 1;
-                    }
-                });
-            });
+              if (!res[swimmerId]) {
+                res[swimmerId] = { first: swimmer.first_name, last: swimmer.last_name, att: 0, pos: 0 };
+              }
+              
+              const term = termById(termId);
+              const termIsActive = getTermStatus(d, termId).status === "active";
+              
+              if (term && termIsActive && d >= new Date(term.date_from) && d <= new Date(term.date_to)) {
+                res[swimmerId].pos += 1;
+              }
+              
+              if (status === true) {
+                res[swimmerId].att += 1;
+              }
+            }
+          }
         }
-        return res;
+      }
+      
+      return res;
     }
 
     function renderSummary(summaryData) {
@@ -963,7 +960,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const { data: existingSwimmers, error: fetchError } = await supabase
         .from('swimmers')
-        .select('id, first_name, last_name');
+        .select('id, first_name, last_name, is_deleted');
         
       if (fetchError) {
           console.error("Napaka pri nalaganju plavalcev:", fetchError);
@@ -975,7 +972,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const inserts = [];
 
       importedSwimmers.forEach(sData => {
-        const existing = existingSwimmers.find(s => s.first_name === sData.first_name && s.last_name === sData.last_name);
+        const existing = existingSwimmers.find(s => s.first_name.toLowerCase() === sData.first_name.toLowerCase() && s.last_name.toLowerCase() === sData.last_name.toLowerCase() && !s.is_deleted);
+        
         if (existing) {
           updates.push({ id: existing.id, terms: sData.terms });
         } else {
