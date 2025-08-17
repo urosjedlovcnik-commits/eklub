@@ -179,14 +179,18 @@ document.addEventListener('DOMContentLoaded', () => {
           const e = document.createElement("div");
           e.className = "event";
 
-          // NOVI POPRAVEK: Barvno kodiranje zdaj deluje za VSE dogodke,
-          // če je vnesen vsaj en podatek o prisotnosti.
-          const ymd = iso(date);
-          const termAtt = attendance[ymd]?.[t.id] || {};
-          if (Object.keys(termAtt).length > 0) {
-              const status = getAttendanceStatus(date, t.id);
-              e.classList.add(status);
+          // NOV POPRAVEK: Barvno kodiranje se aplicira samo na današnje ali pretekle dogodke.
+          if (!isPast(date) && !isToday(date)) {
+              // Ne delamo nič, barva ostane privzeta
+          } else {
+            const ymd = iso(date);
+            const termAtt = attendance[ymd]?.[t.id] || {};
+            if (Object.keys(termAtt).length > 0) {
+                const status = getAttendanceStatus(date, t.id);
+                e.classList.add(status);
+            }
           }
+          
           if (isInactive(date, t.id)) {
               e.classList.add("disabled");
           }
@@ -237,12 +241,18 @@ document.addEventListener('DOMContentLoaded', () => {
           const e = document.createElement("div");
           e.className = "event";
           
-          const ymd = iso(date);
-          const termAtt = attendance[ymd]?.[t.id] || {};
-          if (Object.keys(termAtt).length > 0) {
-              const status = getAttendanceStatus(date, t.id);
-              e.classList.add(status);
+          // NOV POPRAVEK: Enako preverjanje za barvno kodiranje tudi v tem modalnem oknu
+          if (!isPast(date) && !isToday(date)) {
+              // Ne delamo nič
+          } else {
+            const ymd = iso(date);
+            const termAtt = attendance[ymd]?.[t.id] || {};
+            if (Object.keys(termAtt).length > 0) {
+                const status = getAttendanceStatus(date, t.id);
+                e.classList.add(status);
+            }
           }
+
           if (isInactive(date, t.id)) {
               e.classList.add("disabled");
           }
@@ -386,6 +396,7 @@ document.addEventListener('DOMContentLoaded', () => {
               // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
               await refreshDayData(date);
               openEvent(date, termId);
+              refreshSwimmerPanel();
               renderMonth();
             }
           });
@@ -466,7 +477,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .from('term_status')
                 .upsert({ date: ymd, term_id: termId, status: "active", note: null }, { onConflict: ['date', 'term_id'] });
             if (error) {
-                console.error('Napaka pri brisanju statusa:', error);
+                console.error('Napaka pri aktiviranju statusa:', error);
                 alert('Napaka pri aktivaciji. Preverite konzolo.');
                 return;
             }
@@ -602,6 +613,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(rows.length===0) html += `<tr><td colspan="4" class="muted">Ni plavalcev.</td></tr>`;
         rows.forEach(r=>{
             const pct = r.pos > 0 ? (r.att / r.pos * 100).toFixed(1) : "0.0";
+            csv += `${r.first},${r.last},${r.att},${r.pos},${pct}\n`;
             html += `<tr><td>${r.first} ${r.last}</td><td>${r.att}</td><td>${r.pos}</td><td>${pct}</td></tr>`;
         });
         html += `</tbody></table>`;

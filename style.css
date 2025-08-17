@@ -1,6 +1,7 @@
 :root{
   --pri:#2563eb; --ok:#16a34a; --warn:#dc2626; --mut:#6b7280; --bg:#f5f7fa; --border:#e5e7eb;
   --unfilled:#fecaca; --complete:#bbf7d0;
+  --partial:#ff9800;
 }
 *{box-sizing:border-box}
 body{font-family:system-ui, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); color:#0f172a; margin:30px 18px 18px;}
@@ -36,6 +37,7 @@ h1{margin:0 0 12px;text-align:center}
 .event .time{font-variant-numeric:tabular-nums}
 .event.unfilled{background:var(--unfilled); border-color:#fca5a5}
 .event.complete{background:var(--complete); border-color:#86efac}
+.event.partial{background:var(--partial); border-color:#f7911c; color:#fff;}
 .event.disabled{background:#e5e7eb;color:#6b7280;text-decoration:line-through;border-color:#d1d5db}
 .card{background:#fff;border:1px solid var(--border);border-radius:12px}
 .card h3{margin:0;padding:10px 12px;border-bottom:1px solid var(--border)}
@@ -227,9 +229,4 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   .csv-options .inner{ flex-direction: column; gap: 8px; }
   .csv-export-controls{ flex-direction: column; gap: 8px; }
   .csv-export-controls > * { width: 100%; }
-  .event.partial {
-    background-color: #ff9800; /* Oranžna barva */
-    border-color: #f7911c;
-    color: white;
-}
 }
