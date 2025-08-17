@@ -702,11 +702,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
     
-    // NOVO: Funkcija za brisanje plavalca in njegovih prihodnjih obiskov
+    // Funkcija za brisanje plavalca
     elDeleteSwimmerBtn.addEventListener("click", async () => {
       const sid = elSwimmerSelect.value;
       if (!sid) {
-        console.error("No swimmer selected.");
         alert("Prosim, izberite plavalca, ki ga želite izbrisati.");
         return;
       }
