@@ -114,32 +114,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function termById(id){ return TERMS.find(t=>t.id===id); }
 
-    // POSODOBITEV: Logika barvnega kodiranja
+    // POPRAVEK: Prenovljena logika barvnega kodiranja
     function getAttendanceStatus(date, termId) {
         const ymd = iso(date);
+        
+        // Vse vnesene prisotnosti za ta datum in termin
         const termAtt = attendance[ymd]?.[termId] || {};
         const attendedSwimmerIds = Object.keys(termAtt);
         
-        // Pridobimo vse plavalce, ki so (trenutno) dodeljeni temu terminu
-        const assignedSwimmers = swimmers.filter(s => s.terms.includes(termId));
+        // Vsi plavalci, ki so trenutno dodeljeni temu terminu
+        const assignedSwimmers = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted);
         
-        // Če ni dodeljenih plavalcev, status ne more biti določen
-        if (assignedSwimmers.length === 0) {
-            return 'complete'; 
-        }
+        // Združimo vse plavalce, ki so imeli vneseno prisotnost (ne glede na dodelitev)
+        const allRelevantSwimmerIds = [...new Set([...assignedSwimmers.map(s => s.id), ...attendedSwimmerIds])];
 
-        // Preverimo, ali obstaja vsaj ena vnešena prisotnost
-        if (attendedSwimmerIds.length === 0) {
-            return 'unfilled'; // Na ta dan ni vnesene nobene prisotnosti
-        }
+        // Izračunamo število vnesenih prisotnosti
+        const markedSwimmers = allRelevantSwimmerIds.filter(id => termAtt.hasOwnProperty(id));
+        const totalAssigned = assignedSwimmers.length;
 
-        // Preverimo, ali so vsi dodeljeni plavalci označeni
-        const allAssignedMarked = assignedSwimmers.every(s => termAtt.hasOwnProperty(s.id));
-        
-        if (allAssignedMarked) {
-            return 'complete'; // Vsi dodeljeni plavalci imajo vnešeno prisotnost
+        // Logika določitve statusa
+        if (markedSwimmers.length === 0) {
+            return 'unfilled'; // Ni vnesena nobena prisotnost
+        } else if (markedSwimmers.length === totalAssigned) {
+            return 'complete'; // Vsi trenutno dodeljeni imajo vneseno prisotnost
         } else {
-            return 'partial'; // Nekaj je vneseno, a ne vse
+            return 'partial'; // Vsaj ena, a ne vsa prisotnost je vnesena
         }
     }
     
@@ -225,7 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===== NOV MODAL: izbira termina na določen dan (za mobilno verzijo) =====
     function openDayModal(date) {
-      const todaysTerms = getTermsForDate(date).sort((a,b) => a.start_time.localeCompare(b.start_time));
+      const todaysTerms = getTermsForDate(date).sort((a,b) => a.start_time.locale(b.start_time));
       elDayModalTitle.textContent = `Termini za ${date.toLocaleDateString("sl-SI", { weekday: 'long', day: 'numeric', month: 'long' })}`;
       elDayModalList.innerHTML = "";
 
