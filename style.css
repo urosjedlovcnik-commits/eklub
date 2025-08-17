@@ -43,13 +43,13 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
 .modal .box-header{display:flex;align-items:center;justify-content:space-between;padding:12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
 .modal .box-body{padding:12px}
 .chips{display:flex;gap:10px; /* Povečan razmik med gumbi */ flex-wrap:wrap; margin-bottom: 12px; /* Razmik pod vrstico gumbov */}
-/* Popravek: Odstranjena obroba, navpični odmik in barva ozadja prilagojena, da se zlije z ozadjem */
+/* Popravek: Dodana obroba za videz, ki ste ga želeli */
 .chip {
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
   padding: 5px 8px;
-  border: none; /* Odstranjena obroba */
+  border: 1px solid #ffffff; /* Dodana bela obroba */
   border-radius: 999px;
   background-color: #f8fafc; /* Zelo svetlo siva, ki se zlije z belo */
   color: #4b5563;
