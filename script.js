@@ -613,7 +613,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if(rows.length===0) html += `<tr><td colspan="4" class="muted">Ni plavalcev.</td></tr>`;
         rows.forEach(r=>{
             const pct = r.pos > 0 ? (r.att / r.pos * 100).toFixed(1) : "0.0";
-            csv += `${r.first},${r.last},${r.att},${r.pos},${pct}\n`;
             html += `<tr><td>${r.first} ${r.last}</td><td>${r.att}</td><td>${r.pos}</td><td>${pct}</td></tr>`;
         });
         html += `</tbody></table>`;
