@@ -589,6 +589,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function showSwimmerInfo(){
       const sid = elSwimmerSelect.value;
+      console.log('Izbran plavalec:', sid); // DODAN LOG
       const s = swimmers.find(x=>x.id===sid);
       if (!s) {
         elSwimmerInfo.innerHTML = "";
@@ -702,11 +703,15 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
     
-    // Funkcija za brisanje plavalca - POPRAVLJENO
+    // Funkcija za brisanje plavalca - POSODOBITEV!
     elDeleteSwimmerBtn.addEventListener("click", async () => {
+      console.log('Klik na gumb "Zbriši plavalca" zaznan.'); // DODAN LOG
       const sid = elSwimmerSelect.value;
+      console.log('Vrednost izbranega plavalca (ID):', sid); // DODAN LOG
+
       if (!sid) {
         alert("Prosim, izberite plavalca, ki ga želite izbrisati.");
+        console.error("Napaka: Ni izbranega plavalca za brisanje."); // DODAN LOG
         return;
       }
 
@@ -720,6 +725,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const today = iso(new Date());
 
         // Brisanje prihodnjih obiskov
+        console.log(`Brišem prihodnje obiske plavalca z ID-jem: ${sid}`); // DODAN LOG
         const { error: attError } = await supabase
           .from('attendance')
           .delete()
@@ -727,14 +733,17 @@ document.addEventListener('DOMContentLoaded', () => {
           .gte('date', today);
 
         if (attError) throw attError;
+        console.log('Prihodnji obiski uspešno izbrisani.'); // DODAN LOG
 
         // Brisanje plavalca
+        console.log(`Brišem plavalca z ID-jem: ${sid}`); // DODAN LOG
         const { error: swimmerError } = await supabase
           .from('swimmers')
           .delete()
           .eq('id', sid);
 
         if (swimmerError) throw swimmerError;
+        console.log('Plavalec uspešno izbrisan iz baze.'); // DODAN LOG
 
         // Posodobitev lokalnega stanja
         swimmers = swimmers.filter(s => s.id !== sid);
