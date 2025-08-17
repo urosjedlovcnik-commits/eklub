@@ -42,16 +42,16 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
 .modal .box{background:#fff;border-radius:12px;max-width:680px;width:100%;border:1px solid var(--border);box-shadow:0 10px 30px rgba(0,0,0,.15); position:fixed; top:10%; left:50%; transform:translate(-50%, 0);}
 .modal .box-header{display:flex;align-items:center;justify-content:space-between;padding:12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
 .modal .box-body{padding:12px}
-.chips{display:flex;gap:10px; /* Povečan razmik med gumbi */ flex-wrap:wrap}
-/* Popravek: Dodana obroba in povečan notranji navpični odmik */
+.chips{display:flex;gap:10px; /* Povečan razmik med gumbi */ flex-wrap:wrap; margin-bottom: 12px; /* Razmik pod vrstico gumbov */}
+/* Popravek: Odstranjena obroba, navpični odmik in barva ozadja prilagojena, da se zlije z ozadjem */
 .chip {
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
-  padding: 5px 8px; /* Navpični odmik je povečan na 5px */
-  border: 1px solid #d1d5db; /* Dodana obroba za boljšo ločljivost */
+  padding: 5px 8px;
+  border: none; /* Odstranjena obroba */
   border-radius: 999px;
-  background-color: var(--border);
+  background-color: #f8fafc; /* Zelo svetlo siva, ki se zlije z belo */
   color: #4b5563;
   font-size: 0.8rem;
   cursor: pointer;
@@ -61,7 +61,7 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   gap: 4px;
 }
 .chip:hover {
-  background-color: #d1d5db;
+  background-color: #e5e7eb; /* Svetlo siva za hover, ki je malenkost bolj vidna */
 }
 .chip .remove-term-btn {
   border: none;
