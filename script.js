@@ -115,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getAttendanceStatus(date, termId) {
       const ymd = iso(date);
-      const assigned = swimmers.filter(s => s.terms.includes(termId));
+      const assigned = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted);
       if (assigned.length === 0) return 'complete';
       
       const termAtt = attendance[ymd]?.[termId] || {};
@@ -309,10 +309,10 @@ document.addEventListener('DOMContentLoaded', () => {
           return acc;
       }, {});
       
-      // KRUCIALNA SPREMEMBA: Namesto, da prepišemo, podatke združimo.
+      // KRUCIALNA SPREMENJAVA: Namesto, da prepišemo, podatke združimo.
       attendance[ymd] = { ...attendance[ymd], [termId]: termAtt };
 
-      const assigned = swimmers.filter(s => s.terms.includes(termId));
+      const assigned = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted);
       const assignedIds = new Set(assigned.map(s => s.id));
       const oneDaySwimmers = Object.keys(termAtt)
         .filter(swimmerId => !assignedIds.has(swimmerId))
@@ -399,7 +399,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       elModalSwimmerSelect.innerHTML = "";
       const currentEventSwimmerIds = allSwimmersForEvent.map(s => s.id);
-      const unassigned = swimmers.filter(s => !currentEventSwimmerIds.includes(s.id))
+      const unassigned = swimmers.filter(s => !currentEventSwimmerIds.includes(s.id) && !s.is_deleted)
                                .sort((a,b)=> (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name));
       
       if(unassigned.length > 0) {
@@ -527,10 +527,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===== POVZETEK - preimenovana funkcija =====
     function calculateSummaryData(year, month) {
-        const res = swimmers.reduce((acc, s) => {
-            acc[s.id] = { first: s.first_name, last: s.last_name, att: 0, pos: 0 };
-            return acc;
-        }, {});
+        const res = {};
+        
+        // Populate res with ALL swimmers (including deleted ones)
+        swimmers.forEach(s => {
+          res[s.id] = { first: s.first_name, last: s.last_name, att: 0, pos: 0 };
+        });
 
         const dim = daysInMonth(year, month);
         for (let d = 1; d <= dim; d++) {
@@ -543,7 +545,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (termStatusObj.status === "inactive") return;
                 
                 const termAttendees = new Set();
-                swimmers.filter(s => s.terms.includes(term.id)).forEach(s => termAttendees.add(s.id));
+                swimmers.filter(s => s.terms.includes(term.id) && !s.is_deleted).forEach(s => termAttendees.add(s.id));
                 
                 if (attendance[ymd] && attendance[ymd][term.id]) {
                     Object.keys(attendance[ymd][term.id]).forEach(sId => termAttendees.add(sId));
@@ -580,7 +582,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===== Panel: upravljanje plavalcev in terminov =====
     async function refreshSwimmerPanel(){
       elSwimmerSelect.innerHTML = "";
-      swimmers.slice().sort((a,b)=> (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name)).forEach(s=>{
+      swimmers.slice().filter(s => !s.is_deleted).sort((a,b)=> (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name)).forEach(s=>{
         const o=document.createElement("option"); o.value=s.id; o.textContent=`${s.first_name} ${s.last_name}`; elSwimmerSelect.appendChild(o);
       });
       showSwimmerInfo();
@@ -661,7 +663,7 @@ document.addEventListener('DOMContentLoaded', () => {
     elAddSwimmerBtn.addEventListener("click", async ()=>{
       const f = elNewFirst.value.trim(), l = elNewLast.value.trim();
       if (!f || !l) { alert("Vnesi ime in priimek."); return; }
-      if(swimmers.some(s => s.first_name.toLowerCase() === f.toLowerCase() && s.last_name.toLowerCase() === l.toLowerCase())) {
+      if(swimmers.some(s => s.first_name.toLowerCase() === f.toLowerCase() && s.last_name.toLowerCase() === l.toLowerCase() && !s.is_deleted)) {
         alert("Plavalec s tem imenom že obstaja."); return;
       }
       const newSwimmer = mkSwimmer(f, l, []);
@@ -722,16 +724,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (attError) throw attError;
 
-        // Brisanje plavalca
+        // "Mehko" brisanje plavalca
         const { error: swimmerError } = await supabase
           .from('swimmers')
-          .delete()
+          .update({ is_deleted: true })
           .eq('id', sid);
 
         if (swimmerError) throw swimmerError;
-
+        
         // Posodobitev lokalnega stanja
-        swimmers = swimmers.filter(s => s.id !== sid);
+        const deletedSwimmer = swimmers.find(s => s.id === sid);
+        if (deletedSwimmer) {
+            deletedSwimmer.is_deleted = true;
+        }
         
         // Ponovno nalaganje vmesnika
         await refreshSwimmerPanel();
@@ -1130,6 +1135,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (termsError) throw termsError;
         TERMS = termsData;
         
+        // ZDAJ NALOŽIMO VSE PLAVALCE, DA ZADRŽIMO ZGODOVINSKE PODATKE
         const { data: swimmersData, error: swimmersError } = await supabase.from('swimmers').select('*');
         if (swimmersError) throw swimmersError;
         swimmers = swimmersData;
