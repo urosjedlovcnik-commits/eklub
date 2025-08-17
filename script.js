@@ -554,13 +554,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (error) { 
         console.error('Napaka pri dodajanju plavalca v trening:', error); 
       } else {
-        // NOV POPRAVEK: Posodobimo tudi lokalni seznam terminov za plavalca
-        const swimmerToUpdate = swimmers.find(s => s.id === swimmerId);
-        if (swimmerToUpdate && !swimmerToUpdate.terms.includes(modalCtx.termId)) {
-          swimmerToUpdate.terms.push(modalCtx.termId);
-          await supabase.from('swimmers').update({ terms: swimmerToUpdate.terms }).eq('id', swimmerToUpdate.id);
-        }
-
         await refreshDayData(modalCtx.date);
         openEvent(modalCtx.date, modalCtx.termId);
         refreshSwimmerPanel();
