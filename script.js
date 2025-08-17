@@ -702,7 +702,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
     
-    // Funkcija za brisanje plavalca
+    // Funkcija za brisanje plavalca - POSODOBITEV!
     elDeleteSwimmerBtn.addEventListener("click", async () => {
       const sid = elSwimmerSelect.value;
       if (!sid) {
@@ -715,10 +715,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!confirm(`Ali ste prepričani, da želite izbrisati plavalca "${swimmerName}"? To bo izbrisalo VSE njegove prihodnje evidence prisotnosti.`)) {
         return;
       }
-
+      
       const today = iso(new Date());
-
-      // 1. Izbriši prihodnje obiske
       const { error: attError } = await supabase
         .from('attendance')
         .delete()
@@ -731,7 +729,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // 2. Izbriši plavalca iz baze
       const { error: swimmerError } = await supabase
         .from('swimmers')
         .delete()
@@ -741,8 +738,9 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error("Napaka pri brisanju plavalca:", swimmerError);
         alert("Napaka pri brisanju plavalca. Preverite konzolo.");
       } else {
-        // Ključna sprememba: po uspešnem brisanju osvežimo vse podatke, ne samo panel
-        await loadDataFromSupabase();
+        swimmers = swimmers.filter(s => s.id !== sid);
+        refreshSwimmerPanel();
+        renderMonth();
         alert("Plavalec uspešno izbrisan.");
       }
     });
