@@ -570,42 +570,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===== POVZETEK - popravljena logika, da vključi tudi izbrisane plavalce z zgodovino =====
     function calculateSummaryData(year, month) {
-      const res = {};
-      const monthStart = new Date(year, month, 1);
-      const monthEnd = new Date(year, month + 1, 0);
+        const res = {};
+        const monthStart = new Date(year, month, 1);
+        const monthEnd = new Date(year, month + 1, 0);
 
-      const allAttendance = Object.entries(attendance);
-      
-      for (const [date, termData] of allAttendance) {
-        const d = new Date(date);
-        if (d >= monthStart && d <= monthEnd) {
-          for (const [termId, swimmerData] of Object.entries(termData)) {
-            for (const [swimmerId, status] of Object.entries(swimmerData)) {
-              const swimmer = swimmers.find(s => s.id === swimmerId);
-              // POPRAVLJENO: odstranimo preverjanje !swimmer.is_deleted, da se ohrani zgodovina v tekočem mesecu
-              if (!swimmer) continue;
+        // Dodana inicializacija vseh aktivnih plavalcev v povzetku
+        swimmers.filter(s => !s.is_deleted).forEach(s => {
+          res[s.id] = { first: s.first_name, last: s.last_name, att: 0, pos: 0 };
+        });
 
-              if (!res[swimmerId]) {
-                res[swimmerId] = { first: swimmer.first_name, last: swimmer.last_name, att: 0, pos: 0 };
-              }
-              
-              const term = termById(termId);
-              const termIsActive = getTermStatus(d, termId).status === "active";
-              
-              if (term && termIsActive && d >= new Date(term.date_from) && d <= new Date(term.date_to)) {
-                res[swimmerId].pos += 1;
-              }
-              
-              if (status === true) {
-                res[swimmerId].att += 1;
-              }
+        // Loop skozi vse dneve v mesecu
+        const currentDate = new Date(monthStart);
+        while (currentDate <= monthEnd) {
+          const ymd = iso(currentDate);
+
+          // Loop skozi vse termine na ta dan
+          const todaysTerms = getTermsForDate(currentDate);
+          todaysTerms.forEach(term => {
+            const termIsActive = getTermStatus(currentDate, term.id).status === "active";
+            
+            // Samo če je termin aktiven, štejemo "možne" obiske
+            if (termIsActive) {
+              // Loop skozi vse plavalce, dodeljene temu terminu
+              swimmers.filter(s => s.terms.includes(term.id) && !s.is_deleted).forEach(s => {
+                if (res[s.id]) {
+                  res[s.id].pos += 1;
+                }
+              });
             }
+          });
+          
+          // Loop skozi vse zabeležene prisotnosti za ta dan
+          const termAttForDay = attendance[ymd] || {};
+          for (const termId in termAttForDay) {
+              for (const swimmerId in termAttForDay[termId]) {
+                  const status = termAttForDay[termId][swimmerId];
+                  if (status === true && res[swimmerId]) {
+                      res[swimmerId].att += 1;
+                  }
+              }
           }
+          
+          currentDate.setDate(currentDate.getDate() + 1);
         }
-      }
-      
-      return res;
+        
+        return res;
     }
+
 
     function renderSummary(summaryData) {
         let html = `<table><thead><tr><th>Plavalec</th><th>Obiskani</th><th>Možni</th><th>Delež (%)</th></tr></thead><tbody>`;
