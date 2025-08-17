@@ -169,11 +169,8 @@ document.addEventListener('DOMContentLoaded', () => {
               e.classList.add("disabled");
           }
           
-          if (window.innerWidth <= 768) {
-            e.innerHTML = `<span class="time">${t.start_time.slice(0, 5)}</span>`;
-          } else {
-            e.innerHTML = `<span class="time">${t.start_time.slice(0, 5)}–${t.end_time.slice(0, 5)}</span>`;
-          }
+          // POSODOBITEV: Uporabite eno samo vrstico, ki jo nato obdeluje CSS
+          e.innerHTML = `<span class="time">${t.start_time.slice(0, 5)}<span class="end-time">–${t.end_time.slice(0, 5)}</span></span>`;
 
           e.title = t.label;
           e.dataset.termId = t.id;
@@ -230,7 +227,9 @@ document.addEventListener('DOMContentLoaded', () => {
               e.classList.add("disabled");
           }
 
-          e.innerHTML = `<span class="time">${t.start_time.slice(0, 5)}–${t.end_time.slice(0, 5)}</span>`;
+          // POSODOBITEV: Uporabite eno samo vrstico, ki jo nato obdeluje CSS
+          e.innerHTML = `<span class="time">${t.start_time.slice(0, 5)}<span class="end-time">–${t.end_time.slice(0, 5)}</span></span>`;
+          
           e.addEventListener("click", () => {
             closeDayModal();
             openEvent(date, t.id);
