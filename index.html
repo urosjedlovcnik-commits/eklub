@@ -50,7 +50,37 @@
   .modal .box-header{display:flex;align-items:center;justify-content:space-between;padding:12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
   .modal .box-body{padding:12px}
   .chips{display:flex;gap:6px;flex-wrap:wrap}
-  .chip{background:#f1f5f9;border:1px solid var(--border);border-radius:999px;padding:2px 8px;font-size:12px}
+  /* Dodano in popravljeno, da ustvarimo enoten videz gumba */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background-color: var(--grey-light);
+    color: var(--text-dark);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+    border: none;
+    font-family: inherit;
+    gap: 4px;
+  }
+  .chip:hover {
+    background-color: var(--grey-medium);
+  }
+  .chip .remove-term-btn {
+    border: none;
+    background: transparent;
+    color: var(--text-dark);
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    margin: 0;
+  }
   .csv-options{max-width:1200px;margin:12px auto;padding:12px;background:#fff;border:1px solid var(--border);border-radius:12px;}
   .csv-options .inner{padding:12px}
   .csv-export-controls{
@@ -206,9 +236,6 @@
     .csv-options .inner{ flex-direction: column; gap: 8px; }
     .csv-export-controls{ flex-direction: column; gap: 8px; }
     .csv-export-controls > * { width: 100%; }
-.remove-term-btn {
-  border: none;
-}
   }
 </style>
 </head>
