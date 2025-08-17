@@ -528,13 +528,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // ===== POVZETEK - preimenovana funkcija =====
+    // ===== POVZETEK - popravljena logika, da vključi tudi izbrisane plavalce z zgodovino =====
     function calculateSummaryData(year, month) {
       const res = {};
       const monthStart = new Date(year, month, 1);
       const monthEnd = new Date(year, month + 1, 0);
 
-      // Nova, izboljšana logika: iteriraj čez prisotnost in ne čez vse plavalce
       const allAttendance = Object.entries(attendance);
       
       for (const [date, termData] of allAttendance) {
@@ -543,7 +542,8 @@ document.addEventListener('DOMContentLoaded', () => {
           for (const [termId, swimmerData] of Object.entries(termData)) {
             for (const [swimmerId, status] of Object.entries(swimmerData)) {
               const swimmer = swimmers.find(s => s.id === swimmerId);
-              if (!swimmer || swimmer.is_deleted) continue;
+              // POPRAVLJENO: odstranimo preverjanje !swimmer.is_deleted, da se ohrani zgodovina v tekočem mesecu
+              if (!swimmer) continue;
 
               if (!res[swimmerId]) {
                 res[swimmerId] = { first: swimmer.first_name, last: swimmer.last_name, att: 0, pos: 0 };
