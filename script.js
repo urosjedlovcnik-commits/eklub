@@ -116,7 +116,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getAttendanceStatus(date, termId) {
       const ymd = iso(date);
-      const assigned = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted);
+      // Prej smo filtrirali le aktivne plavalce, zdaj pa upoštevamo vse, ki so dodeljeni terminu
+      const assigned = swimmers.filter(s => s.terms.includes(termId));
       if (assigned.length === 0) return 'complete';
       
       const termAtt = attendance[ymd]?.[termId] || {};
@@ -310,13 +311,16 @@ document.addEventListener('DOMContentLoaded', () => {
       // KRUCIALNA SPREMENJAVA: Namesto, da prepišemo, podatke združimo.
       attendance[ymd] = { ...attendance[ymd], [termId]: termAtt };
 
-      const assigned = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted);
-      const assignedIds = new Set(assigned.map(s => s.id));
-      const oneDaySwimmers = Object.keys(termAtt)
-        .filter(swimmerId => !assignedIds.has(swimmerId))
-        .map(swimmerId => swimmers.find(s => s.id === swimmerId));
-      const allSwimmersForEvent = [...new Set([...assigned, ...oneDaySwimmers])];
-
+      // >>> POPRAVEK: tukaj je težava. Namesto da filtriramo, zgradimo seznam vseh, ki so relevantni.
+      // Najprej dobimo vse plavalce, ki so imeli prisotnost na ta dan za ta termin (ne glede na to, ali so aktivni)
+      const swimmersWithAttendance = Object.keys(termAtt).map(swimmerId => swimmers.find(s => s.id === swimmerId)).filter(Boolean);
+      
+      // Nato dodamo še vse aktivne plavalce, ki so dodeljeni temu terminu, a še nimajo prisotnosti za ta dan
+      const assignedActiveSwimmers = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted && !termAtt[s.id]);
+      
+      // Združimo oba seznama in odstranimo duplikate
+      const allSwimmersForEvent = [...new Set([...swimmersWithAttendance, ...assignedActiveSwimmers])];
+      
       elAttendanceTable.innerHTML = "";
       if(allSwimmersForEvent.length===0){
         const tr=document.createElement("tr");
