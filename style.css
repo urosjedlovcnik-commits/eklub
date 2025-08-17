@@ -43,30 +43,30 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
 .modal .box-header{display:flex;align-items:center;justify-content:space-between;padding:12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
 .modal .box-body{padding:12px}
 .chips{display:flex;gap:10px; /* Povečan razmik med gumbi */ flex-wrap:wrap}
-/* Dodano in popravljeno, da ustvarimo enoten videz gumba */
+/* Popravek: Dodana obroba in povečan notranji navpični odmik */
 .chip {
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 8px; /* Vrnjena prvotna velikost gumba */
+  padding: 5px 8px; /* Navpični odmik je povečan na 5px */
+  border: 1px solid #d1d5db; /* Dodana obroba za boljšo ločljivost */
   border-radius: 999px;
-  background-color: var(--border); /* Uporaba obstoječe sive barve */
-  color: #4b5563; /* Barva teksta, usklajena z gumbom neutral */
+  background-color: var(--border);
+  color: #4b5563;
   font-size: 0.8rem;
   cursor: pointer;
   transition: background-color 0.2s;
   white-space: nowrap;
-  border: none;
   font-family: inherit;
   gap: 4px;
 }
 .chip:hover {
-  background-color: #d1d5db; /* Temnejša siva za hover, usklajena z gumbom neutral */
+  background-color: #d1d5db;
 }
 .chip .remove-term-btn {
   border: none;
   background: transparent;
-  color: #4b5563; /* Barva križca, usklajena z besedilom */
+  color: #4b5563;
   font-weight: bold;
   font-size: 1rem;
   cursor: pointer;
