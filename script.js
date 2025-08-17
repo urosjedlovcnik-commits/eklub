@@ -114,15 +114,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function termById(id){ return TERMS.find(t=>t.id===id); }
 
+    // POSODOBITEV: Logika barvnega kodiranja
     function getAttendanceStatus(date, termId) {
-      const ymd = iso(date);
-      // Prej smo filtrirali le aktivne plavalce, zdaj pa upoštevamo vse, ki so dodeljeni terminu
-      const assigned = swimmers.filter(s => s.terms.includes(termId));
-      if (assigned.length === 0) return 'complete';
-      
-      const termAtt = attendance[ymd]?.[termId] || {};
-      const hasUnmarked = assigned.some(s => termAtt[s.id] === undefined);
-      return hasUnmarked ? 'unfilled' : 'complete';
+        const ymd = iso(date);
+        const termAtt = attendance[ymd]?.[termId] || {};
+        const attendedSwimmerIds = Object.keys(termAtt);
+        
+        // Pridobimo vse plavalce, ki so (trenutno) dodeljeni temu terminu
+        const assignedSwimmers = swimmers.filter(s => s.terms.includes(termId));
+        
+        // Če ni dodeljenih plavalcev, status ne more biti določen
+        if (assignedSwimmers.length === 0) {
+            return 'complete'; 
+        }
+
+        // Preverimo, ali obstaja vsaj ena vnešena prisotnost
+        if (attendedSwimmerIds.length === 0) {
+            return 'unfilled'; // Na ta dan ni vnesene nobene prisotnosti
+        }
+
+        // Preverimo, ali so vsi dodeljeni plavalci označeni
+        const allAssignedMarked = assignedSwimmers.every(s => termAtt.hasOwnProperty(s.id));
+        
+        if (allAssignedMarked) {
+            return 'complete'; // Vsi dodeljeni plavalci imajo vnešeno prisotnost
+        } else {
+            return 'partial'; // Nekaj je vneseno, a ne vse
+        }
     }
     
     function getTermStatus(date, termId){
@@ -520,7 +538,16 @@ document.addEventListener('DOMContentLoaded', () => {
         .from('attendance')
         .upsert({ date: ymd, term_id: modalCtx.termId, swimmer_id: swimmer.id, status: true }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
       
-      if (error) { console.error('Napaka pri dodajanju plavalca v trening:', error); } else {
+      if (error) { 
+        console.error('Napaka pri dodajanju plavalca v trening:', error); 
+      } else {
+        // NOV POPRAVEK: Posodobimo tudi lokalni seznam terminov za plavalca
+        const swimmerToUpdate = swimmers.find(s => s.id === swimmerId);
+        if (swimmerToUpdate && !swimmerToUpdate.terms.includes(modalCtx.termId)) {
+          swimmerToUpdate.terms.push(modalCtx.termId);
+          await supabase.from('swimmers').update({ terms: swimmerToUpdate.terms }).eq('id', swimmerToUpdate.id);
+        }
+
         await refreshDayData(modalCtx.date);
         openEvent(modalCtx.date, modalCtx.termId);
         refreshSwimmerPanel();
@@ -1110,7 +1137,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const year = parseInt(elExportYearSelect.value, 10);
         const summary = calculateSummaryData(year, month);
         
-        let csv = "first_name,last_name,attended,possible,percentage\n";
+        // POPRAVEK: Dodamo BOM za pravilno kodiranje UTF-8
+        let csv = "\uFEFFfirst_name,last_name,attended,possible,percentage\n";
         Object.values(summary).sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first)).forEach(r=>{
             const pct = r.pos > 0 ? (r.att / r.pos * 100).toFixed(1) : "0.0";
             csv += `${r.first},${r.last},${r.att},${r.pos},${pct}\n`;
