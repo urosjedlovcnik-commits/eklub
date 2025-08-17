@@ -568,53 +568,63 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // ===== POVZETEK - popravljena logika, da vključi tudi izbrisane plavalce z zgodovino =====
+    // ===== POPRAVLJENA FUNKCIJA ZA POVZETEK =====
     function calculateSummaryData(year, month) {
-        const res = {};
-        const monthStart = new Date(year, month, 1);
-        const monthEnd = new Date(year, month + 1, 0);
+      const res = {};
+      const today = new Date();
+      const monthStart = new Date(year, month, 1);
+      const monthEnd = new Date(year, month + 1, 0);
 
-        // Dodana inicializacija vseh aktivnih plavalcev v povzetku
-        swimmers.filter(s => !s.is_deleted).forEach(s => {
-          res[s.id] = { first: s.first_name, last: s.last_name, att: 0, pos: 0 };
-        });
+      // Dodana inicializacija VSEH plavalcev (vključno z izbrisanimi)
+      swimmers.forEach(s => {
+        res[s.id] = { first: s.first_name, last: s.last_name, att: 0, pos: 0 };
+      });
 
-        // Loop skozi vse dneve v mesecu
-        const currentDate = new Date(monthStart);
-        while (currentDate <= monthEnd) {
-          const ymd = iso(currentDate);
+      // Zanka za izračun prisotnosti (att)
+      const allAttendance = Object.entries(attendance);
+      for (const [date, termData] of allAttendance) {
+        const d = new Date(date);
+        if (d >= monthStart && d <= monthEnd) {
+          for (const termId in termData) {
+            for (const swimmerId in termData[termId]) {
+              if (termData[termId][swimmerId] === true && res[swimmerId]) {
+                res[swimmerId].att += 1;
+              }
+            }
+          }
+        }
+      }
 
-          // Loop skozi vse termine na ta dan
-          const todaysTerms = getTermsForDate(currentDate);
-          todaysTerms.forEach(term => {
-            const termIsActive = getTermStatus(currentDate, term.id).status === "active";
-            
-            // Samo če je termin aktiven, štejemo "možne" obiske
-            if (termIsActive) {
-              // Loop skozi vse plavalce, dodeljene temu terminu
-              swimmers.filter(s => s.terms.includes(term.id) && !s.is_deleted).forEach(s => {
-                if (res[s.id]) {
+      // Zanka za izračun možnih obiskov (pos)
+      const currentDate = new Date(monthStart);
+      while (currentDate <= monthEnd) {
+        const ymd = iso(currentDate);
+        const todaysTerms = getTermsForDate(currentDate);
+
+        todaysTerms.forEach(term => {
+          const termIsActive = getTermStatus(currentDate, term.id).status === "active";
+          
+          if (termIsActive) {
+            swimmers.forEach(s => {
+              if (res[s.id] && s.terms.includes(term.id)) {
+                
+                // Ključni popravek: preveri, ali je plavalec izbrisan
+                if (s.is_deleted) {
+                  // Plavalec je izbrisan, štejemo samo, če je datum v preteklosti
+                  if (isPast(currentDate) || isToday(currentDate)) {
+                    res[s.id].pos += 1;
+                  }
+                } else {
+                  // Plavalec je aktiven, štejemo vse možne obiske
                   res[s.id].pos += 1;
                 }
-              });
-            }
-          });
-          
-          // Loop skozi vse zabeležene prisotnosti za ta dan
-          const termAttForDay = attendance[ymd] || {};
-          for (const termId in termAttForDay) {
-              for (const swimmerId in termAttForDay[termId]) {
-                  const status = termAttForDay[termId][swimmerId];
-                  if (status === true && res[swimmerId]) {
-                      res[swimmerId].att += 1;
-                  }
               }
+            });
           }
-          
-          currentDate.setDate(currentDate.getDate() + 1);
-        }
-        
-        return res;
+        });
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      return res;
     }
 
 
