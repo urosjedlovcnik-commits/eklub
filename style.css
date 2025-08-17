@@ -17,14 +17,14 @@ h1{margin:0 0 12px;text-align:center}
 .calendar{grid-column:1 / -1;background:#fff;border:1px solid var(--border);border-radius:12px;padding:8px}
 .calendar-head{
   display:grid;
-  /* POPRAVEK: Spremembana, da bodo sobota in nedelja ožja */
+  /* Zožitev sobot in nedelj na namiznem prikazu */
   grid-template-columns:repeat(5,1fr) 0.5fr 0.5fr;
   gap:6px;margin-bottom:6px
 }
 .calendar-head div{font-weight:600;text-align:center;padding:6px 0;background:#eff6ff;border-radius:8px}
 .calendar-grid{
   display:grid;
-  /* POPRAVEK: Spremembana, da bodo sobota in nedelja ožja */
+  /* Zožitev sobot in nedelj na namiznem prikazu */
   grid-template-columns:repeat(5,1fr) 0.5fr 0.5fr;
   gap:6px
 }
@@ -184,6 +184,7 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
     padding: 15px;
   }
 }
+/* Media Query za mobilni prikaz */
 @media (max-width: 768px) {
   body { margin: 10px; font-size: 14px; }
   h1 { font-size: 24px; }
@@ -203,6 +204,9 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   }
   .event .time {
     font-size: 10px;
+  }
+  .event .end-time {
+    display: none; /* Skrije čas konca termina na mobilnih napravah */
   }
   .day:not(.disabled) .event:nth-child(n+4) {
     display: none;
