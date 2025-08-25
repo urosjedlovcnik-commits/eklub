@@ -37,35 +37,42 @@
                 <h2>Povzetek prisotnosti</h2>
                 <div id="summaryBox"></div>
             </section>
-
-            <div class="separator-space"></div>
             
+            <div class="section-separator"></div>
+
             <section>
                 <h2>Uvoz podatkov</h2>
                 <div class="form-group">
                     <label for="csvInput">Uvozi plavalce (CSV):</label>
                     <div class="muted" style="margin-bottom: 12px;">
-                        **Navodila za uvoz plavalcev (CSV):**
-                        * Datoteka mora vsebovati stolpce z glavo 'first_name', 'last_name' in 'terms'.
-                        * V stolpec 'terms' vpišite ID-je terminov, ločene z vejico. ID-ji so vidni v tabeli 'terms' v Supabase.
-                        * **Pozor:** Uvoz bo izbrisal vso prisotnost od danes naprej in posodobil termine vsem plavalcem, ki so v datoteki!
-                        <br/>
-                        **Primer:**
-                        first_name,last_name,terms
-                        Janez,Novak,pon-17-00-18-00
-                        Marija,Kovač,tor-16-00-17-00
+                        <p>Navodila:</p>
+                        <ul>
+                            <li>Datoteka mora vsebovati stolpce z glavo: `first_name`, `last_name`, `terms`.</li>
+                            <li>V stolpec `terms` vpišite ID-je terminov, ločene z vejico.</li>
+                            <li>Uvoz bo izbrisal vso prisotnost od danes naprej.</li>
+                        </ul>
+                        <p>Primer:</p>
+                        <pre><code>first_name,last_name,terms
+Janez,Novak,pon-17-00-18-00
+Marija,Kovač,tor-16-00-17-00</code></pre>
                     </div>
                     <input type="file" id="csvInput" accept=".csv">
                 </div>
                 <div class="form-group">
                     <label for="csvTermsInput">Uvozi termine (CSV):</label>
                     <div class="muted" style="margin-bottom: 12px;">
-                        **Navodila za uvoz terminov (CSV):**
-                        * Datoteka mora vsebovati stolpce z glavo 'id', 'day', 'start_time', 'end_time', 'date_from' in 'date_to'.
-                        * ID mora biti edinstven za vsak termin (npr. 'pon-17-00-18-00').
-                        * 'day' je številka dneva v tednu (1=ponedeljek, 7=nedelja).
-                        * 'start_time' in 'end_time' morata biti v formatu 'HH:mm'.
-                        * 'date_from' in 'date_to' morata biti v formatu 'dd / mm / yyyy'.
+                        <p>Navodila:</p>
+                        <ul>
+                            <li>Datoteka mora vsebovati stolpce z glavo: `id`, `day`, `start_time`, `end_time`, `date_from`, `date_to`.</li>
+                            <li>`id` mora biti edinstven za vsak termin (npr. 'pon-17-00-18-00').</li>
+                            <li>`day` je številka dneva v tednu (1=ponedeljek, 7=nedelja).</li>
+                            <li>`start_time` in `end_time` v formatu `HH:mm`.</li>
+                            <li>`date_from` in `date_to` v formatu `dd / mm / yyyy`.</li>
+                        </ul>
+                        <p>Primer:</p>
+                        <pre><code>id,day,start_time,end_time,date_from,date_to
+pon-17-00-18-00,1,17:00,18:00,01 / 01 / 2024,31 / 12 / 2024
+tor-16-00-17-00,2,16:00,17:00,01 / 01 / 2024,31 / 12 / 2024</code></pre>
                     </div>
                     <input type="file" id="csvTermsInput" accept=".csv">
                 </div>

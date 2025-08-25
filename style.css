@@ -565,4 +565,10 @@ button.btn:disabled {
     margin: 20px 0;
     border-radius: var(--border-radius);
 }
+/* Ločilna črta med sekcijami */
+.section-separator {
+    height: 1px;
+    background-color: var(--border-color);
+    margin: 20px 0;
+}
 }
