@@ -558,4 +558,11 @@ button.btn:disabled {
     .event.partial, .event.complete {
         display: block;
     }
+	/* Dodano pravilo za prazen prostor med sekcijami */
+.separator-space {
+    height: 20px;
+    background-color: var(--bg-color);
+    margin: 20px 0;
+    border-radius: var(--border-radius);
+}
 }
