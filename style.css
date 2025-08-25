@@ -558,23 +558,13 @@ button.btn:disabled {
     .event.partial, .event.complete {
         display: block;
     }
-	/* Dodano pravilo za prazen prostor med sekcijami */
-.separator-space {
-    height: 20px;
-    background-color: var(--bg-color);
-    margin: 20px 0;
+
+/* Ločilni okvir za glavne sekcije */
+.box-panel {
+    background-color: var(--panel-bg);
+    padding: 20px;
     border-radius: var(--border-radius);
-}
-/* Ločilna črta med sekcijami */
-.section-separator {
-    height: 1px;
-    background-color: var(--border-color);
-    margin: 20px 0;
-} 
-/* Ločilni prostor med sekcijami glavnega dela */
-.main-content-separator {
-    background-color: var(--bg-color);
-    padding: 10px;
-    margin: 20px 0;
+    box-shadow: var(--shadow);
+    margin-bottom: 20px;
 }
 }
