@@ -234,6 +234,12 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
     padding-top: 15px;
     border-top: 1px solid var(--border-color);
 }
+/* Slogi za polje za zapiske o treningu */
+.notes-section {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color);
+}
 
 .notes-section h4 {
     margin-bottom: 8px;
