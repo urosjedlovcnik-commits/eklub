@@ -31,25 +31,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const elSwimmerSelect = document.getElementById("swimmerSelect");
     const elTermSelect = document.getElementById("termSelect");
     const elAssignTermBtn = document.getElementById("assignTermBtn");
-    // NOVO: Gumb za brisanje plavalca
     const elDeleteSwimmerBtn = document.getElementById("deleteSwimmerBtn"); 
     const elSwimmerInfo = document.getElementById("swimmerInfo");
     const elCsvInput = document.getElementById("csvInput");
     const elCsvTermsInput = document.getElementById("csvTermsInput");
-    // Export elementi
     const elExportMonthSelect = document.getElementById("exportMonthSelect");
     const elExportYearSelect = document.getElementById("exportYearSelect");
     const elExportCsvBtn = document.getElementById("exportCsvBtn");
-    // Novi termini
     const elNewTermDay = document.getElementById("newTermDay");
     const elNewTermStart = document.getElementById("newTermStart");
     const elNewTermEnd = document.getElementById("newTermEnd");
     const elNewTermDateFrom = document.getElementById("newTermDateFrom");
     const elNewTermDateTo = document.getElementById("newTermDateTo");
     const elAddTermBtn = document.getElementById("addTermBtn");
-    // Upravljanje terminov
     const elTermList = document.getElementById("termList");
-    // Modal
     const elModal = document.getElementById("eventModal");
     const elModalTitle = document.getElementById("modalTitle");
     const elModalMeta = document.getElementById("modalMeta");
@@ -58,24 +53,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const elCloseModalBtn = document.getElementById("closeModalBtn");
     const elModalSwimmerSelect = document.getElementById("modalSwimmerSelect");
     const elAddToEventBtn = document.getElementById("addToEventBtn");
-    // Modal notes
     const elInactiveNote = document.getElementById("inactiveNote");
-    const elNotesInput = document.getElementById("notesInput"); // NOV ELEMENT
-    const elSaveNotesBtn = document.getElementById("saveNotesBtn"); // NOV ELEMENT
-    // Modal za izbiro dneva (mobilna verzija)
+    const elNotesInput = document.getElementById("notesInput");
+    const elSaveNotesBtn = document.getElementById("saveNotesBtn");
     const elDayModal = document.getElementById("dayModal");
     const elDayModalTitle = document.getElementById("dayModalTitle");
     const elDayModalList = document.getElementById("dayModalList");
     const elCloseDayModalBtn = document.getElementById("closeDayModalBtn");
-    // Modal za urejanje terminov
     const elEditTermModal = document.getElementById("editTermModal");
     const elEditTermModalTitle = document.getElementById("editTermModalTitle");
     const elEditTermDateFrom = document.getElementById("editTermDateFrom");
     const elEditTermDateTo = document.getElementById("editTermDateTo");
     const elSaveEditTermBtn = document.getElementById("saveEditTermBtn");
     const elCloseEditTermModalBtn = document.getElementById("closeEditTermModalBtn");
-    
-    // Modal za opombo
     const elNoteModal = document.getElementById("noteModal");
     const elNoteInput = document.getElementById("noteInput");
     const elCancelNoteBtn = document.getElementById("cancelNoteBtn");
@@ -142,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const ymd = iso(date);
       const status = termStatus[ymd]?.[termId]?.status || "active";
       const note = termStatus[ymd]?.[termId]?.note || "";
-      const notes = termStatus[ymd]?.[termId]?.notes || ""; // POSODOBLJENO: notes
+      const notes = termStatus[ymd]?.[termId]?.notes || "";
       return { status, note, notes };
     }
     function isInactive(date, termId){ return getTermStatus(date, termId).status === "inactive"; }
@@ -432,7 +422,6 @@ document.addEventListener('DOMContentLoaded', () => {
         elInactiveNote.style.display = "none";
       }
 
-      // POSODOBLJENO: Priprava in shranjevanje zapiskov o treningu
       elNotesInput.value = termStatusObj.notes || "";
       elSaveNotesBtn.onclick = async () => {
         const notes = elNotesInput.value;
@@ -553,12 +542,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const today = new Date();
       today.setHours(0,0,0,0);
 
-      // Inicializacija podatkov za vse plavalce (aktivne in izbrisane)
       swimmers.forEach(s => {
         res[s.id] = { first: s.first_name, last: s.last_name, att: 0, pos: 0 };
       });
 
-      // Zanka za izračun prisotnosti (att)
       const allAttendance = Object.entries(attendance);
       for (const [date, termData] of allAttendance) {
         const d = new Date(date);
@@ -574,7 +561,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      // Zanka za izračun možnih obiskov (pos)
       const currentDate = new Date(monthStart);
       while (currentDate <= monthEnd) {
         const ymd = iso(currentDate);
@@ -588,12 +574,10 @@ document.addEventListener('DOMContentLoaded', () => {
               if (res[s.id] && s.terms.includes(term.id)) {
                 
                 if (s.is_deleted) {
-                  // Plavalec je izbrisan, štejemo samo, če je datum v preteklosti
                   if (currentDate <= today) {
                     res[s.id].pos += 1;
                   }
                 } else {
-                  // Plavalec je aktiven, štejemo vse možne obiske
                   res[s.id].pos += 1;
                 }
               }
@@ -612,7 +596,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(rows.length===0) html += `<tr><td colspan="4" class="muted">Ni plavalcev.</td></tr>`;
         rows.forEach(r=>{
             const pct = r.pos > 0 ? (r.att / r.pos * 100).toFixed(1) : "0.0";
-            csv += `${r.first},${r.last},${r.att},${r.pos},${pct}\n`;
+            html += `<tr><td>${r.first} ${r.last}</td><td>${r.att}</td><td>${r.pos}</td><td>${pct}</td></tr>`;
         });
         html += `</tbody></table>`;
         elSummaryBox.innerHTML = html;
@@ -746,7 +730,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
     
-    // Funkcija za brisanje plavalca - POSODOBITEV!
     elDeleteSwimmerBtn.addEventListener("click", async () => {
       const sid = elSwimmerSelect.value;
       if (!sid) {
@@ -1185,7 +1168,6 @@ document.addEventListener('DOMContentLoaded', () => {
           return acc;
         }, {});
         
-        // POPRAVLJENO: Tukaj je bila napaka. Zdaj uporabljamo pravilno ime stolpca 'notes'.
         const { data: statusData, error: statusError } = await supabase.from('term_status').select('date, term_id, status, note, notes');
         if (statusError) throw statusError;
         termStatus = statusData.reduce((acc, row) => {
