@@ -19,8 +19,8 @@
     --ok-bg-light: #e6f6e9;
     --partial-color: #ffc107;
     --partial-bg-light: #fff3cd;
-    --unfilled-color: #dc3545; /* SPREMENJENO: rdeča za neizpolnjeno */
-    --unfilled-bg-light: #fbe6e8; /* SPREMENJENO: svetlo rdeča za neizpolnjeno */
+    --unfilled-color: #dc3545;
+    --unfilled-bg-light: #fbe6e8;
     --mut: #999;
     --disabled-bg: #e9ecef;
     --disabled-text: #adb5bd;
@@ -248,9 +248,9 @@ button.btn:disabled {
 .event .time {
     font-weight: bold;
 }
+/* Ukloni podrazumevano barvo, da bo barvno kodiranje delovalo za celoten čas */
 .event .end-time {
     font-weight: normal;
-    color: var(--mut);
 }
 
 .more-events-indicator {
@@ -517,13 +517,14 @@ button.btn:disabled {
     main {
         flex-direction: column;
     }
-
-    .sidebar {
+    
+    .content {
+        order: -1; /* Koledar (content) premakne na vrh */
         min-width: unset;
         width: 100%;
     }
 
-    .content {
+    .sidebar {
         min-width: unset;
         width: 100%;
     }
@@ -534,15 +535,26 @@ button.btn:disabled {
     }
 
     .day {
-        min-height: 70px;
+        min-height: 90px; /* Povečana višina za več dogodkov */
+        padding: 2px;
     }
+    
     .day .num {
       font-size: 1rem;
     }
+    
     .event {
-        display: none;
+        display: block; /* Prikaz dogodkov na mobilnih */
+        font-size: 0.65rem;
+        margin: 2px 0;
+        padding: 2px 4px;
     }
+    
+    .event .end-time {
+      display: none; /* Skrije končni čas */
+    }
+
     .event.partial, .event.complete {
-        display: none;
+        display: block;
     }
 }
