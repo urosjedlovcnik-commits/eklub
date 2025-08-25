@@ -3,44 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem za spremljanje treningov</title>
+    <title>Trener plavanja</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
     <header>
-        <h1>Spremljanje prisotnosti</h1>
+        <h1>Trener plavanja</h1>
     </header>
 
     <main>
-        <aside class="sidebar">
+        <div class="sidebar">
             <section>
                 <h2>Dodaj plavalca</h2>
                 <div class="form-group">
-                    <input type="text" id="newFirst" placeholder="Ime">
-                    <input type="text" id="newLast" placeholder="Priimek">
+                    <label for="newFirst">Ime:</label>
+                    <input type="text" id="newFirst">
+                </div>
+                <div class="form-group">
+                    <label for="newLast">Priimek:</label>
+                    <input type="text" id="newLast">
                 </div>
                 <button id="addSwimmerBtn" class="btn primary-btn">Dodaj plavalca</button>
             </section>
-            
+
             <section>
                 <h2>Upravljaj plavalce</h2>
                 <div class="form-group">
+                    <label for="swimmerSelect">Izberi plavalca:</label>
                     <select id="swimmerSelect"></select>
                 </div>
                 <div id="swimmerInfo"></div>
                 <div class="form-group">
+                    <label for="termSelect">Dodelitev termina:</label>
                     <select id="termSelect"></select>
-                    <button id="assignTermBtn" class="btn secondary-btn" disabled>Dodeli termin</button>
                 </div>
+                <button id="assignTermBtn" class="btn secondary-btn" disabled>Dodeli termin</button>
                 <button id="deleteSwimmerBtn" class="btn warn-btn" disabled>Izbriši plavalca</button>
             </section>
 
             <section>
-                <h2>Dodaj nov termin</h2>
+                <h2>Dodaj termin</h2>
                 <div class="form-group">
+                    <label for="newTermDay">Dan:</label>
                     <select id="newTermDay">
-                        <option value="">Izberi dan</option>
                         <option value="1">Ponedeljek</option>
                         <option value="2">Torek</option>
                         <option value="3">Sreda</option>
@@ -51,18 +58,22 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="newTermStart">Začetek</label>
-                    <input type="time" id="newTermStart" value="16:00">
-                    <label for="newTermEnd">Konec</label>
-                    <input type="time" id="newTermEnd" value="18:00">
+                    <label for="newTermStart">Začetek:</label>
+                    <input type="time" id="newTermStart" value="07:00">
                 </div>
                 <div class="form-group">
-                    <label for="newTermDateFrom">Datum od</label>
+                    <label for="newTermEnd">Konec:</label>
+                    <input type="time" id="newTermEnd" value="08:00">
+                </div>
+                <div class="form-group">
+                    <label for="newTermDateFrom">Datum od:</label>
                     <input type="text" id="newTermDateFrom" placeholder="dd / mm / yyyy">
-                    <label for="newTermDateTo">Datum do</label>
+                </div>
+                <div class="form-group">
+                    <label for="newTermDateTo">Datum do:</label>
                     <input type="text" id="newTermDateTo" placeholder="dd / mm / yyyy">
                 </div>
-                <button id="addTermBtn" class="btn secondary-btn">Dodaj termin</button>
+                <button id="addTermBtn" class="btn primary-btn">Dodaj termin</button>
             </section>
             
             <section>
@@ -71,100 +82,132 @@
             </section>
 
             <section>
-                <h2>Uvoz/izvoz podatkov</h2>
-                <h3>Uvoz CSV (plavalci)</h3>
-                <input type="file" id="csvInput" accept=".csv">
-                <h3>Uvoz CSV (termini)</h3>
-                <input type="file" id="csvTermsInput" accept=".csv">
-                <h3>Izvoz CSV (mesečni pregled)</h3>
+                <h2>Uvoz podatkov</h2>
                 <div class="form-group">
+                    <label for="csvInput">Uvozi plavalce (CSV):</label>
+                    <input type="file" id="csvInput" accept=".csv">
+                </div>
+                <div class="form-group">
+                    <label for="csvTermsInput">Uvozi termine (CSV):</label>
+                    <input type="file" id="csvTermsInput" accept=".csv">
+                </div>
+            </section>
+
+            <section>
+                <h2>Izvoz</h2>
+                <div class="form-group">
+                    <label for="exportMonthSelect">Mesec:</label>
                     <select id="exportMonthSelect"></select>
+                </div>
+                <div class="form-group">
+                    <label for="exportYearSelect">Leto:</label>
                     <select id="exportYearSelect"></select>
                 </div>
-                <button id="exportCsvBtn" class="btn secondary-btn">Izvozi CSV</button>
+                <button id="exportCsvBtn" class="btn neutral">Izvoz v CSV</button>
             </section>
-        </aside>
+        </div>
 
-        <section class="content">
-            <div class="calendar-header">
-                <button id="prevBtn" class="btn">❮</button>
-                <h2 id="monthLabel"></h2>
-                <button id="nextBtn" class="btn">❯</button>
-            </div>
-            <div class="calendar-grid-labels">
-                <div>Pon.</div>
-                <div>Tor.</div>
-                <div>Sre.</div>
-                <div>Čet.</div>
-                <div>Pet.</div>
-                <div>Sob.</div>
-                <div>Ned.</div>
-            </div>
-            <div id="calendarGrid" class="calendar-grid"></div>
+        <div class="content">
+            <section>
+                <div class="calendar-header">
+                    <button id="prevBtn" class="btn neutral">&lt;</button>
+                    <h2 id="monthLabel"></h2>
+                    <button id="nextBtn" class="btn neutral">&gt;</button>
+                </div>
+                <div class="calendar-grid-labels">
+                    <span>Pon.</span>
+                    <span>Tor.</span>
+                    <span>Sre.</span>
+                    <span>Čet.</span>
+                    <span>Pet.</span>
+                    <span>Sob.</span>
+                    <span>Ned.</span>
+                </div>
+                <div id="calendarGrid" class="calendar-grid"></div>
+            </section>
 
             <section class="summary">
-                <h2>Mesečni povzetek prisotnosti</h2>
+                <h2>Povzetek prisotnosti</h2>
                 <div id="summaryBox"></div>
             </section>
-        </section>
+        </div>
     </main>
 
-    <div id="eventModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-hidden="true">
+    <div id="eventModal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="modalTitle"></h3>
                 <button id="closeModalBtn" class="close-btn">&times;</button>
             </div>
             <div class="modal-body">
-                <div id="modalMeta" class="modal-meta"></div>
-
-                <div class="notes-section">
-                    <h4>Zapisek o treningu</h4>
-                    <textarea id="notesInput" placeholder="Vnesite opis treninga..."></textarea>
-                    <button id="saveNotesBtn" class="btn primary-btn">Shrani zapisek</button>
-                </div>
-
-                <div class="separator"></div>
-
-                <h4>Prisotnost plavalcev</h4>
+                <div id="modalMeta"></div>
+                <h4>Prisotnost</h4>
                 <div class="table-container">
-                    <table id="attendanceTable">
-                        <tbody></tbody>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Plavalec</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendanceTable">
+                        </tbody>
                     </table>
                 </div>
 
                 <div class="add-swimmer-to-event">
                     <select id="modalSwimmerSelect"></select>
-                    <button id="addToEventBtn" class="btn secondary-btn">Dodaj plavalca</button>
+                    <button id="addToEventBtn" class="btn primary-btn">Dodaj</button>
                 </div>
+                <div class="separator"></div>
+
+                <div class="notes-section">
+                    <h4 id="inactiveNote"></h4>
+                    <label for="notesInput" class="muted">Opomba:</label>
+                    <textarea id="notesInput" placeholder="Dodaj opombo za ta trening (npr. vsebina treninga, opazke trenerja)."></textarea>
+                    <button id="saveNotesBtn" class="btn primary-btn">Shrani trening</button>
+                </div>
+                <div class="separator"></div>
+                
             </div>
             <div class="modal-footer">
-                <p id="inactiveNote" style="display:none;"></p>
-                <button id="toggleEventBtn" class="btn warn-btn"></button>
+                <button id="toggleEventBtn" class="btn warn-btn">Deaktiviraj trening</button>
             </div>
         </div>
     </div>
 
-    <div id="noteModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="noteModalTitle" aria-hidden="true">
+    <div id="dayModal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="dayModalTitle"></h3>
+          <button id="closeDayModalBtn" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body" id="dayModalList">
+        </div>
+      </div>
+    </div>
+    
+    <div id="noteModal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="noteModalTitle">Razlog za deaktivacijo</h3>
+                <h3>Opomba o neaktivnosti</h3>
                 <button id="closeNoteModalBtn" class="close-btn">&times;</button>
             </div>
             <div class="modal-body">
-                <textarea id="noteInput" placeholder="Vnesite razlog..."></textarea>
+                <p>Prosim, navedite razlog za deaktivacijo termina (npr. "praznik", "slabo vreme").</p>
+                <textarea id="noteInput" placeholder="Razlog..."></textarea>
             </div>
             <div class="modal-footer">
-                <button id="cancelNoteBtn" class="btn secondary-btn">Prekliči</button>
-                <button id="confirmNoteBtn" class="btn primary-btn">Potrdi</button>
+                <button id="cancelNoteBtn" class="btn neutral">Prekliči</button>
+                <button id="confirmNoteBtn" class="btn warn-btn">Potrdi</button>
             </div>
         </div>
     </div>
-    
-    <div id="editTermModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="editTermModalTitle" aria-hidden="true">
+
+    <div id="editTermModal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="editTermModalTitle">Uredi termin</h3>
+                <h3 id="editTermModalTitle"></h3>
                 <button id="closeEditTermModalBtn" class="close-btn">&times;</button>
             </div>
             <div class="modal-body">
@@ -178,24 +221,12 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button id="saveEditTermBtn" class="btn primary-btn">Shrani</button>
+                <button id="saveEditTermBtn" class="btn primary-btn">Shrani spremembe</button>
             </div>
         </div>
     </div>
-
-    <div id="dayModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="dayModalTitle" aria-hidden="true">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="dayModalTitle"></h3>
-                <button id="closeDayModalBtn" class="close-btn">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div id="dayModalList"></div>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script src="script.js"></script>
     <script>
      const SUPABASE_URL = "https://tizjimlwfkoniixbetgr.supabase.co";
       const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpemppbWx3ZmtvbmlpeGJldGdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzNDgyNzgsImV4cCI6MjA3MDkyNDI3OH0.Oess7TCevLH3mO0aWxfL5M0Kb_XHEKUBYRYRXKQkdgk";
