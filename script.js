@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function termById(id){ return TERMS.find(t=>t.id===id); }
 
-    // POPRAVEK: Prenovljena in poenostavljena logika barvnega kodiranja
+    // Prenovljena in poenostavljena logika barvnega kodiranja
     function getAttendanceStatus(date, termId) {
         const ymd = iso(date);
         
@@ -179,16 +179,11 @@ document.addEventListener('DOMContentLoaded', () => {
           const e = document.createElement("div");
           e.className = "event";
 
-          // NOV POPRAVEK: Barvno kodiranje se aplicira samo na današnje ali pretekle dogodke.
-          if (!isPast(date) && !isToday(date)) {
-              // Ne delamo nič, barva ostane privzeta
-          } else {
-            const ymd = iso(date);
-            const termAtt = attendance[ymd]?.[t.id] || {};
-            if (Object.keys(termAtt).length > 0) {
-                const status = getAttendanceStatus(date, t.id);
-                e.classList.add(status);
-            }
+          // POPRAVEK: Barvno kodiranje se aplicira samo na današnje ali pretekle dogodke.
+          // PREJŠNJA NAPAKA: Barva se je dodala samo, če je obstajala prisotnost, zdaj se vedno.
+          if (isPast(date) || isToday(date)) {
+            const status = getAttendanceStatus(date, t.id);
+            e.classList.add(status);
           }
           
           if (isInactive(date, t.id)) {
@@ -242,15 +237,9 @@ document.addEventListener('DOMContentLoaded', () => {
           e.className = "event";
           
           // NOV POPRAVEK: Enako preverjanje za barvno kodiranje tudi v tem modalnem oknu
-          if (!isPast(date) && !isToday(date)) {
-              // Ne delamo nič
-          } else {
-            const ymd = iso(date);
-            const termAtt = attendance[ymd]?.[t.id] || {};
-            if (Object.keys(termAtt).length > 0) {
-                const status = getAttendanceStatus(date, t.id);
-                e.classList.add(status);
-            }
+          if (isPast(date) || isToday(date)) {
+            const status = getAttendanceStatus(date, t.id);
+            e.classList.add(status);
           }
 
           if (isInactive(date, t.id)) {
