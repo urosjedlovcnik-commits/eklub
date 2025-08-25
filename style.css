@@ -567,4 +567,10 @@ button.btn:disabled {
     box-shadow: var(--shadow);
     margin-bottom: 20px;
 }
+/* Posodobitev vrstnega reda na mobilnih napravah */
+@media (max-width: 768px) {
+    .content > .data-sections {
+        order: 99;
+    }
+}
 }
