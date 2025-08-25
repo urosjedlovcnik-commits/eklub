@@ -14,6 +14,31 @@
     </header>
 
     <main>
+        <div class="content">
+            <section>
+                <div class="calendar-header">
+                    <button id="prevBtn" class="btn neutral">&lt;</button>
+                    <h2 id="monthLabel"></h2>
+                    <button id="nextBtn" class="btn neutral">&gt;</button>
+                </div>
+                <div class="calendar-grid-labels">
+                    <span>Pon.</span>
+                    <span>Tor.</span>
+                    <span>Sre.</span>
+                    <span>Čet.</span>
+                    <span>Pet.</span>
+                    <span>Sob.</span>
+                    <span>Ned.</span>
+                </div>
+                <div id="calendarGrid" class="calendar-grid"></div>
+            </section>
+
+            <section class="summary">
+                <h2>Povzetek prisotnosti</h2>
+                <div id="summaryBox"></div>
+            </section>
+        </div>
+        
         <div class="sidebar">
             <section>
                 <h2>Dodaj plavalca</h2>
@@ -107,30 +132,6 @@
             </section>
         </div>
 
-        <div class="content">
-            <section>
-                <div class="calendar-header">
-                    <button id="prevBtn" class="btn neutral">&lt;</button>
-                    <h2 id="monthLabel"></h2>
-                    <button id="nextBtn" class="btn neutral">&gt;</button>
-                </div>
-                <div class="calendar-grid-labels">
-                    <span>Pon.</span>
-                    <span>Tor.</span>
-                    <span>Sre.</span>
-                    <span>Čet.</span>
-                    <span>Pet.</span>
-                    <span>Sob.</span>
-                    <span>Ned.</span>
-                </div>
-                <div id="calendarGrid" class="calendar-grid"></div>
-            </section>
-
-            <section class="summary">
-                <h2>Povzetek prisotnosti</h2>
-                <div id="summaryBox"></div>
-            </section>
-        </div>
     </main>
 
     <div id="eventModal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
