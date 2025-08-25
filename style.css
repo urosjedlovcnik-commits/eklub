@@ -229,4 +229,34 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   .csv-options .inner{ flex-direction: column; gap: 8px; }
   .csv-export-controls{ flex-direction: column; gap: 8px; }
   .csv-export-controls > * { width: 100%; }
+  .notes-section {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color);
+}
+
+.notes-section h4 {
+    margin-bottom: 8px;
+    font-size: 1em;
+    color: var(--text-color);
+}
+
+#notesInput {
+    width: 100%;
+    min-height: 100px;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    resize: vertical;
+    font-family: inherit;
+    font-size: 0.9em;
+    box-sizing: border-box;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+}
+
+#saveNotesBtn {
+    margin-top: 8px;
+    width: 100%;
+}
 }
