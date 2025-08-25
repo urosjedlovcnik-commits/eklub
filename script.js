@@ -192,10 +192,11 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         }
         
-        if (window.innerWidth <= 768 && todays.length > 3) {
+        // Prikaz "več dogodkov" samo, če se ne prikažejo vsi
+        if (window.innerWidth <= 768 && todays.length > 2) {
           const more = document.createElement("div");
           more.className = "more-events-indicator";
-          more.textContent = `+ ${todays.length - 3} več...`;
+          more.textContent = `+ ${todays.length - 2} več...`;
           day.appendChild(more);
         }
         
@@ -280,7 +281,6 @@ document.addEventListener('DOMContentLoaded', () => {
       modalCtx = { date:new Date(date), termId };
       const t = termById(termId);
       elModalTitle.textContent = `${t.label}`;
-      // SPREMENJENO: Odstranimo besedilo "datum" in "dan"
       elModalMeta.innerHTML = "";
       
       const ymd = iso(date);
@@ -421,7 +421,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       elNotesInput.value = termStatusObj.notes || "";
-      // SPREMENJENO: "Shrani zapisek" spremenjeno v "Shrani trening" v JS kodi
       elSaveNotesBtn.textContent = "Shrani trening";
       elSaveNotesBtn.onclick = async () => {
         const notes = elNotesInput.value;
