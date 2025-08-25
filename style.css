@@ -573,4 +573,9 @@ button.btn:disabled {
         order: 99;
     }
 }
+/* Ločilni prostor med sekcijami, ki posnema gap */
+.section-gap-separator {
+    height: 20px;
+    background-color: var(--bg-color);
+}
 }
