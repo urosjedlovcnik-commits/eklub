@@ -519,7 +519,7 @@ button.btn:disabled {
     }
     
     .content {
-        order: -1; /* Koledar (content) premakne na vrh */
+        order: -1;
         min-width: unset;
         width: 100%;
     }
@@ -531,11 +531,12 @@ button.btn:disabled {
 
     .calendar-grid-labels,
     .calendar-grid {
+        grid-template-columns: repeat(5, 1fr) 0.5fr 0.5fr;
         font-size: 0.8rem;
     }
 
     .day {
-        min-height: 90px; /* Povečana višina za več dogodkov */
+        min-height: 90px;
         padding: 2px;
     }
     
@@ -544,14 +545,14 @@ button.btn:disabled {
     }
     
     .event {
-        display: block; /* Prikaz dogodkov na mobilnih */
-        font-size: 0.65rem;
+        display: block;
+        font-size: 0.6rem;
         margin: 2px 0;
         padding: 2px 4px;
     }
     
     .event .end-time {
-      display: none; /* Skrije končni čas */
+      display: none;
     }
 
     .event.partial, .event.complete {
