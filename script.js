@@ -280,10 +280,8 @@ document.addEventListener('DOMContentLoaded', () => {
       modalCtx = { date:new Date(date), termId };
       const t = termById(termId);
       elModalTitle.textContent = `${t.label}`;
-      elModalMeta.innerHTML = `
-        <span class="chip">${formatDate(iso(date))}</span>
-        <span class="chip">${DAYNAME[t.day]}</span>
-      `;
+      // SPREMENJENO: Odstranimo besedilo "datum" in "dan"
+      elModalMeta.innerHTML = "";
       
       const ymd = iso(date);
       
@@ -423,6 +421,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       elNotesInput.value = termStatusObj.notes || "";
+      // SPREMENJENO: "Shrani zapisek" spremenjeno v "Shrani trening" v JS kodi
+      elSaveNotesBtn.textContent = "Shrani trening";
       elSaveNotesBtn.onclick = async () => {
         const notes = elNotesInput.value;
         const { error } = await supabase

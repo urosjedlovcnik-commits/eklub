@@ -19,8 +19,8 @@
     --ok-bg-light: #e6f6e9;
     --partial-color: #ffc107;
     --partial-bg-light: #fff3cd;
-    --unfilled-color: #6c757d;
-    --unfilled-bg-light: #e9ecef;
+    --unfilled-color: #dc3545; /* SPREMENJENO: rdeča za neizpolnjeno */
+    --unfilled-bg-light: #fbe6e8; /* SPREMENJENO: svetlo rdeča za neizpolnjeno */
     --mut: #999;
     --disabled-bg: #e9ecef;
     --disabled-text: #adb5bd;
