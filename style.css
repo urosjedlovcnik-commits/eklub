@@ -573,9 +573,14 @@ button.btn:disabled {
         order: 99;
     }
 }
-/* Ločilni prostor med sekcijami, ki posnema gap */
-.section-gap-separator {
-    height: 20px;
-    background-color: var(--bg-color);
+/* Styling za glavno vsebino */
+.content {
+    flex: 2;
+    min-width: 0;
+    
+    /* Novi stil: Uporaba gap za razmik med sekcijami */
+    display: flex;
+    flex-direction: column;
+    gap: 20px; /* Tukaj določimo želeni razmik */
 }
 }
