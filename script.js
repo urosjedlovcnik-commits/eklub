@@ -947,6 +947,26 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ===== CSV: uvoz plavalcev z možnostjo prepisa od danes naprej - SPREMENJENA LOGIKA =====
+    // Dodan opis za uporabnika
+    const instructionsSwimmers = `
+        <div class="muted" style="margin-bottom: 12px;">
+            **Navodila za uvoz plavalcev (CSV):**
+            * Datoteka mora vsebovati stolpce z glavo 'first_name', 'last_name' in 'terms'.
+            * V stolpec 'terms' vpišite ID-je terminov, ločene z vejico. ID-ji so vidni v tabeli 'terms' v Supabase.
+            * **Pozor:** Uvoz bo izbrisal vso prisotnost od danes naprej in posodobil termine vsem plavalcem, ki so v datoteki!
+            <br/>
+            **Primer:**
+            first_name,last_name,terms
+            Janez,Novak,pon-17-00-18-00,sre-17-00-18-00
+            Marija,Kovač,tor-16-00-17-00
+        </div>
+    `;
+    const csvSwimmerInputParent = elCsvInput.closest('.form-control');
+    if (csvSwimmerInputParent) {
+      csvSwimmerInputParent.insertAdjacentHTML('afterbegin', instructionsSwimmers);
+    }
+
+
     elCsvInput.addEventListener("change", async (e)=>{
       const file = e.target.files[0]; if(!file) return;
       const txt = await file.text();
@@ -1025,6 +1045,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ===== CSV: uvoz terminov - NOVA FUNKCIJA =====
+    // Dodan opis za uporabnika
+    const instructionsTerms = `
+        <div class="muted" style="margin-bottom: 12px;">
+            **Navodila za uvoz terminov (CSV):**
+            * Datoteka mora vsebovati stolpce z glavo 'id', 'day', 'start_time', 'end_time', 'date_from' in 'date_to'.
+            * ID mora biti edinstven za vsak termin (npr. 'pon-17-00-18-00').
+            * 'day' je številka dneva v tednu (1=ponedeljek, 7=nedelja).
+            * 'start_time' in 'end_time' morata biti v formatu 'HH:mm'.
+            * 'date_from' in 'date_to' morata biti v formatu 'dd / mm / yyyy'.
+        </div>
+    `;
+    const csvTermInputParent = elCsvTermsInput.closest('.form-control');
+    if (csvTermInputParent) {
+        csvTermInputParent.insertAdjacentHTML('afterbegin', instructionsTerms);
+    }
     elCsvTermsInput.addEventListener("change", async (e) => {
         const file = e.target.files[0]; if (!file) return;
         const txt = await file.text();
