@@ -571,4 +571,10 @@ button.btn:disabled {
     background-color: var(--border-color);
     margin: 20px 0;
 } 
+/* Ločilni prostor med sekcijami glavnega dela */
+.main-content-separator {
+    background-color: var(--bg-color);
+    padding: 10px;
+    margin: 20px 0;
+}
 }
