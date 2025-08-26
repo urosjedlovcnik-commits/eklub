@@ -225,8 +225,8 @@ button.btn:disabled {
     text-overflow: ellipsis;
     display: block;
 }
-/* Privzeto, če ni drugace določeno */
-.event {
+/* Barve za pretekle/današnje dogodke */
+.event.unfilled {
     background-color: var(--unfilled-bg-light);
     color: var(--unfilled-color);
 }
@@ -244,10 +244,11 @@ button.btn:disabled {
     text-decoration: line-through;
     opacity: 0.8;
 }
-/* SPECIFIČNOST: To pravilo zdaj prevlada nad vsemi ostalimi */
+/* Barva za prihodnje dogodke */
 .event.future {
-    background-color: #f0f0f0 !important;
-    color: var(--text-color) !important;
+    background-color: #f0f0f0;
+    color: var(--text-color);
+    text-decoration: none;
 }
 
 .event .time {
@@ -515,6 +516,10 @@ button.btn:disabled {
     color: var(--mut);
     text-decoration: line-through;
     opacity: 0.8;
+}
+#dayModalList .event.future {
+    background-color: #f0f0f0;
+    color: var(--text-color);
 }
 
 /* Ločilni okvir za glavne sekcije */

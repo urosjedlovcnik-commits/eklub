@@ -150,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
         TERMS.forEach(term => {
             const option = document.createElement('option');
             option.value = term.id;
-            option.textContent = `${DAYNAME[term.day]} ${term.start_time}-${term.end_time}`;
+            option.textContent = `${DAYNAME[term.day]} ${term.start_time.slice(0, 5)}-${term.end_time.slice(0, 5)}`;
             elTermSelect.appendChild(option);
         });
     };
@@ -165,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const termInfo = document.createElement('div');
             termInfo.className = 'term-item-info';
             termInfo.innerHTML = `
-                <span class="term-item-label">${DAYNAME[term.day]} ${term.start_time}-${term.end_time}</span>
+                <span class="term-item-label">${DAYNAME[term.day]} ${term.start_time.slice(0, 5)}-${term.end_time.slice(0, 5)}</span>
                 <span class="term-item-dates">${formatDateForDisplay(term.date_from)} - ${formatDateForDisplay(term.date_to)}</span>
             `;
             div.appendChild(termInfo);
@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const showEditTermModal = (termId) => {
         selectedTermToEdit = TERMS.find(t => t.id === termId);
         if (selectedTermToEdit) {
-            elEditTermModalTitle.textContent = `Uredi termin: ${DAYNAME[selectedTermToEdit.day]} ${selectedTermToEdit.start_time}-${selectedTermToEdit.end_time}`;
+            elEditTermModalTitle.textContent = `Uredi termin: ${DAYNAME[selectedTermToEdit.day]} ${selectedTermToEdit.start_time.slice(0, 5)}-${selectedTermToEdit.end_time.slice(0, 5)}`;
             elEditTermDateFrom.value = formatDateForDisplay(selectedTermToEdit.date_from);
             elEditTermDateTo.value = formatDateForDisplay(selectedTermToEdit.date_to);
             elEditTermModal.style.display = 'flex';
@@ -333,7 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
 
-                    eventDiv.innerHTML = `<span class="time">${term.start_time}-${term.end_time}</span>`;
+                    eventDiv.innerHTML = `<span class="time">${term.start_time.slice(0, 5)}-${term.end_time.slice(0, 5)}</span>`;
                     dayDiv.appendChild(eventDiv);
                     eventsRendered++;
                 }
@@ -464,7 +464,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            eventDiv.innerHTML = `<span class="time">${term.start_time}-${term.end_time}</span>`;
+            eventDiv.innerHTML = `<span class="time">${term.start_time.slice(0, 5)}-${term.end_time.slice(0, 5)}</span>`;
             elDayModalList.appendChild(eventDiv);
         });
 
@@ -486,7 +486,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Posodobi naslov in meta podatke
         elModalTitle.textContent = `${formatDateForDisplay(date)} ${DAYNAME[term.day]}`;
-        elModalMeta.innerHTML = `<div class="chip">${term.start_time}-${term.end_time}</div>`;
+        elModalMeta.innerHTML = `<div class="chip">${term.start_time.slice(0, 5)}-${term.end_time.slice(0, 5)}</div>`;
         
         elAttendanceTable.innerHTML = '';
         elModalSwimmerSelect.innerHTML = '<option value="">Dodaj plavalca...</option>';
@@ -747,7 +747,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const dateStr = formatDateForDisplay(row.date);
             const dayStr = DAY_SHORT_NAME[dateObj.getDay() === 0 ? 7 : dateObj.getDay()];
-            const termStr = `${term.start_time}-${term.end_time}`;
+            const termStr = `${term.start_time.slice(0, 5)}-${term.end_time.slice(0, 5)}`;
             const swimmerName = `${swimmer.first_name} ${swimmer.last_name}`;
             const statusStr = row.status === 'present' ? 'prisoten' : 'odsoten';
 
@@ -983,7 +983,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const termsForSwimmer = TERMS.filter(term => swimmer.terms.includes(term.id));
             const termsHtml = termsForSwimmer.map(term => `
                 <div class="chip">
-                    ${DAYNAME[term.day]} ${term.start_time}-${term.end_time}
+                    ${DAYNAME[term.day]} ${term.start_time.slice(0, 5)}-${term.end_time.slice(0, 5)}
                     <button class="remove-term-btn" data-term-id="${term.id}">&times;</button>
                 </div>
             `).join('');
