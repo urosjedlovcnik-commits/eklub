@@ -114,14 +114,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function termById(id){ return TERMS.find(t=>t.id===id); }
 
+    // POPRAVEK: Prenovljena in poenostavljena logika barvnega kodiranja
     function getAttendanceStatus(date, termId) {
-      const ymd = iso(date);
-      const assigned = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted);
-      if (assigned.length === 0) return 'complete';
-      
-      const termAtt = attendance[ymd]?.[termId] || {};
-      const hasUnmarked = assigned.some(s => termAtt[s.id] === undefined);
-      return hasUnmarked ? 'unfilled' : 'complete';
+        const ymd = iso(date);
+        
+        // Plavalci, ki so TRENUTNO dodeljeni temu terminu in niso izbrisani
+        const assignedSwimmers = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted);
+        const assignedSwimmerIds = assignedSwimmers.map(s => s.id);
+        
+        // Vse vnesene prisotnosti za ta datum in termin
+        const termAtt = attendance[ymd]?.[termId] || {};
+        
+        // Preštejemo, koliko DODELJENIH plavalcev ima vneseno prisotnost
+        const markedAssignedSwimmersCount = assignedSwimmerIds.filter(id => termAtt.hasOwnProperty(id)).length;
+        
+        const totalAssignedCount = assignedSwimmers.length;
+
+        // Logika določitve statusa
+        if (totalAssignedCount === 0) {
+            // Če ni dodeljenih plavalcev, status ne more biti določen in je lahko "popoln"
+            return 'complete'; 
+        } else if (markedAssignedSwimmersCount === 0) {
+            return 'unfilled'; // Ni vnesena nobena prisotnost
+        } else if (markedAssignedSwimmersCount === totalAssignedCount) {
+            return 'complete'; // Vsi dodeljeni imajo vneseno prisotnost
+        } else {
+            return 'partial'; // Vsaj ena, a ne vsa prisotnost je vnesena
+        }
     }
     
     function getTermStatus(date, termId){
@@ -160,41 +179,42 @@ document.addEventListener('DOMContentLoaded', () => {
           const e = document.createElement("div");
           e.className = "event";
 
-          const dateIsTodayOrPast = isToday(date) || isPast(date);
-          if (dateIsTodayOrPast) {
-              const status = getAttendanceStatus(date, t.id);
-              e.classList.add(status);
+          // NOV POPRAVEK: Barvno kodiranje se aplicira samo na današnje ali pretekle dogodke.
+          if (!isPast(date) && !isToday(date)) {
+              // Ne delamo nič, barva ostane privzeta
+          } else {
+            const ymd = iso(date);
+            const termAtt = attendance[ymd]?.[t.id] || {};
+            if (Object.keys(termAtt).length > 0) {
+                const status = getAttendanceStatus(date, t.id);
+                e.classList.add(status);
+            }
           }
+          
           if (isInactive(date, t.id)) {
               e.classList.add("disabled");
           }
           
-          if (window.innerWidth <= 768) {
-            e.innerHTML = `<span class="time">${t.start_time.slice(0, 5)}</span>`;
-          } else {
-            e.innerHTML = `<span class="time">${t.start_time.slice(0, 5)}–${t.end_time.slice(0, 5)}</span>`;
-          }
+          e.innerHTML = `<span class="time">${t.start_time.slice(0, 5)}<span class="end-time">–${t.end_time.slice(0, 5)}</span></span>`;
 
           e.title = t.label;
           e.dataset.termId = t.id;
           day.appendChild(e);
         });
 
+        // POPRAVEK: poenostavljena logika za odpiranje modalov
         if (todays.length > 0) {
           day.addEventListener("click", (e) => {
             e.stopPropagation();
-            if (window.innerWidth <= 768) {
-              openDayModal(date);
+            if (todays.length === 1) {
+              openEvent(date, todays[0].id);
             } else {
-              if (todays.length === 1) {
-                openEvent(date, todays[0].id);
-              } else {
-                openDayModal(date);
-              }
+              openDayModal(date);
             }
           });
         }
-
+        
+        // Indikator za preveč dogodkov na mobilnih napravah
         if (window.innerWidth <= 768 && todays.length > 3) {
           const more = document.createElement("div");
           more.className = "more-events-indicator";
@@ -221,16 +241,24 @@ document.addEventListener('DOMContentLoaded', () => {
           const e = document.createElement("div");
           e.className = "event";
           
-          const dateIsTodayOrPast = isToday(date) || isPast(date);
-          if (dateIsTodayOrPast) {
-              const status = getAttendanceStatus(date, t.id);
-              e.classList.add(status);
+          // NOV POPRAVEK: Enako preverjanje za barvno kodiranje tudi v tem modalnem oknu
+          if (!isPast(date) && !isToday(date)) {
+              // Ne delamo nič
+          } else {
+            const ymd = iso(date);
+            const termAtt = attendance[ymd]?.[t.id] || {};
+            if (Object.keys(termAtt).length > 0) {
+                const status = getAttendanceStatus(date, t.id);
+                e.classList.add(status);
+            }
           }
+
           if (isInactive(date, t.id)) {
               e.classList.add("disabled");
           }
 
-          e.innerHTML = `<span class="time">${t.start_time.slice(0, 5)}–${t.end_time.slice(0, 5)}</span>`;
+          e.innerHTML = `<span class="time">${t.start_time.slice(0, 5)}<span class="end-time">–${t.end_time.slice(0, 5)}</span></span>`;
+          
           e.addEventListener("click", () => {
             closeDayModal();
             openEvent(date, t.id);
@@ -313,13 +341,16 @@ document.addEventListener('DOMContentLoaded', () => {
       // KRUCIALNA SPREMENJAVA: Namesto, da prepišemo, podatke združimo.
       attendance[ymd] = { ...attendance[ymd], [termId]: termAtt };
 
-      const assigned = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted);
-      const assignedIds = new Set(assigned.map(s => s.id));
-      const oneDaySwimmers = Object.keys(termAtt)
-        .filter(swimmerId => !assignedIds.has(swimmerId))
-        .map(swimmerId => swimmers.find(s => s.id === swimmerId));
-      const allSwimmersForEvent = [...new Set([...assigned, ...oneDaySwimmers])];
-
+      // >>> POPRAVEK: tukaj je težava. Namesto da filtriramo, zgradimo seznam vseh, ki so relevantni.
+      // Najprej dobimo vse plavalce, ki so imeli prisotnost na ta dan za ta termin (ne glede na to, ali so aktivni)
+      const swimmersWithAttendance = Object.keys(termAtt).map(swimmerId => swimmers.find(s => s.id === swimmerId)).filter(Boolean);
+      
+      // Nato dodamo še vse aktivne plavalce, ki so dodeljeni temu terminu, a še nimajo prisotnosti za ta dan
+      const assignedActiveSwimmers = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted && !termAtt[s.id]);
+      
+      // Združimo oba seznama in odstranimo duplikate
+      const allSwimmersForEvent = [...new Set([...swimmersWithAttendance, ...assignedActiveSwimmers])];
+      
       elAttendanceTable.innerHTML = "";
       if(allSwimmersForEvent.length===0){
         const tr=document.createElement("tr");
@@ -365,6 +396,7 @@ document.addEventListener('DOMContentLoaded', () => {
               // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
               await refreshDayData(date);
               openEvent(date, termId);
+              refreshSwimmerPanel();
               renderMonth();
             }
           });
@@ -384,6 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
                 await refreshDayData(date);
                 openEvent(date, termId);
+                refreshSwimmerPanel();
                 renderMonth();
             }
           });
@@ -444,7 +477,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .from('term_status')
                 .upsert({ date: ymd, term_id: termId, status: "active", note: null }, { onConflict: ['date', 'term_id'] });
             if (error) {
-                console.error('Napaka pri brisanju statusa:', error);
+                console.error('Napaka pri aktiviranju statusa:', error);
                 alert('Napaka pri aktivaciji. Preverite konzolo.');
                 return;
             }
@@ -518,7 +551,9 @@ document.addEventListener('DOMContentLoaded', () => {
         .from('attendance')
         .upsert({ date: ymd, term_id: modalCtx.termId, swimmer_id: swimmer.id, status: true }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
       
-      if (error) { console.error('Napaka pri dodajanju plavalca v trening:', error); } else {
+      if (error) { 
+        console.error('Napaka pri dodajanju plavalca v trening:', error); 
+      } else {
         await refreshDayData(modalCtx.date);
         openEvent(modalCtx.date, modalCtx.termId);
         refreshSwimmerPanel();
@@ -526,50 +561,73 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // ===== POVZETEK - preimenovana funkcija =====
+    // ===== POPRAVLJENA FUNKCIJA ZA POVZETEK =====
     function calculateSummaryData(year, month) {
-        const res = {};
-        
-        // Populate res with ALL swimmers (including deleted ones)
-        swimmers.forEach(s => {
-          res[s.id] = { first: s.first_name, last: s.last_name, att: 0, pos: 0 };
-        });
+      const res = {};
+      const monthStart = new Date(year, month, 1);
+      const monthEnd = new Date(year, month + 1, 0);
+      const today = new Date();
+      today.setHours(0,0,0,0);
 
-        const dim = daysInMonth(year, month);
-        for (let d = 1; d <= dim; d++) {
-            const date = new Date(year, month, d);
-            const ymd = iso(date);
-            const todaysTerms = getTermsForDate(date);
-            
-            todaysTerms.forEach(term => {
-                const termStatusObj = getTermStatus(date, term.id);
-                if (termStatusObj.status === "inactive") return;
-                
-                const termAttendees = new Set();
-                swimmers.filter(s => s.terms.includes(term.id) && !s.is_deleted).forEach(s => termAttendees.add(s.id));
-                
-                if (attendance[ymd] && attendance[ymd][term.id]) {
-                    Object.keys(attendance[ymd][term.id]).forEach(sId => termAttendees.add(sId));
-                }
+      // Inicializacija podatkov za vse plavalce (aktivne in izbrisane)
+      swimmers.forEach(s => {
+        res[s.id] = { first: s.first_name, last: s.last_name, att: 0, pos: 0 };
+      });
 
-                termAttendees.forEach(swimmerId => {
-                    const s = swimmers.find(sw => sw.id === swimmerId);
-                    if (!s || !res[s.id]) return;
-
-                    res[s.id].pos += 1;
-                    const attStatus = attendance[ymd]?.[term.id]?.[swimmerId];
-                    if (attStatus === true) {
-                        res[s.id].att += 1;
-                    }
-                });
-            });
+      // Zanka za izračun prisotnosti (att)
+      const allAttendance = Object.entries(attendance);
+      for (const [date, termData] of allAttendance) {
+        const d = new Date(date);
+        d.setHours(0,0,0,0);
+        if (d >= monthStart && d <= monthEnd) {
+          for (const termId in termData) {
+            for (const swimmerId in termData[termId]) {
+              // Preverimo, ali je bil ta termin aktiven, ko je bila prisotnost vnesena
+              // Opomba: Ker imamo shranjen 'term_status', to ni več potrebno. Lahko zaupamo, da je prisotnost vnešena samo za aktivne termine.
+              if (termData[termId][swimmerId] === true && res[swimmerId]) {
+                res[swimmerId].att += 1;
+              }
+            }
+          }
         }
-        return res;
+      }
+
+      // Zanka za izračun možnih obiskov (pos)
+      const currentDate = new Date(monthStart);
+      while (currentDate <= monthEnd) {
+        const ymd = iso(currentDate);
+        const todaysTerms = getTermsForDate(currentDate);
+
+        todaysTerms.forEach(term => {
+          const termIsActive = getTermStatus(currentDate, term.id).status === "active";
+          
+          if (termIsActive) {
+            swimmers.forEach(s => {
+              if (res[s.id] && s.terms.includes(term.id)) {
+                
+                if (s.is_deleted) {
+                  // Plavalec je izbrisan, štejemo samo, če je datum v preteklosti
+                  if (currentDate <= today) {
+                    res[s.id].pos += 1;
+                  }
+                } else {
+                  // Plavalec je aktiven, štejemo vse možne obiske
+                  res[s.id].pos += 1;
+                }
+              }
+            });
+          }
+        });
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      return res;
     }
+
 
     function renderSummary(summaryData) {
         let html = `<table><thead><tr><th>Plavalec</th><th>Obiskani</th><th>Možni</th><th>Delež (%)</th></tr></thead><tbody>`;
-        const rows = Object.values(summaryData).sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first));
+        // KLJUČNA SPREMEMBA: filtriramo plavalce, ki nimajo nobenega možnega obiska
+        const rows = Object.values(summaryData).filter(r => r.pos > 0).sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first));
         if(rows.length===0) html += `<tr><td colspan="4" class="muted">Ni plavalcev.</td></tr>`;
         rows.forEach(r=>{
             const pct = r.pos > 0 ? (r.att / r.pos * 100).toFixed(1) : "0.0";
@@ -799,14 +857,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderTermsList() {
       elTermList.innerHTML = "";
-      if(TERMS.length === 0){
-        elTermList.textContent = "Ni dodanih terminov.";
+      
+      const activeTerms = TERMS.filter(t => !isPast(new Date(t.date_to)));
+      
+      if(activeTerms.length === 0){
+        elTermList.textContent = "Ni aktivnih terminov.";
         elTermList.style.color = "var(--mut)";
         return;
       }
       elTermList.style.color = "inherit";
 
-      TERMS.forEach(t => {
+      activeTerms.forEach(t => {
         const div = document.createElement("div");
         div.className = "term-item";
 
@@ -847,16 +908,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function deleteTerm(termId) {
-        if (!confirm("Ali ste prepričani, da želite izbrisati ta termin? To bo izbrisalo tudi vse povezane podatke plavalcev in evidence prisotnosti.")) {
+        if (!confirm("Ali ste prepričani, da želite izbrisati ta termin?")) {
             return;
         }
-
-        const { error: attError } = await supabase
-            .from('attendance')
-            .delete()
-            .eq('term_id', termId);
-        
-        if (attError) { console.error("Napaka pri brisanju prisotnosti:", attError); alert("Napaka pri brisanju evidence prisotnosti. Preverite konzolo."); return; }
 
         const { error: statusError } = await supabase
             .from('term_status')
@@ -882,7 +936,7 @@ document.addEventListener('DOMContentLoaded', () => {
         TERMS = TERMS.filter(t => t.id !== termId);
         await refreshSwimmerPanel();
         await renderMonth();
-        alert("Termin uspešno izbrisan.");
+        alert("Termin uspešno izbrisan. Zgodovina obiskov je ohranjena.");
     }
 
     function openEditTermModal(termId) {
@@ -964,7 +1018,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const { data: existingSwimmers, error: fetchError } = await supabase
         .from('swimmers')
-        .select('id, first_name, last_name');
+        .select('id, first_name, last_name, is_deleted');
         
       if (fetchError) {
           console.error("Napaka pri nalaganju plavalcev:", fetchError);
@@ -976,7 +1030,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const inserts = [];
 
       importedSwimmers.forEach(sData => {
-        const existing = existingSwimmers.find(s => s.first_name === sData.first_name && s.last_name === sData.last_name);
+        const existing = existingSwimmers.find(s => s.first_name.toLowerCase() === sData.first_name.toLowerCase() && s.last_name.toLowerCase() === sData.last_name.toLowerCase() && !s.is_deleted);
+        
         if (existing) {
           updates.push({ id: existing.id, terms: sData.terms });
         } else {
@@ -1075,8 +1130,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const result = [];
       let inQuotes = false;
       let currentField = '';
-      for (let i = 0; i < line.length; i++) {
+      for (let i = 1; i < line.length; i++) {
         const char = line[i];
+        const prevChar = line[i-1];
         if (char === '"') {
           inQuotes = !inQuotes;
         } else if (char === ',' && !inQuotes) {
@@ -1109,8 +1165,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const year = parseInt(elExportYearSelect.value, 10);
         const summary = calculateSummaryData(year, month);
         
-        let csv = "first_name,last_name,attended,possible,percentage\n";
-        Object.values(summary).sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first)).forEach(r=>{
+        // POPRAVEK: Dodamo BOM za pravilno kodiranje UTF-8
+        let csv = "\uFEFFfirst_name,last_name,attended,possible,percentage\n";
+        // Popravljeno: izvažamo vse plavalce, ne glede na to, ali imajo možne obiske
+        const rows = Object.values(summary).sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first));
+        rows.forEach(r=>{
             const pct = r.pos > 0 ? (r.att / r.pos * 100).toFixed(1) : "0.0";
             csv += `${r.first},${r.last},${r.att},${r.pos},${pct}\n`;
         });
