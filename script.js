@@ -9,22 +9,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const DAYNAME = ["", "Ponedeljek", "Torek", "Sreda", "Četrtek", "Petek", "Sobota", "Nedelja"];
     const DAY_SHORT_NAME = ["", "Pon.", "Tor.", "Sre.", "Čet.", "Pet.", "Sob.", "Ned."];
-    const DAY_SHORT_MAP = {
-        "ponedeljek": 1, "pon": 1,
-        "torek": 2, "tor": 2,
-        "sreda": 3, "sre": 3,
-        "cetrtek": 4, "cet": 4,
-        "petek": 5, "pet": 5,
-        "sobota": 6, "sob": 6,
-        "nedelja": 7, "ned": 7
-    };
-
+    
     // ===== UI elementi =====
     const elMonthLabel = document.getElementById("monthLabel");
     const elCalendarGrid = document.getElementById("calendarGrid");
     const elPrev = document.getElementById("prevBtn");
     const elNext = document.getElementById("nextBtn");
-    const elSummaryBox = document.getElementById("summaryBox");
     const elNewFirst = document.getElementById("newFirst");
     const elNewLast = document.getElementById("newLast");
     const elNewTermDay = document.getElementById("newTermDay");
@@ -32,23 +22,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const elNewTermEnd = document.getElementById("newTermEnd");
     const elNewTermDesc = document.getElementById("newTermDesc");
     const elAddTermBtn = document.getElementById("addTermBtn");
-    const elEditTermModal = document.getElementById("editTermModal");
     const elEditSwimmerModal = document.getElementById("editSwimmerModal");
-    const elEditTermList = document.getElementById("editTermList");
     const elSwimmerPanel = document.getElementById("swimmerPanel");
     const elCurrentDateLabel = document.getElementById("currentDateLabel");
     const elCurrentTermLabel = document.getElementById("currentTermLabel");
     const elAttendanceTable = document.getElementById("attendanceTable");
     const elDeactivateBtn = document.getElementById("deactivateBtn");
-    const elReactivateBtn = document.getElementById("reactivateBtn");
-    const elTermSwimmersList = document.getElementById("termSwimmersList");
+    const elReactivateBtn = document = document.getElementById("reactivateBtn");
     const elDayModal = document.getElementById("dayModal");
     const elDayModalList = document.getElementById("dayModalList");
-    const elNoteModal = document.getElementById("noteModal");
-    const elNoteInput = document.getElementById("noteInput");
-    const elConfirmNoteBtn = document.getElementById("confirmNoteBtn");
-    const elCancelNoteBtn = document.getElementById("cancelNoteBtn");
-    const elCloseNoteModalBtn = document.getElementById("closeNoteModalBtn");
     const elAttendanceSummaryTable = document.getElementById("attendanceSummaryTable");
     const elCsvExportFrom = document.getElementById("csvExportFrom");
     const elCsvExportTo = document.getElementById("csvExportTo");
@@ -68,12 +50,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadData() {
         try {
-            // Naložimo termine
             const { data: termsData, error: termsError } = await supabase.from('terms').select('*').order('day_of_week').order('start_time');
             if (termsError) throw termsError;
             TERMS = termsData;
 
-            // ZDAJ NALOŽIMO VSE PLAVALCE, DA ZADRŽIMO ZGODOVINSKE PODATKE
             const { data: swimmersData, error: swimmersError } = await supabase.from('swimmers').select('*');
             if (swimmersError) throw swimmersError;
             swimmers = swimmersData;
@@ -116,11 +96,9 @@ document.addEventListener('DOMContentLoaded', () => {
         elMonthLabel.textContent = `${firstDayOfMonth.toLocaleString('sl-SI', { month: 'long', year: 'numeric' })}`;
         elCalendarGrid.innerHTML = '';
 
-        // Določimo dan v tednu za prvi dan (ponedeljek=1)
         let startingDay = firstDayOfMonth.getDay();
         if (startingDay === 0) startingDay = 7;
 
-        // Dodamo prazne celice za zamik
         for (let i = 1; i < startingDay; i++) {
             elCalendarGrid.innerHTML += `<div class="day disabled"></div>`;
         }
@@ -133,7 +111,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let dayHtml = `<div class="day" data-date="${dateString}">`;
 
-            // Določimo, ali je danes
             if (dateString === todayString) {
                 dayHtml = `<div class="day today" data-date="${dateString}">`;
             }
@@ -154,7 +131,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     eventClass += ' disabled';
                 }
 
-                // Check for screen width to display short or full time
                 const isMobile = window.innerWidth <= 768;
                 const timeContent = isMobile ? `${term.start_time.substring(0, 5)}` : `${term.start_time.substring(0, 5)} - ${term.end_time.substring(0, 5)}`;
                 
@@ -173,122 +149,118 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function attachDayListeners() {
-      document.querySelectorAll('.day').forEach(dayEl => {
-          dayEl.addEventListener('click', (e) => {
-              if (e.target.closest('.event')) {
-                  // If an event is clicked, open the swimmer modal
-                  const eventEl = e.target.closest('.event');
-                  currentSelectedDate = eventEl.dataset.date;
-                  currentSelectedTermId = eventEl.dataset.termId;
-                  const termNote = eventEl.dataset.note;
-                  const termStatus = eventEl.classList.contains('disabled') ? 'deactivated' : 'active';
-                  
-                  const term = TERMS.find(t => t.id == currentSelectedTermId);
-                  if (!term) return;
+        document.querySelectorAll('.day').forEach(dayEl => {
+            dayEl.addEventListener('click', (e) => {
+                if (e.target.closest('.event')) {
+                    const eventEl = e.target.closest('.event');
+                    currentSelectedDate = eventEl.dataset.date;
+                    currentSelectedTermId = eventEl.dataset.termId;
+                    const termNote = eventEl.dataset.note;
+                    const termStatus = eventEl.classList.contains('disabled') ? 'deactivated' : 'active';
+                    
+                    const term = TERMS.find(t => t.id == currentSelectedTermId);
+                    if (!term) return;
 
-                  elCurrentDateLabel.textContent = `${DAYNAME[new Date(currentSelectedDate).getDay() || 7]}, ${new Date(currentSelectedDate).toLocaleDateString('sl-SI')}`;
-                  elCurrentTermLabel.textContent = `${term.start_time.substring(0, 5)} - ${term.end_time.substring(0, 5)} (${term.description})`;
-                  
-                  elDeactivateBtn.style.display = termStatus === 'active' ? 'block' : 'none';
-                  elReactivateBtn.style.display = termStatus === 'deactivated' ? 'block' : 'none';
-                  
-                  refreshAttendanceTable();
-                  elEditSwimmerModal.style.display = 'flex';
-              } else {
-                  // If the day is clicked (not an event), open the day modal to show all terms
-                  const dateString = dayEl.dataset.date;
-                  if (!dateString) return;
-                  
-                  const day = new Date(dateString);
-                  const dayOfWeek = day.getDay() || 7;
-                  const dailyTerms = TERMS.filter(term => term.day_of_week === dayOfWeek);
-                  
-                  elDayModal.querySelector('.modal-title').textContent = `Termini za ${day.toLocaleDateString('sl-SI')}`;
-                  elDayModalList.innerHTML = '';
-                  
-                  if (dailyTerms.length === 0) {
-                      elDayModalList.innerHTML = `<p class="muted">Na ta dan ni rednih terminov.</p>`;
-                  } else {
-                      dailyTerms.forEach(term => {
-                          const termEl = document.createElement('div');
-                          termEl.classList.add('term-item');
-                          termEl.innerHTML = `
-                              <div>
-                                  <div class="term-item-label">${term.description}</div>
-                                  <div class="term-item-dates">${term.start_time.substring(0, 5)} - ${term.end_time.substring(0, 5)}</div>
-                              </div>
-                          `;
-                          elDayModalList.appendChild(termEl);
-                      });
-                  }
-                  
-                  elDayModal.style.display = 'flex';
-              }
-          });
-      });
-  }
+                    elCurrentDateLabel.textContent = `${DAYNAME[new Date(currentSelectedDate).getDay() || 7]}, ${new Date(currentSelectedDate).toLocaleDateString('sl-SI')}`;
+                    elCurrentTermLabel.textContent = `${term.start_time.substring(0, 5)} - ${term.end_time.substring(0, 5)} (${term.description})`;
+                    
+                    elDeactivateBtn.style.display = termStatus === 'active' ? 'block' : 'none';
+                    elReactivateBtn.style.display = termStatus === 'deactivated' ? 'block' : 'none';
+                    
+                    refreshAttendanceTable();
+                    elEditSwimmerModal.style.display = 'flex';
+                } else {
+                    const dateString = dayEl.dataset.date;
+                    if (!dateString) return;
+                    
+                    const day = new Date(dateString);
+                    const dayOfWeek = day.getDay() || 7;
+                    const dailyTerms = TERMS.filter(term => term.day_of_week === dayOfWeek);
+                    
+                    elDayModal.querySelector('.modal-title').textContent = `Termini za ${day.toLocaleDateString('sl-SI')}`;
+                    elDayModalList.innerHTML = '';
+                    
+                    if (dailyTerms.length === 0) {
+                        elDayModalList.innerHTML = `<p class="muted">Na ta dan ni rednih terminov.</p>`;
+                    } else {
+                        dailyTerms.forEach(term => {
+                            const termEl = document.createElement('div');
+                            termEl.classList.add('term-item');
+                            termEl.innerHTML = `
+                                <div>
+                                    <div class="term-item-label">${term.description}</div>
+                                    <div class="term-item-dates">${term.start_time.substring(0, 5)} - ${term.end_time.substring(0, 5)}</div>
+                                </div>
+                            `;
+                            elDayModalList.appendChild(termEl);
+                        });
+                    }
+                    
+                    elDayModal.style.display = 'flex';
+                }
+            });
+        });
+    }
 
     async function refreshAttendanceTable() {
-      if (!currentSelectedDate || !currentSelectedTermId) return;
+        if (!currentSelectedDate || !currentSelectedTermId) return;
 
-      const currentAttendance = attendance[currentSelectedDate] && attendance[currentSelectedDate][currentSelectedTermId] ? attendance[currentSelectedDate][currentSelectedTermId] : {};
-      const term = TERMS.find(t => t.id == currentSelectedTermId);
-      const isDeactivated = termStatus[currentSelectedDate] && termStatus[currentSelectedDate][currentSelectedTermId] && termStatus[currentSelectedDate][currentSelectedTermId].status === 'deactivated';
+        const currentAttendance = attendance[currentSelectedDate] && attendance[currentSelectedDate][currentSelectedTermId] ? attendance[currentSelectedDate][currentSelectedTermId] : {};
+        const term = TERMS.find(t => t.id == currentSelectedTermId);
+        const isDeactivated = termStatus[currentSelectedDate] && termStatus[currentSelectedDate][currentSelectedTermId] && termStatus[currentSelectedDate][currentSelectedTermId].status === 'deactivated';
+        
+        const termSwimmers = swimmers.filter(s => s.term_id.includes(term.id));
 
-      const originalSwimmers = swimmers.filter(s => s.term_id.includes(term.id));
+        elAttendanceTable.innerHTML = '';
 
-      elAttendanceTable.innerHTML = '';
+        const headerRow = `<tr><th>Plavalec</th><th>Status</th></tr>`;
+        elAttendanceTable.innerHTML += headerRow;
 
-      const headerRow = `<tr><th>Plavalec</th><th>Status</th></tr>`;
-      elAttendanceTable.innerHTML += headerRow;
+        swimmers.sort((a, b) => a.last_name.localeCompare(b.last_name)).forEach(swimmer => {
+            const status = currentAttendance[swimmer.id] || 'N';
+            const isOriginalSwimmer = termSwimmers.some(s => s.id === swimmer.id);
+            const isActiveSwimmer = swimmer.is_active;
 
-      swimmers.sort((a, b) => a.last_name.localeCompare(b.last_name)).forEach(swimmer => {
-        const status = currentAttendance[swimmer.id] || 'N'; // Privzeti status je neznan/neprisoten
-        const isOriginalSwimmer = originalSwimmers.some(s => s.id === swimmer.id);
-        const isActiveSwimmer = swimmer.is_active;
+            if (isActiveSwimmer) {
+                const statusMap = { 'P': 'Prisoten', 'O': 'Odsoten', 'N': 'Ni opredeljeno', 'I': 'Opravičen', 'E': 'Naredil izpit', 'T': 'Trener', 'M': 'Menedžment', 'S': 'Nadomeščanje' };
+                const statusColorMap = { 'P': 'ok', 'O': 'warn', 'N': 'neutral', 'I': 'neutral', 'E': 'neutral', 'T': 'neutral', 'M': 'neutral', 'S': 'neutral' };
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${swimmer.first_name} ${swimmer.last_name}</td>
+                    <td class="status-cell" data-swimmer-id="${swimmer.id}">
+                        <select class="btn ${isDeactivated ? 'disabled' : statusColorMap[status] || 'neutral'}" ${isDeactivated ? 'disabled' : ''}>
+                            <option value="N" ${status === 'N' ? 'selected' : ''}>Ni opredeljeno</option>
+                            <option value="P" ${status === 'P' ? 'selected' : ''}>Prisoten</option>
+                            <option value="O" ${status === 'O' ? 'selected' : ''}>Odsoten</option>
+                            <option value="I" ${status === 'I' ? 'selected' : ''}>Opravičen</option>
+                            <option value="E" ${status === 'E' ? 'selected' : ''}>Naredil izpit</option>
+                            <option value="T" ${status === 'T' ? 'selected' : ''}>Trener</option>
+                            <option value="M" ${status === 'M' ? 'selected' : ''}>Menedžment</option>
+                            <option value="S" ${status === 'S' ? 'selected' : ''}>Nadomeščanje</option>
+                        </select>
+                    </td>
+                `;
+                elAttendanceTable.appendChild(row);
 
-        if (isActiveSwimmer) {
-          const statusMap = { 'P': 'Prisoten', 'O': 'Odsoten', 'N': 'Ni opredeljeno', 'I': 'Opravičen', 'E': 'Naredil izpit', 'T': 'Trener', 'M': 'Menedžment', 'S': 'Nadomeščanje' };
-          const statusColorMap = { 'P': 'ok', 'O': 'warn', 'N': 'neutral', 'I': 'neutral', 'E': 'neutral', 'T': 'neutral', 'M': 'neutral', 'S': 'neutral' };
-          
-          let statusText = statusMap[status] || 'Ni opredeljeno';
-          if (isDeactivated) {
-              statusText = 'Trening neaktiven';
-          }
-
-          const row = document.createElement('tr');
-          row.innerHTML = `
-              <td>${swimmer.first_name} ${swimmer.last_name}</td>
-              <td class="status-cell" data-swimmer-id="${swimmer.id}">
-                  <select class="btn ${isDeactivated ? 'disabled' : statusColorMap[status] || 'neutral'}" ${isDeactivated ? 'disabled' : ''}>
-                      <option value="N" ${status === 'N' ? 'selected' : ''}>Ni opredeljeno</option>
-                      <option value="P" ${status === 'P' ? 'selected' : ''}>Prisoten</option>
-                      <option value="O" ${status === 'O' ? 'selected' : ''}>Odsoten</option>
-                      <option value="I" ${status === 'I' ? 'selected' : ''}>Opravičen</option>
-                      <option value="E" ${status === 'E' ? 'selected' : ''}>Naredil izpit</option>
-                      <option value="T" ${status === 'T' ? 'selected' : ''}>Trener</option>
-                      <option value="M" ${status === 'M' ? 'selected' : ''}>Menedžment</option>
-                      ${!isOriginalSwimmer ? `<option value="S" ${status === 'S' ? 'selected' : ''}>Nadomeščanje</option>` : ''}
-                  </select>
-              </td>
-          `;
-          elAttendanceTable.appendChild(row);
-
-          const selectEl = row.querySelector('select');
-          selectEl.addEventListener('change', async (e) => {
-              const newStatus = e.target.value;
-              await updateAttendance(swimmer.id, newStatus);
-              // Poudari spremembo
-              e.target.classList.remove('ok', 'warn', 'neutral');
-              e.target.classList.add(statusColorMap[newStatus] || 'neutral');
-          });
-        }
-      });
+                const selectEl = row.querySelector('select');
+                selectEl.addEventListener('change', async (e) => {
+                    let newStatus = e.target.value;
+                    // Logika za samodejno določitev "nadomeščanja"
+                    if (!isOriginalSwimmer && newStatus === 'P') {
+                        newStatus = 'S';
+                        e.target.value = 'S'; // Posodobi UI
+                    }
+                    await updateAttendance(swimmer.id, newStatus);
+                    e.target.classList.remove('ok', 'warn', 'neutral');
+                    e.target.classList.add(statusColorMap[newStatus] || 'neutral');
+                });
+            }
+        });
     }
 
 
     function refreshSwimmerPanel() {
-        elSwimmerPanel.innerHTML = '';
         const today = new Date();
         const twoMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 2, today.getDate());
 
@@ -308,14 +280,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     const term = TERMS.find(t => t.id == termId);
                     if (!term) continue;
 
-                    const isOriginalSwimmer = swimmers.some(s => s.id === swimmer.id && s.term_id.includes(termId));
+                    const isOriginalSwimmer = swimmers.find(s => s.id === swimmer.id)?.term_id.includes(termId);
                     const isDeactivated = termStatus[date] && termStatus[date][termId] && termStatus[date][termId].status === 'deactivated';
                     
                     if (isDeactivated) continue;
 
                     if (isOriginalSwimmer) {
                         totalTrainings++;
-                        if (status === 'P' || status === 'S') {
+                        if (status === 'P') {
                             totalPresent++;
                         }
                     } else if (status === 'S') {
@@ -349,8 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         swimmersSummary.sort((a, b) => b.attendancePercentage - a.attendancePercentage);
 
-        const headerRow = `<tr><th>Ime in priimek</th><th>Prisotnost</th></tr>`;
-        elAttendanceSummaryTable.innerHTML = headerRow;
+        elAttendanceSummaryTable.innerHTML = `<tr><th>Ime in priimek</th><th>Prisotnost</th></tr>`;
 
         swimmersSummary.forEach(s => {
             const attendanceColor = s.attendancePercentage >= 90 ? 'ok' : s.attendancePercentage >= 70 ? 'pri' : 'warn';
@@ -361,9 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             elAttendanceSummaryTable.appendChild(row);
         });
-
     }
-
 
     // =======================================================
     //             INTERAKCIJE IN GUMBI
@@ -470,9 +439,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!attendance[currentSelectedDate][currentSelectedTermId]) {
             attendance[currentSelectedDate][currentSelectedTermId] = {};
         }
-
-        const currentAttendance = attendance[currentSelectedDate][currentSelectedTermId][swimmerId];
-        if (currentAttendance === newStatus) return; // Ni spremembe
 
         const { data, error } = await supabase.from('attendance').upsert([{
             date: currentSelectedDate,
