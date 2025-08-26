@@ -492,8 +492,7 @@ document.addEventListener('DOMContentLoaded', () => {
         elModalSwimmerSelect.innerHTML = '<option value="">Dodaj plavalca...</option>';
 
         const swimmersWithTerm = swimmers.filter(s => s.terms.includes(term.id)).sort((a,b) => a.last_name.localeCompare(b.last_name));
-        const presentSwimmersIds = attendance[date]?.[termId] ? Object.keys(attendance[date][termId]) : [];
-
+        
         // Pripravi seznam prisotnih plavalcev
         swimmersWithTerm.forEach(swimmer => {
             const status = attendance[date]?.[termId]?.[swimmer.id];
@@ -501,8 +500,11 @@ document.addEventListener('DOMContentLoaded', () => {
             row.innerHTML = `
                 <td>${swimmer.first_name} ${swimmer.last_name}</td>
                 <td>
-                    ${status ? `<button class="btn btn-sm ${status === 'present' ? 'ok' : 'warn'}" data-swimmer-id="${swimmer.id}" data-current-status="${status}">${status === 'present' ? 'Prisoten' : 'Odsoten'}</button>` :
-                    `<button class="btn btn-sm neutral" data-swimmer-id="${swimmer.id}" data-current-status="unfilled">Označite</button>`}
+                    <div style="display: flex; gap: 5px;">
+                        <button class="btn btn-sm ok" data-swimmer-id="${swimmer.id}" data-status="present" ${status === 'present' ? 'disabled' : ''}>Prisoten</button>
+                        <button class="btn btn-sm warn" data-swimmer-id="${swimmer.id}" data-status="absent" ${status === 'absent' ? 'disabled' : ''}>Odsoten</button>
+                        ${status ? `<button class="btn btn-sm neutral" data-swimmer-id="${swimmer.id}" data-action="remove">❌</button>` : ''}
+                    </div>
                 </td>
             `;
             elAttendanceTable.appendChild(row);
@@ -563,11 +565,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const handleEventStatusChange = async (event) => {
         const btn = event.target.closest('.btn');
         if (!btn || !selectedEvent) return;
+        
         const swimmerId = btn.getAttribute('data-swimmer-id');
-        const currentStatus = btn.getAttribute('data-current-status');
-        const newStatus = (currentStatus === 'present') ? 'absent' : 'present';
+        const action = btn.getAttribute('data-action');
+        const status = btn.getAttribute('data-status');
 
-        await updateAttendance(selectedEvent.date, selectedEvent.termId, swimmerId, newStatus);
+        if (action === 'remove') {
+            await removeAttendance(selectedEvent.date, selectedEvent.termId, swimmerId);
+        } else if (status) {
+            await updateAttendance(selectedEvent.date, selectedEvent.termId, swimmerId, status);
+        }
     };
 
     const updateAttendance = async (date, termId, swimmerId, status) => {
@@ -593,6 +600,30 @@ document.addEventListener('DOMContentLoaded', () => {
             renderSummary();
         } catch (error) {
             console.error("Napaka pri posodabljanju prisotnosti:", error.message);
+        }
+    };
+
+    const removeAttendance = async (date, termId, swimmerId) => {
+        try {
+            const { error } = await supabase.from('attendance')
+                .delete()
+                .eq('date', date)
+                .eq('term_id', termId)
+                .eq('swimmer_id', swimmerId);
+            
+            if (error) throw error;
+            
+            // Posodobimo lokalno stanje
+            if (attendance[date]?.[termId]?.[swimmerId]) {
+                delete attendance[date][termId][swimmerId];
+            }
+            
+            // Ponovno izrisovanje
+            showEventModal(date, termId);
+            renderMonth();
+            renderSummary();
+        } catch (error) {
+            console.error("Napaka pri brisanju prisotnosti:", error.message);
         }
     };
     
