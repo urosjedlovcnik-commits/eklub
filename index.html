@@ -15,7 +15,7 @@
 
     <main>
         <div class="content">
-            <div class="box-panel">
+            <div class="box-panel calendar-panel">
                 <section>
                     <div class="calendar-header">
                         <button id="prevBtn" class="btn neutral">&lt;</button>
@@ -35,14 +35,16 @@
                 </section>
             </div>
             
-            <div class="box-panel">
+            <div class="box-panel summary-panel">
                 <section class="summary">
                     <h2>Povzetek prisotnosti</h2>
                     <div id="summaryBox"></div>
                 </section>
             </div>
-
-            <section>
+        </div>
+        
+        <div class="sidebar">
+            <section class="sidebar-section order-1">
                 <h2>Upravljaj plavalce</h2>
                 <div class="form-group">
                     <label for="swimmerSelect">Izberi plavalca:</label>
@@ -56,15 +58,13 @@
                 <button id="assignTermBtn" class="btn secondary-btn" disabled>Dodeli termin</button>
                 <button id="deleteSwimmerBtn" class="btn warn-btn" disabled>Izbriši plavalca</button>
             </section>
-            
-            <section>
+
+            <section class="sidebar-section order-2">
                 <h2>Upravljaj termine</h2>
                 <div id="termList" class="term-list"></div>
             </section>
-        </div>
-        
-        <div class="sidebar">
-            <section>
+
+            <section class="sidebar-section order-3">
                 <h2>Dodaj plavalca</h2>
                 <div class="form-group">
                     <label for="newFirst">Ime:</label>
@@ -77,7 +77,7 @@
                 <button id="addSwimmerBtn" class="btn primary-btn">Dodaj plavalca</button>
             </section>
 
-            <section>
+            <section class="sidebar-section order-4">
                 <h2>Dodaj termin</h2>
                 <div class="form-group">
                     <label for="newTermDay">Dan:</label>
@@ -110,7 +110,7 @@
                 <button id="addTermBtn" class="btn primary-btn">Dodaj termin</button>
             </section>
             
-            <section class="data-sections">
+            <section class="sidebar-section order-5">
                 <h2>Uvoz podatkov</h2>
                 <div class="form-group">
                     <label for="csvInput">Uvozi plavalce (CSV):</label>
@@ -148,7 +148,7 @@ tor-16-00-17-00,2,16:00,17:00,01 / 01 / 2024,31 / 12 / 2024</code></pre>
                 </div>
             </section>
 
-            <section class="data-sections">
+            <section class="sidebar-section order-6">
                 <h2>Izvoz</h2>
                 <div class="form-group">
                     <label for="exportMonthSelect">Mesec:</label>
