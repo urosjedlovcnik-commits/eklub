@@ -69,12 +69,11 @@ main {
 }
 
 .content {
-    background-color: var(--panel-bg);
-    padding: 20px;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow);
-    flex: 3;
-    min-width: 400px;
+    flex: 2;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
 .sidebar section {
@@ -512,6 +511,14 @@ button.btn:disabled {
     opacity: 0.8;
 }
 
+/* Ločilni okvir za glavne sekcije */
+.box-panel {
+    background-color: var(--panel-bg);
+    padding: 20px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+}
+
 /* Mobilni zaslon */
 @media (max-width: 768px) {
     main {
@@ -559,28 +566,18 @@ button.btn:disabled {
         display: block;
     }
 
-/* Ločilni okvir za glavne sekcije */
-.box-panel {
-    background-color: var(--panel-bg);
-    padding: 20px;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow);
-    margin-bottom: 20px;
-}
-/* Posodobitev vrstnega reda na mobilnih napravah */
-@media (max-width: 768px) {
+    /* Posodobitev vrstnega reda na mobilnih napravah */
     .content > .data-sections {
         order: 99;
     }
-}
-/* Styling za glavno vsebino */
-.content {
-    flex: 2;
-    min-width: 0;
-    
-    /* Novi stil: Uporaba gap za razmik med sekcijami */
-    display: flex;
-    flex-direction: column;
-    gap: 20px; /* Tukaj določimo želeni razmik */
-}
+
+    /* Prilagoditve za povzetek prisotnosti na mobilnih napravah */
+    .summary #summaryBox table {
+        font-size: 0.8em; /* Zmanjša velikost pisave za celotno tabelo */
+    }
+
+    .summary #summaryBox table th,
+    .summary #summaryBox table td {
+        padding: 5px; /* Zmanjša polnilo celic za bolj strnjen videz */
+    }
 }
