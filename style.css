@@ -580,4 +580,10 @@ button.btn:disabled {
     .summary #summaryBox table td {
         padding: 5px; /* Zmanjša polnilo celic za bolj strnjen videz */
     }
+	/* Nevtralna barva za dogodke v prihodnosti */
+.event.future {
+    background-color: #f0f0f0; /* Svetlo sivo ozadje */
+    color: var(--text-color); /* Temna barva besedila */
+    text-decoration: none;
+}
 }
