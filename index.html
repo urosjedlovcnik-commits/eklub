@@ -42,55 +42,24 @@
                 </section>
             </div>
 
-            <section class="data-sections">
-                <h2>Uvoz podatkov</h2>
+            <section>
+                <h2>Upravljaj plavalce</h2>
                 <div class="form-group">
-                    <label for="csvInput">Uvozi plavalce (CSV):</label>
-                    <div class="muted" style="margin-bottom: 12px;">
-                        <p>Navodila:</p>
-                        <ul>
-                            <li>Datoteka mora vsebovati stolpce z glavo: `first_name`, `last_name`, `terms`.</li>
-                            <li>V stolpec `terms` vpišite ID-je terminov, ločene z vejico.</li>
-                            <li>Uvoz bo izbrisal vso prisotnost od danes naprej.</li>
-                        </ul>
-                        <p>Primer:</p>
-                        <pre><code>first_name,last_name,terms
-Janez,Novak,pon-17-00-18-00
-Marija,Kovač,tor-16-00-17-00,pet-17-00-18-00</code></pre>
-                    </div>
-                    <input type="file" id="csvInput" accept=".csv">
+                    <label for="swimmerSelect">Izberi plavalca:</label>
+                    <select id="swimmerSelect"></select>
                 </div>
+                <div id="swimmerInfo"></div>
                 <div class="form-group">
-                    <label for="csvTermsInput">Uvozi termine (CSV):</label>
-                    <div class="muted" style="margin-bottom: 12px;">
-                        <p>Navodila:</p>
-                        <ul>
-                            <li>Datoteka mora vsebovati stolpce z glavo: `id`, `day`, `start_time`, `end_time`, `date_from`, `date_to`.</li>
-                            <li>`id` mora biti edinstven za vsak termin (npr. 'pon-17-00-18-00').</li>
-                            <li>`day` je številka dneva v tednu (1=ponedeljek, 7=nedelja).</li>
-                            <li>`start_time` in `end_time` v formatu `HH:mm`.</li>
-                            <li>`date_from` in `date_to` v formatu `dd / mm / yyyy`.</li>
-                        </ul>
-                        <p>Primer:</p>
-                        <pre><code>id,day,start_time,end_time,date_from,date_to
-
-</code></pre>
-                    </div>
-                    <input type="file" id="csvTermsInput" accept=".csv">
+                    <label for="termSelect">Dodelitev termina:</label>
+                    <select id="termSelect"></select>
                 </div>
+                <button id="assignTermBtn" class="btn secondary-btn" disabled>Dodeli termin</button>
+                <button id="deleteSwimmerBtn" class="btn warn-btn" disabled>Izbriši plavalca</button>
             </section>
-
-            <section class="data-sections">
-                <h2>Izvoz</h2>
-                <div class="form-group">
-                    <label for="exportMonthSelect">Mesec:</label>
-                    <select id="exportMonthSelect"></select>
-                </div>
-                <div class="form-group">
-                    <label for="exportYearSelect">Leto:</label>
-                    <select id="exportYearSelect"></select>
-                </div>
-                <button id="exportCsvBtn" class="btn neutral">Izvoz v CSV</button>
+            
+            <section>
+                <h2>Upravljaj termine</h2>
+                <div id="termList" class="term-list"></div>
             </section>
         </div>
         
@@ -106,21 +75,6 @@ Marija,Kovač,tor-16-00-17-00,pet-17-00-18-00</code></pre>
                     <input type="text" id="newLast">
                 </div>
                 <button id="addSwimmerBtn" class="btn primary-btn">Dodaj plavalca</button>
-            </section>
-
-            <section>
-                <h2>Upravljaj plavalce</h2>
-                <div class="form-group">
-                    <label for="swimmerSelect">Izberi plavalca:</label>
-                    <select id="swimmerSelect"></select>
-                </div>
-                <div id="swimmerInfo"></div>
-                <div class="form-group">
-                    <label for="termSelect">Dodelitev termina:</label>
-                    <select id="termSelect"></select>
-                </div>
-                <button id="assignTermBtn" class="btn secondary-btn" disabled>Dodeli termin</button>
-                <button id="deleteSwimmerBtn" class="btn warn-btn" disabled>Izbriši plavalca</button>
             </section>
 
             <section>
@@ -156,9 +110,55 @@ Marija,Kovač,tor-16-00-17-00,pet-17-00-18-00</code></pre>
                 <button id="addTermBtn" class="btn primary-btn">Dodaj termin</button>
             </section>
             
-            <section>
-                <h2>Upravljaj termine</h2>
-                <div id="termList" class="term-list"></div>
+            <section class="data-sections">
+                <h2>Uvoz podatkov</h2>
+                <div class="form-group">
+                    <label for="csvInput">Uvozi plavalce (CSV):</label>
+                    <div class="muted" style="margin-bottom: 12px;">
+                        <p>Navodila:</p>
+                        <ul>
+                            <li>Datoteka mora vsebovati stolpce z glavo: `first_name`, `last_name`, `terms`.</li>
+                            <li>V stolpec `terms` vpišite ID-je terminov, ločene z vejico.</li>
+                            <li>Uvoz bo izbrisal vso prisotnost od danes naprej.</li>
+                        </ul>
+                        <p>Primer:</p>
+                        <pre><code>first_name,last_name,terms
+Janez,Novak,pon-17-00-18-00
+Marija,Kovač,tor-16-00-17-00,pet-17-00-18-00</code></pre>
+                    </div>
+                    <input type="file" id="csvInput" accept=".csv">
+                </div>
+                <div class="form-group">
+                    <label for="csvTermsInput">Uvozi termine (CSV):</label>
+                    <div class="muted" style="margin-bottom: 12px;">
+                        <p>Navodila:</p>
+                        <ul>
+                            <li>Datoteka mora vsebovati stolpce z glavo: `id`, `day`, `start_time`, `end_time`, `date_from`, `date_to`.</li>
+                            <li>`id` mora biti edinstven za vsak termin (npr. 'pon-17-00-18-00').</li>
+                            <li>`day` je številka dneva v tednu (1=ponedeljek, 7=nedelja).</li>
+                            <li>`start_time` in `end_time` v formatu `HH:mm`.</li>
+                            <li>`date_from` in `date_to` v formatu `dd / mm / yyyy`.</li>
+                        </ul>
+                        <p>Primer:</p>
+                        <pre><code>id,day,start_time,end_time,date_from,date_to
+pon-17-00-18-00,1,17:00,18:00,01 / 01 / 2024,31 / 12 / 2024
+tor-16-00-17-00,2,16:00,17:00,01 / 01 / 2024,31 / 12 / 2024</code></pre>
+                    </div>
+                    <input type="file" id="csvTermsInput" accept=".csv">
+                </div>
+            </section>
+
+            <section class="data-sections">
+                <h2>Izvoz</h2>
+                <div class="form-group">
+                    <label for="exportMonthSelect">Mesec:</label>
+                    <select id="exportMonthSelect"></select>
+                </div>
+                <div class="form-group">
+                    <label for="exportYearSelect">Leto:</label>
+                    <select id="exportYearSelect"></select>
+                </div>
+                <button id="exportCsvBtn" class="btn neutral">Izvoz v CSV</button>
             </section>
         </div>
 
