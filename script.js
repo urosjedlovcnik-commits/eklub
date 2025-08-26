@@ -502,8 +502,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${swimmer.first_name} ${swimmer.last_name}</td>
                 <td>
                     <div style="display: flex; gap: 5px;">
-                        <button class="btn btn-sm ok" data-swimmer-id="${swimmer.id}" data-status="present" ${status === 'present' ? 'disabled' : ''}>Prisoten</button>
-                        <button class="btn btn-sm warn" data-swimmer-id="${swimmer.id}" data-status="absent" ${status === 'absent' ? 'disabled' : ''}>Odsoten</button>
+                        <button class="btn btn-sm toggle ${status === 'present' ? 'active-ok' : ''}" data-swimmer-id="${swimmer.id}" data-status="present">Prisoten</button>
+                        <button class="btn btn-sm toggle ${status === 'absent' ? 'active-warn' : ''}" data-swimmer-id="${swimmer.id}" data-status="absent">Odsoten</button>
                         ${status ? `<button class="btn btn-sm neutral" data-swimmer-id="${swimmer.id}" data-action="remove">❌</button>` : ''}
                     </div>
                 </td>
