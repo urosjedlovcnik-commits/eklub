@@ -10,13 +10,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const DAYNAME = ["", "Ponedeljek", "Torek", "Sreda", "Četrtek", "Petek", "Sobota", "Nedelja"];
     const DAY_SHORT_NAME = ["", "Pon.", "Tor.", "Sre.", "Čet.", "Pet.", "Sob.", "Ned."];
     const DAY_SHORT_MAP = {
-        "ponedeljek": 1, "pon": 1,
-        "torek": 2, "tor": 2,
-        "sreda": 3, "sre": 3,
-        "cetrtek": 4, "cet": 4,
-        "petek": 5, "pet": 5,
-        "sobota": 6, "sob": 6,
-        "nedelja": 7, "ned": 7
+      "ponedeljek": 1, "pon": 1,
+      "torek": 2, "tor": 2,
+      "sreda": 3, "sre": 3,
+      "cetrtek": 4, "cet": 4,
+      "petek": 5, "pet": 5,
+      "sobota": 6, "sob": 6,
+      "nedelja": 7, "ned": 7
     };
 
     // ===== UI elementi =====
@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (isDisabled) {
                     eventClass += ' disabled';
                 }
-
+                
                 // Preverite širino zaslona, da se prikažejo kratke ali polne ure
                 const isMobile = window.innerWidth <= 768;
                 const timeContent = isMobile ? `${term.start_time.substring(0, 5)}` : `${term.start_time.substring(0, 5)} - ${term.end_time.substring(0, 5)}`;
