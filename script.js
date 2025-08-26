@@ -63,6 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const elSaveNotesBtn = document.getElementById("saveNotesBtn");
     const elToggleEventBtn = document.getElementById("toggleEventBtn");
     const elInactiveNote = document.getElementById("inactiveNote");
+    const elNotesBtn = document.getElementById("notesBtn");
 
     const elNoteInput = document.getElementById("noteInput");
     const elCancelNoteBtn = document.getElementById("cancelNoteBtn");
