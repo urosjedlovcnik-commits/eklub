@@ -453,7 +453,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 eventDiv.classList.add('disabled');
             } else {
                 const attendanceCount = attendance[date]?.[termId] ? Object.keys(attendance[date][termId]).length : 0;
-                const totalSwimmersWithTerm = swimmers.filter(s => s.terms.includes(termId)).length;
+                const totalSwimmersWithTerm = swimmers.filter(s => s.terms.includes(term.id)).length;
                 
                 if (attendanceCount === totalSwimmersWithTerm && totalSwimmersWithTerm > 0) {
                     eventDiv.classList.add('complete');
@@ -490,7 +490,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         elAttendanceTable.innerHTML = '';
         elModalSwimmerSelect.innerHTML = '<option value="">Dodaj plavalca...</option>';
-
+        
+        // Plavalci, ki imajo ta termin
         const swimmersWithTerm = swimmers.filter(s => s.terms.includes(term.id)).sort((a,b) => a.last_name.localeCompare(b.last_name));
         
         // Pripravi seznam prisotnih plavalcev
@@ -510,9 +511,14 @@ document.addEventListener('DOMContentLoaded', () => {
             elAttendanceTable.appendChild(row);
         });
         
-        // Pripravi seznam plavalcev za dodajanje
-        const swimmersNotInEvent = swimmers.filter(s => !swimmersWithTerm.find(sw => sw.id === s.id)).sort((a,b) => a.last_name.localeCompare(b.last_name));
-        swimmersNotInEvent.forEach(swimmer => {
+        // Pripravi seznam plavalcev za dodajanje (samo tiste, ki še niso vpisani)
+        const currentAttendees = attendance[date]?.[termId] || {};
+        const swimmersToAddToEvent = swimmers.filter(swimmer => {
+            // Plavalca dodamo v seznam za dodajanje le, če za ta datum in termin še ni vpisan
+            return !currentAttendees.hasOwnProperty(swimmer.id);
+        }).sort((a, b) => a.last_name.localeCompare(b.last_name));
+
+        swimmersToAddToEvent.forEach(swimmer => {
             const option = document.createElement('option');
             option.value = swimmer.id;
             option.textContent = `${swimmer.first_name} ${swimmer.last_name}`;
