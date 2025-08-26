@@ -216,8 +216,6 @@ button.btn:disabled {
 
 .event {
     width: 95%;
-    background-color: var(--unfilled-bg-light);
-    color: var(--unfilled-color);
     border-radius: 4px;
     padding: 3px 6px;
     font-size: 0.75rem;
@@ -227,7 +225,11 @@ button.btn:disabled {
     text-overflow: ellipsis;
     display: block;
 }
-
+/* Privzeto, če ni drugace določeno */
+.event {
+    background-color: var(--unfilled-bg-light);
+    color: var(--unfilled-color);
+}
 .event.partial {
     background-color: var(--partial-bg-light);
     color: var(--partial-color);
@@ -236,18 +238,22 @@ button.btn:disabled {
     background-color: var(--ok-bg-light);
     color: var(--ok-color);
 }
-
 .event.disabled {
     background-color: #f0f0f0;
     color: var(--mut);
     text-decoration: line-through;
     opacity: 0.8;
 }
+/* SPECIFIČNOST: To pravilo zdaj prevlada nad vsemi ostalimi */
+.event.future {
+    background-color: #f0f0f0 !important;
+    color: var(--text-color) !important;
+}
 
 .event .time {
     font-weight: bold;
 }
-/* Ukloni podrazumevano barvo, da bo barvno kodiranje delovalo za celoten čas */
+
 .event .end-time {
     font-weight: normal;
 }
@@ -520,8 +526,8 @@ button.btn:disabled {
 }
 /* Nevtralna barva za dogodke v prihodnosti */
 .event.future {
-    background-color: #f0f0f0; /* Svetlo sivo ozadje */
-    color: var(--text-color); /* Temna barva besedila */
+    background-color: #f0f0f0;
+    color: var(--text-color);
     text-decoration: none;
 }
 
@@ -579,11 +585,11 @@ button.btn:disabled {
 
     /* Prilagoditve za povzetek prisotnosti na mobilnih napravah */
     .summary #summaryBox table {
-        font-size: 0.8em; /* Zmanjša velikost pisave za celotno tabelo */
+        font-size: 0.8em;
     }
 
     .summary #summaryBox table th,
     .summary #summaryBox table td {
-        padding: 5px; /* Zmanjša polnilo celic za bolj strnjen videz */
+        padding: 5px;
     }
 }
