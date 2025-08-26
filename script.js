@@ -940,22 +940,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Uvoz/izvoz
-    elCsvInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            importSwimmers(file);
-        }
-    });
-    
-    elCsvTermsInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        importTerms(file);
-      }
-    });
-
-    elExportCsvBtn.addEventListener('click', exportCsv);
-    
     const importSwimmers = (file) => {
         const reader = new FileReader();
         reader.onload = async (e) => {
@@ -1103,7 +1087,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         renderMonth();
     });
+    
+    // Uvoz/izvoz
+    elCsvInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            importSwimmers(file);
+        }
+    });
+    
+    elCsvTermsInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        importTerms(file);
+      }
+    });
 
+    elExportCsvBtn.addEventListener('click', exportCsv);
+    
     document.getElementById("closeModalBtn").addEventListener("click", closeModal);
     document.getElementById("closeModalBtnFooter").addEventListener("click", closeModal);
     document.getElementById("closeDayModalBtn").addEventListener("click", closeDayModal);
