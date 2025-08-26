@@ -17,13 +17,13 @@ h1{margin:0 0 12px;text-align:center}
 .calendar{grid-column:1 / -1;background:#fff;border:1px solid var(--border);border-radius:12px;padding:8px}
 .calendar-head{
   display:grid;
-  grid-template-columns:repeat(7,1fr);
+  grid-template-columns:repeat(5,1fr) 0.5fr 0.5fr;
   gap:6px;margin-bottom:6px
 }
 .calendar-head div{font-weight:600;text-align:center;padding:6px 0;background:#eff6ff;border-radius:8px}
 .calendar-grid{
   display:grid;
-  grid-template-columns:repeat(7,1fr);
+  grid-template-columns:repeat(5,1fr) 0.5fr 0.5fr;
   gap:6px
 }
 .day{min-height:120px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:6px;display:flex;flex-direction:column;overflow:hidden; cursor:pointer;}
@@ -156,18 +156,12 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
 
 /* MEDIA QUERIES ZA ODZIVNOST */
 @media (max-width: 768px) {
-  /* Skrije glavi in dneve za soboto in nedeljo, saj ni treningov */
-  .calendar-head div:nth-child(6),
-  .calendar-head div:nth-child(7),
-  .calendar-grid .day:nth-child(7n-1),
-  .calendar-grid .day:nth-child(7n) {
-    display: none;
+  /* Namesto skrivanja, zožanje vikend stolpcev */
+  .calendar-head{
+    grid-template-columns:repeat(5,1fr) 0.5fr 0.5fr;
   }
-  
-  /* Spremeni prikaz mreže, da zapolni prostor, kjer ni vikenda */
-  .calendar-head,
-  .calendar-grid {
-    grid-template-columns: repeat(5, 1fr);
+  .calendar-grid{
+    grid-template-columns:repeat(5,1fr) 0.5fr 0.5fr;
   }
   
   body {
