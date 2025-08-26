@@ -1,6 +1,8 @@
 :root{
   --pri:#2563eb; --ok:#16a34a; --warn:#dc2626; --mut:#6b7280; --bg:#f5f7fa; --border:#e5e7eb;
   --unfilled:#fecaca; --complete:#bbf7d0;
+  --ok-bg-light: #e6f6e9;
+  --warn-bg-light: #fbe6e8;
 }
 *{box-sizing:border-box}
 body{font-family:system-ui, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); color:#0f172a; margin:30px 18px 18px;}
@@ -13,7 +15,6 @@ h1{margin:0 0 12px;text-align:center}
 .btn.neutral{background:#e5e7eb;border-color:#d1d5db;color:#4b5563;}
 .tag{display:inline-block;padding:4px 8px;background:var(--mut);color:#fff;border-radius:8px;font-size:0.8em;margin-right:5px}
 
-/* NOVO: Stil za gumbe za prisotnost */
 .btn.toggle {
   background-color: #fff;
   color: var(--mut);
@@ -45,7 +46,7 @@ h1{margin:0 0 12px;text-align:center}
 main{display:flex;max-width:1200px;margin:0 auto;gap:20px;flex-wrap:wrap}
 .content{flex:1;min-width:700px}
 .sidebar{flex:0 0 400px}
-.box-panel{border:1px solid var(--border);border-radius:10px;background:var(--panel-bg);padding:15px;box-shadow:var(--shadow);margin-bottom:20px}
+.box-panel{border:1px solid var(--border);border-radius:10px;background:#fff;padding:15px;box-shadow:0 4px 6px rgba(0, 0, 0, 0.1);margin-bottom:20px}
 .box-panel h2{margin-top:0;font-size:1.2em}
 .calendar-header{display:flex;justify-content:space-between;align-items:center}
 .calendar-grid-labels, .calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;padding:10px 0}
@@ -56,11 +57,11 @@ main{display:flex;max-width:1200px;margin:0 auto;gap:20px;flex-wrap:wrap}
 .day.today{border:2px solid var(--pri)}
 .day .num{font-weight:bold;font-size:1.2em;display:block;margin-bottom:5px;width:100%;text-align:right}
 .day .event{font-size:0.8em;width:100%;text-align:left;padding:4px 8px;border-radius:4px;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
-.event.unfilled{background-color:var(--unfilled);color:var(--unfilled-color)}
-.event.partial{background-color:var(--partial-bg-light);color:var(--partial-color)}
-.event.complete{background-color:var(--complete);color:var(--ok-color)}
+.event.unfilled{background-color:var(--unfilled);color:#0f172a;}
+.event.partial{background-color:var(--partial-bg-light);color:#0f172a;}
+.event.complete{background-color:var(--complete);color:#0f172a;}
 .event.disabled {
-    background-color: var(--disabled-bg);
+    background-color: #f0f0f0;
     color: var(--mut);
     text-decoration: line-through;
     opacity: 0.8;
@@ -138,6 +139,7 @@ main{display:flex;max-width:1200px;margin:0 auto;gap:20px;flex-wrap:wrap}
 .modal-body table {
     width: 100%;
     border-collapse: collapse;
+    margin-top: 10px;
 }
 .modal-body th, .modal-body td {
     padding: 8px;
@@ -187,11 +189,11 @@ main{display:flex;max-width:1200px;margin:0 auto;gap:20px;flex-wrap:wrap}
 }
 #dayModalList .event.partial {
     background-color: var(--partial-bg-light);
-    color: var(--partial-color);
+    color: #0f172a;
 }
 #dayModalList .event.complete {
     background-color: var(--ok-bg-light);
-    color: var(--ok-color);
+    color: #0f172a;
 }
 #dayModalList .event.disabled {
     background-color: #f0f0f0;

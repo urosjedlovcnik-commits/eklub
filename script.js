@@ -55,6 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const elModalTitle = document.getElementById("modalTitle");
     const elModalMeta = document.getElementById("modalMeta");
     const elAttendanceTable = document.getElementById("attendanceTable");
+    const elSubstituteTable = document.getElementById("substituteTable");
     const elModalSwimmerSelect = document.getElementById("modalSwimmerSelect");
     const elAddToEventBtn = document.getElementById("addToEventBtn");
     const elNotesInput = document.getElementById("notesInput");
@@ -298,6 +299,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const eventsOnThisDay = Object.keys(dailyEvents).length;
             let eventsRendered = 0;
 
+            if (eventsOnThisDay > 0) {
+                dayDiv.style.cursor = 'pointer';
+            } else {
+                dayDiv.classList.add('disabled');
+            }
+
             for (const termId in dailyEvents) {
                 const term = dailyEvents[termId];
                 
@@ -486,16 +493,21 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Posodobi naslov in meta podatke
         elModalTitle.textContent = `${formatDateForDisplay(date)} ${DAYNAME[term.day]}`;
-        elModalMeta.innerHTML = `<div class="chip">${term.start_time.slice(0, 5)}-${term.end_time.slice(0, 5)}</div>`;
+        elModalMeta.innerHTML = `<div class="tag">${term.start_time.slice(0, 5)}-${term.end_time.slice(0, 5)}</div>`;
         
-        elAttendanceTable.innerHTML = '';
-        elModalSwimmerSelect.innerHTML = '<option value="">Dodaj plavalca...</option>';
+        elAttendanceTable.querySelector('tbody').innerHTML = '';
+        elSubstituteTable.querySelector('tbody').innerHTML = '';
+        elModalSwimmerSelect.innerHTML = '<option value="">Izberi plavalca...</option>';
         
         // Plavalci, ki imajo ta termin
         const swimmersWithTerm = swimmers.filter(s => s.terms.includes(term.id)).sort((a,b) => a.last_name.localeCompare(b.last_name));
         
         // Pripravi seznam prisotnih plavalcev
-        swimmersWithTerm.forEach(swimmer => {
+        const presentSwimmersIds = Object.keys(attendance[date]?.[termId] || {});
+        
+        // Plavalci, ki so dodeljeni temu terminu
+        const mainSwimmers = swimmersWithTerm.filter(s => presentSwimmersIds.includes(s.id));
+        mainSwimmers.forEach(swimmer => {
             const status = attendance[date]?.[termId]?.[swimmer.id];
             const row = document.createElement('tr');
             row.innerHTML = `
@@ -508,13 +520,27 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </td>
             `;
-            elAttendanceTable.appendChild(row);
+            elAttendanceTable.querySelector('tbody').appendChild(row);
         });
         
-        // Pripravi seznam plavalcev za dodajanje (samo tiste, ki še niso vpisani)
+        // Plavalci za "nadomeščanje"
+        const substituteSwimmers = swimmers.filter(s => !s.terms.includes(termId) && presentSwimmersIds.includes(s.id));
+        substituteSwimmers.forEach(swimmer => {
+             const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${swimmer.first_name} ${swimmer.last_name}</td>
+                <td>
+                    <div style="display: flex; gap: 5px;">
+                         <button class="btn btn-sm neutral" data-swimmer-id="${swimmer.id}" data-action="remove">❌</button>
+                    </div>
+                </td>
+            `;
+            elSubstituteTable.querySelector('tbody').appendChild(row);
+        });
+
+        // Pripravi seznam plavalcev za dodajanje (samo tiste, ki še niso vpisani v ta trening)
         const currentAttendees = attendance[date]?.[termId] || {};
         const swimmersToAddToEvent = swimmers.filter(swimmer => {
-            // Plavalca dodamo v seznam za dodajanje le, če za ta datum in termin še ni vpisan
             return !currentAttendees.hasOwnProperty(swimmer.id);
         }).sort((a, b) => a.last_name.localeCompare(b.last_name));
 
@@ -835,6 +861,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     elAttendanceTable.addEventListener('click', handleEventStatusChange);
+    elSubstituteTable.addEventListener('click', handleEventStatusChange);
 
     elAddToEventBtn.addEventListener('click', async () => {
         if (selectedEvent && elModalSwimmerSelect.value) {
@@ -1019,7 +1046,7 @@ document.addEventListener('DOMContentLoaded', () => {
             elDeleteSwimmerBtn.disabled = false;
             const termsForSwimmer = TERMS.filter(term => swimmer.terms.includes(term.id));
             const termsHtml = termsForSwimmer.map(term => `
-                <div class="chip">
+                <div class="tag">
                     ${DAYNAME[term.day]} ${term.start_time.slice(0, 5)}-${term.end_time.slice(0, 5)}
                     <button class="remove-term-btn" data-term-id="${term.id}">&times;</button>
                 </div>
@@ -1027,7 +1054,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             elSwimmerInfo.innerHTML = `
                 <h4>Dodani termini:</h4>
-                <p>${termsHtml || 'Trenutno nima dodeljenih terminov.'}</p>
+                <div style="display:flex; flex-wrap: wrap; gap: 5px;">${termsHtml || 'Trenutno nima dodeljenih terminov.'}</div>
             `;
             elAssignTermBtn.disabled = false;
         }
