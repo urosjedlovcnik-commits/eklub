@@ -302,171 +302,221 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===== MODAL: odpranje dogodka =====
     let modalCtx = { date:null, termId:null };
     
-    // Funkcija za prikaz informacij o nadomestnem trenerju
-    async function showSubstituteTrainerInfo(termId, date) {
-        try {
-            const { data: substituteData, error } = await supabase
-                .from('substitute_trainers')
-                .select(`
-                    *,
-                    original_trainer:trainers!substitute_trainers_original_trainer_id_fkey(first_name, last_name),
-                    substitute_trainer:trainers!substitute_trainers_substitute_trainer_id_fkey(first_name, last_name)
-                `)
-                .eq('term_id', termId)
-                .eq('substitute_date', date)
-                .single();
-            
-            if (error && error.code !== 'PGRST116') {
-                throw error;
-            }
-            
-            if (substituteData) {
-                elSubstituteTrainerInfo.style.display = 'block';
-                elSubstituteTrainerName.textContent = `${substituteData.substitute_trainer.first_name} ${substituteData.substitute_trainer.last_name}`;
-                elSubstituteTrainerReason.textContent = substituteData.reason || 'Ni razloga';
-            } else {
-                elSubstituteTrainerInfo.style.display = 'none';
-            }
-            
-        } catch (error) {
-            console.error('Napaka pri nalaganju informacij o nadomestnem trenerju:', error);
-            elSubstituteTrainerInfo.style.display = 'none';
-        }
-    }
+         // Funkcija za prikaz informacij o nadomestnem trenerju
+     async function showSubstituteTrainerInfo(termId, date) {
+         try {
+             // Preveri, ali tabela substitute_trainers obstaja
+             const { data: tableExists, error: tableCheckError } = await supabase
+                 .from('substitute_trainers')
+                 .select('id')
+                 .limit(1);
+             
+             if (tableCheckError && tableCheckError.code === 'PGRST116') {
+                 // Tabela ne obstaja, skrij sekcijo
+                 elSubstituteTrainerInfo.style.display = 'none';
+                 return;
+             }
+             
+             const { data: substituteData, error } = await supabase
+                 .from('substitute_trainers')
+                 .select(`
+                     *,
+                     original_trainer:trainers!substitute_trainers_original_trainer_id_fkey(first_name, last_name),
+                     substitute_trainer:trainers!substitute_trainers_substitute_trainer_id_fkey(first_name, last_name)
+                 `)
+                 .eq('term_id', termId)
+                 .eq('substitute_date', date)
+                 .single();
+             
+             if (error && error.code !== 'PGRST116') {
+                 throw error;
+             }
+             
+             if (substituteData) {
+                 elSubstituteTrainerInfo.style.display = 'block';
+                 elSubstituteTrainerName.textContent = `${substituteData.substitute_trainer.first_name} ${substituteData.substitute_trainer.last_name}`;
+                 elSubstituteTrainerReason.textContent = substituteData.reason || 'Ni razloga';
+             } else {
+                 elSubstituteTrainerInfo.style.display = 'none';
+             }
+             
+         } catch (error) {
+             console.error('Napaka pri nalaganju informacij o nadomestnem trenerju:', error);
+             elSubstituteTrainerInfo.style.display = 'none';
+         }
+     }
 
-    // Funkcija za nalaganje prisotnosti trenerja
-    async function loadTrainerAttendance(termId, date) {
-        try {
-            // Najprej poišči trenerja termina
-            const { data: trainerData, error: trainerError } = await supabase
-                .from('trainer_terms')
-                .select('trainer_id')
-                .eq('term_id', termId)
-                .single();
-            
-            if (trainerError || !trainerData) {
-                console.log('Ni najdenega trenerja za termin:', termId);
-                return;
-            }
-            
-            // Preveri, ali je nadomestni trener za ta termin na ta datum
-            const { data: substituteData, error: substituteError } = await supabase
-                .from('substitute_trainers')
-                .select('substitute_trainer_id')
-                .eq('term_id', termId)
-                .eq('substitute_date', date)
-                .single();
-            
-            let trainerId = trainerData.trainer_id;
-            
-            // Če je nadomestni trener, uporabi njegov ID
-            if (!substituteError && substituteData) {
-                trainerId = substituteData.substitute_trainer_id;
-            }
-            
-            // Naloži prisotnost trenerja
-            const { data: attendanceData, error: attendanceError } = await supabase
-                .from('trainer_attendance')
-                .select('*')
-                .eq('trainer_id', trainerId)
-                .eq('term_id', termId)
-                .eq('date', date)
-                .single();
-            
-            if (attendanceError && attendanceError.code !== 'PGRST116') {
-                throw attendanceError;
-            }
-            
-            // Nastavi vrednosti
-            const trainerPresentCheckbox = document.getElementById('trainerPresentCheckbox');
-            const trainerNoteInput = document.getElementById('trainerNoteInput');
-            
-            if (attendanceData) {
-                trainerPresentCheckbox.checked = attendanceData.present;
-                trainerNoteInput.value = attendanceData.note || '';
-            } else {
-                trainerPresentCheckbox.checked = false;
-                trainerNoteInput.value = '';
-            }
-            
-            // Dodaj event listenerje
-            trainerPresentCheckbox.onchange = () => saveTrainerAttendance(trainerId, termId, date);
-            trainerNoteInput.onchange = () => saveTrainerAttendance(trainerId, termId, date);
-            
-        } catch (error) {
-            console.error('Napaka pri nalaganju prisotnosti trenerja:', error);
-        }
-    }
+         // Funkcija za nalaganje prisotnosti trenerja
+     async function loadTrainerAttendance(termId, date) {
+         try {
+             // Najprej poišči trenerja termina
+             const { data: trainerData, error: trainerError } = await supabase
+                 .from('trainer_terms')
+                 .select('trainer_id')
+                 .eq('term_id', termId)
+                 .single();
+             
+             if (trainerError || !trainerData) {
+                 console.log('Ni najdenega trenerja za termin:', termId);
+                 return;
+             }
+             
+             let trainerId = trainerData.trainer_id;
+             
+             // Preveri, ali tabela substitute_trainers obstaja
+             try {
+                 const { data: substituteData, error: substituteError } = await supabase
+                     .from('substitute_trainers')
+                     .select('substitute_trainer_id')
+                     .eq('term_id', termId)
+                     .eq('substitute_date', date)
+                     .single();
+                 
+                 // Če je nadomestni trener, uporabi njegov ID
+                 if (!substituteError && substituteData) {
+                     trainerId = substituteData.substitute_trainer_id;
+                 }
+             } catch (error) {
+                 // Tabela substitute_trainers ne obstaja, uporabi originalnega trenerja
+                 console.log('Tabela substitute_trainers ne obstaja, uporabljam originalnega trenerja');
+             }
+             
+             // Preveri, ali tabela trainer_attendance obstaja
+             try {
+                 const { data: attendanceData, error: attendanceError } = await supabase
+                     .from('trainer_attendance')
+                     .select('*')
+                     .eq('trainer_id', trainerId)
+                     .eq('term_id', termId)
+                     .eq('date', date)
+                     .single();
+                 
+                 if (attendanceError && attendanceError.code !== 'PGRST116') {
+                     throw attendanceError;
+                 }
+                 
+                 // Nastavi vrednosti
+                 const trainerPresentCheckbox = document.getElementById('trainerPresentCheckbox');
+                 const trainerNoteInput = document.getElementById('trainerNoteInput');
+                 
+                 if (attendanceData) {
+                     trainerPresentCheckbox.checked = attendanceData.present;
+                     trainerNoteInput.value = attendanceData.note || '';
+                 } else {
+                     trainerPresentCheckbox.checked = false;
+                     trainerNoteInput.value = '';
+                 }
+                 
+                 // Dodaj event listenerje
+                 trainerPresentCheckbox.onchange = () => saveTrainerAttendance(trainerId, termId, date);
+                 trainerNoteInput.onchange = () => saveTrainerAttendance(trainerId, termId, date);
+             } catch (error) {
+                 // Tabela trainer_attendance ne obstaja, skrij sekcijo
+                 console.log('Tabela trainer_attendance ne obstaja, skrivam sekcijo');
+                 const trainerPresentCheckbox = document.getElementById('trainerPresentCheckbox');
+                 const trainerNoteInput = document.getElementById('trainerNoteInput');
+                 if (trainerPresentCheckbox && trainerNoteInput) {
+                     trainerPresentCheckbox.checked = false;
+                     trainerNoteInput.value = '';
+                 }
+             }
+             
+         } catch (error) {
+             console.error('Napaka pri nalaganju prisotnosti trenerja:', error);
+         }
+     }
     
-    // Funkcija za shranjevanje prisotnosti trenerja
-    async function saveTrainerAttendance(trainerId, termId, date) {
-        try {
-            const trainerPresentCheckbox = document.getElementById('trainerPresentCheckbox');
-            const trainerNoteInput = document.getElementById('trainerNoteInput');
-            
-            const present = trainerPresentCheckbox.checked;
-            const note = trainerNoteInput.value;
-            
-            // Shrani prisotnost
-            const { error: upsertError } = await supabase
-                .from('trainer_attendance')
-                .upsert({
-                    trainer_id: trainerId,
-                    term_id: termId,
-                    date: date,
-                    present: present,
-                    note: note
-                });
-            
-            if (upsertError) throw upsertError;
-            
-            console.log('Prisotnost trenerja shranjena');
-            
-        } catch (error) {
-            console.error('Napaka pri shranjevanju prisotnosti trenerja:', error);
-            alert('Napaka pri shranjevanju prisotnosti trenerja');
-        }
-    }
+         // Funkcija za shranjevanje prisotnosti trenerja
+     async function saveTrainerAttendance(trainerId, termId, date) {
+         try {
+             // Preveri, ali tabela trainer_attendance obstaja
+             try {
+                 const { data: tableExists, error: tableCheckError } = await supabase
+                     .from('trainer_attendance')
+                     .select('id')
+                     .limit(1);
+                 
+                 if (tableCheckError && tableCheckError.code === 'PGRST116') {
+                     // Tabela ne obstaja
+                     console.log('Tabela trainer_attendance ne obstaja, ne morem shraniti prisotnosti');
+                     return;
+                 }
+             } catch (error) {
+                 console.log('Tabela trainer_attendance ne obstaja, ne morem shraniti prisotnosti');
+                 return;
+             }
+             
+             const trainerPresentCheckbox = document.getElementById('trainerPresentCheckbox');
+             const trainerNoteInput = document.getElementById('trainerNoteInput');
+             
+             const present = trainerPresentCheckbox.checked;
+             const note = trainerNoteInput.value;
+             
+             // Shrani prisotnost
+             const { error: upsertError } = await supabase
+                 .from('trainer_attendance')
+                 .upsert({
+                     trainer_id: trainerId,
+                     term_id: termId,
+                     date: date,
+                     present: present,
+                     note: note
+                 });
+             
+             if (upsertError) throw upsertError;
+             
+             console.log('Prisotnost trenerja shranjena');
+             
+         } catch (error) {
+             console.error('Napaka pri shranjevanju prisotnosti trenerja:', error);
+             alert('Napaka pri shranjevanju prisotnosti trenerja');
+         }
+     }
 
-    // Funkcija za pridobivanje informacij o trenerju termina
-    async function getTermTrainerInfo(termId, date) {
-        try {
-            // Najprej preveri, ali je nadomestni trener za ta termin na ta datum
-            const { data: substituteData, error: substituteError } = await supabase
-                .from('substitute_trainers')
-                .select(`
-                    *,
-                    substitute_trainer:trainers!substitute_trainers_substitute_trainer_id_fkey(first_name, last_name)
-                `)
-                .eq('term_id', termId)
-                .eq('substitute_date', date)
-                .single();
-            
-            if (!substituteError && substituteData) {
-                // Če je nadomestni trener, prikaži njegovo ime
-                return `Nadomestni: ${substituteData.substitute_trainer.first_name} ${substituteData.substitute_trainer.last_name}`;
-            }
-            
-            // Če ni nadomestnega trenerja, poišči rednega trenerja termina
-            const { data: trainerData, error: trainerError } = await supabase
-                .from('trainer_terms')
-                .select(`
-                    trainer:trainers(first_name, last_name)
-                `)
-                .eq('term_id', termId)
-                .single();
-            
-            if (!trainerError && trainerData) {
-                return `${trainerData.trainer.first_name} ${trainerData.trainer.last_name}`;
-            }
-            
-            return null;
-            
-        } catch (error) {
-            console.error('Napaka pri pridobivanju informacij o trenerju:', error);
-            return null;
-        }
-    }
+         // Funkcija za pridobivanje informacij o trenerju termina
+     async function getTermTrainerInfo(termId, date) {
+         try {
+             // Najprej preveri, ali je nadomestni trener za ta termin na ta datum
+             try {
+                 const { data: substituteData, error: substituteError } = await supabase
+                     .from('substitute_trainers')
+                     .select(`
+                         *,
+                         substitute_trainer:trainers!substitute_trainers_substitute_trainer_id_fkey(first_name, last_name)
+                     `)
+                     .eq('term_id', termId)
+                     .eq('substitute_date', date)
+                     .single();
+                 
+                 if (!substituteError && substituteData) {
+                     // Če je nadomestni trener, prikaži njegovo ime
+                     return `Nadomestni: ${substituteData.substitute_trainer.first_name} ${substituteData.substitute_trainer.last_name}`;
+                 }
+             } catch (error) {
+                 // Tabela substitute_trainers ne obstaja, nadaljuj z iskanjem rednega trenerja
+                 console.log('Tabela substitute_trainers ne obstaja, iščem rednega trenerja');
+             }
+             
+             // Če ni nadomestnega trenerja, poišči rednega trenerja termina
+             const { data: trainerData, error: trainerError } = await supabase
+                 .from('trainer_terms')
+                 .select(`
+                     trainer:trainers(first_name, last_name)
+                 `)
+                 .eq('term_id', termId)
+                 .single();
+             
+             if (!trainerError && trainerData) {
+                 return `${trainerData.trainer.first_name} ${trainerData.trainer.last_name}`;
+             }
+             
+             return null;
+             
+         } catch (error) {
+             console.error('Napaka pri pridobivanju informacij o trenerju:', error);
+             return null;
+         }
+     }
 
          // Nova funkcija za osvežitev podatkov za določen dan
      async function refreshDayData(date) {
@@ -1556,15 +1606,15 @@ document.addEventListener('DOMContentLoaded', () => {
           console.error('Napaka pri nalaganju prisotnosti trenerjev:', error);
         }
         
-        const attendanceMap = {};
-        if (attendanceData) {
-          attendanceData.forEach(record => {
-            attendanceMap[record.trainer_id] = {
-              present: record.present_count || 0,
-              total: record.total_sessions || 0
-            };
-          });
-        }
+                 const attendanceMap = {};
+         if (attendanceData) {
+           attendanceData.forEach(record => {
+             attendanceMap[record.trainer_id] = {
+               present: Number(record.present_count) || 0,
+               total: Number(record.total_sessions) || 0
+             };
+           });
+         }
 
         trainers.forEach(trainer => {
           const attendance = attendanceMap[trainer.id] || { present: 0, total: 0 };
@@ -1948,10 +1998,12 @@ document.addEventListener('DOMContentLoaded', () => {
             let csv = "\uFEFFtrainer_id,total_sessions,present_count\n";
             
             if (attendanceData && attendanceData.length > 0) {
-                attendanceData.forEach(trainer => {
-                    const percentage = trainer.total_sessions > 0 ? ((trainer.present_count / trainer.total_sessions) * 100).toFixed(1) : 0;
-                    csv += `${trainer.trainer_id},${trainer.total_sessions},${trainer.present_count}\n`;
-                });
+                                 attendanceData.forEach(trainer => {
+                     const totalSessions = Number(trainer.total_sessions) || 0;
+                     const presentCount = Number(trainer.present_count) || 0;
+                     const percentage = totalSessions > 0 ? ((presentCount / totalSessions) * 100).toFixed(1) : 0;
+                     csv += `${trainer.trainer_id},${totalSessions},${presentCount}\n`;
+                 });
             }
             
             const filename = `prisostnost_trenerjev_${year}-${String(month+1).padStart(2,'0')}.csv`;
@@ -2096,44 +2148,70 @@ document.addEventListener('DOMContentLoaded', () => {
        }
      }, 30000); // 30 sekund
      
-     // Naloži nadomestne trenerje
+          // Naloži nadomestne trenerje
      async function loadSubstituteTrainers() {
-      try {
-        const { data: substituteData, error } = await supabase
-          .from('substitute_trainers')
-          .select(`
-            *,
-            original_trainer:trainers!substitute_trainers_original_trainer_id_fkey(first_name, last_name, email),
-            substitute_trainer:trainers!substitute_trainers_substitute_trainer_id_fkey(first_name, last_name, email),
-            term:terms(id, day, start_time, end_time)
-          `)
-          .order('substitute_date', { ascending: false });
-        
-        if (error) throw error;
-        
-        const elSubstituteTrainersList = document.getElementById('substituteTrainersList');
-        
-        if (substituteData && substituteData.length > 0) {
-          const html = substituteData.map(sub => `
-            <div class="substitute-item" style="border: 1px solid #007bff; padding: 12px; margin: 8px 0; border-radius: 6px; background: #f8f9fa;">
-              <div><strong>Termin:</strong> ${DAYNAME[sub.term.day]} ${sub.term.start_time.slice(0, 5)}-${sub.term.end_time.slice(0, 5)}</div>
-              <div><strong>Datum:</strong> ${new Date(sub.substitute_date).toLocaleDateString('sl-SI')}</div>
-              <div><strong>Originalni trener:</strong> ${sub.original_trainer.first_name} ${sub.original_trainer.last_name}</div>
-              <div><strong>Nadomestni trener:</strong> ${sub.substitute_trainer.first_name} ${sub.substitute_trainer.last_name}</div>
-              <div><strong>Razlog:</strong> ${sub.reason || 'Ni razloga'}</div>
-              <div class="muted">Ustvarjeno: ${new Date(sub.created_at).toLocaleDateString('sl-SI')}</div>
-            </div>
-          `).join('');
-          
-          elSubstituteTrainersList.innerHTML = html;
-        } else {
-          elSubstituteTrainersList.innerHTML = '<p class="muted">Ni nadomestnih dogovorov</p>';
-        }
-        
-              } catch (error) {
-          console.error('Napaka pri nalaganju nadomestnih trenerjev:', error);
-          const elSubstituteTrainersList = document.getElementById('substituteTrainersList');
-          elSubstituteTrainersList.innerHTML = '<p class="error">Napaka pri nalaganju podatkov</p>';
-        }
-      }
+       try {
+         // Preveri, ali tabela substitute_trainers obstaja
+         try {
+           const { data: tableExists, error: tableCheckError } = await supabase
+             .from('substitute_trainers')
+             .select('id')
+             .limit(1);
+           
+           if (tableCheckError && tableCheckError.code === 'PGRST116') {
+             // Tabela ne obstaja, prikaži sporočilo
+             const elSubstituteTrainersList = document.getElementById('substituteTrainersList');
+             if (elSubstituteTrainersList) {
+               elSubstituteTrainersList.innerHTML = '<p class="muted">Tabela nadomestnih trenerjev ne obstaja</p>';
+             }
+             return;
+           }
+         } catch (error) {
+           // Tabela ne obstaja, prikaži sporočilo
+           const elSubstituteTrainersList = document.getElementById('substituteTrainersList');
+           if (elSubstituteTrainersList) {
+             elSubstituteTrainersList.innerHTML = '<p class="muted">Tabela nadomestnih trenerjev ne obstaja</p>';
+           }
+           return;
+         }
+         
+         const { data: substituteData, error } = await supabase
+           .from('substitute_trainers')
+           .select(`
+             *,
+             original_trainer:trainers!substitute_trainers_original_trainer_id_fkey(first_name, last_name, email),
+             substitute_trainer:trainers!substitute_trainers_substitute_trainer_id_fkey(first_name, last_name, email),
+             term:terms(id, day, start_time, end_time)
+           `)
+           .order('substitute_date', { ascending: false });
+         
+         if (error) throw error;
+         
+         const elSubstituteTrainersList = document.getElementById('substituteTrainersList');
+         
+         if (substituteData && substituteData.length > 0) {
+           const html = substituteData.map(sub => `
+             <div class="substitute-item" style="border: 1px solid #007bff; padding: 12px; margin: 8px 0; border-radius: 6px; background: #f8f9fa;">
+               <div><strong>Termin:</strong> ${DAYNAME[sub.term.day]} ${sub.term.start_time.slice(0, 5)}-${sub.term.end_time.slice(0, 5)}</div>
+               <div><strong>Datum:</strong> ${new Date(sub.substitute_date).toLocaleDateString('sl-SI')}</div>
+               <div><strong>Originalni trener:</strong> ${sub.original_trainer.first_name} ${sub.original_trainer.last_name}</div>
+               <div><strong>Nadomestni trener:</strong> ${sub.substitute_trainer.first_name} ${sub.substitute_trainer.last_name}</div>
+               <div><strong>Razlog:</strong> ${sub.reason || 'Ni razloga'}</div>
+               <div class="muted">Ustvarjeno: ${new Date(sub.created_at).toLocaleDateString('sl-SI')}</div>
+             </div>
+           `).join('');
+           
+           elSubstituteTrainersList.innerHTML = html;
+         } else {
+           elSubstituteTrainersList.innerHTML = '<p class="muted">Ni nadomestnih dogovorov</p>';
+         }
+         
+       } catch (error) {
+         console.error('Napaka pri nalaganju nadomestnih trenerjev:', error);
+         const elSubstituteTrainersList = document.getElementById('substituteTrainersList');
+         if (elSubstituteTrainersList) {
+           elSubstituteTrainersList.innerHTML = '<p class="muted">Ni nadomestnih dogovorov</p>';
+         }
+       }
+     }
     });
