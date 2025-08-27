@@ -524,8 +524,10 @@ document.addEventListener('DOMContentLoaded', () => {
       openModal(elModal);
     }
     
-    function openModal(modalEl){ modalEl.style.display = "flex"; modalEl.setAttribute("aria-hidden", "false"); }
-    function closeModal(modalEl){ modalEl.style.display = "none"; modalEl.setAttribute("aria-hidden", "true"); }
+    // POSODOBLJENA FUNKCIJA ZA ODPRANJE MODALA
+    function openModal(modalEl){ modalEl.classList.add("show"); modalEl.setAttribute("aria-hidden", "false"); }
+    // POSODOBLJENA FUNKCIJA ZA ZAPIRANJE MODALA
+    function closeModal(modalEl){ modalEl.classList.remove("show"); modalEl.setAttribute("aria-hidden", "true"); }
 
     elCloseModalBtn.addEventListener("click", ()=>{ 
       closeModal(elModal); 
