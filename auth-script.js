@@ -43,6 +43,24 @@ document.addEventListener('DOMContentLoaded', () => {
   // Preveri, če je uporabnik že prijavljen
   async function checkAuth() {
       console.log('=== CHECK AUTH START ===');
+      
+      // Preveri, ali so vsi potrebni elementi naloženi
+      if (!elCalendarGrid || !elMonthLabel || !elPrevBtn || !elNextBtn || !elSummaryBox) {
+          console.error('Osnovni elementi niso naloženi');
+          return;
+      }
+      
+      // Preveri, ali so modalni elementi naloženi
+      if (!elModal || !elAttendanceTable || !elSubstitutionTable) {
+          console.error('Modalni elementi niso naloženi');
+          console.error('elModal:', !!elModal);
+          console.error('elAttendanceTable:', !!elAttendanceTable);
+          console.error('elSubstitutionTable:', !!elSubstitutionTable);
+          return;
+      }
+      
+      console.log('Vsi elementi so naloženi');
+      
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
           console.log('Uporabnik je prijavljen:', user.email);
@@ -376,8 +394,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const elModal = document.getElementById("eventModal");
   const elModalTitle = document.getElementById("modalTitle");
   const elModalMeta = document.getElementById("modalMeta");
-  const elAttendanceTable = document.getElementById("attendanceTable").querySelector("tbody");
-  const elSubstitutionTable = document.getElementById("substitutionTable").querySelector("tbody");
+  const elAttendanceTable = document.getElementById("attendanceTable")?.querySelector("tbody");
+  const elSubstitutionTable = document.getElementById("substitutionTable")?.querySelector("tbody");
   const elToggleEventBtn = document.getElementById("toggleEventBtn");
   const elCloseModalBtn = document.getElementById("closeModalBtn");
   const elModalSwimmerSelect = document.getElementById("modalSwimmerSelect");
@@ -667,16 +685,25 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
        function renderEventTables(termId, date) {
-     const termKey = `${termId}-${date}`;
-     // Uporabi isto strukturo kot v glavni strani
-     const termAtt = attendance[date]?.[termId] || {};
-     
-     console.log('renderEventTables - termId:', termId, 'date:', date);
-     console.log('termAtt:', termAtt);
-     console.log('swimmers:', swimmers);
-     console.log('userTerms:', userTerms);
-     console.log('termId type:', typeof termId);
-     console.log('termId v userTerms:', userTerms.includes(termId));
+  // Preveri, ali so potrebni elementi naloženi
+  if (!elAttendanceTable || !elSubstitutionTable) {
+    console.error('Potrebni elementi niso naloženi:', {
+      elAttendanceTable: !!elAttendanceTable,
+      elSubstitutionTable: !!elSubstitutionTable
+    });
+    return;
+  }
+
+  const termKey = `${termId}-${date}`;
+  // Uporabi isto strukturo kot v glavni strani
+  const termAtt = attendance[date]?.[termId] || {};
+  
+  console.log('renderEventTables - termId:', termId, 'date:', date);
+  console.log('termAtt:', termAtt);
+  console.log('swimmers:', swimmers);
+  console.log('userTerms:', userTerms);
+  console.log('termId type:', typeof termId);
+  console.log('termId v userTerms:', userTerms.includes(termId));
      
            // KLJUČNI POPRAVEK: Pravilno filtriranje plavalcev
       // Redno dodeljeni plavalci (tisti, ki so dodeljeni temu terminu)
