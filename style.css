@@ -217,8 +217,9 @@ button.btn:disabled {
 
 .event {
     width: 95%;
-    background-color: var(--unfilled-bg-light);
-    color: var(--unfilled-color);
+    background-color: var(--panel-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
     border-radius: 4px;
     padding: 3px 6px;
     font-size: 0.75rem;
@@ -232,10 +233,19 @@ button.btn:disabled {
 .event.partial {
     background-color: var(--partial-bg-light);
     color: var(--partial-color);
+    border-color: var(--partial-color);
 }
+
+.event.unfilled {
+    background-color: var(--unfilled-bg-light);
+    color: var(--unfilled-color);
+    border-color: var(--unfilled-color);
+}
+
 .event.complete {
     background-color: var(--ok-bg-light);
     color: var(--ok-color);
+    border-color: var(--ok-color);
 }
 
 .event.disabled {
@@ -248,11 +258,9 @@ button.btn:disabled {
 .event .time {
     font-weight: bold;
 }
-/* Ukloni podrazumevano barvo, da bo barvno kodiranje delovalo za celoten čas */
 .event .end-time {
     font-weight: normal;
 }
-
 .more-events-indicator {
     position: absolute;
     bottom: 5px;
@@ -261,20 +269,17 @@ button.btn:disabled {
     font-size: 0.7rem;
     color: var(--neutral-color);
 }
-
 .summary {
     margin-top: 20px;
     padding-top: 20px;
     border-top: 1px solid var(--border-color);
 }
-
 .summary table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 10px;
 }
-.summary th,
-.summary td {
+.summary th, .summary td {
     border: 1px solid var(--border-color);
     padding: 8px;
     text-align: left;
@@ -282,11 +287,9 @@ button.btn:disabled {
 .summary th {
     background-color: var(--bg-color);
 }
-
 .muted {
     color: var(--mut);
 }
-
 .chip {
     display: inline-flex;
     align-items: center;
@@ -299,55 +302,13 @@ button.btn:disabled {
 }
 .chip .remove-term-btn {
     margin-left: 8px;
-    background: transparent;
-    color: white;
+    background: none;
     border: none;
+    color: white;
     font-weight: bold;
     cursor: pointer;
-    padding: 0;
-    font-size: 1em;
+    font-size: 1.1em;
 }
-
-#swimmerInfo {
-    margin-top: 10px;
-    min-height: 40px;
-    display: flex;
-    align-items: center;
-}
-
-.term-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.term-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-color: var(--bg-color);
-    padding: 10px;
-    border-radius: 4px;
-    border: 1px solid var(--border-color);
-}
-
-.term-item-info {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.term-item-label {
-    font-weight: bold;
-}
-
-.term-item-dates {
-    font-size: 0.8rem;
-    color: var(--mut);
-}
-
-
-/* ===== Modal Styling ===== */
 .modal {
     display: none;
     position: fixed;
@@ -357,23 +318,22 @@ button.btn:disabled {
     width: 100%;
     height: 100%;
     overflow: auto;
-    background-color: rgba(0,0,0,0.5);
+    background-color: rgba(0,0,0,0.4);
     justify-content: center;
     align-items: center;
+    padding: 20px;
 }
-
 .modal-content {
     background-color: var(--panel-bg);
-    padding: 20px;
     border-radius: var(--border-radius);
-    width: 90%;
-    max-width: 600px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    box-shadow: var(--shadow);
+    max-width: 500px;
+    width: 100%;
+    padding: 20px;
     position: relative;
     max-height: 90vh;
     overflow-y: auto;
 }
-
 .modal-header {
     display: flex;
     justify-content: space-between;
@@ -382,135 +342,46 @@ button.btn:disabled {
     padding-bottom: 10px;
     margin-bottom: 15px;
 }
-
 .close-btn {
-    color: var(--mut);
-    font-size: 28px;
+    color: var(--neutral-color);
+    font-size: 1.5rem;
     font-weight: bold;
-    cursor: pointer;
     background: none;
     border: none;
+    cursor: pointer;
 }
-.close-btn:hover { color: var(--text-color); }
-
-.modal-body h4 {
-    margin-bottom: 10px;
-    color: var(--primary-color);
+.modal-body {
+    margin-bottom: 15px;
 }
-
-.modal-body .table-container {
-    max-height: 250px;
-    overflow-y: auto;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
+.modal-footer {
+    text-align: right;
 }
-
-.modal-body table {
+.attendance-table {
     width: 100%;
     border-collapse: collapse;
 }
-
-.modal-body td {
+.attendance-table th, .attendance-table td {
     padding: 8px;
     border-bottom: 1px solid var(--border-color);
-    vertical-align: middle;
 }
-
-.modal-body td:first-child { font-weight: bold; }
-
-.modal-body tr:last-child td { border-bottom: none; }
-
-.modal-body .btn {
-    padding: 5px 10px;
-    font-size: 0.8rem;
-}
-
-.modal-body .btn.ok {
-    background-color: var(--ok-color);
-    color: white;
-}
-.modal-body .btn.warn {
-    background-color: var(--warn-color);
-    color: white;
-}
-.modal-body .btn.neutral {
-    background-color: var(--neutral-color);
-    color: white;
-}
-
-.modal-footer {
-    padding-top: 15px;
-    border-top: 1px solid var(--border-color);
-    margin-top: 15px;
+.attendance-table td:last-child {
     text-align: right;
 }
-
-.modal-footer .btn {
-    margin-left: 10px;
-}
-
-.modal-meta {
-    margin-bottom: 15px;
-}
-.modal-meta .chip {
+.status-btn {
     background-color: var(--neutral-color);
-}
-
-.add-swimmer-to-event {
-    display: flex;
-    gap: 10px;
-    margin-top: 15px;
-}
-.add-swimmer-to-event select {
-    flex-grow: 1;
-}
-
-.notes-section {
-    margin-bottom: 20px;
-}
-.notes-section textarea {
-    width: 100%;
-    min-height: 80px;
-    padding: 10px;
-    border: 1px solid var(--border-color);
+    color: white;
+    border: none;
     border-radius: 4px;
-    margin-top: 5px;
+    padding: 4px 8px;
+    font-size: 0.8em;
+    cursor: pointer;
+    margin-left: 4px;
 }
-.separator {
-    height: 1px;
-    background-color: var(--border-color);
-    margin: 20px 0;
-}
-
-#inactiveNote {
-    color: var(--warn-color);
-    font-weight: bold;
-    text-align: left;
-    display: block;
-    margin-bottom: 10px;
-}
-
-/* Day modal styling */
-#dayModalList .event {
-    margin-bottom: 10px;
-    width: 100%;
-    display: block;
-    text-align: left;
-}
-#dayModalList .event.partial {
-    background-color: var(--partial-bg-light);
-    color: var(--partial-color);
-}
-#dayModalList .event.complete {
-    background-color: var(--ok-bg-light);
-    color: var(--ok-color);
-}
-#dayModalList .event.disabled {
-    background-color: #f0f0f0;
-    color: var(--mut);
-    text-decoration: line-through;
-    opacity: 0.8;
-}
+.status-btn:hover { background-color: var(--neutral-hover); }
+.status-btn.ok { background-color: var(--ok-color); }
+.status-btn.ok:hover { background-color: var(--secondary-hover); }
+.status-btn.warn { background-color: var(--warn-color); }
+.status-btn.warn:hover { background-color: var(--warn-hover); }
 
 /* Mobilni zaslon */
 @media (max-width: 768px) {
@@ -518,69 +389,23 @@ button.btn:disabled {
         flex-direction: column;
     }
     
-    .content {
-        order: -1;
-        min-width: unset;
-        width: 100%;
-    }
-
     .sidebar {
-        min-width: unset;
-        width: 100%;
+        order: -1;
     }
 
-    .calendar-grid-labels,
-    .calendar-grid {
-        grid-template-columns: repeat(5, 1fr) 0.5fr 0.5fr;
-        font-size: 0.8rem;
+    .content {
+        min-width: unset;
     }
 
     .day {
-        min-height: 90px;
-        padding: 2px;
+        min-height: 70px;
     }
-    
-    .day .num {
-      font-size: 1rem;
+    .num {
+        font-size: 1rem;
     }
     
     .event {
-        display: block;
-        font-size: 0.6rem;
-        margin: 2px 0;
+        font-size: 0.65rem;
         padding: 2px 4px;
     }
-    
-    .event .end-time {
-      display: none;
-    }
-
-    .event.partial, .event.complete {
-        display: block;
-    }
-
-/* Ločilni okvir za glavne sekcije */
-.box-panel {
-    background-color: var(--panel-bg);
-    padding: 20px;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow);
-    margin-bottom: 20px;
-}
-/* Posodobitev vrstnega reda na mobilnih napravah */
-@media (max-width: 768px) {
-    .content > .data-sections {
-        order: 99;
-    }
-}
-/* Styling za glavno vsebino */
-.content {
-    flex: 2;
-    min-width: 0;
-    
-    /* Novi stil: Uporaba gap za razmik med sekcijami */
-    display: flex;
-    flex-direction: column;
-    gap: 20px; /* Tukaj določimo želeni razmik */
-}
 }
