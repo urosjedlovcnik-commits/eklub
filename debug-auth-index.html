@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Auth Index</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .error { color: red; }
+        .success { color: green; }
+        .info { color: blue; }
+        .warning { color: orange; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Debug Auth Index</h1>
+    <div id="output"></div>
+
+    <script>
+        const output = document.getElementById('output');
+
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            output.appendChild(div);
+            console.log(message);
+        }
+
+        // Preveri, ali se auth-script.js naloži
+        log('Preverjam, ali se auth-script.js naloži...', 'info');
+        
+        // Ustvari test script tag
+        const testScript = document.createElement('script');
+        testScript.src = './auth-script.js';
+        testScript.onload = function() {
+            log('auth-script.js se je uspešno naložil', 'success');
+        };
+        testScript.onerror = function() {
+            log('Napaka pri nalaganju auth-script.js', 'error');
+        };
+        
+        document.head.appendChild(testScript);
+
+        // Preveri, ali se auth-index.html naloži
+        log('Preverjam, ali se auth-index.html naloži...', 'info');
+        
+        fetch('./auth-index.html')
+            .then(response => {
+                if (response.ok) {
+                    log('auth-index.html se lahko naloži', 'success');
+                    return response.text();
+                } else {
+                    log(`Napaka pri nalaganju auth-index.html: ${response.status}`, 'error');
+                }
+            })
+            .then(html => {
+                if (html) {
+                    log('auth-index.html vsebina je dostopna', 'success');
+                    
+                    // Preveri, ali so ključni elementi prisotni
+                    if (html.includes('id="loginScreen"')) {
+                        log('✓ loginScreen element najden', 'success');
+                    } else {
+                        log('✗ loginScreen element ni najden', 'error');
+                    }
+                    
+                    if (html.includes('id="mainApp"')) {
+                        log('✓ mainApp element najden', 'success');
+                    } else {
+                        log('✗ mainApp element ni najden', 'error');
+                    }
+                    
+                    if (html.includes('id="userName"')) {
+                        log('✓ userName element najden', 'success');
+                    } else {
+                        log('✗ userName element ni najden', 'error');
+                    }
+                    
+                    if (html.includes('auth-script.js')) {
+                        log('✓ auth-script.js referenca najdena', 'success');
+                    } else {
+                        log('✗ auth-script.js referenca ni najdena', 'error');
+                    }
+                }
+            })
+            .catch(error => {
+                log(`Napaka pri preverjanju auth-index.html: ${error.message}`, 'error');
+            });
+
+        log('Debug test končan', 'info');
+    </script>
+</body>
+</html>

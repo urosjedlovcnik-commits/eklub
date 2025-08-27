@@ -6,37 +6,77 @@
     <title>Test Auth Index</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
-        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
-        .success { background-color: #d4edda; border-color: #c3e6cb; }
-        .error { background-color: #f8d7da; border-color: #f5c6cb; }
-        .info { background-color: #d1ecf1; border-color: #bee5eb; }
-        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
-        iframe { width: 100%; height: 600px; border: 1px solid #ddd; }
+        .error { color: red; }
+        .success { color: green; }
+        .info { color: blue; }
+        .warning { color: orange; }
+        iframe { width: 100%; height: 800px; border: 1px solid #ccc; }
     </style>
 </head>
 <body>
     <h1>Test Auth Index</h1>
+    <div id="output"></div>
     
-    <div class="test-section info">
-        <h3>Test auth-index.html</h3>
-        <p>Odprite auth-index.html v novem oknu in preverite, ali deluje prijava.</p>
-        <button onclick="openAuthIndex()">Odpri auth-index.html</button>
-        <button onclick="openTestLogin()">Odpri test-login.html</button>
-    </div>
-    
-    <div class="test-section info">
-        <h3>Primerjava</h3>
-        <p>Primerjajte delovanje auth-index.html z test-login.html, ki deluje.</p>
-    </div>
+    <h2>Auth Index v iframe:</h2>
+    <iframe id="authFrame" src="auth-index.html"></iframe>
 
     <script>
-        function openAuthIndex() {
-            window.open('auth-index.html', '_blank');
+        const output = document.getElementById('output');
+        const authFrame = document.getElementById('authFrame');
+
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            output.appendChild(div);
+            console.log(message);
         }
-        
-        function openTestLogin() {
-            window.open('test-login.html', '_blank');
-        }
+
+        // Preveri, ali se auth-index.html naloži
+        authFrame.onload = function() {
+            log('auth-index.html se je naložil', 'success');
+            
+            try {
+                // Poskusi dostopati do elementov v iframe
+                const iframeDoc = authFrame.contentDocument || authFrame.contentWindow.document;
+                
+                // Preveri osnovne elemente
+                const loginScreen = iframeDoc.getElementById('loginScreen');
+                const mainApp = iframeDoc.getElementById('mainApp');
+                
+                if (loginScreen) log('✓ loginScreen najden', 'success');
+                else log('✗ loginScreen ni najden', 'error');
+                
+                if (mainApp) log('✓ mainApp najden', 'success');
+                else log('✗ mainApp ni najden', 'error');
+                
+                // Preveri, ali je prikazan login ali glavna aplikacija
+                if (loginScreen && !loginScreen.classList.contains('hidden')) {
+                    log('Prikazan je login obrazec', 'info');
+                } else if (mainApp && !mainApp.classList.contains('hidden')) {
+                    log('Prikazana je glavna aplikacija', 'success');
+                } else {
+                    log('Ni jasno, kaj je prikazano', 'warning');
+                }
+                
+            } catch (error) {
+                log(`Napaka pri dostopu do iframe: ${error.message}`, 'error');
+                log('To je lahko zaradi CORS omejitev', 'warning');
+            }
+        };
+
+        authFrame.onerror = function() {
+            log('Napaka pri nalaganju auth-index.html', 'error');
+        };
+
+        // Poslušaj napake v iframe
+        window.addEventListener('error', function(e) {
+            if (e.target === authFrame) {
+                log(`Napaka v iframe: ${e.message}`, 'error');
+            }
+        });
+
+        log('Začenjam test auth-index.html', 'info');
     </script>
 </body>
 </html>
