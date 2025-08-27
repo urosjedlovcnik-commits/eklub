@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const { data: trainerData, error: trainerError } = await supabase
                 .from('trainers')
                 .select('*')
-                .eq('email', currentUser.email)
+                .eq('user_id', currentUser.id)
                 .single();
 
             if (trainerError || !trainerData) {

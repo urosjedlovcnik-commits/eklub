@@ -3,6 +3,7 @@
 -- 1. Tabela za trenerje
 CREATE TABLE IF NOT EXISTS trainers (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     email TEXT UNIQUE NOT NULL,
     first_name TEXT NOT NULL,
     last_name TEXT NOT NULL,
@@ -28,22 +29,22 @@ ALTER TABLE trainer_terms ENABLE ROW LEVEL SECURITY;
 -- 5. Nastavi politike za tabelo trainers
 -- Dovoli branje samo trenerjem, ki so prijavljeni
 CREATE POLICY "Trenerji lahko vidijo samo svoje podatke" ON trainers
-    FOR SELECT USING (auth.email() = email);
+    FOR SELECT USING (auth.uid() = user_id);
 
 -- Dovoli vstavljanje novih trenerjev (za registracijo)
 CREATE POLICY "Dovoli vstavljanje trenerjev" ON trainers
-    FOR INSERT WITH CHECK (true);
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- Dovoli posodabljanje samo svojih podatkov
 CREATE POLICY "Trenerji lahko posodabljajo samo svoje podatke" ON trainers
-    FOR UPDATE USING (auth.email() = email);
+    FOR UPDATE USING (auth.uid() = user_id);
 
 -- 6. Nastavi politike za tabelo trainer_terms
 -- Dovoli branje samo trenerjem, ki so povezani s termini
 CREATE POLICY "Trenerji lahko vidijo svoje povezave s termini" ON trainer_terms
     FOR SELECT USING (
         trainer_id IN (
-            SELECT id FROM trainers WHERE email = auth.email()
+            SELECT id FROM trainers WHERE user_id = auth.uid()
         )
     );
 
@@ -74,10 +75,10 @@ CREATE TRIGGER update_trainers_updated_at
 -- Odkomentirajte spodnje vrstice, če želite dodati testne trenerje
 
 /*
-INSERT INTO trainers (email, first_name, last_name) VALUES
-('trener1@example.com', 'Janez', 'Novak'),
-('trener2@example.com', 'Maja', 'Kovač'),
-('trener3@example.com', 'Peter', 'Horvat');
+INSERT INTO trainers (user_id, email, first_name, last_name) VALUES
+('user-uuid-1', 'trener1@example.com', 'Janez', 'Novak'),
+('user-uuid-2', 'trener2@example.com', 'Maja', 'Kovač'),
+('user-uuid-3', 'trener3@example.com', 'Peter', 'Horvat');
 
 -- Poveži trenerje z obstoječimi termini (prilagodite ID-je terminov)
 INSERT INTO trainer_terms (trainer_id, term_id) 
@@ -124,6 +125,7 @@ $$ LANGUAGE plpgsql;
 
 -- 12. Indeksi za boljšo zmogljivost
 CREATE INDEX IF NOT EXISTS idx_trainers_email ON trainers(email);
+CREATE INDEX IF NOT EXISTS idx_trainers_user_id ON trainers(user_id);
 CREATE INDEX IF NOT EXISTS idx_trainer_terms_trainer_id ON trainer_terms(trainer_id);
 CREATE INDEX IF NOT EXISTS idx_trainer_terms_term_id ON trainer_terms(term_id);
 CREATE INDEX IF NOT EXISTS idx_trainer_terms_composite ON trainer_terms(trainer_id, term_id);

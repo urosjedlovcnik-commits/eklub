@@ -35,8 +35,8 @@ Ta dokument opisuje, kako nastaviti verzijo aplikacije z autentikacijo, kjer vsa
 4. Ustvarite zapis v tabeli `trainers`:
 
 ```sql
-INSERT INTO trainers (email, first_name, last_name) 
-VALUES ('trener@example.com', 'Ime', 'Priimek');
+INSERT INTO trainers (user_id, email, first_name, last_name) 
+VALUES ('user-uuid-from-auth', 'trener@example.com', 'Ime', 'Priimek');
 ```
 
 #### Možnost B: Preko SQL
@@ -46,8 +46,10 @@ INSERT INTO auth.users (email, encrypted_password, email_confirmed_at, created_a
 VALUES ('trener@example.com', crypt('geslo123', gen_salt('bf')), NOW(), NOW(), NOW());
 
 -- Nato dodajte zapis v tabelo trainers
-INSERT INTO trainers (email, first_name, last_name) 
-VALUES ('trener@example.com', 'Ime', 'Priimek');
+INSERT INTO trainers (user_id, email, first_name, last_name) 
+SELECT id, 'trener@example.com', 'Ime', 'Priimek'
+FROM auth.users 
+WHERE email = 'trener@example.com';
 ```
 
 ### 4. Povezovanje trenerjev s termini
@@ -104,6 +106,7 @@ Za upravljanje trenerjev in povezav:
 
 ### Tabela `trainers`:
 - `id` - UUID primarni ključ
+- `user_id` - UUID reference na auth.users(id)
 - `email` - Email trenerja (povezan z auth.users)
 - `first_name` - Ime trenerja
 - `last_name` - Priimek trenerja

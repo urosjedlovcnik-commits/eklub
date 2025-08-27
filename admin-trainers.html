@@ -457,6 +457,7 @@
           const { data: trainerData, error: trainerError } = await supabase
             .from('trainers')
             .insert([{
+              user_id: authData.user.id,
               email: email,
               first_name: firstName,
               last_name: lastName
