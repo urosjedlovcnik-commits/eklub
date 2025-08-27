@@ -80,6 +80,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const elCancelNoteBtn = document.getElementById("cancelNoteBtn");
     const elConfirmNoteBtn = document.getElementById("confirmNoteBtn");
     const elCloseNoteModalBtn = document.getElementById("closeNoteModalBtn");
+    
+    // Elementi za opombe o treningu
+    const elNotesInput = document.getElementById("notesInput");
+    const elSaveNotesBtn = document.getElementById("saveNotesBtn");
 
 
     // ===== Pomožne funkcije =====
@@ -147,7 +151,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const ymd = iso(date);
       const status = termStatus[ymd]?.[termId]?.status || "active";
       const note = termStatus[ymd]?.[termId]?.note || "";
-      return { status, note };
+      const notes = termStatus[ymd]?.[termId]?.notes || "";
+      return { status, note, notes };
     }
     function isInactive(date, termId){ return getTermStatus(date, termId).status === "inactive"; }
 
@@ -301,7 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }, {});
 
       termStatus[ymd] = statusData.reduce((acc, row) => {
-        acc[row.term_id] = { status: row.status, note: row.note };
+        acc[row.term_id] = { status: row.status, note: row.note, notes: row.notes };
         return acc;
       }, {});
     }
@@ -464,6 +469,24 @@ document.addEventListener('DOMContentLoaded', () => {
         elInactiveNoteText.textContent = "";
         elInactiveNote.style.display = "none";
       }
+
+      // Nastavitev opomb o treningu
+      elNotesInput.value = termStatusObj.notes || "";
+      elSaveNotesBtn.textContent = "Shrani trening";
+      elSaveNotesBtn.onclick = async () => {
+        const notes = elNotesInput.value;
+        const { error } = await supabase
+          .from('term_status')
+          .upsert({ date: ymd, term_id: termId, notes: notes }, { onConflict: ['date', 'term_id'] });
+        
+        if (error) {
+          console.error("Napaka pri shranjevanju zapiska:", error);
+          alert("Napaka pri shranjevanju zapiska. Preverite konzolo.");
+        } else {
+          await refreshDayData(date);
+          alert("Zapisek shranjen!");
+        }
+      };
       
       elToggleEventBtn.onclick = async () => {
         const currentStatus = getTermStatus(date, termId).status;
@@ -1211,7 +1234,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (statusError) throw statusError;
         termStatus = statusData.reduce((acc, row) => {
           acc[row.date] = acc[row.date] || {};
-          acc[row.date][row.term_id] = { status: row.status, note: row.note };
+          acc[row.date][row.term_id] = { status: row.status, note: row.note, notes: row.notes };
           return acc;
         }, {});
 

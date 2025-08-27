@@ -12,6 +12,8 @@ h1{margin:0 0 12px;text-align:center}
 .btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
 .btn.warn{background:var(--warn);border-color:var(--warn);color:#fff}
 .btn.neutral{background:#e5e7eb;border-color:#d1d5db;color:#4b5563;}
+.btn.primary-btn{background:var(--pri);border-color:var(--pri);color:#fff}
+.btn.primary-btn:hover{background:var(--pri);opacity:0.9}
 .tag{display:inline-block;background:#eef2ff;border:1px solid #c7d2fe;border-radius:999px;padding:3px 10px;font-size:13px}
 .grid{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr;gap:12px}
 /* Koledar (širok, nižji) */
@@ -181,6 +183,27 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   padding: 8px;
   box-sizing: border-box;
 }
+
+.notes-section {
+  margin-top: 12px;
+}
+
+.notes-section textarea {
+  width: 100%;
+  min-height: 80px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  box-sizing: border-box;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.notes-section label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
 @media (max-width: 768px) {
   #noteModal .modal-content {
     padding: 15px;
@@ -222,6 +245,7 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   .card h3 { font-size: 16px; padding: 8px 10px; }
   .card .inner { padding: 8px; }
   .btn { padding: 6px 10px; font-size: 13px; }
+  .btn.primary-btn { padding: 6px 10px; font-size: 13px; }
   .modal .box { max-width: 95%; top: 10%; transform: translate(-50%, 0); }
   .modal .box-header { flex-direction: column; align-items: flex-start; }
   .modal .box-header .row { flex-wrap: wrap; margin-top: 8px; }
@@ -229,4 +253,25 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   .csv-options .inner{ flex-direction: column; gap: 8px; }
   .csv-export-controls{ flex-direction: column; gap: 8px; }
   .csv-export-controls > * { width: 100%; }
+  .notes-section textarea { min-height: 60px; }
+  .notes-section { margin-top: 8px; }
+  .notes-section label { font-size: 13px; }
+  .notes-section h4 { font-size: 14px; margin-bottom: 8px; }
+  .notes-section button { margin-top: 8px; }
+  .notes-section textarea { font-size: 13px; }
+  .notes-section { padding: 8px; }
+  .notes-section { border: 1px solid var(--border); border-radius: 8px; background: #f8fafc; }
+  .notes-section { margin-bottom: 12px; }
+  .notes-section { margin-top: 12px; }
+  .notes-section { margin-bottom: 8px; }
+  .notes-section { margin-top: 8px; }
+  .notes-section { margin-bottom: 8px; }
+  .notes-section { margin-top: 8px; }
+  .notes-section { margin-bottom: 8px; }
+  .notes-section { margin-top: 8px; }
+  .notes-section { margin-bottom: 8px; }
+  .notes-section { margin-top: 8px; }
+  .notes-section { margin-bottom: 8px; }
+  .notes-section { margin-top: 8px; }
+  .notes-section { margin-bottom: 8px; }
 }
