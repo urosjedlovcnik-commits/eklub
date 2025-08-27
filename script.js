@@ -491,6 +491,12 @@ document.addEventListener('DOMContentLoaded', () => {
         acc[row.term_id] = { status: row.status, note: row.note, notes: row.notes };
         return acc;
       }, {});
+      
+      // NOVO: Če je modal odprt za ta datum, osveži tudi modal
+      if (modalCtx && modalCtx.date && iso(modalCtx.date) === ymd) {
+        console.log('Osvežujem modal za datum:', ymd);
+        await openEvent(modalCtx.date, modalCtx.termId);
+      }
     }
 
 
@@ -1557,6 +1563,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Posodobi kalendar in povzetek
         renderMonth();
         
+        // NOVO: Če je modal odprt, osveži tudi modal
+        if (modalCtx && modalCtx.date && modalCtx.termId) {
+          console.log('Ročno osveževanje modala za termin:', modalCtx.termId);
+          await openEvent(modalCtx.date, modalCtx.termId);
+        }
+        
         console.log('Podatki ročno osveženi');
       } catch (error) {
         console.error('Napaka pri ročnem osveževanju:', error);
@@ -1791,7 +1803,6 @@ document.addEventListener('DOMContentLoaded', () => {
           const currentYear = currentDate.getFullYear();
           
           // Osveži podatke za vse datume v trenutnem mesecu
-          const daysInCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
           for (let day = 1; day <= daysInCurrentMonth; day++) {
             const date = new Date(currentYear, currentMonth, day);
             await refreshDayData(date);
@@ -1800,7 +1811,13 @@ document.addEventListener('DOMContentLoaded', () => {
           // Posodobi kalendar
           renderMonth();
           
-          console.log('Kalendar avtomatsko osvežen');
+          // NOVO: Če je modal odprt, osveži tudi modal
+          if (modalCtx && modalCtx.date && modalCtx.termId) {
+            console.log('Avtomatsko osveževanje modala za termin:', modalCtx.termId);
+            await openEvent(modalCtx.date, modalCtx.termId);
+          }
+          
+          console.log('Kalendar in modal avtomatsko osveženi');
         } catch (error) {
           console.error('Napaka pri avtomatskem osveževanju kalendarja:', error);
         }
