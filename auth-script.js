@@ -40,6 +40,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Preveri, če je uporabnik že prijavljen
     async function checkAuth() {
         console.log('=== CHECK AUTH START ===');
+        
+        // DODAJAM DEBUGGER - odpri Developer Tools (F12) in poglej Console
+        debugger;
+        
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
             console.log('Uporabnik je prijavljen:', user.email);
@@ -65,6 +69,9 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('=== LOAD USER TERMS START ===');
             console.log('Current user ID:', currentUser.id);
             console.log('Current user email:', currentUser.email);
+            
+            // DODAJAM DEBUGGER - odpri Developer Tools (F12) in poglej Console
+            debugger;
             
             // Najprej poiščemo trenerja v tabeli trenerjev
             console.log('Iščem trenerja v tabeli trainers...');
@@ -164,6 +171,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         console.log('Email:', email);
         console.log('Password length:', password.length);
+
+        // DODAJAM DEBUGGER - odpri Developer Tools (F12) in poglej Console
+        debugger;
 
         try {
             console.log('Attempting to sign in with Supabase...');
@@ -1144,19 +1154,25 @@ document.addEventListener('DOMContentLoaded', () => {
       elSwimmerInfo.textContent = `Dodeljeni termini: ${termNames || 'Ni dodeljenih terminov'}`;
     }
 
-    // ===== NALAGANJE PODATKOV =====
+        // ===== NALAGANJE PODATKOV =====
     async function loadDataFromSupabase() {
-      try {
-        // Če trener nima terminov, ne naloži podatkov
-        if (!userTerms || userTerms.length === 0) {
-          TERMS = [];
-          swimmers = [];
-          attendance = {};
-          termStatus = {};
-          renderCalendar();
-          updateSummary();
-          return;
-        }
+        try {
+            console.log('=== LOAD DATA FROM SUPABASE START ===');
+            console.log('userTerms:', userTerms);
+            
+            // DODAJAM DEBUGGER - odpri Developer Tools (F12) in poglej Console
+            debugger;
+            
+            // Če trener nima terminov, ne naloži podatkov
+            if (!userTerms || userTerms.length === 0) {
+                TERMS = [];
+                swimmers = [];
+                attendance = {};
+                termStatus = {};
+                renderCalendar();
+                updateSummary();
+                return;
+            }
         
         // Naloži samo termine trenerja
         const { data: termsData, error: termsError } = await supabase
