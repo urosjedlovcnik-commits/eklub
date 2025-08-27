@@ -390,17 +390,26 @@
              <div id="substituteTrainerReason" style="margin-top:4px; font-size:0.9em;"></div>
            </div>
            
-           <!-- Prisotnost trenerja -->
-           <div class="trainer-attendance-section" style="margin-bottom:12px;">
-             <h4 style="margin:0 0 8px 0;">Prisotnost trenerja</h4>
-             <div style="display:flex; align-items:center; gap:10px;">
-               <label>
-                 <input type="checkbox" id="trainerPresentCheckbox">
-                 Trener je prisoten
-               </label>
-               <input type="text" id="trainerNoteInput" placeholder="Opomba trenerja" style="flex:1; max-width:200px;">
-             </div>
-           </div>
+                       <!-- Prisotnost trenerja -->
+            <div class="trainer-attendance-section" style="margin-bottom:12px;">
+              <h4 style="margin:0 0 8px 0;">Prisotnost trenerja</h4>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <label>
+                  <input type="checkbox" id="trainerPresentCheckbox">
+                  Trener je prisoten
+                </label>
+                <input type="text" id="trainerNoteInput" placeholder="Opomba trenerja" style="flex:1; max-width:200px;">
+              </div>
+            </div>
+            
+            <!-- Tabela za prisotnost trenerja -->
+            <div id="trainerAttendanceSection" style="display: none;">
+              <h4 style="margin:0 0 8px 0;">Prisotnost nadomestnega trenerja</h4>
+              <table id="trainerAttendanceTable">
+                <thead><tr><th>Trener</th><th>Prisotnost</th><th>Opomba</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
            
            <h4>Prisotnost plavalcev</h4>
            <table id="attendanceTable">

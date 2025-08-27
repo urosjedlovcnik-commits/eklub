@@ -855,8 +855,10 @@ document.addEventListener('DOMContentLoaded', () => {
         !assignedSwimmerIds.includes(s.id) && !s.is_deleted
       );
       
-      // Vsi plavalci z vneseno prisotnostjo (redno dodeljeni + nadomestni)
-      const regularSwimmers = swimmersWithAttendance.filter(s => !s.is_deleted);
+      // SAMO redno dodeljeni plavalci z vneseno prisotnostjo
+      const regularSwimmers = assignedSwimmers.filter(s => 
+        Object.keys(termAtt).includes(s.id)
+      );
 
     // Render attendance table - vsi plavalci z vneseno prisotnostjo
     elAttendanceTable.innerHTML = '';
@@ -910,12 +912,13 @@ document.addEventListener('DOMContentLoaded', () => {
             await renderEventTables(termId, date);
           });
           
-          // Gumb za odstranitev
+          // Gumb za ponastavitev prisotnosti (samo za redno dodeljene plavalce)
           const btnRemove = document.createElement("button");
           btnRemove.innerHTML = "✖";
           btnRemove.className = "btn remove-btn";
+          btnRemove.title = "Ponastavi prisotnost";
           btnRemove.addEventListener("click", async () => {
-            await removeSwimmerFromEvent(s.id);
+            await resetAttendance(s.id);
             await renderEventTables(termId, date);
           });
           
@@ -982,10 +985,11 @@ document.addEventListener('DOMContentLoaded', () => {
             await renderEventTables(termId, date);
           });
           
-          // Gumb za odstranitev
+          // Gumb za odstranitev iz nadomeščanja
           const btnRemove = document.createElement("button");
           btnRemove.innerHTML = "✖";
           btnRemove.className = "btn remove-btn";
+          btnRemove.title = "Odstrani iz nadomeščanja";
           btnRemove.addEventListener("click", async () => {
             await removeSwimmerFromEvent(s.id);
             await renderEventTables(termId, date);
@@ -1225,7 +1229,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Posodobi povzetek
       updateSummary();
       
-      console.log(`Plavalec ${swimmer.first_name} ${swimmer.last_name} dodan v trening`);
+      console.log(`Plavalec ${swimmer.first_name} ${swimmer.last_name} dodan v nadomeščanje`);
       
     } catch (error) {
       console.error('Napaka pri dodajanju plavalca:', error);
@@ -1233,8 +1237,42 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // ===== PONASTAVITEV PRISOTNOSTI PLAVALCA =====
+  // Funkcija za ponastavitev prisotnosti plavalca (samo za redno dodeljene plavalce)
+  window.resetAttendance = async function(swimmerId) {
+    if (!currentEventTermId || !currentEventDate) return;
+    
+    try {
+      const { error } = await supabase
+        .from('attendance')
+        .delete()
+        .eq('date', currentEventDate)
+        .eq('term_id', currentEventTermId)
+        .eq('swimmer_id', swimmerId);
+
+      if (error) throw error;
+
+      // Posodobi lokalne podatke
+      if (attendance[currentEventDate] && attendance[currentEventDate][currentEventTermId]) {
+        delete attendance[currentEventDate][currentEventTermId][swimmerId];
+      }
+
+      // Ponovno naloži podatke dogodka
+      await loadEventData(currentEventTermId, currentEventDate);
+      
+      // Posodobi povzetek
+      updateSummary();
+      
+      console.log(`Prisotnost plavalca ponastavljena`);
+      
+    } catch (error) {
+      console.error('Napaka pri ponastavljanju prisotnosti plavalca:', error);
+      alert('Napaka pri ponastavljanju prisotnosti plavalca');
+    }
+  };
+
   // ===== IZBRISANJE PLAVALCA IZ TRENINGA =====
-  // Funkcija za odstranitev plavalca iz treninga
+  // Funkcija za odstranitev plavalca iz treninga (samo za nadomeščanje)
   window.removeSwimmerFromEvent = async function(swimmerId) {
     if (!currentEventTermId || !currentEventDate) return;
     
@@ -1259,11 +1297,11 @@ document.addEventListener('DOMContentLoaded', () => {
       // Posodobi povzetek
       updateSummary();
       
-      console.log(`Plavalec odstranjen iz treninga`);
+      console.log(`Plavalec odstranjen iz nadomeščanja`);
       
     } catch (error) {
-      console.error('Napaka pri odstranjevanju plavalca:', error);
-      alert('Napaka pri odstranjevanju plavalca iz treninga');
+      console.error('Napaka pri odstranjevanju plavalca iz nadomeščanja:', error);
+      alert('Napaka pri odstranjevanju plavalca iz nadomeščanja');
     }
   };
 
@@ -1921,16 +1959,22 @@ document.addEventListener('DOMContentLoaded', () => {
            // Če je trener nadomestni trener, prikaži sekcijo za prisotnost trenerja
            if (substituteData) {
                console.log('Trener je nadomestni trener, prikazujem sekcijo za prisotnost');
-               trainerAttendanceSection.style.display = 'block';
-               await loadTrainerAttendance(termId, date);
+               if (trainerAttendanceSection) {
+                   trainerAttendanceSection.style.display = 'block';
+                   await loadTrainerAttendance(termId, date);
+               }
            } else {
                console.log('Trener ni nadomestni trener, skrivam sekcijo za prisotnost');
-               trainerAttendanceSection.style.display = 'none';
+               if (trainerAttendanceSection) {
+                   trainerAttendanceSection.style.display = 'none';
+               }
            }
            
        } catch (error) {
            console.error('Napaka pri preverjanju nadomestnega trenerja:', error);
-           trainerAttendanceSection.style.display = 'none';
+           if (trainerAttendanceSection) {
+               trainerAttendanceSection.style.display = 'none';
+           }
        }
    }
    
@@ -1969,20 +2013,22 @@ document.addEventListener('DOMContentLoaded', () => {
            const isPresent = attendanceData ? attendanceData.present : false;
            const note = attendanceData ? attendanceData.note || '' : '';
            
-           trainerAttendanceTable.innerHTML = `
-               <tr>
-                   <td>${trainerData.first_name} ${trainerData.last_name} (nadomestni trener)</td>
-                   <td>
-                       <input type="checkbox" ${isPresent ? 'checked' : ''} 
-                              onchange="updateTrainerAttendance('${trainerData.id}', '${termId}', '${date}', ${!isPresent}, '${note}')">
-                   </td>
-                   <td>
-                       <input type="text" value="${note}" 
-                              onchange="updateTrainerAttendance('${trainerData.id}', '${termId}', '${date}', ${isPresent}, this.value)" 
-                              placeholder="Opomba">
-                   </td>
-               </tr>
-           `;
+           if (trainerAttendanceTable) {
+               trainerAttendanceTable.innerHTML = `
+                   <tr>
+                       <td>${trainerData.first_name} ${trainerData.last_name} (nadomestni trener)</td>
+                       <td>
+                           <input type="checkbox" ${isPresent ? 'checked' : ''} 
+                                  onchange="updateTrainerAttendance('${trainerData.id}', '${termId}', '${date}', ${!isPresent}, '${note}')">
+                       </td>
+                       <td>
+                           <input type="text" value="${note}" 
+                                  onchange="updateTrainerAttendance('${trainerData.id}', '${termId}', '${date}', ${isPresent}, this.value)" 
+                                  placeholder="Opomba">
+                       </td>
+                   </tr>
+               `;
+           }
            
        } catch (error) {
            console.error('Napaka pri nalaganju prisotnosti trenerja:', error);
