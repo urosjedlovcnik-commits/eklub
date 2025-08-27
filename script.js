@@ -447,7 +447,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       elNotesInput.value = termStatusObj.notes || "";
-      elSaveNotesBtn.textContent = "Shrani trening";
+      elSaveNotesBtn.textContent = "Shrani opombo";
       elSaveNotesBtn.onclick = async () => {
         const notes = elNotesInput.value;
         const { error } = await supabase
@@ -901,6 +901,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        const { error: attError } = await supabase
+            .from('attendance')
+            .delete()
+            .eq('term_id', termId);
+        
+        if (attError) { console.error("Napaka pri brisanju prisotnosti termina:", attError); alert("Napaka pri brisanju prisotnosti termina. Preverite konzolo."); return; }
+
         const { error: statusError } = await supabase
             .from('term_status')
             .delete()
@@ -925,7 +932,7 @@ document.addEventListener('DOMContentLoaded', () => {
         TERMS = TERMS.filter(t => t.id !== termId);
         await refreshSwimmerPanel();
         await renderMonth();
-        alert("Termin uspešno izbrisan. Zgodovina obiskov je ohranjena.");
+        alert("Termin uspešno izbrisan.");
     }
 
     function openEditTermModal(termId) {
