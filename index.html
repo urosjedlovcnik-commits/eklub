@@ -5,17 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vodenje prisotnosti - PKL</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-
     <header>
         <h1>Vodenje prisotnosti - PKL</h1>
     </header>
 
     <main>
         <div class="content">
-            <div class="box-panel">
+            <div class="box-panel calendar-panel">
                 <section>
                     <div class="calendar-header">
                         <button id="prevBtn" class="btn neutral">&lt;</button>
@@ -35,236 +33,181 @@
                 </section>
             </div>
             
-            <div class="box-panel">
+            <div class="box-panel summary-panel">
                 <section class="summary">
                     <h2>Povzetek prisotnosti</h2>
-                    <div id="summaryBox"></div>
+                    <div id="summaryBox" class="summary-content"></div>
                 </section>
             </div>
 
-            <section class="data-sections">
-                <h2>Uvoz podatkov</h2>
-                <div class="form-group">
-                    <label for="csvInput">Uvozi plavalce (CSV):</label>
-                    <div class="muted" style="margin-bottom: 12px;">
-                        <p>Navodila:</p>
-                        <ul>
-                            <li>Datoteka mora vsebovati stolpce z glavo: `first_name`, `last_name`, `terms`.</li>
-                            <li>V stolpec `terms` vpišite ID-je terminov, ločene z vejico.</li>
-                            <li>Uvoz bo izbrisal vso prisotnost od danes naprej.</li>
-                        </ul>
-                        <p>Primer:</p>
-                        <pre><code>first_name,last_name,terms
-Janez,Novak,pon-17-00-18-00
-Marija,Kovač,tor-16-00-17-00,pet-17-00-18-00</code></pre>
-                    </div>
-                    <input type="file" id="csvInput" accept=".csv">
+            <div class="sidebar">
+                <div class="box-panel">
+                    <section>
+                        <h2>Dodaj plavalca</h2>
+                        <div class="form-group">
+                            <label for="newFirst">Ime:</label>
+                            <input type="text" id="newFirst" placeholder="Ime">
+                        </div>
+                        <div class="form-group">
+                            <label for="newLast">Priimek:</label>
+                            <input type="text" id="newLast" placeholder="Priimek">
+                        </div>
+                        <div class="form-group">
+                             <button id="addSwimmerBtn" class="btn primary-btn">Dodaj plavalca</button>
+                        </div>
+                    </section>
                 </div>
-                <div class="form-group">
-                    <label for="csvTermsInput">Uvozi termine (CSV):</label>
-                    <div class="muted" style="margin-bottom: 12px;">
-                        <p>Navodila:</p>
-                        <ul>
-                            <li>Datoteka mora vsebovati stolpce z glavo: `id`, `day`, `start_time`, `end_time`, `date_from`, `date_to`.</li>
-                            <li>`id` mora biti edinstven za vsak termin (npr. 'pon-17-00-18-00').</li>
-                            <li>`day` je številka dneva v tednu (1=ponedeljek, 7=nedelja).</li>
-                            <li>`start_time` in `end_time` v formatu `HH:mm`.</li>
-                            <li>`date_from` in `date_to` v formatu `dd / mm / yyyy`.</li>
-                        </ul>
-                        <p>Primer:</p>
-                        <pre><code>id,day,start_time,end_time,date_from,date_to
-pon-17-00-18-00,1,17:00,18:00,01 / 01 / 2024,31 / 12 / 2024
-tor-16-00-17-00,2,16:00,17:00,01 / 01 / 2024,31 / 12 / 2024</code></pre>
-                    </div>
-                    <input type="file" id="csvTermsInput" accept=".csv">
-                </div>
-            </section>
-
-            <section class="data-sections">
-                <h2>Izvoz</h2>
-                <div class="form-group">
-                    <label for="exportMonthSelect">Mesec:</label>
-                    <select id="exportMonthSelect"></select>
-                </div>
-                <div class="form-group">
-                    <label for="exportYearSelect">Leto:</label>
-                    <select id="exportYearSelect"></select>
-                </div>
-                <button id="exportCsvBtn" class="btn neutral">Izvoz v CSV</button>
-            </section>
-        </div>
-        
-        <div class="sidebar">
-            <section>
-                <h2>Dodaj plavalca</h2>
-                <div class="form-group">
-                    <label for="newFirst">Ime:</label>
-                    <input type="text" id="newFirst">
-                </div>
-                <div class="form-group">
-                    <label for="newLast">Priimek:</label>
-                    <input type="text" id="newLast">
-                </div>
-                <button id="addSwimmerBtn" class="btn primary-btn">Dodaj plavalca</button>
-            </section>
-
-            <section>
-                <h2>Upravljaj plavalce</h2>
-                <div class="form-group">
-                    <label for="swimmerSelect">Izberi plavalca:</label>
-                    <select id="swimmerSelect"></select>
-                </div>
-                <div id="swimmerInfo"></div>
-                <div class="form-group">
-                    <label for="termSelect">Dodelitev termina:</label>
-                    <select id="termSelect"></select>
-                </div>
-                <button id="assignTermBtn" class="btn secondary-btn" disabled>Dodeli termin</button>
-                <button id="deleteSwimmerBtn" class="btn warn-btn" disabled>Izbriši plavalca</button>
-            </section>
-
-            <section>
-                <h2>Dodaj termin</h2>
-                <div class="form-group">
-                    <label for="newTermDay">Dan:</label>
-                    <select id="newTermDay">
-                        <option value="1">Ponedeljek</option>
-                        <option value="2">Torek</option>
-                        <option value="3">Sreda</option>
-                        <option value="4">Četrtek</option>
-                        <option value="5">Petek</option>
-                        <option value="6">Sobota</option>
-                        <option value="7">Nedelja</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="newTermStart">Začetek:</label>
-                    <input type="time" id="newTermStart" value="07:00">
-                </div>
-                <div class="form-group">
-                    <label for="newTermEnd">Konec:</label>
-                    <input type="time" id="newTermEnd" value="08:00">
-                </div>
-                <div class="form-group">
-                    <label for="newTermDateFrom">Datum od:</label>
-                    <input type="text" id="newTermDateFrom" placeholder="dd / mm / yyyy">
-                </div>
-                <div class="form-group">
-                    <label for="newTermDateTo">Datum do:</label>
-                    <input type="text" id="newTermDateTo" placeholder="dd / mm / yyyy">
-                </div>
-                <button id="addTermBtn" class="btn primary-btn">Dodaj termin</button>
-            </section>
-            
-            <section>
-                <h2>Upravljaj termine</h2>
-                <div id="termList" class="term-list"></div>
-            </section>
-        </div>
-
-    </main>
-
-    <div id="eventModal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="modalTitle"></h3>
-                <button id="closeModalBtn" class="close-btn">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div id="modalMeta"></div>
-                <h4>Prisotnost</h4>
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Plavalec</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="attendanceTable">
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="add-swimmer-to-event">
-                    <select id="modalSwimmerSelect"></select>
-                    <button id="addToEventBtn" class="btn primary-btn">Dodaj</button>
-                </div>
-                <div class="separator"></div>
-
-                <div class="notes-section">
-                    <h4 id="inactiveNote"></h4>
-                    <label for="notesInput" class="muted">Opomba:</label>
-                    <textarea id="notesInput" placeholder="Dodaj opombo za ta trening (npr. vsebina treninga, opazke trenerja)."></textarea>
-                    <button id="saveNotesBtn" class="btn primary-btn">Shrani trening</button>
-                </div>
-                <div class="separator"></div>
                 
-            </div>
-            <div class="modal-footer">
-                <button id="toggleEventBtn" class="btn warn-btn">Deaktiviraj trening</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="dayModal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3 id="dayModalTitle"></h3>
-          <button id="closeDayModalBtn" class="close-btn">&times;</button>
-        </div>
-        <div class="modal-body" id="dayModalList">
-        </div>
-      </div>
-    </div>
-    
-    <div id="noteModal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Opomba o neaktivnosti</h3>
-                <button id="closeNoteModalBtn" class="close-btn">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p>Prosim, navedite razlog za deaktivacijo termina (npr. "praznik", "slabo vreme").</p>
-                <textarea id="noteInput" placeholder="Razlog..."></textarea>
-            </div>
-            <div class="modal-footer">
-                <button id="cancelNoteBtn" class="btn neutral">Prekliči</button>
-                <button id="confirmNoteBtn" class="btn warn-btn">Potrdi</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="editTermModal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="editTermModalTitle"></h3>
-                <button id="closeEditTermModalBtn" class="close-btn">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="editTermDateFrom">Datum od:</label>
-                    <input type="text" id="editTermDateFrom" placeholder="dd / mm / yyyy">
+                <div class="box-panel">
+                  <section>
+                    <h2>Povezava</h2>
+                      <div class="form-group">
+                        <label for="swimmerSelect">Plavalec:</label>
+                        <select id="swimmerSelect"></select>
+                      </div>
+                      <div class="form-group">
+                        <label for="termSelect">Termin:</label>
+                        <select id="termSelect"></select>
+                      </div>
+                      <button id="assignTermBtn" class="btn primary-btn">Deli termin</button>
+                  </section>
                 </div>
-                <div class="form-group">
-                    <label for="editTermDateTo">Datum do:</label>
-                    <input type="text" id="editTermDateTo" placeholder="dd / mm / yyyy">
+
+                <div class="box-panel">
+                    <section>
+                        <h2>Uvoz CSV</h2>
+                        <div class="form-group">
+                            <label for="csvInput">Uvozi plavalce (csv):</label>
+                            <input type="file" id="csvInput" accept=".csv">
+                        </div>
+                        <div class="form-group">
+                            <label for="csvTermsInput">Uvozi termine (csv):</label>
+                            <input type="file" id="csvTermsInput" accept=".csv">
+                        </div>
+                    </section>
+                </div>
+
+                <div class="box-panel">
+                    <section>
+                        <h2>Izvoz CSV</h2>
+                        <div class="form-group">
+                            <label for="exportMonthSelect">Mesec:</label>
+                            <select id="exportMonthSelect"></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="exportYearSelect">Leto:</label>
+                            <select id="exportYearSelect"></select>
+                        </div>
+                        <button id="exportCsvBtn" class="btn secondary-btn">Izvozi v CSV</button>
+                    </section>
+                </div>
+                
+                <div class="box-panel">
+                    <section>
+                        <h2>Dodaj termin</h2>
+                        <div class="form-group">
+                            <label for="newTermDay">Dan:</label>
+                            <input type="text" id="newTermDay" placeholder="npr. pon, sre, pet">
+                        </div>
+                        <div class="form-group">
+                            <label for="newTermStart">Začetek:</label>
+                            <input type="time" id="newTermStart">
+                        </div>
+                        <div class="form-group">
+                            <label for="newTermEnd">Konec:</label>
+                            <input type="time" id="newTermEnd">
+                        </div>
+                        <div class="form-group">
+                            <label for="newTermDateFrom">Datum od:</label>
+                            <input type="text" id="newTermDateFrom" placeholder="dd / mm / yyyy">
+                        </div>
+                        <div class="form-group">
+                            <label for="newTermDateTo">Datum do:</label>
+                            <input type="text" id="newTermDateTo" placeholder="dd / mm / yyyy">
+                        </div>
+                        <button id="addTermBtn" class="btn primary-btn">Dodaj termin</button>
+                    </section>
+                </div>
+
+                <div class="box-panel">
+                  <section>
+                    <h2>Plavalci</h2>
+                    <div id="swimmerInfo"></div>
+                    <button id="deleteSwimmerBtn" class="btn warn">Izbriši plavalca</button>
+                  </section>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button id="saveEditTermBtn" class="btn primary-btn">Shrani spremembe</button>
+
+            <div id="eventModal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 id="modalTitle"></h3>
+                        <button id="closeModalBtn" class="close-btn">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <p id="modalMeta"></p>
+                        <p id="inactiveNote"></p>
+                        <table class="table" id="attendanceTable">
+                            <thead>
+                                <tr>
+                                    <th>Plavalec</th>
+                                    <th>Prisotnost</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                        <div class="form-group mt-2">
+                          <label for="modalSwimmerSelect">Dodaj plavalca v ta termin:</label>
+                          <select id="modalSwimmerSelect"></select>
+                          <button id="addToEventBtn" class="btn primary-btn">Dodaj</button>
+                        </div>
+                        <div class="form-group mt-2">
+                           <textarea id="notesInput" placeholder="Vnesi opombo..."></textarea>
+                           <button id="saveNotesBtn" class="btn primary-btn">Shrani opombo</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="dayModal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 id="dayModalTitle"></h3>
+                        <span class="close-btn" id="closeDayModalBtn">&times;</span>
+                    </div>
+                    <div class="modal-body" id="dayModalList">
+                    </div>
+                </div>
+            </div>
+
+            <div id="editTermModal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 id="editTermModalTitle"></h3>
+                        <button id="closeEditTermModalBtn" class="close-btn">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="editTermDateFrom">Datum od:</label>
+                            <input type="text" id="editTermDateFrom" placeholder="dd / mm / yyyy">
+                        </div>
+                        <div class="form-group">
+                            <label for="editTermDateTo">Datum do:</label>
+                            <input type="text" id="editTermDateTo" placeholder="dd / mm / yyyy">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button id="saveEditTermBtn" class="btn primary-btn">Shrani spremembe</button>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
+    </main>
     
- 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-     const SUPABASE_URL = "https://tizjimlwfkoniixbetgr.supabase.co";
-      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpemppbWx3ZmtvbmlpeGJldGdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzNDgyNzgsImV4cCI6MjA3MDkyNDI3OH0.Oess7TCevLH3mO0aWxfL5M0Kb_XHEKUBYRYRXKQkdgk";
-
-      // globalno: window.supabase
-      const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
+      const SUPABASE_URL = "https://tizjimlwfkoniixbetgr.supabase.co";
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpemppbWx3ZmtvbmlpeGJldGdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzNDgyNzgsImV4cCI6MjA3MDkyNDI3OH0.Oess7TCevLH3mO0aW...o9nQ1D_1l0lJj7Wq448";
     </script>
     <script src="script.js"></script>
 </body>
