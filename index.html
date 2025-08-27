@@ -122,6 +122,15 @@
     </div>
   </div>
 
+  <div class="grid" style="margin-top:12px">
+    <div class="card">
+      <h3>Prisotnost trenerjev (trenutni mesec)</h3>
+      <div class="inner">
+        <div id="trainerAttendanceList">Nalaganje prisotnosti trenerjev...</div>
+      </div>
+    </div>
+  </div>
+
   <div class="modal" id="eventModal" role="dialog" aria-modal="true" aria-hidden="true">
     <div class="box">
       <div class="box-header">
@@ -269,7 +278,14 @@ sre-18:00-19:00,3,18:00,19:00,"01 / 09 / 2024","31 / 05 / 2025"
       <div class="csv-export-controls">
         <select id="exportMonthSelect"></select>
         <select id="exportYearSelect"></select>
-        <button class="btn" id="exportCsvBtn">Izvozi</button>
+        <button class="btn" id="exportCsvBtn">Izvozi prisotnost plavalcev</button>
+      </div>
+      
+      <h4>Izvoz prisotnosti trenerjev</h4>
+      <div class="csv-export-controls">
+        <select id="exportTrainerMonthSelect"></select>
+        <select id="exportTrainerYearSelect"></select>
+        <button class="btn" id="exportTrainerCsvBtn">Izvozi prisotnost trenerjev</button>
       </div>
     </div>
   </div>

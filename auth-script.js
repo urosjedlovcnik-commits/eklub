@@ -1059,16 +1059,16 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (error) throw error;
             
-            if (substitutionsData && substitutionsData.length > 0) {
-                const html = substitutionsData.map(sub => `
-                    <div class="substitution-item" style="border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 5px;">
-                        <div><strong>Termin:</strong> ${sub.term_id}</div>
-                        <div><strong>Datum:</strong> ${new Date(sub.substitute_date).toLocaleDateString('sl-SI')}</div>
-                        <div><strong>${sub.is_substitute ? 'Nadomestujem za:' : 'Nadomestuje me:'}</strong> ${sub.other_trainer_name}</div>
-                        <div><strong>Razlog:</strong> ${sub.reason || 'Ni razloga'}</div>
-                        ${!sub.is_substitute ? `<button class="btn warn" onclick="deleteSubstitution('${sub.id}')" style="margin-top: 5px;">Prekliči</button>` : ''}
-                    </div>
-                `).join('');
+                         if (substitutionsData && substitutionsData.length > 0) {
+                 const html = substitutionsData.map(sub => `
+                     <div class="substitution-item" style="border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 5px;">
+                         <div><strong>Termin:</strong> ${sub.term_id}</div>
+                         <div><strong>Datum:</strong> ${new Date(sub.substitute_date).toLocaleDateString('sl-SI')}</div>
+                         <div><strong>${sub.is_substitute ? 'Nadomestujem za:' : 'Nadomestuje me:'}</strong> ${sub.other_trainer_name}</div>
+                         <div><strong>Razlog:</strong> ${sub.reason || 'Ni razloga'}</div>
+                         <button class="btn warn" onclick="deleteSubstitution('${sub.id}')" style="margin-top: 5px;">${sub.is_substitute ? 'Prekliči nadomestitev' : 'Prekliči'}</button>
+                     </div>
+                 `).join('');
                 
                 mySubstitutionsList.innerHTML = html;
             } else {
@@ -1249,30 +1249,34 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // Funkcija za brisanje nadomestnega dogovora (globalna)
-    window.deleteSubstitution = async function(substitutionId) {
-        if (!confirm('Ali ste prepričani, da želite preklicati ta nadomestni dogovor?')) {
-            return;
-        }
-        
-        try {
-            const { error } = await supabase
-                .from('substitute_trainers')
-                .delete()
-                .eq('id', substitutionId);
-            
-            if (error) throw error;
-            
-            // Posodobi seznam
-            await loadMySubstitutions();
-            
-            alert('Nadomestni dogovor je bil preklican!');
-            
-        } catch (error) {
-            console.error('Napaka pri brisanju nadomestnega dogovora:', error);
-            alert('Napaka pri brisanju nadomestnega dogovora');
-        }
-    };
+         // Funkcija za brisanje nadomestnega dogovora (globalna)
+     window.deleteSubstitution = async function(substitutionId) {
+         if (!confirm('Ali ste prepričani, da želite preklicati ta nadomestni dogovor?')) {
+             return;
+         }
+         
+         try {
+             const { error } = await supabase
+                 .from('substitute_trainers')
+                 .delete()
+                 .eq('id', substitutionId);
+             
+             if (error) throw error;
+             
+             // Posodobi sezname
+             await loadMySubstitutions();
+             await loadSubstituteObligations();
+             
+             // Ponovno naloži podatke, če je bilo brisanje uspešno
+             await loadDataFromSupabase();
+             
+             alert('Nadomestni dogovor je bil preklican!');
+             
+         } catch (error) {
+             console.error('Napaka pri brisanju nadomestnega dogovora:', error);
+             alert('Napaka pri brisanju nadomestnega dogovora');
+         }
+     };
     
     // Naloži nadomestne termine za trenutni dan
     async function loadSubstituteTerms() {
