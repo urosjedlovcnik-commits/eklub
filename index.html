@@ -94,7 +94,7 @@
     </div>
   </div>
 
-  <div class="modal" id="eventModal" aria-hidden="true">
+  <div class="modal" id="eventModal" role="dialog" aria-modal="true" aria-hidden="true">
     <div class="box">
       <div class="box-header">
         <div>
@@ -138,7 +138,7 @@
     </div>
   </div>
 
-  <div class="modal day-modal" id="dayModal" aria-hidden="true">
+  <div class="modal day-modal" id="dayModal" role="dialog" aria-modal="true" aria-hidden="true">
     <div class="box">
       <div class="box-header">
         <strong id="dayModalTitle">Izberi termin</strong>
@@ -150,7 +150,7 @@
     </div>
   </div>
 
-  <div class="modal" id="editTermModal" aria-hidden="true">
+  <div class="modal" id="editTermModal" role="dialog" aria-modal="true" aria-hidden="true">
     <div class="box">
       <div class="box-header">
         <strong id="editTermModalTitle">Uredi termin</strong>
@@ -225,7 +225,7 @@ sre-18:00-19:00,3,18:00,19:00,"01 / 09 / 2024","31 / 05 / 2025"
       </div>
     </div>
   </div>
-<div id="noteModal" class="modal">
+<div id="noteModal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
     <div class="modal-content">
         <div class="modal-header">
             <h5 class="modal-title">Deaktivacija treninga</h5>
@@ -242,8 +242,6 @@ sre-18:00-19:00,3,18:00,19:00,"01 / 09 / 2024","31 / 05 / 2025"
     </div>
 </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-	
-	    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
       const SUPABASE_URL = "https://tizjimlwfkoniixbetgr.supabase.co";
