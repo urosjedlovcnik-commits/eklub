@@ -27,8 +27,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const substituteObligationsList = document.getElementById('substituteObligationsList');
     
     // UI elementi za prisotnost trenerja
-    const trainerPresentCheckbox = document.getElementById('trainerPresentCheckbox');
-    const trainerNoteInput = document.getElementById('trainerNoteInput');
+    const trainerAttendanceSection = document.getElementById('trainerAttendanceSection');
+    const trainerAttendanceTable = document.getElementById('trainerAttendanceTable');
     
     // Modal elementi za nadomestne trenerje
     const confirmSubstituteModal = document.getElementById('confirmSubstituteModal');
@@ -596,10 +596,10 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
       }
       
-      loadEventData(termId, date);
-      loadTrainerAttendance(termId, date);
-      elModal.setAttribute('aria-hidden', 'false');
-      elModal.style.display = 'flex';
+             loadEventData(termId, date);
+       checkAndLoadTrainerAttendance(termId, date);
+       elModal.setAttribute('aria-hidden', 'false');
+       elModal.style.display = 'flex';
     }
 
     async function loadEventData(termId, date) {
@@ -1321,7 +1321,54 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-         // Naloži prisotnost trenerja
+         // Preveri, ali je trener nadomestni trener in naloži prisotnost
+     async function checkAndLoadTrainerAttendance(termId, date) {
+         try {
+             console.log('checkAndLoadTrainerAttendance - termId:', termId, 'date:', date);
+             
+             // Najdi trenerja
+             const { data: trainerData, error: trainerError } = await supabase
+                 .from('trainers')
+                 .select('id')
+                 .eq('user_id', currentUser.id)
+                 .single();
+             
+             if (trainerError) throw trainerError;
+             
+             console.log('Trener ID:', trainerData.id);
+             
+             // Preveri, ali je trener nadomestni trener za ta termin in datum
+             const { data: substituteData, error: substituteError } = await supabase
+                 .from('substitute_trainers')
+                 .select('*')
+                 .eq('substitute_trainer_id', trainerData.id)
+                 .eq('term_id', termId)
+                 .eq('substitute_date', date)
+                 .single();
+             
+             console.log('Nadomestni podatki:', { substituteData, substituteError });
+             
+             if (substituteError && substituteError.code !== 'PGRST116') {
+                 throw substituteError;
+             }
+             
+             // Če je trener nadomestni trener, prikaži sekcijo za prisotnost trenerja
+             if (substituteData) {
+                 console.log('Trener je nadomestni trener, prikazujem sekcijo za prisotnost');
+                 trainerAttendanceSection.style.display = 'block';
+                 await loadTrainerAttendance(termId, date);
+             } else {
+                 console.log('Trener ni nadomestni trener, skrivam sekcijo za prisotnost');
+                 trainerAttendanceSection.style.display = 'none';
+             }
+             
+         } catch (error) {
+             console.error('Napaka pri preverjanju nadomestnega trenerja:', error);
+             trainerAttendanceSection.style.display = 'none';
+         }
+     }
+     
+     // Naloži prisotnost trenerja
      async function loadTrainerAttendance(termId, date) {
          try {
              console.log('loadTrainerAttendance - termId:', termId, 'date:', date);
@@ -1329,7 +1376,7 @@ document.addEventListener('DOMContentLoaded', () => {
              // Najdi trenerja
              const { data: trainerData, error: trainerError } = await supabase
                  .from('trainers')
-                 .select('id')
+                 .select('id, first_name, last_name')
                  .eq('user_id', currentUser.id)
                  .single();
              
@@ -1352,59 +1399,55 @@ document.addEventListener('DOMContentLoaded', () => {
                  throw attendanceError;
              }
              
-             // Nastavi vrednosti
-             if (attendanceData) {
-                 trainerPresentCheckbox.checked = attendanceData.present;
-                 trainerNoteInput.value = attendanceData.note || '';
-             } else {
-                 trainerPresentCheckbox.checked = false;
-                 trainerNoteInput.value = '';
-             }
+             // Prikaži prisotnost trenerja v tabeli
+             const isPresent = attendanceData ? attendanceData.present : false;
+             const note = attendanceData ? attendanceData.note || '' : '';
              
-             // Dodaj event listenerje
-             trainerPresentCheckbox.onchange = () => saveTrainerAttendance(termId, date);
-             trainerNoteInput.onchange = () => saveTrainerAttendance(termId, date);
+             trainerAttendanceTable.innerHTML = `
+                 <tr>
+                     <td>${trainerData.first_name} ${trainerData.last_name} (nadomestni trener)</td>
+                     <td>
+                         <input type="checkbox" ${isPresent ? 'checked' : ''} 
+                                onchange="updateTrainerAttendance('${trainerData.id}', '${termId}', '${date}', ${!isPresent}, '${note}')">
+                     </td>
+                     <td>
+                         <input type="text" value="${note}" 
+                                onchange="updateTrainerAttendance('${trainerData.id}', '${termId}', '${date}', ${isPresent}, this.value)" 
+                                placeholder="Opomba">
+                     </td>
+                 </tr>
+             `;
              
          } catch (error) {
              console.error('Napaka pri nalaganju prisotnosti trenerja:', error);
          }
      }
     
-    // Shrani prisotnost trenerja
-    async function saveTrainerAttendance(termId, date) {
-        try {
-            // Najdi trenerja
-            const { data: trainerData, error: trainerError } = await supabase
-                .from('trainers')
-                .select('id')
-                .eq('user_id', currentUser.id)
-                .single();
-            
-            if (trainerError) throw trainerError;
-            
-            const present = trainerPresentCheckbox.checked;
-            const note = trainerNoteInput.value;
-            
-            // Shrani prisotnost
-            const { error: upsertError } = await supabase
-                .from('trainer_attendance')
-                .upsert({
-                    trainer_id: trainerData.id,
-                    term_id: termId,
-                    date: date,
-                    present: present,
-                    note: note
-                });
-            
-            if (upsertError) throw upsertError;
-            
-            console.log('Prisotnost trenerja shranjena');
-            
-        } catch (error) {
-            console.error('Napaka pri shranjevanju prisotnosti trenerja:', error);
-            alert('Napaka pri shranjevanju prisotnosti trenerja');
-        }
-    }
+         // Posodobi prisotnost trenerja (globalna funkcija)
+     window.updateTrainerAttendance = async function(trainerId, termId, date, present, note) {
+         try {
+             console.log('updateTrainerAttendance - trainerId:', trainerId, 'termId:', termId, 'date:', date, 'present:', present, 'note:', note);
+             
+             // Shrani prisotnost
+             const { error: upsertError } = await supabase
+                 .from('trainer_attendance')
+                 .upsert({
+                     trainer_id: trainerId,
+                     term_id: termId,
+                     date: date,
+                     present: present,
+                     note: note
+                 });
+             
+             if (upsertError) throw upsertError;
+             
+             console.log('Prisotnost trenerja shranjena');
+             
+         } catch (error) {
+             console.error('Napaka pri shranjevanju prisotnosti trenerja:', error);
+             alert('Napaka pri shranjevanju prisotnosti trenerja');
+         }
+     };
 
     // Naloži informacije o nadomestnih trenerjih
     async function loadSubstituteTrainerInfo() {

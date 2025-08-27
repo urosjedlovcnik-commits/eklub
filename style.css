@@ -98,6 +98,38 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
 .csv-export-controls > * {
   flex-grow: 1;
 }
+
+/* Tabela prisotnosti trenerja */
+.trainer-attendance-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+}
+
+.trainer-attendance-table th,
+.trainer-attendance-table td {
+  border: 1px solid var(--border);
+  padding: 8px;
+  text-align: left;
+}
+
+.trainer-attendance-table th {
+  background: #eff6ff;
+  font-weight: 600;
+}
+
+.trainer-attendance-table input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+}
+
+.trainer-attendance-table input[type="text"] {
+  width: 100%;
+  margin: 0;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
 .csv-export-controls .btn {
   flex-grow: 0;
 }

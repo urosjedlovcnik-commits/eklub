@@ -252,15 +252,18 @@
           <button class="close-btn" id="closeModalBtn">&times;</button>
         </div>
         <div class="box-body">
-          <div class="trainer-attendance-section">
-            <h4>Prisotnost trenerja</h4>
-            <div class="trainer-attendance-controls">
-              <label>
-                <input type="checkbox" id="trainerPresentCheckbox">
-                Trener je prisoten
-              </label>
-              <input type="text" id="trainerNoteInput" placeholder="Opomba trenerja" style="margin-left: 10px; width: 200px;">
-            </div>
+          <div class="trainer-attendance-section" id="trainerAttendanceSection" style="display: none;">
+            <h4>Nadomestni trener</h4>
+            <table class="trainer-attendance-table">
+              <thead>
+                <tr>
+                  <th>Trener</th>
+                  <th>Prisoten</th>
+                  <th>Opomba</th>
+                </tr>
+              </thead>
+              <tbody id="trainerAttendanceTable"></tbody>
+            </table>
           </div>
           
           <hr style="margin: 20px 0; border: none; border-top: 1px solid var(--border);">
