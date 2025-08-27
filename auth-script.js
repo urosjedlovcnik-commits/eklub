@@ -54,6 +54,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Naloži termine, ki pripadajo trenerju
     async function loadUserTerms() {
         try {
+            console.log('=== LOAD USER TERMS START ===');
+            console.log('Current user ID:', currentUser.id);
+            
             // Najprej poiščemo trenerja v tabeli trenerjev
             const { data: trainerData, error: trainerError } = await supabase
                 .from('trainers')
@@ -98,6 +101,8 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 console.log('Trener ima', userTerms.length, 'terminov');
             }
+            
+            console.log('=== LOAD USER TERMS END ===');
             
         } catch (error) {
             console.error('Napaka pri nalaganju podatkov trenerja:', error);
@@ -434,13 +439,23 @@ document.addEventListener('DOMContentLoaded', () => {
       const date = new Date(dateStr);
       const dayOfWeek = date.getDay() === 0 ? 7 : date.getDay();
       
+      console.log(`getEventsForDate: ${dateStr}, dayOfWeek: ${dayOfWeek}, TERMS.length: ${TERMS.length}, userTerms:`, userTerms);
+      
       TERMS.forEach(term => {
         // Preveri, če termin pripada trenerju
-        if (!userTerms.includes(term.id)) return;
+        if (!userTerms.includes(term.id)) {
+          console.log(`Termin ${term.id} ne pripada trenerju`);
+          return;
+        }
+        
+        console.log(`Preverjam termin ${term.id}, dan: ${term.day}, date_from: ${term.date_from}, date_to: ${term.date_to}`);
         
         if (term.day === dayOfWeek) {
-          const termDateFrom = parseDate(term.date_from);
-          const termDateTo = parseDate(term.date_to);
+          // Podatki iz baze so v ISO formatu (YYYY-MM-DD), ne potrebujemo parseDate
+          const termDateFrom = new Date(term.date_from);
+          const termDateTo = new Date(term.date_to);
+          
+          console.log(`Termin ${term.id}: termDateFrom: ${termDateFrom}, termDateTo: ${termDateTo}, date: ${date}`);
           
           if (termDateFrom && termDateTo && date >= termDateFrom && date <= termDateTo) {
             const termKey = `${term.id}-${dateStr}`;
@@ -912,6 +927,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===== NALAGANJE PODATKOV =====
     async function loadDataFromSupabase() {
       try {
+        console.log('=== LOAD DATA FROM SUPABASE START ===');
         console.log('Nalaganje podatkov za trenerja. userTerms:', userTerms);
         
         // Če trener nima terminov, ne naloži podatkov
@@ -938,6 +954,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (termsError) throw termsError;
         TERMS = termsData || [];
         console.log('Naloženi termini:', TERMS);
+        console.log('Število naloženih terminov:', TERMS.length);
+        if (TERMS.length > 0) {
+          console.log('Prvi termin:', TERMS[0]);
+        }
 
         // Naloži plavalce, ki pripadajo trenerjevim terminom
         const { data: swimmersData, error: swimmersError } = await supabase
@@ -998,6 +1018,8 @@ document.addEventListener('DOMContentLoaded', () => {
         updateSwimmerSelect();
         updateTermSelect();
         showSwimmerInfo();
+
+        console.log('=== LOAD DATA FROM SUPABASE END ===');
 
       } catch (error) {
         console.error('Napaka pri nalaganju podatkov:', error);
