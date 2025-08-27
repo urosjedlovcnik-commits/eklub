@@ -27,8 +27,8 @@ h1{margin:0 0 12px;text-align:center}
 .calendar-head div{font-weight:600;text-align:center;padding:6px 0;background:#eff6ff;border-radius:8px}
 .calendar-grid{
   display:grid;
-  /* Zožitev sobot in nedelj na namiznem prikazu */
-  grid-template-columns:repeat(5,1fr) 0.5fr 0.5fr;
+  /* 7 enakih stolpcev za vse dneve v tednu */
+  grid-template-columns:repeat(7,1fr);
   gap:6px
 }
 .day{min-height:120px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:6px;display:flex;flex-direction:column;overflow:hidden; cursor:pointer;}

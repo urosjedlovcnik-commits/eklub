@@ -484,6 +484,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const date = new Date(dateStr);
     // JavaScript getDay() vrača 0-6 (nedelja=0, ponedeljek=1, ...)
     // Naši termini uporabljajo 1-7 (ponedeljek=1, nedelja=7)
+    // Pretvorimo JavaScript dan v naš format: 0(nedelja) -> 7, 1(ponedeljek) -> 1, 2(torek) -> 2, ...
     const dayOfWeek = date.getDay() === 0 ? 7 : date.getDay();
     
     console.log(`getEventsForDate: ${dateStr}, dayOfWeek: ${dayOfWeek}, TERMS.length: ${TERMS.length}, userTerms:`, userTerms);
