@@ -617,13 +617,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function loadEventData(termId, date) {
     const termKey = `${termId}-${date}`;
-    // Uporabi isto strukturo kot v glavni strani
+    
+    // Inicializiraj strukturo podatkov, če ne obstaja
     if (!attendance[date]) attendance[date] = {};
     if (!attendance[date][termId]) attendance[date][termId] = {};
-    const termAtt = attendance[date][termId];
-    const termStat = termStatus[termKey];
     
-    // Naloži prisotnost
+    // Naloži prisotnost za ta termin na ta dan
     const { data: attData, error: attError } = await supabase
       .from('attendance')
       .select('*')
@@ -631,9 +630,17 @@ document.addEventListener('DOMContentLoaded', () => {
       .eq('date', date);
 
     if (!attError && attData) {
+      // Počisti obstoječe podatke za ta termin
+      attendance[date][termId] = {};
+      
+      // Naloži nove podatke
       attData.forEach(record => {
-        termAtt[record.swimmer_id] = record.present;
+        attendance[date][termId][record.swimmer_id] = record.present;
       });
+      
+      console.log('Naložena prisotnost za termin', termId, 'na dan', date, ':', attendance[date][termId]);
+    } else if (attError) {
+      console.error('Napaka pri nalaganju prisotnosti:', attError);
     }
 
     // Naloži status termina
@@ -648,8 +655,9 @@ document.addEventListener('DOMContentLoaded', () => {
       termStatus[termKey] = statusData;
     }
 
+    // Posodobi UI
     renderEventTables(termId, date);
-    updateModalButtons(termStat);
+    updateModalButtons(termStatus[termKey]);
   }
 
        function renderEventTables(termId, date) {
@@ -661,29 +669,37 @@ document.addEventListener('DOMContentLoaded', () => {
      console.log('termAtt:', termAtt);
      console.log('swimmers:', swimmers);
      
-     // Filtriraj plavalce, ki pripadajo trenerju
-     // Vključi tudi izbrisane plavalce za zgodovinske podatke
-     const assignedSwimmers = swimmers.filter(s => s.terms && s.terms.includes(termId));
-     console.log('assignedSwimmers:', assignedSwimmers);
-     
-     const assignedSwimmerIds = assignedSwimmers.map(s => s.id);
-     
-     const swimmersWithAttendance = Object.keys(termAtt).map(swimmerId => 
-       swimmers.find(s => s.id === swimmerId)
-     ).filter(Boolean);
-     
-     const substitutionSwimmers = swimmersWithAttendance.filter(s => 
-       !assignedSwimmerIds.includes(s.id)
-     );
-     
-     const regularSwimmers = assignedSwimmers.filter(s => 
-       termAtt[s.id] !== undefined || true // Vključi vse plavalce, tudi brez prisotnosti
-     );
+           // KLJUČNI POPRAVEK: Pravilno filtriranje plavalcev
+      // Redno dodeljeni plavalci (tisti, ki so dodeljeni temu terminu)
+      const assignedSwimmers = swimmers.filter(s => s.terms && s.terms.includes(termId) && !s.is_deleted);
+      console.log('assignedSwimmers:', assignedSwimmers);
+      
+      const assignedSwimmerIds = assignedSwimmers.map(s => s.id);
+      
+      // Plavalci z vneseno prisotnostjo, ki NISO redno dodeljeni temu terminu (nadomeščanje)
+      const swimmersWithAttendance = Object.keys(termAtt).map(swimmerId => 
+        swimmers.find(s => s.id === swimmerId)
+      ).filter(Boolean);
+      
+      const substitutionSwimmers = swimmersWithAttendance.filter(s => 
+        !assignedSwimmerIds.includes(s.id) && !s.is_deleted
+      );
+      
+      // Redno dodeljeni plavalci z vneseno prisotnostjo ali brez
+      const regularSwimmers = assignedSwimmers.filter(s => 
+        termAtt[s.id] !== undefined || !s.is_deleted
+      );
 
-    // Render attendance table
+    // Render attendance table - redno dodeljeni plavalci
     elAttendanceTable.innerHTML = '';
     if (regularSwimmers.length === 0) {
-      elAttendanceTable.innerHTML = '<tr><td colspan="4" class="muted">Ni plavalcev</td></tr>';
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 4;
+      td.className = 'muted';
+      td.textContent = 'Ni dodeljenih plavalcev za ta termin.';
+      tr.appendChild(td);
+      elAttendanceTable.appendChild(tr);
     } else {
       regularSwimmers.sort((a,b) => (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name))
         .forEach(s => {
@@ -708,10 +724,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Render substitution table
+    // Render substitution table - nadomeščanje
     elSubstitutionTable.innerHTML = '';
     if (substitutionSwimmers.length === 0) {
-      elSubstitutionTable.innerHTML = '<tr><td colspan="4" class="muted">Ni nadomestnih plavalcev</td></tr>';
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 4;
+      td.className = 'muted';
+      td.textContent = 'Ni nadomeščanja.';
+      tr.appendChild(td);
+      elSubstitutionTable.appendChild(tr);
     } else {
       substitutionSwimmers.sort((a,b) => (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name))
         .forEach(s => {
@@ -736,7 +758,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Update swimmer select
+    // Update swimmer select - plavalci, ki jih lahko dodamo
     elModalSwimmerSelect.innerHTML = '';
     const allSwimmersInEvent = [...regularSwimmers, ...substitutionSwimmers];
     const currentEventSwimmerIds = allSwimmersInEvent.map(s => s.id);
@@ -757,7 +779,8 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       const o = document.createElement('option');
       o.value = '';
-      o.textContent = 'Ni več plavalcev';
+      o.textContent = 'Vsi plavalci so že v treningu ali nadomeščanju.';
+      o.disabled = true;
       elModalSwimmerSelect.appendChild(o);
       elModalSwimmerSelect.style.display = 'none';
       elAddToEventBtn.style.display = 'none';
@@ -1069,6 +1092,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       // Če trener nima terminov, ne naloži podatkov
       if (!userTerms || userTerms.length === 0) {
+        console.log('Trener nima terminov, ne naloži podatkov');
         TERMS = [];
         swimmers = [];
         attendance = {};
@@ -1098,6 +1122,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (swimmersError) throw swimmersError;
       
+      console.log('Vsi plavalci iz baze:', swimmersData);
+      
       // Filtriraj plavalce, ki pripadajo trenerjevim terminom
       // Plavalec pripada trenerju, če ima vsaj en termin, ki je v userTerms
       swimmers = (swimmersData || []).filter(s => {
@@ -1108,6 +1134,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       
       console.log('Filtirani plavalci za trenerja:', swimmers);
+      console.log('Število plavalcev po filtiranju:', swimmers.length);
 
       // Naloži prisotnost za trenerjeve termine
       const { data: attendanceData, error: attendanceError } = await supabase
@@ -1126,6 +1153,8 @@ document.addEventListener('DOMContentLoaded', () => {
           attendance[record.date][record.term_id][record.swimmer_id] = record.present;
         });
       }
+      
+      console.log('Naložena prisotnost:', attendance);
       
       // Naloži podatke o nadomestnih trenerjih
       await loadSubstituteTrainerInfo();

@@ -188,15 +188,84 @@ function updateGroupsOverview() {
   </div>
 
   <div class="test-section">
-    <h2 class="test-title">Če se problemi nadaljujejo</h2>
+    <h2 class="test-title">Rešitev</h2>
     
-    <div class="test-result warning">
-      <strong>⚠️ Preverite konzolo brskalnika</strong> za debug izpise:
+    <div class="test-result success">
+      <strong>✅ Problem identificiran:</strong> V bazi podatkov manjka tabela <code>attendance</code> za beleženje prisotnosti plavalcev.
+    </div>
+    
+    <div class="test-result">
+      <strong>🔧 Koraki za rešitev:</strong>
+      <ol>
+        <li><strong>Ustvari manjkajočo tabelo:</strong> Izvedi SQL skript <code>setup-swimmers-attendance.sql</code> v Supabase SQL Editor</li>
+        <li><strong>Preveri strukturo:</strong> V Supabase Dashboard > Table Editor preveri, ali obstaja tabela <code>attendance</code></li>
+        <li><strong>Preveri RLS politike:</strong> Tabela mora imeti omogočene RLS politike za trenerje</li>
+        <li><strong>Testiraj:</strong> Osveži stran in preveri modal</li>
+      </ol>
+    </div>
+    
+    <div class="test-result">
+      <strong>📁 Datoteke za rešitev:</strong>
       <ul>
-        <li><code>=== LOAD USER TERMS START ===</code></li>
+        <li><code>setup-swimmers-attendance.sql</code> - SQL skript za ustvarjanje tabele</li>
+        <li><code>README-FIX-ATTENDANCE-TABLE.md</code> - Navodila za popravek</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2 class="test-title">Rešitev</h2>
+    
+    <div class="test-result success">
+      <strong>✅ Problem identificiran:</strong> V bazi podatkov manjka tabela <code>attendance</code> za beleženje prisotnosti plavalcev.
+    </div>
+    
+    <div class="test-result">
+      <strong>🔧 Koraki za rešitev:</strong>
+      <ol>
+        <li><strong>Ustvari manjkajočo tabelo:</strong> Izvedi SQL skript <code>setup-swimmers-attendance.sql</code> v Supabase SQL Editor</li>
+        <li><strong>Preveri strukturo:</strong> V Supabase Dashboard > Table Editor preveri, ali obstaja tabela <code>attendance</code></li>
+        <li><strong>Preveri RLS politike:</strong> Tabela mora imeti omogočene RLS politike za trenerje</li>
+        <li><strong>Testiraj:</strong> Osveži stran in preveri modal</li>
+      </ol>
+    </div>
+    
+    <div class="test-result">
+      <strong>📁 Datoteke za rešitev:</strong>
+      <ul>
+        <li><code>setup-swimmers-attendance.sql</code> - SQL skript za ustvarjanje tabele</li>
+        <li><code>README-FIX-ATTENDANCE-TABLE.md</code> - Navodila za popravek</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2 class="test-title">Problem</h2>
+    
+    <div class="test-result error">
+      <strong>❌ Problem:</strong> V modal kjer trener odpre svoj trening niso zabeleženi plavalci, ki so na njega dodeljeni, da označi njihovo prisotnost. Prav tako ni opcije dodati plavalca, ki nadomešča.
+    </div>
+    
+    <div class="test-result">
+      <strong>🔍 Kaj bi morali videti:</strong>
+      <ul>
+        <li>V sekciji "Prisotnost plavalcev" - vsi plavalci, ki so dodeljeni temu terminu</li>
+        <li>V sekciji "Nadomestni plavalci" - plavalci, ki so bili dodani kot nadomeščanje</li>
+        <li>V sekciji "Dodaj plavalca" - dropdown z vsemi plavalci, ki jih lahko dodamo</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2 class="test-title">Debug informacije</h2>
+    
+    <div class="test-result">
+      <strong>Konzola brskalnika:</strong>
+      <ul>
         <li><code>=== LOAD DATA FROM SUPABASE START ===</code></li>
-        <li><code>=== UPDATE GROUPS OVERVIEW START ===</code></li>
-        <li><code>=== UPDATE SUMMARY START ===</code></li>
+        <li><code>Naložena prisotnost: {...}</code></li>
+        <li><code>renderEventTables - termId: X, date: Y</code></li>
+        <li><code>assignedSwimmers: [...]</code></li>
       </ul>
     </div>
     
