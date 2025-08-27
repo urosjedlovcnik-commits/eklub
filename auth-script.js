@@ -537,39 +537,36 @@ document.addEventListener('DOMContentLoaded', () => {
       
       console.log(`Preverjam termin ${term.id}, dan: ${term.day}, date_from: ${term.date_from}, date_to: ${term.date_to}`);
       
-      if (term.day === dayOfWeek) {
-        // Podatki iz baze so v ISO formatu (YYYY-MM-DD), ne potrebujemo parseDate
-        const termDateFrom = new Date(term.date_from);
-        const termDateTo = new Date(term.date_to);
+      // POPRAVEK: Preveri tudi, ali se termin izvaja na ta datum (kot v script.js)
+      if (term.day === dayOfWeek && dateStr >= term.date_from && dateStr <= term.date_to) {
+        console.log(`Termin ${term.id} se izvaja na ${dateStr}`);
         
-        console.log(`Termin ${term.id}: termDateFrom: ${termDateFrom}, termDateTo: ${termDateTo}, date: ${date}`);
+        // Uporabi isto strukturo kot v glavni strani
+        const termAtt = attendance[dateStr]?.[term.id] || {};
+        const assignedSwimmers = swimmers.filter(s => s.terms && s.terms.includes(term.id));
+        const assignedSwimmerIds = assignedSwimmers.map(s => s.id);
+        const markedAssignedSwimmersCount = assignedSwimmerIds.filter(id => termAtt.hasOwnProperty(id)).length;
+        const totalAssignedCount = assignedSwimmers.length;
         
-        if (termDateFrom && termDateTo && date >= termDateFrom && date <= termDateTo) {
-          // Uporabi isto strukturo kot v glavni strani
-          const termAtt = attendance[dateStr]?.[term.id] || {};
-          const assignedSwimmers = swimmers.filter(s => s.terms && s.terms.includes(term.id));
-          const assignedSwimmerIds = assignedSwimmers.map(s => s.id);
-          const markedAssignedSwimmersCount = assignedSwimmerIds.filter(id => termAtt.hasOwnProperty(id)).length;
-          const totalAssignedCount = assignedSwimmers.length;
-          
-          let status = 'active';
-          const termKey = `${term.id}-${dateStr}`;
-          if (termStatus[termKey]) {
-            status = termStatus[termKey].status;
-          } else if (markedAssignedSwimmersCount === 0) {
-            status = 'empty';
-          } else if (markedAssignedSwimmersCount === totalAssignedCount) {
-            status = 'full';
-          }
-          
-          events.push({
-            termId: term.id,
-            time: `${term.start_time}-${term.end_time}`,
-            count: markedAssignedSwimmersCount,
-            total: totalAssignedCount,
-            status: status
-          });
+        let status = 'active';
+        const termKey = `${term.id}-${dateStr}`;
+        if (termStatus[termKey]) {
+          status = termStatus[termKey].status;
+        } else if (markedAssignedSwimmersCount === 0) {
+          status = 'empty';
+        } else if (markedAssignedSwimmersCount === totalAssignedCount) {
+          status = 'full';
         }
+        
+        events.push({
+          termId: term.id,
+          time: `${term.start_time}-${term.end_time}`,
+          count: markedAssignedSwimmersCount,
+          total: totalAssignedCount,
+          status: status
+        });
+      } else {
+        console.log(`Termin ${term.id} se NE izvaja na ${dateStr} (dan: ${term.day} vs ${dayOfWeek}, datum: ${dateStr} vs ${term.date_from}-${term.date_to})`);
       }
     });
     
@@ -937,25 +934,43 @@ document.addEventListener('DOMContentLoaded', () => {
   // ===== UPRAVLJANJE PRISOTNOSTI =====
   // Funkcija za osvežitev podatkov za določen dan (kompatibilna z script.js)
   async function refreshDayData(date) {
-    const ymd = iso(date);
+    console.log('=== REFRESH DAY DATA START ===');
+    console.log('date:', date);
     
+    const ymd = iso(date);
+    console.log('ymd:', ymd);
+    
+    console.log('Nalagam prisotnost iz Supabase...');
     const { data: attData, error: attError } = await supabase
       .from('attendance')
       .select('*')
       .eq('date', ymd);
     
-    if (attError) { console.error('Napaka pri osveževanju prisotnosti za dan:', attError); return; }
+    if (attError) { 
+      console.error('Napaka pri osveževanju prisotnosti za dan:', attError); 
+      return; 
+    }
     
+    console.log('attData:', attData);
+    
+    console.log('Nalagam status terminov iz Supabase...');
     const { data: statusData, error: statusError } = await supabase
       .from('term_status')
       .select('*')
       .eq('date', ymd);
 
-    if (statusError) { console.error('Napaka pri osveževanju statusa termina za dan:', statusError); return; }
+    if (statusError) { 
+      console.error('Napaka pri osveževanju statusa termina za dan:', statusError); 
+      return; 
+    }
     
+    console.log('statusData:', statusData);
+    
+    console.log('Posodabljam lokalne podatke...');
     attendance[ymd] = attData.reduce((acc, row) => {
       acc[row.term_id] = acc[row.term_id] || {};
       acc[row.term_id][row.swimmer_id] = row.status;
+      row.status;
       return acc;
     }, {});
 
@@ -963,13 +978,28 @@ document.addEventListener('DOMContentLoaded', () => {
       acc[row.term_id] = { status: row.status, note: row.note, notes: row.notes };
       return acc;
     }, {});
+    
+    console.log('Lokalni podatki posodobljeni:');
+    console.log('attendance[ymd]:', attendance[ymd]);
+    console.log('termStatus[ymd]:', termStatus[ymd]);
+    console.log('=== REFRESH DAY DATA END ===');
   }
 
   // Uporabi isto funkcijo kot v glavni strani (script.js)
   window.updateAttendance = async function(swimmerId, present) {
-    if (!currentEventTermId || !currentEventDate) return;
+    console.log('=== UPDATE ATTENDANCE START ===');
+    console.log('swimmerId:', swimmerId);
+    console.log('present:', present);
+    console.log('currentEventTermId:', currentEventTermId);
+    console.log('currentEventDate:', currentEventDate);
+    
+    if (!currentEventTermId || !currentEventDate) {
+      console.error('Manjkajo podatki:', { currentEventTermId, currentEventDate });
+      return;
+    }
     
     try {
+      console.log('Poskušam shraniti v Supabase...');
       // Uporabi isto strukturo kot v glavni strani
       const { error } = await supabase
         .from('attendance')
@@ -984,14 +1014,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (error) throw error;
       
+      console.log('Uspešno shranjeno v Supabase');
+      console.log('Osvežujem podatke...');
+      
       // Osveži podatke za dan (kompatibilno z script.js)
       await refreshDayData(new Date(currentEventDate));
+      
+      console.log('Podatki osveženi, posodabljam povzetek...');
       
       // Posodobi povzetek
       updateSummary();
       
+      console.log('Povzetek posodobljen, posodabljam kalendar...');
+      
       // Posodobi tudi kalendar (če je potrebno)
       renderCalendar();
+      
+      console.log('=== UPDATE ATTENDANCE END ===');
       
     } catch (error) {
       console.error('Napaka pri shranjevanju prisotnosti:', error);
