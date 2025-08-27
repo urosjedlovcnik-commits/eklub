@@ -846,7 +846,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===== UREJANJE TERMINOV - SPREMENJENA FUNKCIJA =====
     let editingTermId = null;
 
-   function renderTerms(){
+function renderTerms(){
       elTermList.innerHTML = "";
       TERMS.sort((a,b)=>{
         if(a.day!==b.day) return a.day-b.day;
@@ -863,7 +863,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           <div class="term-item-actions">
             <button class="btn neutral edit-btn" data-id="${t.id}">Uredi</button>
-            <button class="btn warn delete-btn" data-id="${t.id}">Izbriši</button>
+            <button class="btn warn delete-btn" data-id="${t.id}">Izbriši</špan>
           </div>
         `;
 
@@ -896,8 +896,6 @@ document.addEventListener('DOMContentLoaded', () => {
       TERMS.sort((a,b)=>a.label.localeCompare(b.label)).forEach(t=>{
         const o=document.createElement("option"); o.value=t.id; o.textContent=t.label; elTermSelect.appendChild(o);
       });
-    }
-
     function openEditTermModal(termId) {
       editingTermId = termId;
       const term = termById(termId);
