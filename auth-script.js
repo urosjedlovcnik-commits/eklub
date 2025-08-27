@@ -1,5 +1,7 @@
 // Počakamo, da se celotna stran naloži
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('=== DOM CONTENT LOADED START ===');
+  console.log('DOM je naložen, začenjam inicializacijo...');
 
   // ===== AUTENTIKACIJA =====
   let currentUser = null;
@@ -86,9 +88,9 @@ document.addEventListener('DOMContentLoaded', () => {
           // Posodobi pregled skupin
           updateGroupsOverview();
           // Naloži podatke za nadomestne trenerje
-          await loadSubstituteData();
+          // await loadSubstituteData(); // Odstranjeno, ker se kliče v setTimeout
           // Naloži nadomestne termine
-          await loadSubstituteTerms();
+          // await loadSubstituteTerms(); // Odstranjeno, ker se kliče v setTimeout
       } else {
           console.log('Uporabnik ni prijavljen');
           showLoginScreen();
@@ -410,6 +412,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const elModalMeta = document.getElementById("modalMeta");
   const elAttendanceTable = document.getElementById("attendanceTable");
   const elSubstitutionTable = document.getElementById("substitutionTable");
+  
+  console.log('=== ELEMENTI NALOŽENI ===');
+  console.log('elAttendanceTable:', !!elAttendanceTable);
+  console.log('elSubstitutionTable:', !!elSubstitutionTable);
+  console.log('elAttendanceTable element:', elAttendanceTable);
+  console.log('elSubstitutionTable element:', elSubstitutionTable);
   const elToggleEventBtn = document.getElementById("toggleEventBtn");
   const elCloseModalBtn = document.getElementById("closeModalBtn");
   const elModalSwimmerSelect = document.getElementById("modalSwimmerSelect");
@@ -1832,6 +1840,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (elAttendanceTable && elSubstitutionTable) {
           console.log('Elementi so naloženi, začenjam z autentikacijo...');
           checkAuth();
+          // Naloži podatke za nadomestne trenerje
+          loadSubstituteData();
+          // Naloži nadomestne termine
+          loadSubstituteTerms();
       } else {
           console.error('Elementi še vedno niso naloženi, poskušam ponovno naložiti...');
                            // Poskusi ponovno naložiti elemente
@@ -1844,6 +1856,10 @@ document.addEventListener('DOMContentLoaded', () => {
               elAttendanceTable = retryAttendanceTable;
               elSubstitutionTable = retrySubstitutionTable;
               checkAuth();
+              // Naloži podatke za nadomestne trenerje
+              loadSubstituteData();
+              // Naloži nadomestne termine
+              loadSubstituteTerms();
           } else {
               console.error('Elementi še vedno niso naloženi, prekinjam');
           }
