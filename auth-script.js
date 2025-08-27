@@ -827,249 +827,204 @@ document.addEventListener('DOMContentLoaded', () => {
     updateModalButtons(termStatus[termKey]);
   }
 
+       // Funkcija za osvežitev tabele prisotnosti (kopirano iz script.js)
+       async function refreshAttendanceTable(date, termId, termAtt) {
+         elAttendanceTable.innerHTML = "";
+         
+         // Redno dodeljeni plavalci
+         const assignedSwimmers = swimmers.filter(s => s.terms && s.terms.includes(termId) && !s.is_deleted);
+         
+         if (assignedSwimmers.length === 0) {
+           const tr = document.createElement("tr");
+           const td = document.createElement("td");
+           td.colSpan = 2;
+           td.className = "muted";
+           td.textContent = "Ni dodeljenih plavalcev za ta termin.";
+           tr.appendChild(td);
+           elAttendanceTable.appendChild(tr);
+           return;
+         }
+         
+         assignedSwimmers.sort((a, b) => (a.last_name + a.first_name).localeCompare(b.last_name + b.first_name))
+           .forEach(s => {
+             const tr = document.createElement("tr");
+             const td1 = document.createElement("td");
+             td1.textContent = `${s.first_name} ${s.last_name}`;
+             
+             const td2 = document.createElement("td");
+             td2.style.display = "flex";
+             td2.style.gap = "4px";
+             td2.style.alignItems = "center";
+             
+             const status = termAtt[s.id];
+             const btnPresent = document.createElement("button");
+             btnPresent.textContent = "Prisoten";
+             btnPresent.className = "btn";
+             if (status === true) { btnPresent.classList.add("ok"); } else { btnPresent.classList.add("neutral"); }
+             btnPresent.addEventListener("click", async () => {
+               await updateAttendance(s.id, true);
+               await refreshAttendanceTable(date, termId, termAtt);
+               await refreshSubstitutionTable(date, termId, termAtt);
+             });
+             
+             const btnAbsent = document.createElement("button");
+             btnAbsent.textContent = "Odsoten";
+             btnAbsent.className = "btn";
+             if (status === false) { btnAbsent.classList.add("warn"); } else { btnAbsent.classList.add("neutral"); }
+             btnAbsent.addEventListener("click", async () => {
+               await updateAttendance(s.id, false);
+               await refreshAttendanceTable(date, termId, termAtt);
+               await refreshSubstitutionTable(date, termId, termAtt);
+             });
+             
+             const btnRemove = document.createElement("button");
+             btnRemove.innerHTML = "✖";
+             btnRemove.className = "btn remove-btn";
+             btnRemove.title = "Ponastavi prisotnost";
+             btnRemove.addEventListener("click", async () => {
+               await resetAttendance(s.id);
+               await refreshAttendanceTable(date, termId, termAtt);
+               await refreshSubstitutionTable(date, termId, termAtt);
+             });
+             
+             tr.appendChild(td1);
+             tr.appendChild(td2);
+             
+             td2.appendChild(btnPresent);
+             td2.appendChild(btnAbsent);
+             td2.appendChild(btnRemove);
+             
+             elAttendanceTable.appendChild(tr);
+           });
+       }
+       
+       // Funkcija za osvežitev tabele nadomeščanja (kopirano iz script.js)
+       async function refreshSubstitutionTable(date, termId, termAtt) {
+         elSubstitutionTable.innerHTML = "";
+         
+         // Plavalci z vneseno prisotnostjo, ki NISO redno dodeljeni temu terminu
+         const assignedSwimmerIds = swimmers.filter(s => s.terms && s.terms.includes(termId) && !s.is_deleted).map(s => s.id);
+         const substitutionSwimmers = Object.keys(termAtt)
+           .map(swimmerId => swimmers.find(s => s.id === swimmerId))
+           .filter(s => s && !assignedSwimmerIds.includes(s.id) && !s.is_deleted);
+         
+         if (substitutionSwimmers.length === 0) {
+           const tr = document.createElement("tr");
+           const td = document.createElement("td");
+           td.colSpan = 2;
+           td.className = "muted";
+           td.textContent = "Ni nadomeščanja.";
+           tr.appendChild(td);
+           elSubstitutionTable.appendChild(tr);
+           return;
+         }
+         
+         substitutionSwimmers.sort((a, b) => (a.last_name + a.first_name).localeCompare(b.last_name + b.first_name))
+           .forEach(s => {
+             const tr = document.createElement("tr");
+             const td1 = document.createElement("td");
+             td1.textContent = `${s.first_name} ${s.last_name}`;
+             
+             const td2 = document.createElement("td");
+             td2.style.display = "flex";
+             td2.style.gap = "4px";
+             td2.style.alignItems = "center";
+             
+             const status = termAtt[s.id];
+             const btnPresent = document.createElement("button");
+             btnPresent.textContent = "Prisoten";
+             btnPresent.className = "btn";
+             if (status === true) { btnPresent.classList.add("ok"); } else { btnPresent.classList.add("neutral"); }
+             btnPresent.addEventListener("click", async () => {
+               await updateAttendance(s.id, true);
+               await refreshAttendanceTable(date, termId, termAtt);
+               await refreshSubstitutionTable(date, termId, termAtt);
+             });
+             
+             const btnAbsent = document.createElement("button");
+             btnAbsent.textContent = "Odsoten";
+             btnAbsent.className = "btn";
+             if (status === false) { btnAbsent.classList.add("warn"); } else { btnAbsent.classList.add("neutral"); }
+             btnAbsent.addEventListener("click", async () => {
+               await updateAttendance(s.id, false);
+               await refreshAttendanceTable(date, termId, termAtt);
+               await refreshSubstitutionTable(date, termId, termAtt);
+             });
+             
+             const btnRemove = document.createElement("button");
+             btnRemove.innerHTML = "✖";
+             btnRemove.className = "btn remove-btn";
+             btnRemove.title = "Odstrani iz nadomeščanja";
+             btnRemove.addEventListener("click", async () => {
+               await removeSwimmerFromEvent(s.id);
+               await refreshAttendanceTable(date, termId, termAtt);
+               await refreshSubstitutionTable(date, termId, termAtt);
+             });
+             
+             tr.appendChild(td1);
+             tr.appendChild(td2);
+             
+             td2.appendChild(btnPresent);
+             td2.appendChild(btnAbsent);
+             td2.appendChild(btnRemove);
+             
+             elSubstitutionTable.appendChild(tr);
+           });
+       }
+       
+       // Funkcija za osvežitev dropdown-a za dodajanje plavalcev (kopirano iz script.js)
+       async function refreshSwimmerDropdown(date, termId) {
+         elModalSwimmerSelect.innerHTML = "";
+         
+         const termAtt = attendance[date]?.[termId] || {};
+         const allSwimmerIds = Object.keys(termAtt);
+         
+         const unassigned = swimmers.filter(s => !allSwimmerIds.includes(s.id) && !s.is_deleted)
+           .sort((a, b) => (a.last_name + a.first_name).localeCompare(b.last_name + b.first_name));
+         
+         if (unassigned.length > 0) {
+           unassigned.forEach(s => {
+             const o = document.createElement('option');
+             o.value = s.id;
+             o.textContent = `${s.first_name} ${s.last_name}`;
+             elModalSwimmerSelect.appendChild(o);
+           });
+           elModalSwimmerSelect.style.display = 'inline-block';
+           elAddToEventBtn.style.display = 'inline-block';
+         } else {
+           const o = document.createElement('option');
+           o.value = '';
+           o.textContent = 'Vsi plavalci so že v treningu ali nadomeščanju.';
+           o.disabled = true;
+           elModalSwimmerSelect.appendChild(o);
+           elModalSwimmerSelect.style.display = 'none';
+           elAddToEventBtn.style.display = 'none';
+         }
+       }
+       
+       // Glavna funkcija za osvežitev vseh tabel
        async function renderEventTables(termId, date) {
-  // Preveri, ali so potrebni elementi naloženi
-  if (!elAttendanceTable || !elSubstitutionTable) {
-    console.error('Potrebni elementi niso naloženi:', {
-      elAttendanceTable: !!elAttendanceTable,
-      elSubstitutionTable: !!elSubstitutionTable
-    });
-    return;
-  }
+         // Preveri, ali so potrebni elementi naloženi
+         if (!elAttendanceTable || !elSubstitutionTable) {
+           console.error('Potrebni elementi niso naloženi:', {
+             elAttendanceTable: !!elAttendanceTable,
+             elSubstitutionTable: !!elSubstitutionTable
+           });
+           return;
+         }
+         
+         const termAtt = attendance[date]?.[termId] || {};
+         
+         console.log('renderEventTables - termId:', termId, 'date:', date);
+         console.log('termAtt:', termAtt);
+         
+         // Osveži vse tabele
+         await refreshAttendanceTable(date, termId, termAtt);
+         await refreshSubstitutionTable(date, termId, termAtt);
+         await refreshSwimmerDropdown(date, termId);
+       }
 
-  const termKey = `${termId}-${date}`;
-  // Uporabi isto strukturo kot v glavni strani
-  const termAtt = attendance[date]?.[termId] || {};
-  
-  console.log('renderEventTables - termId:', termId, 'date:', date);
-  console.log('termAtt:', termAtt);
-  console.log('swimmers:', swimmers);
-  console.log('userTerms:', userTerms);
-  console.log('termId type:', typeof termId);
-  console.log('termId v userTerms:', userTerms.includes(termId));
-     
-           // KLJUČNI POPRAVEK: Pravilno filtriranje plavalcev
-      // Redno dodeljeni plavalci (tisti, ki so dodeljeni temu terminu)
-      console.log('\n--- Filtriranje plavalcev za termin ---');
-      console.log('Termin ID:', termId);
-      console.log('Vsi plavalci:', swimmers);
-      
-      const assignedSwimmers = swimmers.filter(s => {
-        const hasTerm = s.terms && s.terms.includes(termId);
-        const notDeleted = !s.is_deleted;
-        console.log(`Plavalec ${s.first_name} ${s.last_name}: hasTerm=${hasTerm}, notDeleted=${notDeleted}`);
-        return hasTerm && notDeleted;
-      });
-      
-      console.log('assignedSwimmers:', assignedSwimmers);
-      
-      const assignedSwimmerIds = assignedSwimmers.map(s => s.id);
-      
-      // Vsi plavalci z vneseno prisotnostjo (vključno z nadomestnimi)
-      const swimmersWithAttendance = Object.keys(termAtt).map(swimmerId => 
-        swimmers.find(s => s.id === swimmerId)
-      ).filter(Boolean);
-      
-      // Plavalci z vneseno prisotnostjo, ki NISO redno dodeljeni temu terminu (nadomeščanje)
-      const substitutionSwimmers = swimmersWithAttendance.filter(s => 
-        !assignedSwimmerIds.includes(s.id) && !s.is_deleted
-      );
-      
-      console.log('Razdelitev plavalcev:');
-      console.log('- Redno dodeljeni:', regularSwimmers.map(s => `${s.first_name} ${s.last_name}`));
-      console.log('- Nadomeščanje:', substitutionSwimmers.map(s => `${s.first_name} ${s.last_name}`));
-      console.log('- Vsi z prisotnostjo:', swimmersWithAttendance.map(s => `${s.first_name} ${s.last_name}`));
-      
-      // VSI redno dodeljeni plavalci (tudi brez prisotnosti)
-      const regularSwimmers = assignedSwimmers;
 
-    // Render attendance table - vsi redno dodeljeni plavalci
-    elAttendanceTable.innerHTML = '';
-    if (regularSwimmers.length === 0) {
-      const tr = document.createElement('tr');
-      const td = document.createElement('td');
-      td.colSpan = 2;
-      td.className = 'muted';
-      td.textContent = 'Ni redno dodeljenih plavalcev za ta termin.';
-      tr.appendChild(td);
-      elAttendanceTable.appendChild(tr);
-    } else {
-                regularSwimmers.sort((a,b) => (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name))
-        .forEach(s => {
-          const isPresent = termAtt[s.id] || false;
-          const row = document.createElement('tr');
-          
-          const td1 = document.createElement('td');
-          td1.textContent = `${s.first_name} ${s.last_name}`;
-          
-          const td2 = document.createElement('td');
-          td2.style.display = "flex";
-          td2.style.gap = "4px";
-          td2.style.alignItems = "center";
-          
-          // Gumb "Prisoten"
-          const btnPresent = document.createElement("button");
-          btnPresent.textContent = "Prisoten";
-          btnPresent.className = "btn";
-          if (isPresent === true) {
-            btnPresent.classList.add("ok");
-          } else {
-            btnPresent.classList.add("neutral");
-          }
-          btnPresent.addEventListener("click", async () => {
-            await updateAttendance(s.id, true);
-            await renderEventTables(termId, date);
-          });
-          
-          // Gumb "Odsoten"
-          const btnAbsent = document.createElement("button");
-          btnAbsent.textContent = "Odsoten";
-          btnAbsent.className = "btn";
-          if (isPresent === false) {
-            btnAbsent.classList.add("warn");
-          } else {
-            btnAbsent.classList.add("neutral");
-          }
-          btnAbsent.addEventListener("click", async () => {
-            await updateAttendance(s.id, false);
-            await renderEventTables(termId, date);
-          });
-          
-          // Gumb za ponastavitev prisotnosti (samo za redno dodeljene plavalce)
-          const btnRemove = document.createElement("button");
-          btnRemove.innerHTML = "✖";
-          btnRemove.className = "btn remove-btn";
-          btnRemove.title = "Ponastavi prisotnost";
-          btnRemove.addEventListener("click", async () => {
-            await resetAttendance(s.id);
-            await renderEventTables(termId, date);
-          });
-          
-          td2.appendChild(btnPresent);
-          td2.appendChild(btnAbsent);
-          td2.appendChild(btnRemove);
-          
-          row.appendChild(td1);
-          row.appendChild(td2);
-          
-          elAttendanceTable.appendChild(row);
-        });
-    }
-
-    // Render substitution table - nadomeščanje
-    elSubstitutionTable.innerHTML = '';
-    if (substitutionSwimmers.length === 0) {
-      const tr = document.createElement('tr');
-      const td = document.createElement('td');
-      td.colSpan = 2;
-      td.className = 'muted';
-      td.textContent = 'Ni nadomeščanja.';
-      tr.appendChild(td);
-      elSubstitutionTable.appendChild(tr);
-    } else {
-              substitutionSwimmers.sort((a,b) => (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name))
-        .forEach(s => {
-          const isPresent = termAtt[s.id] || false;
-          const row = document.createElement('tr');
-          
-          const td1 = document.createElement('td');
-          td1.textContent = `${s.first_name} ${s.last_name}`;
-          
-          const td2 = document.createElement('td');
-          td2.style.display = "flex";
-          td2.style.gap = "4px";
-          td2.style.alignItems = "center";
-          
-          // Gumb "Prisoten"
-          const btnPresent = document.createElement("button");
-          btnPresent.textContent = "Prisoten";
-          btnPresent.className = "btn";
-          if (isPresent === true) {
-            btnPresent.classList.add("ok");
-          } else {
-            btnPresent.classList.add("neutral");
-          }
-          btnPresent.addEventListener("click", async () => {
-            await updateAttendance(s.id, true);
-            await renderEventTables(termId, date);
-          });
-          
-          // Gumb "Odsoten"
-          const btnAbsent = document.createElement("button");
-          btnAbsent.textContent = "Odsoten";
-          btnAbsent.className = "btn";
-          if (isPresent === false) {
-            btnAbsent.classList.add("warn");
-          } else {
-            btnAbsent.classList.add("neutral");
-          }
-          btnAbsent.addEventListener("click", async () => {
-            await updateAttendance(s.id, false);
-            await renderEventTables(termId, date);
-          });
-          
-          // Gumb za odstranitev iz nadomeščanja
-          const btnRemove = document.createElement("button");
-          btnRemove.innerHTML = "✖";
-          btnRemove.className = "btn remove-btn";
-          btnRemove.title = "Odstrani iz nadomeščanja";
-          btnRemove.addEventListener("click", async () => {
-            await removeSwimmerFromEvent(s.id);
-            await renderEventTables(termId, date);
-          });
-          
-          td2.appendChild(btnPresent);
-          td2.appendChild(btnAbsent);
-          td2.appendChild(btnRemove);
-          
-          row.appendChild(td1);
-          row.appendChild(td2);
-          
-          elSubstitutionTable.appendChild(row);
-        });
-    }
-
-    // Update swimmer select - plavalci, ki jih lahko dodamo
-    elModalSwimmerSelect.innerHTML = '';
-    const allSwimmersInEvent = [...regularSwimmers, ...substitutionSwimmers];
-    const currentEventSwimmerIds = allSwimmersInEvent.map(s => s.id);
-    
-    // Naloži vse plavalce iz baze, ne samo tiste, ki so dodeljeni trenerju
-    const { data: allSwimmersData, error: allSwimmersError } = await supabase
-      .from('swimmers')
-      .select('*')
-      .eq('is_deleted', false)
-      .order('last_name, first_name');
-    
-    if (allSwimmersError) {
-      console.error('Napaka pri nalaganju vseh plavalcev:', allSwimmersError);
-      return;
-    }
-    
-    const unassigned = allSwimmersData.filter(s => 
-      !currentEventSwimmerIds.includes(s.id)
-    );
-
-    if (unassigned.length > 0) {
-      unassigned.sort((a,b) => (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name))
-        .forEach(s => {
-          const o = document.createElement('option');
-          o.value = s.id;
-          o.textContent = `${s.first_name} ${s.last_name}`;
-          elModalSwimmerSelect.appendChild(o);
-        });
-      elModalSwimmerSelect.style.display = 'inline-block';
-      elAddToEventBtn.style.display = 'inline-block';
-    } else {
-      const o = document.createElement('option');
-      o.value = '';
-      o.textContent = 'Vsi plavalci so že v treningu ali nadomeščanju.';
-      o.disabled = true;
-      elModalSwimmerSelect.appendChild(o);
-      elModalSwimmerSelect.style.display = 'none';
-      elAddToEventBtn.style.display = 'none';
-    }
-  }
 
   function updateModalButtons(termStat) {
     if (termStat && termStat.status === 'inactive') {
