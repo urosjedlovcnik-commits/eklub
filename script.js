@@ -54,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const elModalTitle = document.getElementById("modalTitle");
     const elModalMeta = document.getElementById("modalMeta");
     const elAttendanceTable = document.getElementById("attendanceTable").querySelector("tbody");
+    const elSubstitutionTable = document.getElementById("substitutionTable").querySelector("tbody");
     const elToggleEventBtn = document.getElementById("toggleEventBtn");
     const elCloseModalBtn = document.getElementById("closeModalBtn");
     const elModalSwimmerSelect = document.getElementById("modalSwimmerSelect");
@@ -347,22 +348,27 @@ document.addEventListener('DOMContentLoaded', () => {
       attendance[ymd] = { ...attendance[ymd], [termId]: termAtt };
 
       // >>> POPRAVEK: tukaj je težava. Namesto da filtriramo, zgradimo seznam vseh, ki so relevantni.
-      // Najprej dobimo vse plavalce, ki so imeli prisotnost na ta dan za ta termin (ne glede na to, ali so aktivni)
+      // Ločimo plavalce na redno dodeljene in nadomeščanje
       const swimmersWithAttendance = Object.keys(termAtt).map(swimmerId => swimmers.find(s => s.id === swimmerId)).filter(Boolean);
       
-      // Nato dodamo še vse aktivne plavalce, ki so dodeljeni temu terminu, a še nimajo prisotnosti za ta dan
-      const assignedActiveSwimmers = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted && !termAtt[s.id]);
+      // Redno dodeljeni plavalci (tisti, ki so dodeljeni temu terminu)
+      const assignedSwimmers = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted);
+      const assignedSwimmerIds = assignedSwimmers.map(s => s.id);
       
-      // Združimo oba seznama in odstranimo duplikate
-      const allSwimmersForEvent = [...new Set([...swimmersWithAttendance, ...assignedActiveSwimmers])];
+      // Plavalci z vneseno prisotnostjo, ki NISO redno dodeljeni temu terminu (nadomeščanje)
+      const substitutionSwimmers = swimmersWithAttendance.filter(s => !assignedSwimmerIds.includes(s.id));
       
+      // Redno dodeljeni plavalci z vneseno prisotnostjo ali brez
+      const regularSwimmers = assignedSwimmers.filter(s => termAtt[s.id] !== undefined || !s.is_deleted);
+      
+      // Prikaži redno dodeljene plavalce
       elAttendanceTable.innerHTML = "";
-      if(allSwimmersForEvent.length===0){
+      if(regularSwimmers.length===0){
         const tr=document.createElement("tr");
         const td=document.createElement("td"); td.colSpan=2; td.className="muted"; td.textContent="Ni dodeljenih plavalcev za ta termin.";
         tr.appendChild(td); elAttendanceTable.appendChild(tr);
       } else {
-        allSwimmersForEvent.sort((a,b)=> (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name)).forEach(s=>{
+        regularSwimmers.sort((a,b)=> (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name)).forEach(s=>{
           const tr=document.createElement("tr");
           const td1=document.createElement("td"); td1.textContent = `${s.first_name} ${s.last_name}`;
           
@@ -436,8 +442,90 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       }
 
+      // Prikaži nadomeščanje
+      elSubstitutionTable.innerHTML = "";
+      if(substitutionSwimmers.length===0){
+        const tr=document.createElement("tr");
+        const td=document.createElement("td"); td.colSpan=2; td.className="muted"; td.textContent="Ni nadomeščanja.";
+        tr.appendChild(td); elSubstitutionTable.appendChild(tr);
+      } else {
+        substitutionSwimmers.sort((a,b)=> (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name)).forEach(s=>{
+          const tr=document.createElement("tr");
+          const td1=document.createElement("td"); td1.textContent = `${s.first_name} ${s.last_name}`;
+          
+          const td2=document.createElement("td");
+          td2.style.display = "flex"; td2.style.gap = "4px";
+          td2.style.alignItems = "center";
+
+          const status = termAtt[s.id];
+          const btnPresent = document.createElement("button");
+          btnPresent.textContent = "Prisoten";
+          btnPresent.className = "btn";
+          if (isInactive(date, termId)) { btnPresent.disabled = true; }
+          if (status === true) { btnPresent.classList.add("ok"); } else { btnPresent.classList.add("neutral"); }
+          btnPresent.addEventListener("click", async ()=>{
+            const { error } = await supabase
+              .from('attendance')
+              .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: true }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
+            if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
+              // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
+              await refreshDayData(date);
+              openEvent(date, termId);
+              renderMonth();
+            }
+          });
+          
+          const btnAbsent = document.createElement("button");
+          btnAbsent.textContent = "Odsoten";
+          btnAbsent.className = "btn";
+          if (isInactive(date, termId)) { btnAbsent.disabled = true; }
+          if (status === false) { btnAbsent.classList.add("warn"); } else { btnAbsent.classList.add("neutral"); }
+          btnAbsent.addEventListener("click", async ()=>{
+            const { error } = await supabase
+              .from('attendance')
+              .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: false }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
+          if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
+              // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
+              await refreshDayData(date);
+              openEvent(date, termId);
+              refreshSwimmerPanel();
+              renderMonth();
+            }
+          });
+          
+          const btnRemove = document.createElement("button");
+          btnRemove.innerHTML = "✖";
+          btnRemove.className = "btn remove-btn";
+          if (isInactive(date, termId)) { btnRemove.disabled = true; }
+          btnRemove.addEventListener("click", async ()=>{
+              const { error } = await supabase
+                .from('attendance')
+                .delete()
+                .eq('date', ymd)
+                .eq('term_id', termId)
+                .eq('swimmer_id', s.id);
+            if (error) { console.error('Napaka pri brisanju prisotnosti:', error); } else {
+                // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
+                await refreshDayData(date);
+                openEvent(date, termId);
+                refreshSwimmerPanel();
+                renderMonth();
+            }
+          });
+          
+          tr.appendChild(td1); tr.appendChild(td2); 
+          
+          td2.appendChild(btnPresent);
+          td2.appendChild(btnAbsent);
+          td2.appendChild(btnRemove);
+          
+          elSubstitutionTable.appendChild(tr);
+        });
+      }
+
       elModalSwimmerSelect.innerHTML = "";
-      const currentEventSwimmerIds = allSwimmersForEvent.map(s => s.id);
+      const allSwimmersInEvent = [...regularSwimmers, ...substitutionSwimmers];
+      const currentEventSwimmerIds = allSwimmersInEvent.map(s => s.id);
       const unassigned = swimmers.filter(s => !currentEventSwimmerIds.includes(s.id) && !s.is_deleted)
                                .sort((a,b)=> (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name));
       
@@ -452,7 +540,7 @@ document.addEventListener('DOMContentLoaded', () => {
         elModalSwimmerSelect.style.display = "inline-block";
       } else {
         const o = document.createElement("option");
-        o.textContent = "Vsi plavalci so že dodeljeni.";
+        o.textContent = "Vsi plavalci so že v treningu ali nadomeščanju.";
         o.disabled = true;
         elModalSwimmerSelect.appendChild(o);
         elAddToEventBtn.style.display = "none";

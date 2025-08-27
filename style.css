@@ -199,6 +199,28 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   resize: vertical;
 }
 
+/* Stili za tabelo nadomeščanja */
+#substitutionTable {
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+#substitutionTable th {
+  background: #fbbf24;
+  color: #92400e;
+  font-weight: 600;
+}
+
+#substitutionTable td {
+  background: #fef3c7;
+}
+
+#substitutionTable tr:hover td {
+  background: #fde68a;
+}
+
 .notes-section label {
   display: block;
   margin-bottom: 4px;
