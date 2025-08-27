@@ -203,6 +203,26 @@
   text-decoration: line-through;
   color: #999;
 }
+
+.remove-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  min-width: 24px;
+}
+
+.remove-btn:hover {
+  background: #c82333;
+}
+
+.remove-btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+}
 </style>
 </head>
 <body>
@@ -404,6 +424,7 @@
                   <th>Plavalec</th>
                   <th>Prisoten</th>
                   <th>Opomba</th>
+                  <th>Akcije</th>
                 </tr>
               </thead>
               <tbody id="attendanceTable"></tbody>
@@ -418,6 +439,7 @@
                   <th>Plavalec</th>
                   <th>Prisoten</th>
                   <th>Opomba</th>
+                  <th>Akcije</th>
                 </tr>
               </thead>
               <tbody id="substitutionTable"></tbody>

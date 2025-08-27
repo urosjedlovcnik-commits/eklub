@@ -683,7 +683,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Render attendance table
     elAttendanceTable.innerHTML = '';
     if (regularSwimmers.length === 0) {
-      elAttendanceTable.innerHTML = '<tr><td colspan="3" class="muted">Ni plavalcev</td></tr>';
+      elAttendanceTable.innerHTML = '<tr><td colspan="4" class="muted">Ni plavalcev</td></tr>';
     } else {
       regularSwimmers.sort((a,b) => (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name))
         .forEach(s => {
@@ -700,6 +700,9 @@ document.addEventListener('DOMContentLoaded', () => {
                      onchange="updateAttendance('${s.id}', ${isPresent}, this.value)" 
                      placeholder="Opomba">
             </td>
+            <td>
+              <button class="btn remove-btn" onclick="removeSwimmerFromEvent('${s.id}')" title="Odstrani plavalca iz treninga">✖</button>
+            </td>
           `;
           elAttendanceTable.appendChild(row);
         });
@@ -708,7 +711,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Render substitution table
     elSubstitutionTable.innerHTML = '';
     if (substitutionSwimmers.length === 0) {
-      elSubstitutionTable.innerHTML = '<tr><td colspan="3" class="muted">Ni nadomestnih plavalcev</td></tr>';
+      elSubstitutionTable.innerHTML = '<tr><td colspan="4" class="muted">Ni nadomestnih plavalcev</td></tr>';
     } else {
       substitutionSwimmers.sort((a,b) => (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name))
         .forEach(s => {
@@ -724,6 +727,9 @@ document.addEventListener('DOMContentLoaded', () => {
               <input type="text" value="" 
                      onchange="updateAttendance('${s.id}', ${isPresent}, this.value)" 
                      placeholder="Opomba">
+            </td>
+            <td>
+              <button class="btn remove-btn" onclick="removeSwimmerFromEvent('${s.id}')" title="Odstrani nadomestnega plavalca iz treninga">✖</button>
             </td>
           `;
           elSubstitutionTable.appendChild(row);
@@ -747,12 +753,14 @@ document.addEventListener('DOMContentLoaded', () => {
           elModalSwimmerSelect.appendChild(o);
         });
       elModalSwimmerSelect.style.display = 'inline-block';
+      elAddToEventBtn.style.display = 'inline-block';
     } else {
       const o = document.createElement('option');
       o.value = '';
       o.textContent = 'Ni več plavalcev';
       elModalSwimmerSelect.appendChild(o);
       elModalSwimmerSelect.style.display = 'none';
+      elAddToEventBtn.style.display = 'none';
     }
   }
 
@@ -795,6 +803,85 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (error) {
       console.error('Napaka pri shranjevanju prisotnosti:', error);
       alert('Napaka pri shranjevanju prisotnosti');
+    }
+  };
+
+  // ===== DODAJANJE PLAVALCEV V TRENING =====
+  // Dodaj event listener za gumb dodajanja plavalcev
+  elAddToEventBtn.addEventListener('click', async () => {
+    const swimmerId = elModalSwimmerSelect.value;
+    if (!swimmerId) return;
+    
+    const swimmer = swimmers.find(s => s.id === swimmerId);
+    if (!swimmer) return;
+
+    try {
+      const { error } = await supabase
+        .from('attendance')
+        .upsert({
+          date: currentEventDate,
+          term_id: currentEventTermId,
+          swimmer_id: swimmer.id,
+          present: true,
+          note: ''
+        }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
+      
+      if (error) {
+        console.error('Napaka pri dodajanju plavalca v trening:', error);
+        alert('Napaka pri dodajanju plavalca v trening');
+        return;
+      }
+
+      // Posodobi lokalne podatke
+      if (!attendance[currentEventDate]) attendance[currentEventDate] = {};
+      if (!attendance[currentEventDate][currentEventTermId]) attendance[currentEventDate][currentEventTermId] = {};
+      attendance[currentEventDate][currentEventTermId][swimmer.id] = true;
+
+      // Ponovno naloži podatke dogodka
+      await loadEventData(currentEventTermId, currentEventDate);
+      
+      // Posodobi povzetek
+      updateSummary();
+      
+      console.log(`Plavalec ${swimmer.first_name} ${swimmer.last_name} dodan v trening`);
+      
+    } catch (error) {
+      console.error('Napaka pri dodajanju plavalca:', error);
+      alert('Napaka pri dodajanju plavalca v trening');
+    }
+  });
+
+  // ===== IZBRISANJE PLAVALCA IZ TRENINGA =====
+  // Funkcija za odstranitev plavalca iz treninga
+  window.removeSwimmerFromEvent = async function(swimmerId) {
+    if (!currentEventTermId || !currentEventDate) return;
+    
+    try {
+      const { error } = await supabase
+        .from('attendance')
+        .delete()
+        .eq('date', currentEventDate)
+        .eq('term_id', currentEventTermId)
+        .eq('swimmer_id', swimmerId);
+
+      if (error) throw error;
+
+      // Posodobi lokalne podatke
+      if (attendance[currentEventDate] && attendance[currentEventDate][currentEventTermId]) {
+        delete attendance[currentEventDate][currentEventTermId][swimmerId];
+      }
+
+      // Ponovno naloži podatke dogodka
+      await loadEventData(currentEventTermId, currentEventDate);
+      
+      // Posodobi povzetek
+      updateSummary();
+      
+      console.log(`Plavalec odstranjen iz treninga`);
+      
+    } catch (error) {
+      console.error('Napaka pri odstranjevanju plavalca:', error);
+      alert('Napaka pri odstranjevanju plavalca iz treninga');
     }
   };
 
