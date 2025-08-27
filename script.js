@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const elEditTermDateFrom = document.getElementById('editTermDateFrom');
     const elEditTermDateTo = document.getElementById('editTermDateTo');
     const elSaveEditTermBtn = document.getElementById('saveEditTermBtn');
-    
+
     // Spremenljivke za koledar
     let currentYear = new Date().getFullYear();
     let currentMonth = new Date().getMonth();
@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const SUPABASE_URL = "https://tizjimlwfkoniixbetgr.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpemppbWx3ZmtvbmlpeGJldGdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzNDgyNzgsImV4cCI6MjA3MDkyNDI3OH0.Oess7TCevLH3mO0aW...o9nQ1D_1l0lJj7Wq448";
     const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    
+
     // ===== Funkcije =====
 
     async function updateStateAndRender() {
@@ -128,9 +128,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 return eventEl;
             });
-            
+
             dayElement.innerHTML = `<span class="day-number">${i}</span>`;
-            
+
             const eventContainer = document.createElement('div');
             eventContainer.className = 'events-container';
             dayEvents.forEach(el => eventContainer.appendChild(el));
@@ -171,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
             elDayModalList.innerHTML = '<p>Na ta dan ni treningov.</p>';
             return;
         }
-        
+
         events.forEach(eventEl => {
             const termId = eventEl.dataset.termId;
             const term = TERMS.find(t => t.id == termId);
@@ -179,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const div = document.createElement('div');
             div.className = 'event-summary';
-            
+
             const titleSpan = document.createElement('span');
             titleSpan.className = 'event-title';
             titleSpan.textContent = term.description;
@@ -189,11 +189,11 @@ document.addEventListener('DOMContentLoaded', () => {
             timeSpan.className = 'event-time';
             timeSpan.textContent = ` (${term.time})`;
             div.appendChild(timeSpan);
-            
+
             const attendanceStatus = document.createElement('span');
             const status = eventEl.dataset.status;
             attendanceStatus.className = `event-status ${status}`;
-            
+
             // Prikaz stanja
             if (status === 'complete') {
                 attendanceStatus.textContent = 'Popolna prisotnost';
@@ -252,7 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Napaka pri posodabljanju statusa.');
         }
     }
-    
+
     // Funkcija za odpiranje modala za opombo
     function openNoteModal(date, termId) {
         elDayModal.style.display = 'none';
@@ -278,7 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Zapiranje modalov
     elCloseDayModalBtn.addEventListener('click', () => elDayModal.style.display = 'none');
     elCloseNoteModalBtn.addEventListener('click', () => elNoteModal.style.display = 'none');
-    
+
     elPrev.addEventListener('click', () => {
         currentMonth--;
         if (currentMonth < 0) {
@@ -315,8 +315,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Posodobi tudi dropdown za izvoz
         populateExportSelects();
     }
-    
-    // Posodobljeno: tukaj je popravljen del kode
+
+    // Dodan popravek
     elAddSwimmerBtn.addEventListener('click', async () => {
         const first = elNewFirst.value.trim();
         const last = elNewLast.value.trim();
@@ -334,7 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .select();
 
             if (error) throw error;
-            
+
             // Dodaj novega plavalca v lokalni seznam
             swimmers.push(data[0]);
 
@@ -342,8 +342,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Počisti vnosna polja
             clearNewSwimmerInputs();
-            
-            // POPRAVEK: Dodan klic za osvežitev seznama
+
+            // POPRAVEK: Doda klic za osvežitev seznama
             refreshSwimmerPanel();
 
         } catch (error) {
@@ -361,7 +361,7 @@ document.addEventListener('DOMContentLoaded', () => {
             option.textContent = `${swimmer.first_name} ${swimmer.last_name}`;
             elExportSelectSwimmer.appendChild(option);
         });
-        
+
         elExportSelectTerm.innerHTML = '<option value="">Vsi termini</option>';
         TERMS.forEach(term => {
             const option = document.createElement('option');
@@ -374,7 +374,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function exportCsv() {
         const selectedSwimmerId = elExportSelectSwimmer.value;
         const selectedTermId = elExportSelectTerm.value;
-        
+
         let query = supabase.from('attendance').select('date, swimmers(first_name, last_name), terms(description), status');
 
         if (selectedSwimmerId) {
@@ -399,7 +399,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const statusText = row.status === 'unfilled' ? 'Manjka' : row.status === 'complete' ? 'Prisoten' : 'Opravičen';
             return [row.date, swimmerName, termName, statusText];
         });
-        
+
         const csvContent = [
             header.join(';'),
             ...rows.map(e => e.join(';'))
@@ -417,7 +417,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.removeChild(link);
         }
     }
-    
+
     // Brisanje vseh podatkov iz baze
     elClearDbBtn.addEventListener('click', async () => {
       if (confirm('Ali ste prepričani, da želite izbrisati VSE podatke (plavalce, termine in prisotnost)? Tega ne morete razveljaviti.')) {
@@ -426,12 +426,12 @@ document.addEventListener('DOMContentLoaded', () => {
           await supabase.from('term_status').delete().gt('id', 0);
           await supabase.from('swimmers').delete().gt('id', 0);
           await supabase.from('terms').delete().gt('id', 0);
-          
+
           swimmers = [];
           TERMS = [];
           attendance = {};
           termStatus = {};
-          
+
           alert('Vsi podatki so bili uspešno izbrisani.');
           updateStateAndRender();
         } catch (error) {
@@ -446,12 +446,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const { data: termsData, error: termsError } = await supabase.from('terms').select('*');
             if (termsError) throw termsError;
             TERMS = termsData;
-            
+
             // ZDAJ NALOŽIMO VSE PLAVALCE, DA ZADRŽIMO ZGODOVINSKE PODATKE
             const { data: swimmersData, error: swimmersError } = await supabase.from('swimmers').select('*');
             if (swimmersError) throw swimmersError;
             swimmers = swimmersData;
-            
+
             const { data: attendanceData, error: attendanceError } = await supabase.from('attendance').select('*');
             if (attendanceError) throw attendanceError;
             attendance = attendanceData.reduce((acc, row) => {
@@ -460,7 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
               acc[row.date][row.term_id][row.swimmer_id] = row.status;
               return acc;
             }, {});
-            
+
             const { data: statusData, error: statusError } = await supabase.from('term_status').select('*');
             if (statusError) throw statusError;
             termStatus = statusData.reduce((acc, row) => {
@@ -478,7 +478,7 @@ document.addEventListener('DOMContentLoaded', () => {
             alert("Napaka pri nalaganju začetnih podatkov.");
           }
     }
-    
+
     // Prvo nalaganje
     loadInitialState();
 });
