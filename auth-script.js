@@ -393,21 +393,17 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ===== UI elementi =====
+    // Definiraj UI elemente z varnostnimi preverjanji
     const elMonthLabel = document.getElementById("monthLabel");
     const elCalendarGrid = document.getElementById("calendarGrid");
     const elPrev = document.getElementById("prevBtn");
     const elNext = document.getElementById("nextBtn");
     const elSummaryBox = document.getElementById("summaryBox");
-
-    // Preveri autentikacijo ob nalaganju
-    console.log('=== PAGE LOADED, CHECKING AUTH ===');
-    checkAuth();
-
     const elModal = document.getElementById("eventModal");
     const elModalTitle = document.getElementById("modalTitle");
     const elModalMeta = document.getElementById("modalMeta");
-    const elAttendanceTable = document.getElementById("attendanceTable").querySelector("tbody");
-    const elSubstitutionTable = document.getElementById("substitutionTable").querySelector("tbody");
+    const elAttendanceTable = document.getElementById("attendanceTable");
+    const elSubstitutionTable = document.getElementById("substitutionTable");
     const elToggleEventBtn = document.getElementById("toggleEventBtn");
     const elCloseModalBtn = document.getElementById("closeModalBtn");
     const elModalSwimmerSelect = document.getElementById("modalSwimmerSelect");
@@ -431,6 +427,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const elCloseNoteModalBtn = document.getElementById("closeNoteModalBtn");
     const elNotesInput = document.getElementById("notesInput");
     const elSaveNotesBtn = document.getElementById("saveNotesBtn");
+
+    // Preveri autentikacijo ob nalaganju - premaknemo na konec
+    console.log('=== PAGE LOADED, CHECKING AUTH ===');
 
     // ===== Pomožne funkcije =====
     function mkSwimmer(first,last,terms=[]){ return { first_name:first, last_name:last, terms:[...new Set(terms)] }; }
@@ -460,6 +459,12 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log('currentYear:', currentYear, 'currentMonth:', currentMonth);
       console.log('TERMS.length:', TERMS.length);
       console.log('userTerms:', userTerms);
+      
+      // Preveri, ali UI elementi obstajajo
+      if (!elMonthLabel || !elCalendarGrid) {
+        console.error('UI elementi za koledar ne obstajajo');
+        return;
+      }
       
       const year = currentYear;
       const month = currentMonth;
@@ -734,55 +739,61 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Render attendance table - preveri, ali element obstaja
       if (elAttendanceTable) {
-        elAttendanceTable.innerHTML = '';
-        if (regularSwimmers.length === 0) {
-          elAttendanceTable.innerHTML = '<tr><td colspan="3" class="muted">Ni plavalcev</td></tr>';
-        } else {
-          regularSwimmers.sort((a,b) => (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name))
-            .forEach(s => {
-              const isPresent = termAtt[s.id] || false;
-              const row = document.createElement('tr');
-              row.innerHTML = `
-                <td>${s.first_name} ${s.last_name}</td>
-                <td>
-                  <input type="checkbox" ${isPresent ? 'checked' : ''} 
-                         onchange="updateAttendance('${s.id}', ${!isPresent}, '')">
-                </td>
-                <td>
-                  <input type="text" value="" 
-                         onchange="updateAttendance('${s.id}', ${isPresent}, this.value)" 
-                         placeholder="Opomba">
-                </td>
-              `;
-              elAttendanceTable.appendChild(row);
-            });
+        const tbody = elAttendanceTable.querySelector("tbody");
+        if (tbody) {
+          tbody.innerHTML = '';
+          if (regularSwimmers.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" class="muted">Ni plavalcev</td></tr>';
+          } else {
+            regularSwimmers.sort((a,b) => (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name))
+              .forEach(s => {
+                const isPresent = termAtt[s.id] || false;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                  <td>${s.first_name} ${s.last_name}</td>
+                  <td>
+                    <input type="checkbox" ${isPresent ? 'checked' : ''} 
+                           onchange="updateAttendance('${s.id}', ${!isPresent}, '')">
+                  </td>
+                  <td>
+                    <input type="text" value="" 
+                           onchange="updateAttendance('${s.id}', ${isPresent}, this.value)" 
+                           placeholder="Opomba">
+                  </td>
+                `;
+                tbody.appendChild(row);
+              });
+          }
         }
       }
 
       // Render substitution table - preveri, ali element obstaja
       if (elSubstitutionTable) {
-        elSubstitutionTable.innerHTML = '';
-        if (substitutionSwimmers.length === 0) {
-          elSubstitutionTable.innerHTML = '<tr><td colspan="3" class="muted">Ni nadomestnih plavalcev</td></tr>';
-        } else {
-          substitutionSwimmers.sort((a,b) => (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name))
-            .forEach(s => {
-              const isPresent = termAtt[s.id] || false;
-              const row = document.createElement('tr');
-              row.innerHTML = `
-                <td>${s.first_name} ${s.last_name}</td>
-                <td>
-                  <input type="checkbox" ${isPresent ? 'checked' : ''} 
-                         onchange="updateAttendance('${s.id}', ${!isPresent}, '')">
-                </td>
-                <td>
-                  <input type="text" value="" 
-                         onchange="updateAttendance('${s.id}', ${isPresent}, this.value)" 
-                         placeholder="Opomba">
-                </td>
-              `;
-              elSubstitutionTable.appendChild(row);
-            });
+        const tbody = elSubstitutionTable.querySelector("tbody");
+        if (tbody) {
+          tbody.innerHTML = '';
+          if (substitutionSwimmers.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" class="muted">Ni nadomestnih plavalcev</td></tr>';
+          } else {
+            substitutionSwimmers.sort((a,b) => (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name))
+              .forEach(s => {
+                const isPresent = termAtt[s.id] || false;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                  <td>${s.first_name} ${s.last_name}</td>
+                  <td>
+                    <input type="checkbox" ${isPresent ? 'checked' : ''} 
+                           onchange="updateAttendance('${s.id}', ${!isPresent}, '')">
+                  </td>
+                  <td>
+                    <input type="text" value="" 
+                           onchange="updateAttendance('${s.id}', ${isPresent}, this.value)" 
+                           placeholder="Opomba">
+                  </td>
+                `;
+                tbody.appendChild(row);
+              });
+          }
         }
       }
 
