@@ -35,20 +35,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Preveri, če je uporabnik že prijavljen
     async function checkAuth() {
+        console.log('=== CHECK AUTH START ===');
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
+            console.log('Uporabnik je prijavljen:', user.email);
             currentUser = user;
             await loadUserTerms();
             showMainApp();
-                // Naloži podatke za trenerja po tem, ko so userTerms naloženi
-    await loadDataFromSupabase();
-    // Naloži podatke za nadomestne trenerje
-    await loadSubstituteData();
-    // Naloži nadomestne termine
-    await loadSubstituteTerms();
-} else {
-    showLoginScreen();
-}
+            // Naloži podatke za trenerja po tem, ko so userTerms naloženi
+            await loadDataFromSupabase();
+            // Naloži podatke za nadomestne trenerje
+            await loadSubstituteData();
+            // Naloži nadomestne termine
+            await loadSubstituteTerms();
+        } else {
+            console.log('Uporabnik ni prijavljen');
+            showLoginScreen();
+        }
+        console.log('=== CHECK AUTH END ===');
     }
 
     // Naloži termine, ki pripadajo trenerju
@@ -384,54 +388,65 @@ document.addEventListener('DOMContentLoaded', () => {
       const daysInMonthCount = daysInMonth(year, month);
       const startWeekdayNum = startWeekday(year, month);
       
-      elMonthLabel.textContent = `${DAYNAME[month + 1]} ${year}`;
+      // Popravek: Pravilno prikazovanje meseca
+      elMonthLabel.textContent = new Date(year, month, 1).toLocaleDateString("sl-SI", {month:"long",year:"numeric"});
       
-      let html = '';
-      let dayCount = 1;
+      elCalendarGrid.innerHTML = "";
       
-      for (let week = 0; week < 6; week++) {
-        for (let dayOfWeek = 1; dayOfWeek <= 7; dayOfWeek++) {
-          if (week === 0 && dayOfWeek < startWeekdayNum) {
-            html += '<div class="calendar-day empty"></div>';
-          } else if (dayCount > daysInMonthCount) {
-            html += '<div class="calendar-day empty"></div>';
-          } else {
-            const date = new Date(year, month, dayCount);
-            const dateStr = iso(date);
-            const events = getEventsForDate(dateStr);
-            const isTodayClass = isToday(date) ? ' today' : '';
-            const isPastClass = isPast(date) ? ' past' : '';
-            
-            html += `<div class="calendar-day${isTodayClass}${isPastClass}" data-date="${dateStr}">`;
-            html += `<div class="day-number">${dayCount}</div>`;
-            
-            if (events.length > 0) {
-              events.forEach(event => {
-                const statusClass = getStatusClass(event.status);
-                html += `<div class="event ${statusClass}" data-term-id="${event.termId}" data-date="${dateStr}">`;
-                html += `<div class="event-time">${event.time}</div>`;
-                html += `<div class="event-count">${event.count}/${event.total}</div>`;
-                html += `</div>`;
-              });
-            }
-            
-            html += '</div>';
-            dayCount++;
-          }
-        }
+      // Dodaj prazne celice za začetek tedna
+      const pad = startWeekdayNum - 1;
+      for (let i = 0; i < pad; i++) {
+        const div = document.createElement("div");
+        div.className = "calendar-day empty";
+        elCalendarGrid.appendChild(div);
       }
       
-      elCalendarGrid.innerHTML = html;
-      
-      // Dodaj event listenerje za dogodke
-      document.querySelectorAll('.event').forEach(eventEl => {
-        eventEl.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const termId = eventEl.dataset.termId;
-          const date = eventEl.dataset.date;
-          openEventModal(termId, date);
-        });
-      });
+      // Dodaj dneve v mesecu
+      for (let d = 1; d <= daysInMonthCount; d++) {
+        const date = new Date(year, month, d);
+        const day = document.createElement("div");
+        day.className = "calendar-day" + (isToday(date) ? " today" : "");
+        day.setAttribute("data-date", iso(date));
+        
+        const num = document.createElement("div");
+        num.className = "day-number";
+        num.textContent = d;
+        day.appendChild(num);
+        
+        // Pridobi dogodke za ta dan
+        const dateStr = iso(date);
+        const events = getEventsForDate(dateStr);
+        
+        if (events.length > 0) {
+          events.forEach(event => {
+            const statusClass = getStatusClass(event.status);
+            const eventDiv = document.createElement("div");
+            eventDiv.className = `event ${statusClass}`;
+            eventDiv.setAttribute("data-term-id", event.termId);
+            eventDiv.setAttribute("data-date", dateStr);
+            
+            const timeDiv = document.createElement("div");
+            timeDiv.className = "event-time";
+            timeDiv.textContent = event.time;
+            
+            const countDiv = document.createElement("div");
+            countDiv.className = "event-count";
+            countDiv.textContent = `${event.count}/${event.total}`;
+            
+            eventDiv.appendChild(timeDiv);
+            eventDiv.appendChild(countDiv);
+            day.appendChild(eventDiv);
+            
+            // Dodaj event listener za dogodek
+            eventDiv.addEventListener('click', (e) => {
+              e.stopPropagation();
+              openEventModal(event.termId, dateStr);
+            });
+          });
+        }
+        
+        elCalendarGrid.appendChild(day);
+      }
     }
 
     function getEventsForDate(dateStr) {
