@@ -548,7 +548,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const assignedSwimmerIds = assignedSwimmers.map(s => s.id);
       
       // Plavalci z vneseno prisotnostjo, ki NISO redno dodeljeni temu terminu (nadomeščanje)
-      const substitutionSwimmers = swimmersWithAttendance.filter(s => !assignedSwimmerIds.includes(s.id));
+      const substitutionSwimmers = swimmersWithAttendance.filter(s => !assignedSwimmerIds.includes(s.id) && !s.is_deleted);
       
       // Redno dodeljeni plavalci z vneseno prisotnostjo ali brez
       const regularSwimmers = assignedSwimmers.filter(s => termAtt[s.id] !== undefined || !s.is_deleted);
@@ -954,7 +954,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function showSwimmerInfo(){
       const sid = elSwimmerSelect.value;
       const s = swimmers.find(x=>x.id===sid);
-      if (!s) {
+      if (!s || s.is_deleted) {
         elSwimmerInfo.innerHTML = "";
         elTermSelect.innerHTML = "";
         elAssignTermBtn.disabled = true;
