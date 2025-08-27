@@ -13,12 +13,6 @@
     <button class="btn" id="prevBtn">◀ Prejšnji mesec</button>
     <span class="tag" id="monthLabel"></span>
     <button class="btn" id="nextBtn">Naslednji mesec ▶</button>
-    <button class="btn" id="refreshBtn" title="Osveži podatke iz trener portala">🔄 Osveži</button>
-    <div style="margin-left: auto;">
-      <a href="admin-trainers.html" class="btn">Upravljanje trenerjev</a>
-      <a href="assign-terms.html" class="btn">Dodeli termine</a>
-      <a href="auth-index.html" class="btn">Trener portal</a>
-    </div>
   </div>
 
   <div class="calendar">
@@ -34,13 +28,6 @@
       <div class="inner" id="summaryBox">Nalaganje podatkov...</div>
     </div>
 
-    <div class="card">
-      <h3>Prisotnost trenerjev</h3>
-      <div class="inner" id="trainerAttendanceBox">Nalaganje podatkov...</div>
-    </div>
-  </div>
-
-  <div class="grid" style="margin-top:12px">
     <div class="card">
       <h3>Upravljanje plavalcev</h3>
       <div class="inner">
@@ -107,31 +94,6 @@
     </div>
   </div>
 
-  <div class="grid" style="margin-top:12px">
-    <div class="card">
-      <h3>Seznam trenerjev</h3>
-      <div class="inner">
-        <div id="trainersList">Nalaganje trenerjev...</div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h3>Nadomestni trenerji</h3>
-      <div class="inner">
-        <div id="substituteTrainersList">Nalaganje nadomestnih dogovorov...</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="grid" style="margin-top:12px">
-    <div class="card">
-      <h3>Prisotnost trenerjev (trenutni mesec)</h3>
-      <div class="inner">
-        <div id="trainerAttendanceList">Nalaganje prisotnosti trenerjev...</div>
-      </div>
-    </div>
-  </div>
-
   <div class="modal" id="eventModal" role="dialog" aria-modal="true" aria-hidden="true">
     <div class="box">
       <div class="box-header">
@@ -149,26 +111,6 @@
           <strong style="display:block; margin-bottom:4px;">Opomba:</strong>
           <span id="inactiveNoteText"></span>
         </div>
-        
-        <!-- Informacije o nadomestnem trenerju -->
-        <div id="substituteTrainerInfo" style="display:none; margin-bottom:12px; padding:10px; background:#e3f2fd; border-radius:8px; border:1px solid #2196f3;">
-          <strong style="display:block; margin-bottom:4px;">Nadomestni trener:</strong>
-          <span id="substituteTrainerName"></span>
-          <div id="substituteTrainerReason" style="margin-top:4px; font-size:0.9em;"></div>
-        </div>
-        
-        <!-- Prisotnost trenerja -->
-        <div class="trainer-attendance-section" style="margin-bottom:12px;">
-          <h4 style="margin:0 0 8px 0;">Prisotnost trenerja</h4>
-          <div style="display:flex; align-items:center; gap:10px;">
-            <label>
-              <input type="checkbox" id="trainerPresentCheckbox">
-              Trener je prisoten
-            </label>
-            <input type="text" id="trainerNoteInput" placeholder="Opomba trenerja" style="flex:1; max-width:200px;">
-          </div>
-        </div>
-        
         <table id="attendanceTable">
           <thead><tr><th>Plavalec</th><th>Prisotnost</th></tr></thead>
           <tbody></tbody>
@@ -235,18 +177,15 @@
       <h4>Uvoz plavalcev</h4>
       <p class="muted">
         Uvožena CSV datoteka mora v glavi vsebovati stolpce <code>first_name</code>, <code>last_name</code> in <code>terms</code>.
-        V stolpec <code>terms</code> lahko vpišete več terminov, ločenih z vejico (npr. <code>"pon-20:00-21:00,sre-18:00-19:00"</code>).
+        V stolpec <code>terms</code> lahko vpišete več terminov, ločenih z vejico (npr. <code>pon-17:00-18:00,sre-18:00-19:00</code>).
         <br><br>
-        <strong>⚠️ POMEMBNO:</strong> ID-ji terminov morajo biti v formatu <code>pon-20:00-21:00</code> (pomišljaj med uro in minuto!)
-        <br>
         <strong>Opomba:</strong> Uvožena datoteka mora uporabljati vejico (`,`) kot ločilo med stolpci.
         <br>
         <strong>Primer:</strong>
         <pre style="background:#f1f5f9; padding:8px; border-radius:6px; overflow-x:auto;">
 first_name,last_name,terms
-Janez,Novak,"pon-20:00-21:00,sre-18:00-19:00,pet-19:00-20:00"
+Janez,Novak,"pon-17:00-18:00,sre-18:00-19:00,pet-19:00-20:00"
         </pre>
-        <small>💡 <a href="SQL supabase/csv-import-instructions.md" target="_blank">Podrobna navodila</a> | <a href="SQL supabase/swimmers-example.csv" download>Primer plavalcev</a></small>
       </p>
       <div class="row" style="margin-top:0">
         <label class="btn">
@@ -261,17 +200,14 @@ Janez,Novak,"pon-20:00-21:00,sre-18:00-19:00,pet-19:00-20:00"
         Uvožena CSV datoteka mora v glavi vsebovati stolpce <code>id</code>, <code>day</code>, <code>start_time</code>, <code>end_time</code>, <code>date_from</code> in <code>date_to</code>.
         Datum mora biti v formatu <code>dd / mm / yyyy</code>.
         <br><br>
-        <strong>⚠️ POMEMBNO:</strong> ID-ji terminov morajo biti v formatu <code>pon-20:00-21:00</code> (pomišljaj med uro in minuto!)
-        <br>
         <strong>Opomba:</strong> Obstoječi termini z istim ID-jem bodo prepisani.
         <br>
         <strong>Primer:</strong>
         <pre style="background:#f1f5f9; padding:8px; border-radius:6px; overflow-x:auto;">
 id,day,start_time,end_time,date_from,date_to
-pon-20:00-21:00,1,20:00,21:00,"01 / 09 / 2025","30 / 06 / 2026"
-sre-18:00-19:00,3,18:00,19:00,"01 / 09 / 2025","30 / 06 / 2026"
+pon-17:00-18:00,1,17:00,18:00,"01 / 09 / 2024","31 / 05 / 2025"
+sre-18:00-19:00,3,18:00,19:00,"01 / 09 / 2024","31 / 05 / 2025"
         </pre>
-        <small>💡 <a href="SQL supabase/csv-import-instructions.md" target="_blank">Podrobna navodila</a> | <a href="SQL supabase/terms-example.csv" download>Primer terminov</a></small>
       </p>
       <div class="row" style="margin-top:0">
         <label class="btn">
@@ -285,14 +221,7 @@ sre-18:00-19:00,3,18:00,19:00,"01 / 09 / 2025","30 / 06 / 2026"
       <div class="csv-export-controls">
         <select id="exportMonthSelect"></select>
         <select id="exportYearSelect"></select>
-        <button class="btn" id="exportCsvBtn">Izvozi prisotnost plavalcev</button>
-      </div>
-      
-      <h4>Izvoz prisotnosti trenerjev</h4>
-      <div class="csv-export-controls">
-        <select id="exportTrainerMonthSelect"></select>
-        <select id="exportTrainerYearSelect"></select>
-        <button class="btn" id="exportTrainerCsvBtn">Izvozi prisotnost trenerjev</button>
+        <button class="btn" id="exportCsvBtn">Izvozi</button>
       </div>
     </div>
   </div>
@@ -313,7 +242,6 @@ sre-18:00-19:00,3,18:00,19:00,"01 / 09 / 2025","30 / 06 / 2026"
     </div>
 </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./admin-auth.js"></script>
 
     <script>
       const SUPABASE_URL = "https://tizjimlwfkoniixbetgr.supabase.co";

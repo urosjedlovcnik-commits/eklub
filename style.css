@@ -27,8 +27,8 @@ h1{margin:0 0 12px;text-align:center}
 .calendar-head div{font-weight:600;text-align:center;padding:6px 0;background:#eff6ff;border-radius:8px}
 .calendar-grid{
   display:grid;
-  /* 7 enakih stolpcev za vse dneve v tednu */
-  grid-template-columns:repeat(7,1fr);
+  /* Zožitev sobot in nedelj na namiznem prikazu */
+  grid-template-columns:repeat(5,1fr) 0.5fr 0.5fr;
   gap:6px
 }
 .day{min-height:120px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:6px;display:flex;flex-direction:column;overflow:hidden; cursor:pointer;}
@@ -97,38 +97,6 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
 }
 .csv-export-controls > * {
   flex-grow: 1;
-}
-
-/* Tabela prisotnosti trenerja */
-.trainer-attendance-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 20px;
-}
-
-.trainer-attendance-table th,
-.trainer-attendance-table td {
-  border: 1px solid var(--border);
-  padding: 8px;
-  text-align: left;
-}
-
-.trainer-attendance-table th {
-  background: #eff6ff;
-  font-weight: 600;
-}
-
-.trainer-attendance-table input[type="checkbox"] {
-  width: auto;
-  margin: 0;
-}
-
-.trainer-attendance-table input[type="text"] {
-  width: 100%;
-  margin: 0;
-  padding: 6px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
 }
 .csv-export-controls .btn {
   flex-grow: 0;
@@ -328,101 +296,4 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   .notes-section { margin-bottom: 8px; }
   .notes-section { margin-top: 8px; }
   .notes-section { margin-bottom: 8px; }
-}
-
-/* Stili za nadomestne trenerje */
-.substitution-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.substitution-controls .row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.substitution-controls label {
-  min-width: 120px;
-  font-weight: 500;
-}
-
-.substitution-controls input,
-.substitution-controls select {
-  flex: 1;
-  padding: 8px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-}
-
-.substitution-item {
-  border: 1px solid #ddd;
-  padding: 12px;
-  margin: 8px 0;
-  border-radius: 6px;
-  background: #f8f9fa;
-}
-
-.substitution-item:hover {
-  background: #e9ecef;
-}
-
-.obligation-item {
-  border: 1px solid #007bff;
-  padding: 12px;
-  margin: 8px 0;
-  border-radius: 6px;
-  background: #f8f9fa;
-}
-
-.obligation-item:hover {
-  background: #e3f2fd;
-}
-
-.substitution-item div,
-.obligation-item div {
-  margin-bottom: 4px;
-}
-
-.substitution-item div:last-child,
-.obligation-item div:last-child {
-  margin-bottom: 0;
-}
-
-/* Modal za potrditev nadomestnega trenerja */
-#confirmSubstituteModal .box {
-  max-width: 500px;
-}
-
-#substituteConfirmationDetails {
-  margin-bottom: 20px;
-}
-
-#substituteConfirmationDetails p {
-  margin-bottom: 8px;
-}
-
-#substituteConfirmationDetails strong {
-  color: #333;
-}
-
-/* Mobilni prikaz za nadomestne trenerje */
-@media (max-width: 768px) {
-  .substitution-controls .row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .substitution-controls label {
-    min-width: auto;
-    margin-bottom: 4px;
-  }
-  
-  .substitution-item,
-  .obligation-item {
-    padding: 8px;
-    font-size: 14px;
-  }
 }
