@@ -328,29 +328,8 @@ document.addEventListener('DOMContentLoaded', () => {
           btnPresent.textContent = "Prisoten";
           btnPresent.className = "btn";
           if (isInactive(date, termId)) { btnPresent.disabled = true; }
-          
-          const btnAbsent = document.createElement("button");
-          btnAbsent.textContent = "Odsoten";
-          btnAbsent.className = "btn";
-          if (isInactive(date, termId)) { btnAbsent.disabled = true; }
-
-          if (status === true) {
-              btnPresent.classList.add("ok");
-              btnAbsent.classList.add("neutral");
-          } else if (status === false) {
-              btnAbsent.classList.add("warn");
-              btnPresent.classList.add("neutral");
-          } else {
-              btnPresent.classList.add("neutral");
-              btnAbsent.classList.add("neutral");
-          }
-
+          if (status === true) { btnPresent.classList.add("ok"); } else { btnPresent.classList.add("neutral"); }
           btnPresent.addEventListener("click", async ()=>{
-            btnAbsent.classList.remove("warn");
-            btnPresent.classList.add("ok");
-            btnPresent.classList.remove("neutral");
-            btnAbsent.classList.add("neutral");
-            
             const { error } = await supabase
               .from('attendance')
               .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: true }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
@@ -361,12 +340,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
           });
           
+          const btnAbsent = document.createElement("button");
+          btnAbsent.textContent = "Odsoten";
+          btnAbsent.className = "btn";
+          if (isInactive(date, termId)) { btnAbsent.disabled = true; }
+          if (status === false) { btnAbsent.classList.add("warn"); } else { btnAbsent.classList.add("neutral"); }
           btnAbsent.addEventListener("click", async ()=>{
-            btnPresent.classList.remove("ok");
-            btnAbsent.classList.add("warn");
-            btnAbsent.classList.remove("neutral");
-            btnPresent.classList.add("neutral");
-
             const { error } = await supabase
               .from('attendance')
               .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: false }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
@@ -383,11 +362,6 @@ document.addEventListener('DOMContentLoaded', () => {
           btnRemove.className = "btn remove-btn";
           if (isInactive(date, termId)) { btnRemove.disabled = true; }
           btnRemove.addEventListener("click", async ()=>{
-              btnPresent.classList.remove("ok");
-              btnAbsent.classList.remove("warn");
-              btnPresent.classList.add("neutral");
-              btnAbsent.classList.add("neutral");
-
               const { error } = await supabase
                 .from('attendance')
                 .delete()
