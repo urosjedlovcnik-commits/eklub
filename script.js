@@ -1534,6 +1534,38 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===== UPRAVLJANJE DATUMA =====
     elPrev.addEventListener("click", ()=>{ viewDate.setMonth(viewDate.getMonth()-1); renderMonth(); });
     elNext.addEventListener("click", ()=>{ viewDate.setMonth(viewDate.getMonth()+1); renderMonth(); });
+    
+    // NOVO: Gumb za ročno osveževanje podatkov iz trener portala
+    const elRefreshBtn = document.getElementById("refreshBtn");
+    elRefreshBtn.addEventListener("click", async () => {
+      try {
+        elRefreshBtn.disabled = true;
+        elRefreshBtn.textContent = "Osveževanje...";
+        
+        // Osveži podatke za trenutni mesec
+        const currentDate = new Date();
+        const currentMonth = currentDate.getMonth();
+        const currentYear = currentDate.getFullYear();
+        
+        // Osveži podatke za vse datume v trenutnem mesecu
+        const daysInCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        for (let day = 1; day <= daysInCurrentMonth; day++) {
+          const date = new Date(currentYear, currentMonth, day);
+          await refreshDayData(date);
+        }
+        
+        // Posodobi kalendar in povzetek
+        renderMonth();
+        
+        console.log('Podatki ročno osveženi');
+      } catch (error) {
+        console.error('Napaka pri ročnem osveževanju:', error);
+        alert('Napaka pri osveževanju podatkov');
+      } finally {
+        elRefreshBtn.disabled = false;
+        elRefreshBtn.textContent = "🔄 Osveži";
+      }
+    });
 
     // ===== EXPORT CSV - DODANA FUNKCIJA =====
     function populateExportSelects() {
@@ -1743,10 +1775,34 @@ document.addEventListener('DOMContentLoaded', () => {
           elSubstituteTrainersList.innerHTML = '<p class="muted">Ni nadomestnih dogovorov</p>';
         }
         
-      } catch (error) {
-        console.error('Napaka pri nalaganju nadomestnih trenerjev:', error);
-        const elSubstituteTrainersList = document.getElementById('substituteTrainersList');
-        elSubstituteTrainersList.innerHTML = '<p class="error">Napaka pri nalaganju podatkov</p>';
+              } catch (error) {
+          console.error('Napaka pri nalaganju nadomestnih trenerjev:', error);
+          const elSubstituteTrainersList = document.getElementById('substituteTrainersList');
+          elSubstituteTrainersList.innerHTML = '<p class="error">Napaka pri nalaganju podatkov</p>';
+        }
       }
-    }
-});
+      
+      // NOVO: Avtomatsko osveževanje kalendarja vsakih 30 sekund, da se prikaže prisotnost iz trener portala
+      setInterval(async () => {
+        try {
+          // Osveži podatke za trenutni mesec
+          const currentDate = new Date();
+          const currentMonth = currentDate.getMonth();
+          const currentYear = currentDate.getFullYear();
+          
+          // Osveži podatke za vse datume v trenutnem mesecu
+          const daysInCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+          for (let day = 1; day <= daysInCurrentMonth; day++) {
+            const date = new Date(currentYear, currentMonth, day);
+            await refreshDayData(date);
+          }
+          
+          // Posodobi kalendar
+          renderMonth();
+          
+          console.log('Kalendar avtomatsko osvežen');
+        } catch (error) {
+          console.error('Napaka pri avtomatskem osveževanju kalendarja:', error);
+        }
+      }, 30000); // 30 sekund
+    });
