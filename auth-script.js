@@ -1762,4 +1762,4 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('=== PAGE LOADED, CHECKING AUTH ===');
     checkAuth();
 
-});
+}); // End of DOMContentLoaded event listener
