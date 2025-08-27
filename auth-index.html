@@ -203,26 +203,6 @@
   text-decoration: line-through;
   color: #999;
 }
-
-.remove-btn {
-  background: #dc3545;
-  color: white;
-  border: none;
-  padding: 4px 8px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-  min-width: 24px;
-}
-
-.remove-btn:hover {
-  background: #c82333;
-}
-
-.remove-btn:disabled {
-  background: #6c757d;
-  cursor: not-allowed;
-}
 </style>
 </head>
 <body>
@@ -275,11 +255,6 @@
     </div>
 
     <div class="grid" style="margin-top:12px">
-      <div class="card">
-        <h3>Skupine trenerja</h3>
-        <div class="inner" id="groupsOverview">Nalaganje skupin...</div>
-      </div>
-
       <div class="card">
         <h3>Povzetek udeležbe (za prikazani mesec)</h3>
         <div class="inner" id="summaryBox">Nalaganje podatkov...</div>
@@ -418,46 +393,39 @@
           
           <div class="attendance-section">
             <h4>Prisotnost plavalcev</h4>
-            <table class="attendance-table">
-              <thead>
-                <tr>
-                  <th>Plavalec</th>
-                  <th>Prisoten</th>
-                  <th>Opomba</th>
-                  <th>Akcije</th>
-                </tr>
-              </thead>
-              <tbody id="attendanceTable"></tbody>
+            <table id="attendanceTable">
+              <thead><tr><th>Plavalec</th><th>Prisotnost</th></tr></thead>
+              <tbody></tbody>
             </table>
+            <hr style="margin:12px 0;border:none;border-top:1px solid var(--border)">
           </div>
           
           <div class="substitution-section">
-            <h4>Nadomestni plavalci</h4>
-            <table class="substitution-table">
-              <thead>
-                <tr>
-                  <th>Plavalec</th>
-                  <th>Prisoten</th>
-                  <th>Opomba</th>
-                  <th>Akcije</th>
-                </tr>
-              </thead>
-              <tbody id="substitutionTable"></tbody>
+            <h4>Nadomeščanje</h4>
+            <table id="substitutionTable">
+              <thead><tr><th>Plavalec</th><th>Prisotnost</th></tr></thead>
+              <tbody></tbody>
             </table>
+            <hr style="margin:12px 0;border:none;border-top:1px solid var(--border)">
           </div>
 
           <div class="add-swimmer-section">
-            <h4>Dodaj plavalca</h4>
+            <h4>Dodaj plavalca v nadomeščanje</h4>
             <div class="row">
               <select id="modalSwimmerSelect"></select>
-              <button class="btn ok" id="addToEventBtn">Dodaj</button>
+              <button class="btn ok" id="addToEventBtn">Dodaj v nadomeščanje</button>
             </div>
+            <hr style="margin:12px 0;border:none;border-top:1px solid var(--border)">
           </div>
 
           <div class="event-notes">
             <h4>Opombe o treningu</h4>
-            <textarea id="notesInput" placeholder="Vnesite opombe o treningu..." rows="3"></textarea>
-            <button class="btn pri" id="saveNotesBtn">Shrani opombe</button>
+            <div class="notes-section">
+              <label for="notesInput" class="muted">Opomba:</label>
+              <textarea id="notesInput" placeholder="Dodaj opombo za ta trening (npr. vsebina treninga, opazke trenerja)."></textarea>
+              <button id="saveNotesBtn" class="btn primary-btn">Shrani trening</button>
+            </div>
+            <hr style="margin:12px 0;border:none;border-top:1px solid var(--border)">
           </div>
 
           <div id="inactiveNote" style="display:none; margin-bottom:12px; padding:10px; background:#fef3c7; border-radius:8px; border:1px solid #fcd34d;">
