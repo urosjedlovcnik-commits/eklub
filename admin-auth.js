@@ -16,7 +16,7 @@ class AdminAuth {
 
         try {
             // Preveri, če je token veljaven
-            const tokenData = JSON.parse(atob(adminToken.split('.')[1]));
+            const tokenData = JSON.parse(atob(adminToken));
             const now = Math.floor(Date.now() / 1000);
             
             if (tokenData.exp <= now) {
@@ -62,7 +62,7 @@ class AdminAuth {
         if (!adminToken) return null;
 
         try {
-            const tokenData = JSON.parse(atob(adminToken.split('.')[1]));
+            const tokenData = JSON.parse(atob(adminToken));
             return {
                 email: tokenData.email,
                 role: tokenData.role
@@ -78,7 +78,7 @@ class AdminAuth {
         if (!adminToken) return false;
 
         try {
-            const tokenData = JSON.parse(atob(adminToken.split('.')[1]));
+            const tokenData = JSON.parse(atob(adminToken));
             const now = Math.floor(Date.now() / 1000);
             
             return tokenData.exp > now && 

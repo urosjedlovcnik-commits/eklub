@@ -128,7 +128,7 @@
       const adminToken = localStorage.getItem('adminToken');
       if (adminToken) {
         // Preveri, če je token veljaven (preprosta preveritev)
-        const tokenData = JSON.parse(atob(adminToken.split('.')[1]));
+        const tokenData = JSON.parse(atob(adminToken));
         const now = Math.floor(Date.now() / 1000);
         
         if (tokenData.exp > now) {
