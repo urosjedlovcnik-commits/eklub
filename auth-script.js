@@ -845,28 +845,27 @@ document.addEventListener('DOMContentLoaded', () => {
       
       const assignedSwimmerIds = assignedSwimmers.map(s => s.id);
       
-      // Plavalci z vneseno prisotnostjo, ki NISO redno dodeljeni temu terminu (nadomeščanje)
+      // Vsi plavalci z vneseno prisotnostjo (vključno z nadomestnimi)
       const swimmersWithAttendance = Object.keys(termAtt).map(swimmerId => 
         swimmers.find(s => s.id === swimmerId)
       ).filter(Boolean);
       
+      // Plavalci z vneseno prisotnostjo, ki NISO redno dodeljeni temu terminu (nadomeščanje)
       const substitutionSwimmers = swimmersWithAttendance.filter(s => 
         !assignedSwimmerIds.includes(s.id) && !s.is_deleted
       );
       
-      // Redno dodeljeni plavalci z vneseno prisotnostjo ali brez
-      const regularSwimmers = assignedSwimmers.filter(s => 
-        termAtt[s.id] !== undefined || !s.is_deleted
-      );
+      // Vsi plavalci z vneseno prisotnostjo (redno dodeljeni + nadomestni)
+      const regularSwimmers = swimmersWithAttendance.filter(s => !s.is_deleted);
 
-    // Render attendance table - redno dodeljeni plavalci
+    // Render attendance table - vsi plavalci z vneseno prisotnostjo
     elAttendanceTable.innerHTML = '';
     if (regularSwimmers.length === 0) {
       const tr = document.createElement('tr');
       const td = document.createElement('td');
       td.colSpan = 2;
       td.className = 'muted';
-      td.textContent = 'Ni dodeljenih plavalcev za ta termin.';
+      td.textContent = 'Ni plavalcev z vneseno prisotnostjo.';
       tr.appendChild(td);
       elAttendanceTable.appendChild(tr);
     } else {

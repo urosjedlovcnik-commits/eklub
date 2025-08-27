@@ -603,7 +603,7 @@ document.addEventListener('DOMContentLoaded', () => {
                .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: true }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
              if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
                await refreshDayData(date);
-               await refreshModal();
+               // NE kliči refreshModal() - to ustvarja neskončno zanko!
                renderMonth();
              }
            });
@@ -619,7 +619,7 @@ document.addEventListener('DOMContentLoaded', () => {
                .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: false }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
              if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
                await refreshDayData(date);
-               await refreshModal();
+               // NE kliči refreshModal() - to ustvarja neskončno zanko!
                refreshSwimmerPanel();
                renderMonth();
              }
@@ -638,7 +638,7 @@ document.addEventListener('DOMContentLoaded', () => {
                .eq('swimmer_id', s.id);
              if (error) { console.error('Napaka pri brisanju prisotnosti:', error); } else {
                await refreshDayData(date);
-               await refreshModal();
+               // NE kliči refreshModal() - to ustvarja neskončno zanko!
                refreshSwimmerPanel();
                renderMonth();
              }
@@ -699,7 +699,7 @@ document.addEventListener('DOMContentLoaded', () => {
                .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: true }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
              if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
                await refreshDayData(date);
-               await refreshModal();
+               // NE kliči refreshModal() - to ustvarja neskončno zanko!
                renderMonth();
              }
            });
@@ -715,7 +715,7 @@ document.addEventListener('DOMContentLoaded', () => {
                .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: false }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
              if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
                await refreshDayData(date);
-               await refreshModal();
+               // NE kliči refreshModal() - to ustvarja neskončno zanko!
                refreshSwimmerPanel();
                renderMonth();
              }
@@ -734,7 +734,7 @@ document.addEventListener('DOMContentLoaded', () => {
                .eq('swimmer_id', s.id);
              if (error) { console.error('Napaka pri brisanju prisotnosti:', error); } else {
                await refreshDayData(date);
-               await refreshModal();
+               // NE kliči refreshModal() - to ustvarja neskončno zanko!
                refreshSwimmerPanel();
                renderMonth();
              }
@@ -895,7 +895,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
               // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
               await refreshDayData(date);
-              openEvent(date, termId);
+              // NE kliči openEvent() - to ustvarja neskončno zanko!
               renderMonth();
             }
           });
@@ -912,7 +912,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
               // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
               await refreshDayData(date);
-              openEvent(date, termId);
+              // NE kliči openEvent() - to ustvarja neskončno zanko!
               refreshSwimmerPanel();
               renderMonth();
             }
@@ -932,7 +932,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (error) { console.error('Napaka pri brisanju prisotnosti:', error); } else {
                 // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
                 await refreshDayData(date);
-                openEvent(date, termId);
+                // NE kliči openEvent() - to ustvarja neskončno zanko!
                 refreshSwimmerPanel();
                 renderMonth();
             }
@@ -976,7 +976,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
               // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
               await refreshDayData(date);
-              openEvent(date, termId);
+              // NE kliči openEvent() - to ustvarja neskončno zanko!
               renderMonth();
             }
           });
@@ -993,7 +993,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
               // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
               await refreshDayData(date);
-              openEvent(date, termId);
+              // NE kliči openEvent() - to ustvarja neskončno zanko!
               refreshSwimmerPanel();
               renderMonth();
             }
@@ -1013,7 +1013,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (error) { console.error('Napaka pri brisanju prisotnosti:', error); } else {
                 // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
                 await refreshDayData(date);
-                openEvent(date, termId);
+                // NE kliči openEvent() - to ustvarja neskončno zanko!
                 refreshSwimmerPanel();
                 renderMonth();
             }
@@ -1099,7 +1099,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             await refreshDayData(date);
-            await openEvent(date, termId);
+            // NE kliči openEvent() - to ustvarja neskončno zanko!
             renderMonth();
         }
       };
@@ -1126,7 +1126,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         closeModal(elNoteModal);
         await refreshDayData(modalCtx.date);
-        await openEvent(modalCtx.date, modalCtx.termId);
+        // NE kliči openEvent() - to ustvarja neskončno zanko!
         renderMonth();
       };
 
@@ -1172,7 +1172,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('Napaka pri dodajanju plavalca v trening:', error); 
       } else {
         await refreshDayData(modalCtx.date);
-        openEvent(modalCtx.date, modalCtx.termId);
+        // NE kliči openEvent() - to ustvarja neskončno zanko!
         refreshSwimmerPanel();
         renderMonth();
       }
