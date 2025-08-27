@@ -1750,11 +1750,41 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Začetni zagon
-    loadDataFromSupabase();
-    
-    // Naloži nadomestne trenerje
-    async function loadSubstituteTrainers() {
+         // Začetni zagon
+     loadDataFromSupabase();
+     
+     // NOVO: Avtomatsko osveževanje kalendarja vsakih 30 sekund, da se prikaže prisotnost iz trener portala
+     setInterval(async () => {
+       try {
+         // Osveži podatke za trenutni mesec
+         const currentDate = new Date();
+         const currentMonth = currentDate.getMonth();
+         const currentYear = currentDate.getFullYear();
+         
+         // Osveži podatke za vse datume v trenutnem mesecu
+         const daysInCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+         for (let day = 1; day <= daysInCurrentMonth; day++) {
+           const date = new Date(currentYear, currentMonth, day);
+           await refreshDayData(date);
+         }
+         
+         // Posodobi kalendar
+         renderMonth();
+         
+         // NOVO: Če je modal odprt, osveži tudi modal
+         if (modalCtx && modalCtx.date && modalCtx.termId) {
+           console.log('Avtomatsko osveževanje modala za termin:', modalCtx.termId);
+           await openEvent(modalCtx.date, modalCtx.termId);
+         }
+         
+         console.log('Kalendar in modal avtomatsko osveženi');
+       } catch (error) {
+         console.error('Napaka pri avtomatskem osveževanju kalendarja:', error);
+       }
+     }, 30000); // 30 sekund
+     
+     // Naloži nadomestne trenerje
+     async function loadSubstituteTrainers() {
       try {
         const { data: substituteData, error } = await supabase
           .from('substitute_trainers')
@@ -1793,33 +1823,4 @@ document.addEventListener('DOMContentLoaded', () => {
           elSubstituteTrainersList.innerHTML = '<p class="error">Napaka pri nalaganju podatkov</p>';
         }
       }
-      
-      // NOVO: Avtomatsko osveževanje kalendarja vsakih 30 sekund, da se prikaže prisotnost iz trener portala
-      setInterval(async () => {
-        try {
-          // Osveži podatke za trenutni mesec
-          const currentDate = new Date();
-          const currentMonth = currentDate.getMonth();
-          const currentYear = currentDate.getFullYear();
-          
-          // Osveži podatke za vse datume v trenutnem mesecu
-          for (let day = 1; day <= daysInCurrentMonth; day++) {
-            const date = new Date(currentYear, currentMonth, day);
-            await refreshDayData(date);
-          }
-          
-          // Posodobi kalendar
-          renderMonth();
-          
-          // NOVO: Če je modal odprt, osveži tudi modal
-          if (modalCtx && modalCtx.date && modalCtx.termId) {
-            console.log('Avtomatsko osveževanje modala za termin:', modalCtx.termId);
-            await openEvent(modalCtx.date, modalCtx.termId);
-          }
-          
-          console.log('Kalendar in modal avtomatsko osveženi');
-        } catch (error) {
-          console.error('Napaka pri avtomatskem osveževanju kalendarja:', error);
-        }
-      }, 30000); // 30 sekund
     });
