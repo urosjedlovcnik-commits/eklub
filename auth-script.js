@@ -1648,31 +1648,25 @@ document.addEventListener('DOMContentLoaded', () => {
       const timeRange = `${term.start_time.slice(0, 5)}-${term.end_time.slice(0, 5)}`;
       const termSwimmers = swimmers.filter(s => s.terms && s.terms.includes(term.id));
       const activeSwimmers = termSwimmers.filter(s => !s.is_deleted);
-      const deletedSwimmers = termSwimmers.filter(s => s.is_deleted);
       
       html += `<div class="group-card">
         <h4 class="group-title">${dayName} ${timeRange}</h4>
         <div class="group-stats">
-          <strong>Skupaj plavalcev:</strong> ${termSwimmers.length}
+          <strong>Skupaj plavalcev:</strong> ${activeSwimmers.length}
         </div>
         <div class="group-stats">
           <strong>Aktivni:</strong> ${activeSwimmers.length}
-          ${deletedSwimmers.length > 0 ? `<br><small>Izbrisani: ${deletedSwimmers.length}</small>` : ''}
         </div>
         <div class="group-stats">
           <strong>Plavalci v skupini:</strong>
           <div class="swimmers-list">`;
       
-      if (termSwimmers.length === 0) {
+      if (activeSwimmers.length === 0) {
         html += '<div class="muted">Ni plavalcev</div>';
       } else {
-        termSwimmers.sort((a, b) => (a.last_name + a.first_name).localeCompare(b.last_name + b.first_name))
+        activeSwimmers.sort((a, b) => (a.last_name + a.first_name).localeCompare(b.last_name + b.first_name))
           .forEach(swimmer => {
-            const swimmerClass = swimmer.is_deleted ? 'swimmer-item swimmer-deleted' : 'swimmer-item';
-            const swimmerName = swimmer.is_deleted 
-              ? `${swimmer.first_name} ${swimmer.last_name}`
-              : `${swimmer.first_name} ${swimmer.last_name}`;
-            html += `<div class="${swimmerClass}">${swimmerName}</div>`;
+            html += `<div class="swimmer-item">${swimmer.first_name} ${swimmer.last_name}</div>`;
           });
       }
       
