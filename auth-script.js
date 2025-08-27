@@ -101,6 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
               .eq('trainer_id', trainerData.id);
 
           console.log('Rezultat iskanja terminov:', { termsData, termsError });
+          console.log('Raw termsData:', termsData);
 
           if (termsError) {
               console.error('Napaka pri nalaganju terminov:', termsError);
@@ -109,8 +110,13 @@ document.addEventListener('DOMContentLoaded', () => {
               return;
           }
 
-          userTerms = termsData.map(t => t.term_id);
-          console.log('Mapirani userTerms:', userTerms);
+          if (!termsData || termsData.length === 0) {
+              console.warn('Trener nima dodeljenih terminov v trainer_terms tabeli');
+              userTerms = [];
+          } else {
+              userTerms = termsData.map(t => t.term_id);
+              console.log('Mapirani userTerms:', userTerms);
+          }
           
           // Posodobi prikaz - popravimo prikaz imena
           console.log('Trainer data:', trainerData);
@@ -1102,6 +1108,9 @@ document.addEventListener('DOMContentLoaded', () => {
       
       console.log('=== LOAD DATA FROM SUPABASE START ===');
       console.log('userTerms:', userTerms);
+      console.log('userTerms length:', userTerms.length);
+      console.log('userTerms type:', typeof userTerms);
+      console.log('userTerms is array:', Array.isArray(userTerms));
       
       // Naloži samo termine trenerja
       const { data: termsData, error: termsError } = await supabase
@@ -1121,6 +1130,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (swimmersError) throw swimmersError;
       
       console.log('Vsi plavalci iz baze:', swimmersData);
+      console.log('Filtriram plavalce...');
+      console.log('userTerms za filtriranje:', userTerms);
       
       // Filtriraj plavalce, ki pripadajo trenerjevim terminom
       // Plavalec pripada trenerju, če ima vsaj en termin, ki je v userTerms
