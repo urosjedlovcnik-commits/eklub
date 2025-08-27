@@ -40,6 +40,16 @@ document.addEventListener('DOMContentLoaded', () => {
       trainerAttendanceSection: !!trainerAttendanceSection,
       trainerAttendanceTable: !!trainerAttendanceTable
     });
+    
+    // Dodatno preverjanje
+    if (trainerAttendanceSection) {
+      console.log('trainerAttendanceSection ID:', trainerAttendanceSection.id);
+      console.log('trainerAttendanceSection display:', trainerAttendanceSection.style.display);
+    }
+    
+    if (trainerAttendanceTable) {
+      console.log('trainerAttendanceTable ID:', trainerAttendanceTable.id);
+    }
   }
   
 
@@ -865,19 +875,22 @@ document.addEventListener('DOMContentLoaded', () => {
         !assignedSwimmerIds.includes(s.id) && !s.is_deleted
       );
       
-      // SAMO redno dodeljeni plavalci z vneseno prisotnostjo
-      const regularSwimmers = assignedSwimmers.filter(s => 
-        Object.keys(termAtt).includes(s.id)
-      );
+      console.log('Razdelitev plavalcev:');
+      console.log('- Redno dodeljeni:', regularSwimmers.map(s => `${s.first_name} ${s.last_name}`));
+      console.log('- Nadomeščanje:', substitutionSwimmers.map(s => `${s.first_name} ${s.last_name}`));
+      console.log('- Vsi z prisotnostjo:', swimmersWithAttendance.map(s => `${s.first_name} ${s.last_name}`));
+      
+      // VSI redno dodeljeni plavalci (tudi brez prisotnosti)
+      const regularSwimmers = assignedSwimmers;
 
-    // Render attendance table - vsi plavalci z vneseno prisotnostjo
+    // Render attendance table - vsi redno dodeljeni plavalci
     elAttendanceTable.innerHTML = '';
     if (regularSwimmers.length === 0) {
       const tr = document.createElement('tr');
       const td = document.createElement('td');
       td.colSpan = 2;
       td.className = 'muted';
-      td.textContent = 'Ni plavalcev z vneseno prisotnostjo.';
+      td.textContent = 'Ni redno dodeljenih plavalcev za ta termin.';
       tr.appendChild(td);
       elAttendanceTable.appendChild(tr);
     } else {
@@ -1215,6 +1228,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!swimmer) return;
 
     try {
+      // Preveri, ali je plavalec redno dodeljen temu terminu
+      const isAssignedToTerm = swimmer.terms && swimmer.terms.includes(currentEventTermId);
+      
       const { error } = await supabase
         .from('attendance')
         .upsert({
@@ -1239,7 +1255,11 @@ document.addEventListener('DOMContentLoaded', () => {
       // Posodobi povzetek
       updateSummary();
       
-      console.log(`Plavalec ${swimmer.first_name} ${swimmer.last_name} dodan v nadomeščanje`);
+      if (isAssignedToTerm) {
+        console.log(`Plavalec ${swimmer.first_name} ${swimmer.last_name} dodan v glavno tabelo prisotnosti`);
+      } else {
+        console.log(`Plavalec ${swimmer.first_name} ${swimmer.last_name} dodan v nadomeščanje`);
+      }
       
     } catch (error) {
       console.error('Napaka pri dodajanju plavalca:', error);
@@ -1938,9 +1958,11 @@ document.addEventListener('DOMContentLoaded', () => {
        // Preveri, ali je trener nadomestni trener in naloži prisotnost
    async function checkAndLoadTrainerAttendance(termId, date) {
        try {
+           console.log('=== CHECK AND LOAD TRAINER ATTENDANCE START ===');
            console.log('checkAndLoadTrainerAttendance - termId:', termId, 'date:', date);
            console.log('trainerAttendanceSection element:', trainerAttendanceSection);
            console.log('trainerAttendanceTable element:', trainerAttendanceTable);
+           console.log('currentUser:', currentUser);
            
            // Preveri, ali obstajajo potrebni elementi
            if (!trainerAttendanceSection) {
@@ -1995,6 +2017,7 @@ document.addEventListener('DOMContentLoaded', () => {
                trainerAttendanceSection.style.display = 'none';
            }
        }
+       console.log('=== CHECK AND LOAD TRAINER ATTENDANCE END ===');
    }
    
    // Naloži prisotnost trenerja
