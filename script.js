@@ -1585,11 +1585,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (error) throw error;
             
             // POPRAVEK: Dodamo BOM za pravilno kodiranje UTF-8
-            let csv = "\uFEFFtrainer_name,total_sessions,present_sessions,attendance_percentage\n";
+            let csv = "\uFEFFtrainer_id,total_sessions,present_count\n";
             
             if (attendanceData && attendanceData.length > 0) {
                 attendanceData.forEach(trainer => {
-                    csv += `${trainer.trainer_name},${trainer.total_sessions},${trainer.present_sessions},${trainer.attendance_percentage}%\n`;
+                    const percentage = trainer.total_sessions > 0 ? ((trainer.present_count / trainer.total_sessions) * 100).toFixed(1) : 0;
+                    csv += `${trainer.trainer_id},${trainer.total_sessions},${trainer.present_count}\n`;
                 });
             }
             
@@ -1678,11 +1679,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 let html = '<table><thead><tr><th>Trener</th><th>Skupaj terminov</th><th>Prisotni</th><th>Delež (%)</th></tr></thead><tbody>';
                 
                 attendanceData.forEach(trainer => {
+                    const trainerInfo = trainers.find(t => t.id === trainer.trainer_id);
+                    const trainerName = trainerInfo ? `${trainerInfo.first_name} ${trainerInfo.last_name}` : 'Neznan trener';
+                    const percentage = trainer.total_sessions > 0 ? ((trainer.present_count / trainer.total_sessions) * 100).toFixed(1) : 0;
+                    
                     html += `<tr>
-                        <td>${trainer.trainer_name}</td>
+                        <td>${trainerName}</td>
                         <td>${trainer.total_sessions}</td>
-                        <td>${trainer.present_sessions}</td>
-                        <td>${trainer.attendance_percentage}%</td>
+                        <td>${trainer.present_count}</td>
+                        <td>${percentage}%</td>
                     </tr>`;
                 });
                 
