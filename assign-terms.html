@@ -159,7 +159,10 @@
   <div class="admin-container">
     <div class="admin-header">
       <h1>Admin - Povezovanje trenerjev s termini</h1>
-      <a href="auth-index.html" class="btn">Nazaj na aplikacijo</a>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <a href="index.html" class="btn">Nazaj na aplikacijo</a>
+        <button class="btn" onclick="adminAuth.logout()" style="background: #dc3545; color: white;">Odjava</button>
+      </div>
     </div>
 
     <div class="assign-form">
@@ -213,6 +216,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./admin-auth.js"></script>
   <script>
     const SUPABASE_URL = "https://tizjimlwfkoniixbetgr.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpemppbWx3ZmtvbmlpeGJldGdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzNDgyNzgsImV4cCI6MjA3MDkyNDI3OH0.Oess7TCevLH3mO0aWxfL5M0Kb_XHEKUBYRYRXKQkdgk";

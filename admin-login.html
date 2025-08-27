@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Admin Prijava - Prisotnost plavalcev</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.login-container {
+  max-width: 400px;
+  margin: 100px auto;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.login-container h1 {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #333;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.login-form input {
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+.login-form button {
+  padding: 12px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.login-form button:hover {
+  background: #0056b3;
+}
+
+.error-message {
+  color: #dc3545;
+  text-align: center;
+  margin-top: 10px;
+  padding: 10px;
+  background: #f8d7da;
+  border-radius: 4px;
+}
+
+.success-message {
+  color: #28a745;
+  text-align: center;
+  margin-top: 10px;
+  padding: 10px;
+  background: #d4edda;
+  border-radius: 4px;
+}
+
+.hidden {
+  display: none;
+}
+
+.admin-info {
+  text-align: center;
+  margin-top: 20px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  border-left: 4px solid #007bff;
+}
+
+.admin-info h3 {
+  margin: 0 0 10px 0;
+  color: #007bff;
+}
+
+.admin-info p {
+  margin: 5px 0;
+  color: #666;
+}
+</style>
+</head>
+<body>
+  <div id="loginScreen" class="login-container">
+    <h1>Admin Prijava</h1>
+    <h2 style="text-align: center; margin-bottom: 20px;">Prisotnost plavalcev</h2>
+    
+    <form id="loginForm" class="login-form">
+      <input type="email" id="emailInput" placeholder="E-pošta" required>
+      <input type="password" id="passwordInput" placeholder="Geslo" required>
+      <button type="submit">Prijavi se kot admin</button>
+    </form>
+    
+    <div id="loginError" class="error-message hidden"></div>
+    <div id="loginSuccess" class="success-message hidden"></div>
+    
+    <div class="admin-info">
+      <h3>Admin dostop</h3>
+      <p>Ta prijava je namenjena samo administratorju sistema.</p>
+      <p>Trenerji se prijavijo preko <a href="auth-index.html">trener portala</a>.</p>
+    </div>
+  </div>
+
+  <script>
+    // Admin credentials - v produkciji bi bilo to na strežniku
+    const ADMIN_EMAIL = 'uros.jedlovcnik@gmail.com';
+    const ADMIN_PASSWORD = 'uros2024'; // Spremenite to geslo!
+
+    // UI elementi
+    const loginForm = document.getElementById('loginForm');
+    const emailInput = document.getElementById('emailInput');
+    const passwordInput = document.getElementById('passwordInput');
+    const loginError = document.getElementById('loginError');
+    const loginSuccess = document.getElementById('loginSuccess');
+
+    // Preveri, če je admin že prijavljen
+    function checkAdminAuth() {
+      const adminToken = localStorage.getItem('adminToken');
+      if (adminToken) {
+        // Preveri, če je token veljaven (preprosta preveritev)
+        const tokenData = JSON.parse(atob(adminToken.split('.')[1]));
+        const now = Math.floor(Date.now() / 1000);
+        
+        if (tokenData.exp > now) {
+          // Admin je prijavljen, preusmeri na glavno stran
+          window.location.href = 'index.html';
+          return;
+        } else {
+          // Token je potekel
+          localStorage.removeItem('adminToken');
+        }
+      }
+    }
+
+    // Prijava
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+
+      // Preveri admin credentials
+      if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+        // Ustvari JWT token (preprost)
+        const token = {
+          email: email,
+          role: 'admin',
+          exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 ur
+        };
+        
+        const tokenString = btoa(JSON.stringify(token));
+        localStorage.setItem('adminToken', tokenString);
+        
+        showSuccess('Uspešna prijava! Preusmerjanje...');
+        setTimeout(() => {
+          window.location.href = 'index.html';
+        }, 1000);
+      } else {
+        showError('Napačna e-pošta ali geslo');
+      }
+    });
+
+    // Pomožne funkcije za sporočila
+    function showError(message) {
+      loginError.textContent = message;
+      loginError.classList.remove('hidden');
+      loginSuccess.classList.add('hidden');
+    }
+
+    function showSuccess(message) {
+      loginSuccess.textContent = message;
+      loginSuccess.classList.remove('hidden');
+      loginError.classList.add('hidden');
+    }
+
+    // Preveri autentikacijo ob nalaganju
+    checkAdminAuth();
+  </script>
+</body>
+</html>
