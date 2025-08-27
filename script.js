@@ -328,8 +328,29 @@ document.addEventListener('DOMContentLoaded', () => {
           btnPresent.textContent = "Prisoten";
           btnPresent.className = "btn";
           if (isInactive(date, termId)) { btnPresent.disabled = true; }
-          if (status === true) { btnPresent.classList.add("ok"); } else { btnPresent.classList.add("neutral"); }
+          
+          const btnAbsent = document.createElement("button");
+          btnAbsent.textContent = "Odsoten";
+          btnAbsent.className = "btn";
+          if (isInactive(date, termId)) { btnAbsent.disabled = true; }
+
+          if (status === true) {
+              btnPresent.classList.add("ok");
+              btnAbsent.classList.add("neutral");
+          } else if (status === false) {
+              btnAbsent.classList.add("warn");
+              btnPresent.classList.add("neutral");
+          } else {
+              btnPresent.classList.add("neutral");
+              btnAbsent.classList.add("neutral");
+          }
+
           btnPresent.addEventListener("click", async ()=>{
+            btnAbsent.classList.remove("warn");
+            btnPresent.classList.add("ok");
+            btnPresent.classList.remove("neutral");
+            btnAbsent.classList.add("neutral");
+            
             const { error } = await supabase
               .from('attendance')
               .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: true }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
@@ -340,12 +361,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
           });
           
-          const btnAbsent = document.createElement("button");
-          btnAbsent.textContent = "Odsoten";
-          btnAbsent.className = "btn";
-          if (isInactive(date, termId)) { btnAbsent.disabled = true; }
-          if (status === false) { btnAbsent.classList.add("warn"); } else { btnAbsent.classList.add("neutral"); }
           btnAbsent.addEventListener("click", async ()=>{
+            btnPresent.classList.remove("ok");
+            btnAbsent.classList.add("warn");
+            btnAbsent.classList.remove("neutral");
+            btnPresent.classList.add("neutral");
+
             const { error } = await supabase
               .from('attendance')
               .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: false }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
@@ -362,6 +383,11 @@ document.addEventListener('DOMContentLoaded', () => {
           btnRemove.className = "btn remove-btn";
           if (isInactive(date, termId)) { btnRemove.disabled = true; }
           btnRemove.addEventListener("click", async ()=>{
+              btnPresent.classList.remove("ok");
+              btnAbsent.classList.remove("warn");
+              btnPresent.classList.add("neutral");
+              btnAbsent.classList.add("neutral");
+
               const { error } = await supabase
                 .from('attendance')
                 .delete()
@@ -421,7 +447,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       elNotesInput.value = termStatusObj.notes || "";
-      elSaveNotesBtn.textContent = "Shrani trening";
+      elSaveNotesBtn.textContent = "Shrani opombo";
       elSaveNotesBtn.onclick = async () => {
         const notes = elNotesInput.value;
         const { error } = await supabase
@@ -498,8 +524,10 @@ document.addEventListener('DOMContentLoaded', () => {
       openModal(elModal);
     }
     
-    function openModal(modalEl){ modalEl.style.display = "flex"; modalEl.setAttribute("aria-hidden", "false"); }
-    function closeModal(modalEl){ modalEl.style.display = "none"; modalEl.setAttribute("aria-hidden", "true"); }
+    // POSODOBLJENA FUNKCIJA ZA ODPRANJE MODALA
+    function openModal(modalEl){ modalEl.classList.add("show"); modalEl.setAttribute("aria-hidden", "false"); }
+    // POSODOBLJENA FUNKCIJA ZA ZAPIRANJE MODALA
+    function closeModal(modalEl){ modalEl.classList.remove("show"); modalEl.setAttribute("aria-hidden", "true"); }
 
     elCloseModalBtn.addEventListener("click", ()=>{ 
       closeModal(elModal); 
@@ -875,6 +903,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        const { error: attError } = await supabase
+            .from('attendance')
+            .delete()
+            .eq('term_id', termId);
+        
+        if (attError) { console.error("Napaka pri brisanju prisotnosti termina:", attError); alert("Napaka pri brisanju prisotnosti termina. Preverite konzolo."); return; }
+
         const { error: statusError } = await supabase
             .from('term_status')
             .delete()
@@ -899,7 +934,7 @@ document.addEventListener('DOMContentLoaded', () => {
         TERMS = TERMS.filter(t => t.id !== termId);
         await refreshSwimmerPanel();
         await renderMonth();
-        alert("Termin uspešno izbrisan. Zgodovina obiskov je ohranjena.");
+        alert("Termin uspešno izbrisan.");
     }
 
     function openEditTermModal(termId) {
