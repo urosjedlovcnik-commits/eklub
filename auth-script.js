@@ -41,9 +41,111 @@ document.addEventListener('DOMContentLoaded', () => {
   const cancelSubstituteBtn = document.getElementById('cancelSubstituteBtn');
   const confirmSubstituteBtn = document.getElementById('confirmSubstituteBtn');
 
+  // ===== DOLGOROČNA AVTENTIKACIJA =====
+  
+  // Shrani session token lokalno za 24 ur
+  function saveSessionLocally(session) {
+      try {
+          const sessionData = {
+              access_token: session.access_token,
+              refresh_token: session.refresh_token,
+              expires_at: Date.now() + (24 * 60 * 60 * 1000), // 24 ur
+              user: session.user
+          };
+          localStorage.setItem('trainer_session', JSON.stringify(sessionData));
+          console.log('Session shranjen lokalno za 24 ur');
+      } catch (error) {
+          console.error('Napaka pri shranjevanju session-a:', error);
+      }
+  }
+  
+  // Obnovi session iz lokalnega shranjevanja
+  function restoreSessionFromLocal() {
+      try {
+          const sessionData = localStorage.getItem('trainer_session');
+          if (!sessionData) return null;
+          
+          const session = JSON.parse(sessionData);
+          
+          // Preveri, če je session še veljaven
+          if (Date.now() > session.expires_at) {
+              console.log('Lokalni session je potekel, brišem...');
+              localStorage.removeItem('trainer_session');
+              return null;
+          }
+          
+          console.log('Obnavljam session iz lokalnega shranjevanja');
+          return session;
+      } catch (error) {
+          console.error('Napaka pri obnovitvi session-a:', error);
+          localStorage.removeItem('trainer_session');
+          return null;
+      }
+  }
+  
+  // Počisti lokalni session
+  function clearLocalSession() {
+      try {
+          localStorage.removeItem('trainer_session');
+          console.log('Lokalni session počiščen');
+      } catch (error) {
+          console.error('Napaka pri čiščenju session-a:', error);
+      }
+  }
+  
+  // Nastavi avtomatsko osveževanje tokena
+  function setupTokenRefresh() {
+      // Preveri token vsakih 30 minut
+      setInterval(async () => {
+          try {
+              const { data: { session } } = await supabase.auth.getSession();
+              if (session) {
+                  // Shrani posodobljen session
+                  saveSessionLocally(session);
+                  console.log('Token avtomatsko osvežen');
+              }
+          } catch (error) {
+              console.error('Napaka pri avtomatskem osveževanju tokena:', error);
+          }
+      }, 30 * 60 * 1000); // 30 minut
+  }
+
   // Preveri, če je uporabnik že prijavljen
   async function checkAuth() {
       console.log('=== CHECK AUTH START ===');
+      
+      // Najprej preveri lokalni session
+      const localSession = restoreSessionFromLocal();
+      if (localSession) {
+          console.log('Najden lokalni session, poskušam obnoviti...');
+          try {
+              // Poskusi obnoviti session z Supabase
+              const { data, error } = await supabase.auth.setSession({
+                  access_token: localSession.access_token,
+                  refresh_token: localSession.refresh_token
+              });
+              
+              if (error) {
+                  console.log('Napaka pri obnovitvi session-a:', error);
+                  clearLocalSession();
+                             } else if (data.session) {
+                  console.log('Session uspešno obnovljen iz lokalnega shranjevanja');
+                  currentUser = data.user;
+                  
+                  // Nastavi avtomatsko osveževanje tokena
+                  setupTokenRefresh();
+                  
+                  await loadUserTerms();
+                  showMainApp();
+                  await loadDataFromSupabase();
+                  console.log('=== CHECK AUTH END (LOCAL SESSION) ===');
+                  return;
+              }
+          } catch (error) {
+              console.error('Napaka pri obnovitvi session-a:', error);
+              clearLocalSession();
+          }
+      }
       
       // Preveri, ali so vsi potrebni elementi naloženi
       if (!elCalendarGrid || !elMonthLabel || !elPrevBtn || !elNextBtn || !elSummaryBox) {
@@ -58,10 +160,10 @@ document.addEventListener('DOMContentLoaded', () => {
           console.error('elAttendanceTable:', !!elAttendanceTable);
           console.error('elSubstitutionTable:', !!elSubstitutionTable);
           
-                           // Poskusi ponovno naložiti elemente
-                 console.log('Poskušam ponovno naložiti elemente...');
-                 const retryAttendanceTable = document.getElementById("attendanceTable");
-                 const retrySubstitutionTable = document.getElementById("substitutionTable");
+          // Poskusi ponovno naložiti elemente
+          console.log('Poskušam ponovno naložiti elemente...');
+          const retryAttendanceTable = document.getElementById("attendanceTable")?.querySelector("tbody");
+          const retrySubstitutionTable = document.getElementById("substitutionTable")?.querySelector("tbody");
           
           if (retryAttendanceTable && retrySubstitutionTable) {
               console.log('Elementi so sedaj naloženi, poskušam ponovno...');
@@ -84,10 +186,6 @@ document.addEventListener('DOMContentLoaded', () => {
           showMainApp();
           // Naloži podatke za trenerja po tem, ko so userTerms naloženi
           await loadDataFromSupabase();
-          // Naloži podatke za nadomestne trenerje
-          // await loadSubstituteData(); // Odstranjeno, ker se kliče v setTimeout
-          // Naloži nadomestne termine
-          // await loadSubstituteTerms(); // Odstranjeno, ker se kliče v setTimeout
       } else {
           console.log('Uporabnik ni prijavljen');
           showLoginScreen();
@@ -216,6 +314,15 @@ document.addEventListener('DOMContentLoaded', () => {
           }
 
           currentUser = data.user;
+          
+          // Shrani session lokalno za 24 ur
+          if (data.session) {
+              saveSessionLocally(data.session);
+              
+              // Nastavi avtomatsko osveževanje tokena
+              setupTokenRefresh();
+          }
+          
           await loadUserTerms();
           showMainApp();
           // Naloži podatke za trenerja po tem, ko so userTerms naloženi
@@ -234,6 +341,10 @@ document.addEventListener('DOMContentLoaded', () => {
           await supabase.auth.signOut();
           currentUser = null;
           userTerms = [];
+          
+          // Počisti lokalni session
+          clearLocalSession();
+          
           showLoginScreen();
           hideMessages();
       } catch (error) {
