@@ -735,7 +735,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tr.appendChild(td);
       elSubstitutionTable.appendChild(tr);
     } else {
-      substitutionSwimmers.sort((a,b) => (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name))
+              substitutionSwimmers.sort((a,b) => (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name))
         .forEach(s => {
           const isPresent = termAtt[s.id] || false;
           const row = document.createElement('tr');
@@ -743,11 +743,11 @@ document.addEventListener('DOMContentLoaded', () => {
             <td>${s.first_name} ${s.last_name}</td>
             <td>
               <input type="checkbox" ${isPresent ? 'checked' : ''} 
-                     onchange="updateAttendance('${s.id}', ${!isPresent}, '')">
+                     onchange="updateAttendance('${s.id}', ${!isPresent})">
             </td>
             <td>
               <input type="text" value="" 
-                     onchange="updateAttendance('${s.id}', ${isPresent}, this.value)" 
+                     onchange="updateAttendance('${s.id}', ${isPresent})" 
                      placeholder="Opomba">
             </td>
             <td>
