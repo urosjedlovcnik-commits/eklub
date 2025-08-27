@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Auth</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .error { color: red; }
+        .success { color: green; }
+        .info { color: blue; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Debug Auth Index</h1>
+    <div id="output"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = "https://tizjimlwfkoniixbetgr.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpemppbWx3ZmtvbmlpeGJldGdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzNDgyNzgsImV4cCI6MjA3MDkyNDI3OH0.Oess7TCevLH3mO0aWxfL5M0Kb_XHEKUBYRYRXKQkdgk";
+
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const output = document.getElementById('output');
+
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            output.appendChild(div);
+            console.log(message);
+        }
+
+        async function testAuth() {
+            log('=== TESTING AUTH INDEX ===', 'info');
+            
+            try {
+                // Test 1: Check if Supabase is loaded
+                log('Test 1: Checking Supabase connection...', 'info');
+                const { data, error } = await supabase.from('trainers').select('count').limit(1);
+                if (error) {
+                    log(`Supabase connection failed: ${error.message}`, 'error');
+                    return;
+                }
+                log('Supabase connection successful', 'success');
+
+                // Test 2: Check current user
+                log('Test 2: Checking current user...', 'info');
+                const { data: { user }, error: userError } = await supabase.auth.getUser();
+                if (userError) {
+                    log(`User check failed: ${userError.message}`, 'error');
+                } else if (user) {
+                    log(`User is logged in: ${user.email}`, 'success');
+                    
+                    // Test 3: Check trainer data
+                    log('Test 3: Checking trainer data...', 'info');
+                    const { data: trainerData, error: trainerError } = await supabase
+                        .from('trainers')
+                        .select('*')
+                        .eq('user_id', user.id)
+                        .single();
+                    
+                    if (trainerError) {
+                        log(`Trainer lookup failed: ${trainerError.message}`, 'error');
+                    } else if (trainerData) {
+                        log(`Trainer found: ${trainerData.first_name} ${trainerData.last_name}`, 'success');
+                        
+                        // Test 4: Check trainer terms
+                        log('Test 4: Checking trainer terms...', 'info');
+                        const { data: termsData, error: termsError } = await supabase
+                            .from('trainer_terms')
+                            .select('term_id')
+                            .eq('trainer_id', trainerData.id);
+                        
+                        if (termsError) {
+                            log(`Terms lookup failed: ${termsError.message}`, 'error');
+                        } else {
+                            const termIds = termsData.map(t => t.term_id);
+                            log(`Found ${termIds.length} terms: ${termIds.join(', ')}`, 'success');
+                        }
+                    } else {
+                        log('No trainer found for this user', 'error');
+                    }
+                } else {
+                    log('No user is logged in', 'info');
+                }
+
+            } catch (error) {
+                log(`Unexpected error: ${error.message}`, 'error');
+            }
+        }
+
+        // Run test when page loads
+        testAuth();
+    </script>
+</body>
+</html>

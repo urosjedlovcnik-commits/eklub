@@ -137,7 +137,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Če trener nima terminov, prikaži sporočilo
             if (userTerms.length === 0) {
-                elSummaryBox.innerHTML = '<div class="error-message">Trener nima dodeljenih terminov. Kontaktirajte administratorja.</div>';
+                if (elSummaryBox) {
+                    elSummaryBox.innerHTML = '<div class="error-message">Trener nima dodeljenih terminov. Kontaktirajte administratorja.</div>';
+                }
                 console.warn('Trener nima dodeljenih terminov');
             } else {
                 console.log('Trener ima', userTerms.length, 'terminov');
@@ -370,10 +372,6 @@ document.addEventListener('DOMContentLoaded', () => {
         loginSuccess.classList.add('hidden');
     }
 
-    // Preveri autentikacijo ob nalaganju
-    console.log('=== PAGE LOADED, CHECKING AUTH ===');
-    checkAuth();
-
     // ===== GLAVNA APLIKACIJA =====
     
     // Stanja bodo naložena asinhrono
@@ -400,6 +398,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const elPrev = document.getElementById("prevBtn");
     const elNext = document.getElementById("nextBtn");
     const elSummaryBox = document.getElementById("summaryBox");
+
+    // Preveri autentikacijo ob nalaganju
+    console.log('=== PAGE LOADED, CHECKING AUTH ===');
+    checkAuth();
 
     const elModal = document.getElementById("eventModal");
     const elModalTitle = document.getElementById("modalTitle");
@@ -937,30 +939,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // ===== EVENT LISTENERJI =====
-    elPrev.addEventListener('click', () => {
-      currentMonth--;
-      if (currentMonth < 0) {
-        currentMonth = 11;
-        currentYear--;
-      }
-      renderCalendar();
-      updateSummary();
-    });
+    if (elPrev) {
+      elPrev.addEventListener('click', () => {
+        currentMonth--;
+        if (currentMonth < 0) {
+          currentMonth = 11;
+          currentYear--;
+        }
+        renderCalendar();
+        updateSummary();
+      });
+    }
 
-    elNext.addEventListener('click', () => {
-      currentMonth++;
-      if (currentMonth > 11) {
-        currentMonth = 0;
-        currentYear++;
-      }
-      renderCalendar();
-      updateSummary();
-    });
+    if (elNext) {
+      elNext.addEventListener('click', () => {
+        currentMonth++;
+        if (currentMonth > 11) {
+          currentMonth = 0;
+          currentYear++;
+        }
+        renderCalendar();
+        updateSummary();
+      });
+    }
 
-    elCloseModalBtn.addEventListener('click', () => {
-      elModal.setAttribute('aria-hidden', 'true');
-      elModal.style.display = 'none';
-    });
+    if (elCloseModalBtn) {
+      elCloseModalBtn.addEventListener('click', () => {
+        elModal.setAttribute('aria-hidden', 'true');
+        elModal.style.display = 'none';
+      });
+    }
 
 
 
@@ -988,6 +996,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Funkcije za upravljanje plavalcev
     function updateSwimmerSelect() {
+      // Preveri, če so UI elementi že definirani
+      const elSwimmerSelect = document.getElementById("swimmerSelect");
       if (!elSwimmerSelect) return;
       elSwimmerSelect.innerHTML = '';
       // Filtriraj plavalce, ki pripadajo trenerjevim terminom
@@ -1005,6 +1015,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateTermSelect() {
+      // Preveri, če so UI elementi že definirani
+      const elTermSelect = document.getElementById("termSelect");
       if (!elTermSelect) return;
       elTermSelect.innerHTML = '';
       // Prikaži samo termine trenerja
@@ -1018,7 +1030,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showSwimmerInfo() {
-      if (!elSwimmerInfo) return;
+      // Preveri, če so UI elementi že definirani
+      const elSwimmerInfo = document.getElementById("swimmerInfo");
+      const elSwimmerSelect = document.getElementById("swimmerSelect");
+      if (!elSwimmerInfo || !elSwimmerSelect) return;
       const sid = elSwimmerSelect.value;
       const s = swimmers.find(x => x.id === sid);
       if (!s) {
@@ -1128,7 +1143,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    elSwimmerSelect.addEventListener('change', showSwimmerInfo);
+    if (elSwimmerSelect) {
+      elSwimmerSelect.addEventListener('change', showSwimmerInfo);
+    }
 
     // Funkcije za upravljanje plavalcev
     function updateSwimmerSelect() {
@@ -1422,18 +1439,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // Nastavi event listenerje za nadomestne trenerje
     function setupSubstituteEventListeners() {
         // Dodaj nadomestnega trenerja
-        addSubstituteBtn.addEventListener('click', handleAddSubstitute);
+        if (addSubstituteBtn) {
+            addSubstituteBtn.addEventListener('click', handleAddSubstitute);
+        }
         
         // Modal event listenerji
-        closeConfirmSubstituteModalBtn.addEventListener('click', () => {
-            confirmSubstituteModal.style.display = 'none';
-        });
+        if (closeConfirmSubstituteModalBtn) {
+            closeConfirmSubstituteModalBtn.addEventListener('click', () => {
+                confirmSubstituteModal.style.display = 'none';
+            });
+        }
         
-        cancelSubstituteBtn.addEventListener('click', () => {
-            confirmSubstituteModal.style.display = 'none';
-        });
+        if (cancelSubstituteBtn) {
+            cancelSubstituteBtn.addEventListener('click', () => {
+                confirmSubstituteModal.style.display = 'none';
+            });
+        }
         
-        confirmSubstituteBtn.addEventListener('click', handleConfirmSubstitute);
+        if (confirmSubstituteBtn) {
+            confirmSubstituteBtn.addEventListener('click', handleConfirmSubstitute);
+        }
         
         // Zapri modal ob kliku zunaj
         window.addEventListener('click', (event) => {
