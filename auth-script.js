@@ -57,10 +57,10 @@ document.addEventListener('DOMContentLoaded', () => {
           console.error('elAttendanceTable:', !!elAttendanceTable);
           console.error('elSubstitutionTable:', !!elSubstitutionTable);
           
-          // Poskusi ponovno naložiti elemente
-          console.log('Poskušam ponovno naložiti elemente...');
-          const retryAttendanceTable = document.getElementById("attendanceTable")?.querySelector("tbody");
-          const retrySubstitutionTable = document.getElementById("substitutionTable")?.querySelector("tbody");
+                           // Poskusi ponovno naložiti elemente
+                 console.log('Poskušam ponovno naložiti elemente...');
+                 const retryAttendanceTable = document.getElementById("attendanceTable");
+                 const retrySubstitutionTable = document.getElementById("substitutionTable");
           
           if (retryAttendanceTable && retrySubstitutionTable) {
               console.log('Elementi so sedaj naloženi, poskušam ponovno...');
@@ -408,8 +408,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const elModal = document.getElementById("eventModal");
   const elModalTitle = document.getElementById("modalTitle");
   const elModalMeta = document.getElementById("modalMeta");
-  const elAttendanceTable = document.getElementById("attendanceTable")?.querySelector("tbody");
-  const elSubstitutionTable = document.getElementById("substitutionTable")?.querySelector("tbody");
+  const elAttendanceTable = document.getElementById("attendanceTable");
+  const elSubstitutionTable = document.getElementById("substitutionTable");
   const elToggleEventBtn = document.getElementById("toggleEventBtn");
   const elCloseModalBtn = document.getElementById("closeModalBtn");
   const elModalSwimmerSelect = document.getElementById("modalSwimmerSelect");
@@ -1834,9 +1834,9 @@ document.addEventListener('DOMContentLoaded', () => {
           checkAuth();
       } else {
           console.error('Elementi še vedno niso naloženi, poskušam ponovno naložiti...');
-          // Poskusi ponovno naložiti elemente
-          const retryAttendanceTable = document.getElementById("attendanceTable")?.querySelector("tbody");
-          const retrySubstitutionTable = document.getElementById("substitutionTable")?.querySelector("tbody");
+                           // Poskusi ponovno naložiti elemente
+                 const retryAttendanceTable = document.getElementById("attendanceTable");
+                 const retrySubstitutionTable = document.getElementById("substitutionTable");
           
           if (retryAttendanceTable && retrySubstitutionTable) {
               console.log('Elementi so sedaj naloženi, začenjam z autentikacijo...');
