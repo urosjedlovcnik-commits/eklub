@@ -56,7 +56,21 @@ document.addEventListener('DOMContentLoaded', () => {
           console.error('elModal:', !!elModal);
           console.error('elAttendanceTable:', !!elAttendanceTable);
           console.error('elSubstitutionTable:', !!elSubstitutionTable);
-          return;
+          
+          // Poskusi ponovno naložiti elemente
+          console.log('Poskušam ponovno naložiti elemente...');
+          const retryAttendanceTable = document.getElementById("attendanceTable")?.querySelector("tbody");
+          const retrySubstitutionTable = document.getElementById("substitutionTable")?.querySelector("tbody");
+          
+          if (retryAttendanceTable && retrySubstitutionTable) {
+              console.log('Elementi so sedaj naloženi, poskušam ponovno...');
+              // Posodobi globalne reference
+              elAttendanceTable = retryAttendanceTable;
+              elSubstitutionTable = retrySubstitutionTable;
+          } else {
+              console.error('Elementi še vedno niso naloženi, prekinjam');
+              return;
+          }
       }
       
       console.log('Vsi elementi so naloženi');
@@ -1807,5 +1821,34 @@ document.addEventListener('DOMContentLoaded', () => {
           console.error('Napaka pri nalaganju informacij o nadomestnih trenerjih:', error);
       }
   }
+
+  // Počakaj, da se DOM popolnoma naloži, nato začni z autentikacijo
+  setTimeout(() => {
+      console.log('=== DELAYED INIT START ===');
+      console.log('Preverjam elemente po 500ms...');
+      console.log('elAttendanceTable:', !!elAttendanceTable);
+      console.log('elSubstitutionTable:', !!elSubstitutionTable);
+      
+      if (elAttendanceTable && elSubstitutionTable) {
+          console.log('Elementi so naloženi, začenjam z autentikacijo...');
+          checkAuth();
+      } else {
+          console.error('Elementi še vedno niso naloženi, poskušam ponovno naložiti...');
+          // Poskusi ponovno naložiti elemente
+          const retryAttendanceTable = document.getElementById("attendanceTable")?.querySelector("tbody");
+          const retrySubstitutionTable = document.getElementById("substitutionTable")?.querySelector("tbody");
+          
+          if (retryAttendanceTable && retrySubstitutionTable) {
+              console.log('Elementi so sedaj naloženi, začenjam z autentikacijo...');
+              // Posodobi globalne reference
+              elAttendanceTable = retryAttendanceTable;
+              elSubstitutionTable = retrySubstitutionTable;
+              checkAuth();
+          } else {
+              console.error('Elementi še vedno niso naloženi, prekinjam');
+          }
+      }
+      console.log('=== DELAYED INIT END ===');
+  }, 500);
 
 });
