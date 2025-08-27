@@ -415,10 +415,6 @@
 
     // Zbriši povezavo
     async function deleteAssignment(assignmentId) {
-      if (!confirm('Ali ste prepričani, da želite zbrisati to povezavo?')) {
-        return;
-      }
-
       try {
         const { error } = await supabase
           .from('trainer_terms')
