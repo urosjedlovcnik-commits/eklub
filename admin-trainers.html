@@ -246,6 +246,8 @@
     // Naloži podatke
     async function loadData() {
       try {
+        console.log('=== LOAD DATA START ===');
+        
         // Naloži trenerje
         const { data: trainersData, error: trainersError } = await supabase
           .from('trainers')
@@ -254,6 +256,9 @@
 
         if (trainersError) throw trainersError;
         trainers = trainersData || [];
+        
+        console.log('Naloženi trenerji:', trainers);
+        console.log('Število trenerjev:', trainers.length);
 
         // Naloži termine
         const { data: termsData, error: termsError } = await supabase
@@ -263,8 +268,19 @@
 
         if (termsError) throw termsError;
         terms = termsData || [];
+        
+        console.log('Naloženi termini:', terms);
+        console.log('Število terminov:', terms.length);
 
         renderTrainersTable();
+        
+        // Preveri povezave z auth uporabniki
+        console.log('Preverjam povezave z auth uporabniki...');
+        for (const trainer of trainers) {
+          console.log(`Trener ${trainer.first_name} ${trainer.last_name}: user_id = ${trainer.user_id}`);
+        }
+        
+        console.log('=== LOAD DATA END ===');
       } catch (error) {
         console.error('Napaka pri nalaganju podatkov:', error);
         showMessage('Napaka pri nalaganju podatkov', 'error');
