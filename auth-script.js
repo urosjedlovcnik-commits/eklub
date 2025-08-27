@@ -375,8 +375,8 @@ document.addEventListener('DOMContentLoaded', () => {
       loginSuccess.classList.add('hidden');
   }
 
-  // Preveri autentikacijo ob nalaganju
-  checkAuth();
+  // Preveri autentikacijo ob nalaganju - odstranjeno, ker se kliče v setTimeout
+  // checkAuth();
 
   // ===== GLAVNA APLIKACIJA =====
   
