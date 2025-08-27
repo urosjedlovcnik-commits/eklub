@@ -887,14 +887,16 @@ document.addEventListener('DOMContentLoaded', () => {
         actionsDiv.appendChild(editBtn);
 
         const deleteBtn = document.createElement("button");
-        deleteBtn.innerHTML = "✖";
-        deleteBtn.className = "btn remove-btn";
-        deleteBtn.onclick = () => deleteTerm(t.id);
-        actionsDiv.appendChild(deleteBtn);
-
-        div.appendChild(actionsDiv);
-
-        elTermList.appendChild(div);
+deleteBtn.innerHTML = "✖";
+deleteBtn.className = "btn warn delete-btn"; // Dodan razred "warn" za rdečo barvo
+deleteBtn.addEventListener("click", async () => {
+    // Koda za izbris termina se izvede takoj
+    const { error } = await supabase.from('terms').delete().eq('id', t.id);
+    if (error) {
+        console.error("Napaka pri brisanju termina:", error);
+    } else {
+        // Po uspešnem izbrisu osveži podatke in vmesnik
+        await loadDataAndRender();
       });
     }
 
