@@ -200,6 +200,70 @@
         <h3>Povzetek udeležbe (za prikazani mesec)</h3>
         <div class="inner" id="summaryBox">Nalaganje podatkov...</div>
       </div>
+
+      <div class="card">
+        <h3>Upravljanje plavalcev</h3>
+        <div class="inner">
+          <div class="flex-col">
+            <div class="row" style="width:100%;align-items:stretch;gap:4px">
+              <input type="text" id="newFirst" placeholder="Ime">
+              <input type="text" id="newLast" placeholder="Priimek">
+              <button class="btn ok" id="addSwimmerBtn" style="width:auto">Dodaj</button>
+            </div>
+            <div class="row" style="width:100%;align-items:stretch;gap:4px">
+              <select id="swimmerSelect"></select>
+              <select id="termSelect"></select>
+              <button class="btn pri" id="assignTermBtn" style="width:auto">Dodeli</button>
+              <button id="deleteSwimmerBtn" class="btn warn">Zbriši plavalca</button>
+            </div>
+          </div>
+          <div id="swimmerInfo" class="muted"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid" style="margin-top:12px">
+      <div class="card">
+        <h3>Dodaj nov termin</h3>
+        <div class="inner">
+          <div class="row">
+            <label for="newTermDay">Dan:</label>
+            <select id="newTermDay">
+              <option value="1">Ponedeljek</option>
+              <option value="2">Torek</option>
+              <option value="3">Sreda</option>
+              <option value="4">Četrtek</option>
+              <option value="5">Petek</option>
+              <option value="6">Sobota</option>
+              <option value="7">Nedelja</option>
+            </select>
+          </div>
+          <div class="row">
+            <label for="newTermStart">Začetna ura:</label>
+            <input type="time" id="newTermStart">
+          </div>
+          <div class="row">
+            <label for="newTermEnd">Končna ura:</label>
+            <input type="time" id="newTermEnd">
+          </div>
+          <div class="row">
+            <label for="newTermDateFrom">Datum trajanja od:</label>
+            <input type="text" id="newTermDateFrom" placeholder="dd / mm / yyyy">
+          </div>
+          <div class="row">
+            <label for="newTermDateTo">do:</label>
+            <input type="text" id="newTermDateTo" placeholder="dd / mm / yyyy">
+          </div>
+          <button class="btn pri" id="addTermBtn">Dodaj termin</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Upravljanje terminov</h3>
+        <div class="inner">
+          <div class="term-list" id="termList"></div>
+        </div>
+      </div>
     </div>
 
     <div class="grid" style="margin-top:12px">
@@ -310,6 +374,11 @@
             <button class="btn pri" id="saveNotesBtn">Shrani opombe</button>
           </div>
 
+          <div id="inactiveNote" style="display:none; margin-bottom:12px; padding:10px; background:#fef3c7; border-radius:8px; border:1px solid #fcd34d;">
+            <strong style="display:block; margin-bottom:4px;">Opomba:</strong>
+            <span id="inactiveNoteText"></span>
+          </div>
+
           <div class="event-actions">
             <button class="btn" id="toggleEventBtn">Deaktiviraj termin</button>
           </div>
@@ -352,7 +421,41 @@
       </div>
     </div>
 
+    <!-- Modal za urejanje terminov -->
+    <div class="modal" id="editTermModal" role="dialog" aria-modal="true" aria-hidden="true">
+      <div class="box">
+        <div class="box-header">
+          <strong id="editTermModalTitle">Uredi termin</strong>
+          <button class="btn" id="closeEditTermModalBtn">Zapri</button>
+        </div>
+        <div class="box-body">
+          <div class="row">
+            <label for="editTermDateFrom">Datum trajanja od:</label>
+            <input type="text" id="editTermDateFrom" placeholder="dd / mm / yyyy">
+          </div>
+          <div class="row">
+            <label for="editTermDateTo">do:</label>
+            <input type="text" id="editTermDateTo" placeholder="dd / mm / yyyy">
+          </div>
+          <button class="btn pri" id="saveEditTermBtn">Shrani</button>
+        </div>
+      </div>
+    </div>
 
+
+
+    <!-- CSV Export -->
+    <div class="card csv-options">
+      <h3>Izvoz CSV</h3>
+      <div class="inner">
+        <h4>Izvoz povzetka</h4>
+        <div class="csv-export-controls">
+          <select id="exportMonthSelect"></select>
+          <select id="exportYearSelect"></select>
+          <button class="btn" id="exportCsvBtn">Izvozi</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Modal za spremembo gesla -->
     <div class="modal" id="changePasswordModal" role="dialog" aria-modal="true" aria-hidden="true">
@@ -399,6 +502,19 @@
             <button type="button" class="btn neutral" id="cancelSubstituteBtn">Prekliči</button>
             <button type="button" class="btn ok" id="confirmSubstituteBtn">Potrdi</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal za izbiro dneva -->
+    <div class="modal day-modal" id="dayModal" role="dialog" aria-modal="true" aria-hidden="true">
+      <div class="box">
+        <div class="box-header">
+          <strong id="dayModalTitle">Izberi termin</strong>
+          <button class="btn" id="closeDayModalBtn">Zapri</button>
+        </div>
+        <div class="box-body">
+          <div id="dayModalList" class="day-modal-list"></div>
         </div>
       </div>
     </div>
