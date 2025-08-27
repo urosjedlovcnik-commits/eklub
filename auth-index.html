@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Prisotnost plavalcev – Trener Portal</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.login-container {
+  max-width: 400px;
+  margin: 100px auto;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.login-container h1 {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #333;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.login-form input {
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+.login-form button {
+  padding: 12px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.login-form button:hover {
+  background: #0056b3;
+}
+
+.error-message {
+  color: #dc3545;
+  text-align: center;
+  margin-top: 10px;
+}
+
+.success-message {
+  color: #28a745;
+  text-align: center;
+  margin-top: 10px;
+}
+
+.user-info {
+  background: #f8f9fa;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logout-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.logout-btn:hover {
+  background: #c82333;
+}
+
+.hidden {
+  display: none;
+}
+</style>
+</head>
+<body>
+  <!-- Login Screen -->
+  <div id="loginScreen" class="login-container">
+    <h1>Prisotnost plavalcev</h1>
+    <h2 style="text-align: center; margin-bottom: 20px;">Prijava trenerja</h2>
+    
+    <form id="loginForm" class="login-form">
+      <input type="email" id="emailInput" placeholder="E-pošta" required>
+      <input type="password" id="passwordInput" placeholder="Geslo" required>
+      <button type="submit">Prijavi se</button>
+    </form>
+    
+    <div id="loginError" class="error-message hidden"></div>
+    <div id="loginSuccess" class="success-message hidden"></div>
+  </div>
+
+  <!-- Main Application -->
+  <div id="mainApp" class="hidden">
+    <div class="user-info">
+      <div>
+        <strong>Prijavljen trener:</strong> <span id="userName">Naložanje...</span>
+        <br>
+        <small>Skupine: <span id="userGroups">Naložanje...</span></small>
+      </div>
+      <button id="logoutBtn" class="logout-btn">Odjava</button>
+    </div>
+
+    <h1>Prisotnost plavalcev</h1>
+
+    <div class="toolbar">
+      <button class="btn" id="prevBtn">◀ Prejšnji mesec</button>
+      <span class="tag" id="monthLabel"></span>
+      <button class="btn" id="nextBtn">Naslednji mesec ▶</button>
+    </div>
+
+    <div class="calendar">
+      <div class="calendar-head">
+        <div>Pon</div><div>Tor</div><div>Sre</div><div>Čet</div><div>Pet</div><div>Sob</div><div>Ned</div>
+      </div>
+      <div class="calendar-grid" id="calendarGrid"></div>
+    </div>
+
+    <div class="grid" style="margin-top:12px">
+      <div class="card">
+        <h3>Povzetek udeležbe (za prikazani mesec)</h3>
+        <div class="inner" id="summaryBox">Nalaganje podatkov...</div>
+      </div>
+
+      <div class="card">
+        <h3>Upravljanje plavalcev</h3>
+        <div class="inner">
+          <div class="flex-col">
+            <div class="row" style="width:100%;align-items:stretch;gap:4px">
+              <input type="text" id="newFirst" placeholder="Ime">
+              <input type="text" id="newLast" placeholder="Priimek">
+              <button class="btn ok" id="addSwimmerBtn" style="width:auto">Dodaj</button>
+            </div>
+            <div class="row" style="width:100%;align-items:stretch;gap:4px">
+              <select id="swimmerSelect"></select>
+              <select id="termSelect"></select>
+              <button class="btn pri" id="assignTermBtn" style="width:auto">Dodeli</button>
+              <button id="deleteSwimmerBtn" class="btn warn">Zbriši plavalca</button>
+            </div>
+          </div>
+          <div id="swimmerInfo" class="muted"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid" style="margin-top:12px">
+      <div class="card">
+        <h3>Dodaj nov termin</h3>
+        <div class="inner">
+          <div class="row">
+            <label for="newTermDay">Dan:</label>
+            <select id="newTermDay">
+              <option value="1">Ponedeljek</option>
+              <option value="2">Torek</option>
+              <option value="3">Sreda</option>
+              <option value="4">Četrtek</option>
+              <option value="5">Petek</option>
+              <option value="6">Sobota</option>
+              <option value="7">Nedelja</option>
+            </select>
+          </div>
+          <div class="row">
+            <label for="newTermStart">Začetna ura:</label>
+            <input type="time" id="newTermStart">
+          </div>
+          <div class="row">
+            <label for="newTermEnd">Končna ura:</label>
+            <input type="time" id="newTermEnd">
+          </div>
+          <div class="row">
+            <label for="newTermDateFrom">Datum trajanja od:</label>
+            <input type="text" id="newTermDateFrom" placeholder="dd / mm / yyyy">
+          </div>
+          <div class="row">
+            <label for="newTermDateTo">do:</label>
+            <input type="text" id="newTermDateTo" placeholder="dd / mm / yyyy">
+          </div>
+          <button class="btn pri" id="addTermBtn">Dodaj termin</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Upravljanje terminov</h3>
+        <div class="inner">
+          <div class="term-list" id="termList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal za dogodke -->
+    <div class="modal" id="eventModal" role="dialog" aria-modal="true" aria-hidden="true">
+      <div class="box">
+        <div class="box-header">
+          <div>
+            <h3 id="modalTitle">Dogodek</h3>
+            <div id="modalMeta" class="muted"></div>
+          </div>
+          <button class="close-btn" id="closeModalBtn">&times;</button>
+        </div>
+        <div class="box-body">
+          <div class="attendance-section">
+            <h4>Prisotnost</h4>
+            <table class="attendance-table">
+              <thead>
+                <tr>
+                  <th>Plavalec</th>
+                  <th>Prisoten</th>
+                  <th>Opomba</th>
+                </tr>
+              </thead>
+              <tbody id="attendanceTable"></tbody>
+            </table>
+          </div>
+          
+          <div class="substitution-section">
+            <h4>Nadomestni plavalci</h4>
+            <table class="substitution-table">
+              <thead>
+                <tr>
+                  <th>Plavalec</th>
+                  <th>Prisoten</th>
+                  <th>Opomba</th>
+                </tr>
+              </thead>
+              <tbody id="substitutionTable"></tbody>
+            </table>
+          </div>
+
+          <div class="add-swimmer-section">
+            <h4>Dodaj plavalca</h4>
+            <div class="row">
+              <select id="modalSwimmerSelect"></select>
+              <button class="btn ok" id="addToEventBtn">Dodaj</button>
+            </div>
+          </div>
+
+          <div class="event-notes">
+            <h4>Opombe o treningu</h4>
+            <textarea id="notesInput" placeholder="Vnesite opombe o treningu..." rows="3"></textarea>
+            <button class="btn pri" id="saveNotesBtn">Shrani opombe</button>
+          </div>
+
+          <div class="event-actions">
+            <button class="btn" id="toggleEventBtn">Deaktiviraj termin</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal za deaktivacijo -->
+    <div class="modal" id="inactiveModal" role="dialog" aria-modal="true" aria-hidden="true">
+      <div class="box">
+        <div class="box-header">
+          <h3>Deaktivacija termina</h3>
+          <button class="close-btn" id="closeInactiveModalBtn">&times;</button>
+        </div>
+        <div class="box-body">
+          <p>Ali ste prepričani, da želite deaktivirati ta termin?</p>
+          <div class="row">
+            <button class="btn neutral" id="cancelInactiveBtn">Prekliči</button>
+            <button class="btn warn" id="confirmInactiveBtn">Deaktiviraj</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal za opombo -->
+    <div id="noteModal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Deaktivacija treninga</h5>
+          <span class="close-btn" id="closeNoteModalBtn">&times;</span>
+        </div>
+        <div class="modal-body">
+          <p>Prosim, vnesite opombo za deaktivacijo:</p>
+          <textarea id="noteInput" rows="4"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button class="btn neutral" id="cancelNoteBtn">Prekliči</button>
+          <button class="btn ok" id="confirmNoteBtn">Potrdi</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CSV Export -->
+    <div class="card csv-options">
+      <h3>Izvoz CSV</h3>
+      <div class="inner">
+        <h4>Izvoz povzetka</h4>
+        <div class="csv-export-controls">
+          <select id="exportMonthSelect"></select>
+          <select id="exportYearSelect"></select>
+          <button class="btn" id="exportCsvBtn">Izvozi</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL = "https://tizjimlwfkoniixbetgr.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpemppbWx3ZmtvbmlpeGJldGdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzNDgyNzgsImV4cCI6MjA3MDkyNDI3OH0.Oess7TCevLH3mO0aWxfL5M0Kb_XHEKUBYRYRXKQkdgk";
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  </script>
+  <script src="./auth-script.js"></script>
+</body>
+</html>

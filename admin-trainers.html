@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Admin - Upravljanje trenerjev</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.admin-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid var(--border);
+}
+
+.trainer-form {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin-bottom: 30px;
+}
+
+.trainer-form h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr auto;
+  gap: 15px;
+  align-items: end;
+}
+
+.form-grid input,
+.form-grid select {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.form-grid button {
+  padding: 10px 20px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.form-grid button:hover {
+  background: #0056b3;
+}
+
+.trainers-list {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+.trainers-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.trainers-table th,
+.trainers-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.trainers-table th {
+  background: #f8f9fa;
+  font-weight: 600;
+}
+
+.trainers-table tr:hover {
+  background: #f8f9fa;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-edit {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.btn-delete {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.btn-edit:hover {
+  background: #218838;
+}
+
+.btn-delete:hover {
+  background: #c82333;
+}
+
+.terms-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.term-tag {
+  background: #e9ecef;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  color: #495057;
+}
+
+.error-message {
+  color: #dc3545;
+  margin-top: 10px;
+  padding: 10px;
+  background: #f8d7da;
+  border-radius: 4px;
+}
+
+.success-message {
+  color: #28a745;
+  margin-top: 10px;
+  padding: 10px;
+  background: #d4edda;
+  border-radius: 4px;
+}
+</style>
+</head>
+<body>
+  <div class="admin-container">
+    <div class="admin-header">
+      <h1>Admin - Upravljanje trenerjev</h1>
+      <a href="auth-index.html" class="btn">Nazaj na aplikacijo</a>
+    </div>
+
+    <div class="trainer-form">
+      <h3>Dodaj/uredi trenerja</h3>
+      <form id="trainerForm">
+        <div class="form-grid">
+          <div>
+            <label for="trainerEmail">Email:</label>
+            <input type="email" id="trainerEmail" required>
+          </div>
+          <div>
+            <label for="trainerPassword">Geslo:</label>
+            <input type="password" id="trainerPassword" placeholder="Pustite prazno za obstoječega">
+          </div>
+          <div>
+            <label for="trainerFirstName">Ime:</label>
+            <input type="text" id="trainerFirstName" required>
+          </div>
+          <div>
+            <label for="trainerLastName">Priimek:</label>
+            <input type="text" id="trainerLastName" required>
+          </div>
+          <div>
+            <button type="submit" id="saveTrainerBtn">Shrani trenerja</button>
+          </div>
+        </div>
+      </form>
+      <div id="formMessage"></div>
+    </div>
+
+    <div class="trainers-list">
+      <h3>Seznam trenerjev</h3>
+      <table class="trainers-table">
+        <thead>
+          <tr>
+            <th>Ime in priimek</th>
+            <th>Email</th>
+            <th>Termini</th>
+            <th>Ustvarjen</th>
+            <th>Akcije</th>
+          </tr>
+        </thead>
+        <tbody id="trainersTableBody">
+          <tr>
+            <td colspan="5">Nalaganje...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL = "https://tizjimlwfkoniixbetgr.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpemppbWx3ZmtvbmlpeGJldGdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzNDgyNzgsImV4cCI6MjA3MDkyNDI3OH0.Oess7TCevLH3mO0aWxfL5M0Kb_XHEKUBYRYRXKQkdgk";
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let trainers = [];
+    let terms = [];
+    let editingTrainerId = null;
+
+    // UI elementi
+    const trainerForm = document.getElementById('trainerForm');
+    const trainerEmail = document.getElementById('trainerEmail');
+    const trainerPassword = document.getElementById('trainerPassword');
+    const trainerFirstName = document.getElementById('trainerFirstName');
+    const trainerLastName = document.getElementById('trainerLastName');
+    const saveTrainerBtn = document.getElementById('saveTrainerBtn');
+    const formMessage = document.getElementById('formMessage');
+    const trainersTableBody = document.getElementById('trainersTableBody');
+
+    // Naloži podatke
+    async function loadData() {
+      try {
+        // Naloži trenerje
+        const { data: trainersData, error: trainersError } = await supabase
+          .from('trainers')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (trainersError) throw trainersError;
+        trainers = trainersData || [];
+
+        // Naloži termine
+        const { data: termsData, error: termsError } = await supabase
+          .from('terms')
+          .select('*')
+          .order('day, start_time');
+
+        if (termsError) throw termsError;
+        terms = termsData || [];
+
+        renderTrainersTable();
+      } catch (error) {
+        console.error('Napaka pri nalaganju podatkov:', error);
+        showMessage('Napaka pri nalaganju podatkov', 'error');
+      }
+    }
+
+    // Prikaži seznam trenerjev
+    function renderTrainersTable() {
+      trainersTableBody.innerHTML = '';
+
+      if (trainers.length === 0) {
+        trainersTableBody.innerHTML = '<tr><td colspan="5">Ni trenerjev</td></tr>';
+        return;
+      }
+
+      trainers.forEach(trainer => {
+        const row = document.createElement('tr');
+        
+        // Poišči termine trenerja
+        const trainerTerms = getTrainerTerms(trainer.id);
+        const termNames = trainerTerms.map(termId => {
+          const term = terms.find(t => t.id === termId);
+          return term ? `${getDayName(term.day)} ${term.start_time}-${term.end_time}` : termId;
+        });
+
+        row.innerHTML = `
+          <td>${trainer.first_name} ${trainer.last_name}</td>
+          <td>${trainer.email}</td>
+          <td>
+            <div class="terms-list">
+              ${termNames.map(name => `<span class="term-tag">${name}</span>`).join('')}
+            </div>
+          </td>
+          <td>${new Date(trainer.created_at).toLocaleDateString('sl-SI')}</td>
+          <td>
+            <div class="action-buttons">
+              <button class="btn-edit" onclick="editTrainer('${trainer.id}')">Uredi</button>
+              <button class="btn-delete" onclick="deleteTrainer('${trainer.id}')">Zbriši</button>
+            </div>
+          </td>
+        `;
+        
+        trainersTableBody.appendChild(row);
+      });
+    }
+
+    // Poišči termine trenerja
+    async function getTrainerTerms(trainerId) {
+      try {
+        const { data, error } = await supabase
+          .from('trainer_terms')
+          .select('term_id')
+          .eq('trainer_id', trainerId);
+
+        if (error) throw error;
+        return data.map(t => t.term_id);
+      } catch (error) {
+        console.error('Napaka pri nalaganju terminov trenerja:', error);
+        return [];
+      }
+    }
+
+    // Pomožne funkcije
+    function getDayName(day) {
+      const days = ['', 'Pon', 'Tor', 'Sre', 'Čet', 'Pet', 'Sob', 'Ned'];
+      return days[day] || day;
+    }
+
+    function showMessage(message, type = 'success') {
+      formMessage.textContent = message;
+      formMessage.className = type === 'error' ? 'error-message' : 'success-message';
+      setTimeout(() => {
+        formMessage.textContent = '';
+        formMessage.className = '';
+      }, 5000);
+    }
+
+    function clearForm() {
+      trainerForm.reset();
+      editingTrainerId = null;
+      saveTrainerBtn.textContent = 'Shrani trenerja';
+    }
+
+    // Uredi trenerja
+    async function editTrainer(trainerId) {
+      const trainer = trainers.find(t => t.id === trainerId);
+      if (!trainer) return;
+
+      editingTrainerId = trainerId;
+      trainerEmail.value = trainer.email;
+      trainerFirstName.value = trainer.first_name;
+      trainerLastName.value = trainer.last_name;
+      trainerPassword.value = '';
+      trainerPassword.placeholder = 'Pustite prazno za obstoječega';
+      saveTrainerBtn.textContent = 'Posodobi trenerja';
+    }
+
+    // Zbriši trenerja
+    async function deleteTrainer(trainerId) {
+      if (!confirm('Ali ste prepričani, da želite zbrisati tega trenerja?')) {
+        return;
+      }
+
+      try {
+        // Najprej zbriši povezave s termini
+        const { error: termsError } = await supabase
+          .from('trainer_terms')
+          .delete()
+          .eq('trainer_id', trainerId);
+
+        if (termsError) throw termsError;
+
+        // Nato zbriši trenerja
+        const { error: trainerError } = await supabase
+          .from('trainers')
+          .delete()
+          .eq('id', trainerId);
+
+        if (trainerError) throw trainerError;
+
+        showMessage('Trener uspešno izbrisan');
+        loadData();
+      } catch (error) {
+        console.error('Napaka pri brisanju trenerja:', error);
+        showMessage('Napaka pri brisanju trenerja', 'error');
+      }
+    }
+
+    // Shrani trenerja
+    trainerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const email = trainerEmail.value.trim();
+      const password = trainerPassword.value.trim();
+      const firstName = trainerFirstName.value.trim();
+      const lastName = trainerLastName.value.trim();
+
+      if (!email || !firstName || !lastName) {
+        showMessage('Prosim, izpolnite vsa obvezna polja', 'error');
+        return;
+      }
+
+      try {
+        if (editingTrainerId) {
+          // Posodobi obstoječega trenerja
+          const { error } = await supabase
+            .from('trainers')
+            .update({
+              email: email,
+              first_name: firstName,
+              last_name: lastName
+            })
+            .eq('id', editingTrainerId);
+
+          if (error) throw error;
+
+          // Če je bilo vneseno novo geslo, posodobi tudi v auth
+          if (password) {
+            // Opomba: To zahteva admin pravice v Supabase
+            console.log('Geslo je bilo spremenjeno, vendar ga ni mogoče posodobiti preko klienta');
+          }
+
+          showMessage('Trener uspešno posodobljen');
+        } else {
+          // Ustvari novega trenerja
+          if (!password) {
+            showMessage('Geslo je obvezno za novega trenerja', 'error');
+            return;
+          }
+
+          // Najprej ustvari uporabnika v auth
+          const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+            email: email,
+            password: password,
+            email_confirm: true
+          });
+
+          if (authError) throw authError;
+
+          // Nato dodaj v tabelo trainers
+          const { data: trainerData, error: trainerError } = await supabase
+            .from('trainers')
+            .insert([{
+              email: email,
+              first_name: firstName,
+              last_name: lastName
+            }])
+            .select()
+            .single();
+
+          if (trainerError) throw trainerError;
+
+          showMessage('Trener uspešno ustvarjen');
+        }
+
+        clearForm();
+        loadData();
+      } catch (error) {
+        console.error('Napaka pri shranjevanju trenerja:', error);
+        showMessage('Napaka pri shranjevanju trenerja: ' + error.message, 'error');
+      }
+    });
+
+    // Inicializacija
+    loadData();
+  </script>
+</body>
+</html>
