@@ -207,6 +207,7 @@
           <tr>
             <th>Ime in priimek</th>
             <th>Email</th>
+            <th>Auth račun</th>
             <th>Termini</th>
             <th>Ustvarjen</th>
             <th>Akcije</th>
@@ -218,6 +219,28 @@
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- Modal za dodelitev terminov -->
+    <div id="assignTermsModal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+      <div class="modal-content" style="background-color: white; margin: 5% auto; padding: 20px; border-radius: 8px; width: 80%; max-width: 600px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <h3 id="assignTermsModalTitle">Dodeli termine trenerju</h3>
+          <span class="close" onclick="closeAssignTermsModal()" style="cursor: pointer; font-size: 24px;">&times;</span>
+        </div>
+        
+        <div id="assignTermsContent">
+          <p>Izberi termine za trenerja:</p>
+          <div id="termsCheckboxes" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin: 10px 0;">
+            <!-- Termini bodo dodani dinamično -->
+          </div>
+          
+          <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+            <button onclick="closeAssignTermsModal()" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Prekliči</button>
+            <button onclick="saveAssignedTerms()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Shrani</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -232,6 +255,7 @@
     let trainers = [];
     let terms = [];
     let editingTrainerId = null;
+    let assigningTermsTrainerId = null;
 
     // UI elementi
     const trainerForm = document.getElementById('trainerForm');
@@ -288,36 +312,66 @@
     }
 
     // Prikaži seznam trenerjev
-    function renderTrainersTable() {
+    async function renderTrainersTable() {
       trainersTableBody.innerHTML = '';
 
       if (trainers.length === 0) {
-        trainersTableBody.innerHTML = '<tr><td colspan="5">Ni trenerjev</td></tr>';
+        trainersTableBody.innerHTML = '<tr><td colspan="6">Ni trenerjev</td></tr>';
         return;
       }
 
+      // Naloži termine za vse trenerje
+      const trainerTermsMap = {};
+      for (const trainer of trainers) {
+        try {
+          const { data, error } = await supabase
+            .from('trainer_terms')
+            .select('term_id')
+            .eq('trainer_id', trainer.id);
+
+          if (error) {
+            console.error(`Napaka pri nalaganju terminov za trenerja ${trainer.id}:`, error);
+            trainerTermsMap[trainer.id] = [];
+          } else {
+            trainerTermsMap[trainer.id] = data.map(t => t.term_id);
+          }
+        } catch (error) {
+          console.error(`Napaka pri nalaganju terminov za trenerja ${trainer.id}:`, error);
+          trainerTermsMap[trainer.id] = [];
+        }
+      }
+
+      // Prikaži trenerje z njihovimi termini
       trainers.forEach(trainer => {
         const row = document.createElement('tr');
         
         // Poišči termine trenerja
-        const trainerTerms = getTrainerTerms(trainer.id);
+        const trainerTerms = trainerTermsMap[trainer.id] || [];
         const termNames = trainerTerms.map(termId => {
           const term = terms.find(t => t.id === termId);
-          return term ? `${getDayName(term.day)} ${term.start_time}-${term.end_time}` : termId;
+          return term ? `${getDayName(term.day)} ${term.start_time.slice(0, 5)}-${term.end_time.slice(0, 5)}` : termId;
         });
 
         row.innerHTML = `
           <td>${trainer.first_name} ${trainer.last_name}</td>
           <td>${trainer.email}</td>
           <td>
+            ${trainer.user_id ? 
+              '<span style="color: #28a745; font-weight: bold;">✓ Povezan</span>' : 
+              '<span style="color: #dc3545; font-weight: bold;">✗ Ni povezan</span>'
+            }
+          </td>
+          <td>
             <div class="terms-list">
-              ${termNames.map(name => `<span class="term-tag">${name}</span>`).join('')}
+              ${termNames.length > 0 ? termNames.map(name => `<span class="term-tag">${name}</span>`).join('') : '<span class="term-tag" style="background: #f8d7da; color: #721c24;">Ni terminov</span>'}
             </div>
           </td>
           <td>${new Date(trainer.created_at).toLocaleDateString('sl-SI')}</td>
           <td>
             <div class="action-buttons">
               <button class="btn-edit" onclick="editTrainer('${trainer.id}')">Uredi</button>
+              <button class="btn-edit" onclick="assignTerms('${trainer.id}')" style="background: #17a2b8;">Termini</button>
+              ${!trainer.user_id ? `<button class="btn-edit" onclick="linkAuthAccount('${trainer.id}')" style="background: #ffc107; color: #000;">Poveži Auth</button><button class="btn-edit" onclick="createAuthAccount('${trainer.id}')" style="background: #28a745;">Ustvari Auth</button>` : `<button class="btn-edit" onclick="resetPassword('${trainer.id}')" style="background: #fd7e14;">Ponastavi Geslo</button><button class="btn-edit" onclick="setNewPassword('${trainer.id}')" style="background: #e83e8c;">Nastavi Geslo</button><button class="btn-edit" onclick="sendConfirmationEmail('${trainer.id}')" style="background: #20c997;">Potrdi Email</button><button class="btn-edit" onclick="sendPasswordResetEmail('${trainer.id}')" style="background: #6f42c1;">Pošlji Email</button><button class="btn-delete" onclick="unlinkAuthAccount('${trainer.id}')" style="background: #6c757d;">Odstrani Auth</button><button class="btn-delete" onclick="deleteAuthAccount('${trainer.id}')" style="background: #dc3545;">Zbriši Auth</button>`}
               <button class="btn-delete" onclick="deleteTrainer('${trainer.id}')">Zbriši</button>
             </div>
           </td>
@@ -497,6 +551,382 @@
         showMessage('Napaka pri shranjevanju trenerja: ' + error.message, 'error');
       }
     });
+
+    // Funkcije za dodelitev terminov
+    async function assignTerms(trainerId) {
+      assigningTermsTrainerId = trainerId;
+      const trainer = trainers.find(t => t.id === trainerId);
+      
+      if (!trainer) {
+        showMessage('Trener ni najden', 'error');
+        return;
+      }
+
+      // Nastavi naslov modalnega okna
+      document.getElementById('assignTermsModalTitle').textContent = `Dodeli termine trenerju: ${trainer.first_name} ${trainer.last_name}`;
+
+      // Naloži trenutne termine trenerja
+      const { data: currentTerms, error } = await supabase
+        .from('trainer_terms')
+        .select('term_id')
+        .eq('trainer_id', trainerId);
+
+      if (error) {
+        console.error('Napaka pri nalaganju trenutnih terminov:', error);
+        showMessage('Napaka pri nalaganju trenutnih terminov', 'error');
+        return;
+      }
+
+      const currentTermIds = currentTerms.map(t => t.term_id);
+
+      // Ustvari checkboxe za vse termine
+      const termsCheckboxes = document.getElementById('termsCheckboxes');
+      termsCheckboxes.innerHTML = '';
+
+      terms.forEach(term => {
+        const isChecked = currentTermIds.includes(term.id);
+        const div = document.createElement('div');
+        div.style.marginBottom = '8px';
+        div.innerHTML = `
+          <label style="display: flex; align-items: center; cursor: pointer;">
+            <input type="checkbox" value="${term.id}" ${isChecked ? 'checked' : ''} style="margin-right: 8px;">
+            <span>${getDayName(term.day)} ${term.start_time.slice(0, 5)}-${term.end_time.slice(0, 5)} (${term.date_from} - ${term.date_to})</span>
+          </label>
+        `;
+        termsCheckboxes.appendChild(div);
+      });
+
+      // Prikaži modalno okno
+      document.getElementById('assignTermsModal').style.display = 'block';
+    }
+
+    function closeAssignTermsModal() {
+      document.getElementById('assignTermsModal').style.display = 'none';
+      assigningTermsTrainerId = null;
+    }
+
+    async function saveAssignedTerms() {
+      if (!assigningTermsTrainerId) return;
+
+      try {
+        // Zbriši vse trenutne termine trenerja
+        const { error: deleteError } = await supabase
+          .from('trainer_terms')
+          .delete()
+          .eq('trainer_id', assigningTermsTrainerId);
+
+        if (deleteError) throw deleteError;
+
+        // Izberi vse označene checkboxe
+        const checkboxes = document.querySelectorAll('#termsCheckboxes input[type="checkbox"]:checked');
+        const selectedTermIds = Array.from(checkboxes).map(cb => cb.value);
+
+        if (selectedTermIds.length > 0) {
+          // Dodaj nove termine
+          const newTerms = selectedTermIds.map(termId => ({
+            trainer_id: assigningTermsTrainerId,
+            term_id: termId
+          }));
+
+          const { error: insertError } = await supabase
+            .from('trainer_terms')
+            .insert(newTerms);
+
+          if (insertError) throw insertError;
+        }
+
+        showMessage('Termini uspešno dodeljeni trenerju');
+        closeAssignTermsModal();
+        loadData(); // Ponovno naloži podatke
+      } catch (error) {
+        console.error('Napaka pri dodelitvi terminov:', error);
+        showMessage('Napaka pri dodelitvi terminov: ' + error.message, 'error');
+      }
+    }
+
+    // Funkcija za povezovanje auth računov
+    async function linkAuthAccount(trainerId) {
+      const trainer = trainers.find(t => t.id === trainerId);
+      
+      if (!trainer) {
+        showMessage('Trener ni najden', 'error');
+        return;
+      }
+
+      const email = prompt(`Vnesite email obstoječega auth računa za trenerja ${trainer.first_name} ${trainer.last_name}:`, trainer.email);
+      
+      if (!email) return;
+
+      try {
+        // Poišči auth uporabnika
+        const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+        
+        if (authError) throw authError;
+
+        const authUser = authUsers.users.find(user => user.email === email);
+        
+        if (!authUser) {
+          showMessage('Auth račun s tem emailom ni najden', 'error');
+          return;
+        }
+
+        // Posodobi trenerja z user_id
+        const { error: updateError } = await supabase
+          .from('trainers')
+          .update({ user_id: authUser.id })
+          .eq('id', trainerId);
+
+        if (updateError) throw updateError;
+
+        showMessage('Auth račun uspešno povezan s trenerjem');
+        loadData(); // Ponovno naloži podatke
+      } catch (error) {
+        console.error('Napaka pri povezovanju auth računa:', error);
+        showMessage('Napaka pri povezovanju auth računa: ' + error.message, 'error');
+      }
+    }
+
+    // Funkcija za ustvarjanje auth računa
+    async function createAuthAccount(trainerId) {
+      const trainer = trainers.find(t => t.id === trainerId);
+      
+      if (!trainer) {
+        showMessage('Trener ni najden', 'error');
+        return;
+      }
+
+      const password = prompt(`Vnesite geslo za nov auth račun trenerja ${trainer.first_name} ${trainer.last_name}:`);
+      
+      if (!password) return;
+
+      if (password.length < 6) {
+        showMessage('Geslo mora biti dolgo vsaj 6 znakov', 'error');
+        return;
+      }
+
+      try {
+        // Ustvari auth uporabnika
+        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+          email: trainer.email,
+          password: password,
+          email_confirm: true,
+          user_metadata: {
+            first_name: trainer.first_name,
+            last_name: trainer.last_name,
+            role: 'trainer'
+          }
+        });
+
+        if (authError) throw authError;
+
+        // Posodobi trenerja z user_id
+        const { error: updateError } = await supabase
+          .from('trainers')
+          .update({ user_id: authData.user.id })
+          .eq('id', trainerId);
+
+        if (updateError) throw updateError;
+
+        showMessage('Auth račun uspešno ustvarjen in povezan s trenerjem');
+        loadData(); // Ponovno naloži podatke
+      } catch (error) {
+        console.error('Napaka pri ustvarjanju auth računa:', error);
+        showMessage('Napaka pri ustvarjanju auth računa: ' + error.message, 'error');
+      }
+    }
+
+    // Funkcija za odstranjevanje auth povezave
+    async function unlinkAuthAccount(trainerId) {
+      const trainer = trainers.find(t => t.id === trainerId);
+      
+      if (!trainer) {
+        showMessage('Trener ni najden', 'error');
+        return;
+      }
+
+      if (!confirm(`Ali ste prepričani, da želite odstraniti auth povezavo za trenerja ${trainer.first_name} ${trainer.last_name}?`)) {
+        return;
+      }
+
+      try {
+        // Odstrani user_id iz trenerja
+        const { error: updateError } = await supabase
+          .from('trainers')
+          .update({ user_id: null })
+          .eq('id', trainerId);
+
+        if (updateError) throw updateError;
+
+        showMessage('Auth povezava uspešno odstranjena');
+        loadData(); // Ponovno naloži podatke
+      } catch (error) {
+        console.error('Napaka pri odstranjevanju auth povezave:', error);
+        showMessage('Napaka pri odstranjevanju auth povezave: ' + error.message, 'error');
+      }
+    }
+
+    // Funkcija za brisanje auth računa
+    async function deleteAuthAccount(trainerId) {
+      const trainer = trainers.find(t => t.id === trainerId);
+      
+      if (!trainer) {
+        showMessage('Trener ni najden', 'error');
+        return;
+      }
+
+      if (!confirm(`OPOZORILO: To bo trajno izbrisalo auth račun za trenerja ${trainer.first_name} ${trainer.last_name}. Ali ste prepričani?`)) {
+        return;
+      }
+
+      try {
+        // Izbriši auth uporabnika
+        const { error: deleteAuthError } = await supabase.auth.admin.deleteUser(trainer.user_id);
+        
+        if (deleteAuthError) throw deleteAuthError;
+
+        // Odstrani user_id iz trenerja
+        const { error: updateError } = await supabase
+          .from('trainers')
+          .update({ user_id: null })
+          .eq('id', trainerId);
+
+        if (updateError) throw updateError;
+
+        showMessage('Auth račun uspešno izbrisan');
+        loadData(); // Ponovno naloži podatke
+      } catch (error) {
+        console.error('Napaka pri brisanju auth računa:', error);
+        showMessage('Napaka pri brisanju auth računa: ' + error.message, 'error');
+      }
+    }
+
+    // Funkcija za ponastavitev gesla
+    async function resetPassword(trainerId) {
+      const trainer = trainers.find(t => t.id === trainerId);
+      
+      if (!trainer) {
+        showMessage('Trener ni najden', 'error');
+        return;
+      }
+
+      if (!confirm(`Pošlji email za ponastavitev gesla trenerju ${trainer.first_name} ${trainer.last_name}?`)) {
+        return;
+      }
+
+      try {
+        // Pošlji email za ponastavitev gesla
+        const { error } = await supabase.auth.admin.generateLink({
+          type: 'recovery',
+          email: trainer.email
+        });
+
+        if (error) throw error;
+
+        showMessage('Email za ponastavitev gesla je bil poslan trenerju');
+      } catch (error) {
+        console.error('Napaka pri pošiljanju emaila za ponastavitev gesla:', error);
+        showMessage('Napaka pri pošiljanju emaila za ponastavitev gesla: ' + error.message, 'error');
+      }
+    }
+
+    // Funkcija za pošiljanje emaila za potrditev
+    async function sendConfirmationEmail(trainerId) {
+      const trainer = trainers.find(t => t.id === trainerId);
+      
+      if (!trainer) {
+        showMessage('Trener ni najden', 'error');
+        return;
+      }
+
+      if (!confirm(`Pošlji email za potrditev računa trenerju ${trainer.first_name} ${trainer.last_name}?`)) {
+        return;
+      }
+
+      try {
+        // Pošlji email za potrditev
+        const { error } = await supabase.auth.admin.generateLink({
+          type: 'signup',
+          email: trainer.email
+        });
+
+        if (error) throw error;
+
+        showMessage('Email za potrditev računa je bil poslan trenerju');
+      } catch (error) {
+        console.error('Napaka pri pošiljanju emaila za potrditev:', error);
+        showMessage('Napaka pri pošiljanju emaila za potrditev: ' + error.message, 'error');
+      }
+    }
+
+    // Funkcija za nastavljanje novega gesla
+    async function setNewPassword(trainerId) {
+      const trainer = trainers.find(t => t.id === trainerId);
+      
+      if (!trainer) {
+        showMessage('Trener ni najden', 'error');
+        return;
+      }
+
+      const newPassword = prompt(`Vnesite novo geslo za trenerja ${trainer.first_name} ${trainer.last_name}:`);
+      
+      if (!newPassword) return;
+
+      if (newPassword.length < 6) {
+        showMessage('Geslo mora biti dolgo vsaj 6 znakov', 'error');
+        return;
+      }
+
+      try {
+        // Posodobi geslo
+        const { error } = await supabase.auth.admin.updateUserById(trainer.user_id, {
+          password: newPassword
+        });
+
+        if (error) throw error;
+
+        showMessage('Geslo uspešno posodobljeno');
+      } catch (error) {
+        console.error('Napaka pri nastavljanju gesla:', error);
+        showMessage('Napaka pri nastavljanju gesla: ' + error.message, 'error');
+      }
+    }
+
+    // Funkcija za pošiljanje emaila za ponastavitev gesla
+    async function sendPasswordResetEmail(trainerId) {
+      const trainer = trainers.find(t => t.id === trainerId);
+      
+      if (!trainer) {
+        showMessage('Trener ni najden', 'error');
+        return;
+      }
+
+      if (!confirm(`Pošlji email za ponastavitev gesla trenerju ${trainer.first_name} ${trainer.last_name}?`)) {
+        return;
+      }
+
+      try {
+        // Pošlji email za ponastavitev gesla
+        const { error } = await supabase.auth.admin.generateLink({
+          type: 'recovery',
+          email: trainer.email
+        });
+
+        if (error) throw error;
+
+        showMessage('Email za ponastavitev gesla je bil poslan trenerju');
+      } catch (error) {
+        console.error('Napaka pri pošiljanju emaila za ponastavitev gesla:', error);
+        showMessage('Napaka pri pošiljanju emaila za ponastavitev gesla: ' + error.message, 'error');
+      }
+    }
+
+    // Zapri modalno okno ob kliku zunaj
+    window.onclick = function(event) {
+      const modal = document.getElementById('assignTermsModal');
+      if (event.target === modal) {
+        closeAssignTermsModal();
+      }
+    }
 
     // Inicializacija
     loadData();
