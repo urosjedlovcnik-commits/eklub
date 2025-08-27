@@ -1344,6 +1344,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (trainersError) throw trainersError;
         trainers = trainersData || [];
         
+        // Naloži nadomestne trenerje
+        await loadSubstituteTrainers();
+        
         const { data: attendanceData, error: attendanceError } = await supabase.from('attendance').select('*');
         if (attendanceError) throw attendanceError;
         attendance = attendanceData.reduce((acc, row) => {
@@ -1364,6 +1367,7 @@ document.addEventListener('DOMContentLoaded', () => {
         populateExportSelects();
         refreshSwimmerPanel();
         renderTrainersList();
+        await loadSubstituteTrainers();
         renderMonth();
 
       } catch (error) {
@@ -1374,4 +1378,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Začetni zagon
     loadDataFromSupabase();
+    
+    // Naloži nadomestne trenerje
+    async function loadSubstituteTrainers() {
+      try {
+        const { data: substituteData, error } = await supabase
+          .from('substitute_trainers')
+          .select(`
+            *,
+            original_trainer:trainers!substitute_trainers_original_trainer_id_fkey(first_name, last_name, email),
+            substitute_trainer:trainers!substitute_trainers_substitute_trainer_id_fkey(first_name, last_name, email),
+            term:terms(id, day, start_time, end_time)
+          `)
+          .order('substitute_date', { ascending: false });
+        
+        if (error) throw error;
+        
+        const elSubstituteTrainersList = document.getElementById('substituteTrainersList');
+        
+        if (substituteData && substituteData.length > 0) {
+          const html = substituteData.map(sub => `
+            <div class="substitute-item" style="border: 1px solid #007bff; padding: 12px; margin: 8px 0; border-radius: 6px; background: #f8f9fa;">
+              <div><strong>Termin:</strong> ${DAYNAME[sub.term.day]} ${sub.term.start_time}-${sub.term.end_time}</div>
+              <div><strong>Datum:</strong> ${new Date(sub.substitute_date).toLocaleDateString('sl-SI')}</div>
+              <div><strong>Originalni trener:</strong> ${sub.original_trainer.first_name} ${sub.original_trainer.last_name}</div>
+              <div><strong>Nadomestni trener:</strong> ${sub.substitute_trainer.first_name} ${sub.substitute_trainer.last_name}</div>
+              <div><strong>Razlog:</strong> ${sub.reason || 'Ni razloga'}</div>
+              <div class="muted">Ustvarjeno: ${new Date(sub.created_at).toLocaleDateString('sl-SI')}</div>
+            </div>
+          `).join('');
+          
+          elSubstituteTrainersList.innerHTML = html;
+        } else {
+          elSubstituteTrainersList.innerHTML = '<p class="muted">Ni nadomestnih dogovorov</p>';
+        }
+        
+      } catch (error) {
+        console.error('Napaka pri nalaganju nadomestnih trenerjev:', error);
+        const elSubstituteTrainersList = document.getElementById('substituteTrainersList');
+        elSubstituteTrainersList.innerHTML = '<p class="error">Napaka pri nalaganju podatkov</p>';
+      }
+    }
 });

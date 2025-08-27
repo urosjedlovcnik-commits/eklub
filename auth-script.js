@@ -17,6 +17,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const userGroups = document.getElementById('userGroups');
     const logoutBtn = document.getElementById('logoutBtn');
 
+    // UI elementi za nadomestne trenerje
+    const substituteTermSelect = document.getElementById('substituteTermSelect');
+    const substituteDateInput = document.getElementById('substituteDateInput');
+    const substituteTrainerSelect = document.getElementById('substituteTrainerSelect');
+    const substituteReasonInput = document.getElementById('substituteReasonInput');
+    const addSubstituteBtn = document.getElementById('addSubstituteBtn');
+    const mySubstitutionsList = document.getElementById('mySubstitutionsList');
+    const substituteObligationsList = document.getElementById('substituteObligationsList');
+    
+    // Modal elementi za nadomestne trenerje
+    const confirmSubstituteModal = document.getElementById('confirmSubstituteModal');
+    const substituteConfirmationDetails = document.getElementById('substituteConfirmationDetails');
+    const closeConfirmSubstituteModalBtn = document.getElementById('closeConfirmSubstituteModalBtn');
+    const cancelSubstituteBtn = document.getElementById('cancelSubstituteBtn');
+    const confirmSubstituteBtn = document.getElementById('confirmSubstituteBtn');
+
     // Preveri, če je uporabnik že prijavljen
     async function checkAuth() {
         const { data: { user } } = await supabase.auth.getUser();
@@ -24,11 +40,15 @@ document.addEventListener('DOMContentLoaded', () => {
             currentUser = user;
             await loadUserTerms();
             showMainApp();
-            // Naloži podatke za trenerja po tem, ko so userTerms naloženi
-            await loadDataFromSupabase();
-        } else {
-            showLoginScreen();
-        }
+                // Naloži podatke za trenerja po tem, ko so userTerms naloženi
+    await loadDataFromSupabase();
+    // Naloži podatke za nadomestne trenerje
+    await loadSubstituteData();
+    // Naloži nadomestne termine
+    await loadSubstituteTerms();
+} else {
+    showLoginScreen();
+}
     }
 
     // Naloži termine, ki pripadajo trenerju
@@ -139,6 +159,102 @@ document.addEventListener('DOMContentLoaded', () => {
             showError('Napaka pri odjavi: ' + error.message);
         }
     });
+
+    // ===== SPREMEMBA GESLA =====
+    
+    // UI elementi za spremembo gesla
+    const changePasswordBtn = document.getElementById('changePasswordBtn');
+    const changePasswordModal = document.getElementById('changePasswordModal');
+    const closeChangePasswordModalBtn = document.getElementById('closeChangePasswordModalBtn');
+    const cancelChangePasswordBtn = document.getElementById('cancelChangePasswordBtn');
+    const changePasswordForm = document.getElementById('changePasswordForm');
+    const currentPasswordInput = document.getElementById('currentPassword');
+    const newPasswordInput = document.getElementById('newPassword');
+    const confirmPasswordInput = document.getElementById('confirmPassword');
+    const passwordChangeError = document.getElementById('passwordChangeError');
+    const passwordChangeSuccess = document.getElementById('passwordChangeSuccess');
+
+    // Odpri modal za spremembo gesla
+    changePasswordBtn.addEventListener('click', () => {
+        changePasswordModal.classList.remove('hidden');
+        clearPasswordForm();
+    });
+
+    // Zapri modal za spremembo gesla
+    closeChangePasswordModalBtn.addEventListener('click', () => {
+        changePasswordModal.classList.add('hidden');
+        clearPasswordForm();
+    });
+
+    cancelChangePasswordBtn.addEventListener('click', () => {
+        changePasswordModal.classList.add('hidden');
+        clearPasswordForm();
+    });
+
+    // Sprememba gesla
+    changePasswordForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const currentPassword = currentPasswordInput.value;
+        const newPassword = newPasswordInput.value;
+        const confirmPassword = confirmPasswordInput.value;
+
+        // Preveri, če se gesli ujemata
+        if (newPassword !== confirmPassword) {
+            showPasswordChangeError('Novi gesli se ne ujemata.');
+            return;
+        }
+
+        // Preveri dolžino gesla
+        if (newPassword.length < 6) {
+            showPasswordChangeError('Novo geslo mora biti dolgo vsaj 6 znakov.');
+            return;
+        }
+
+        try {
+            // Posodobi geslo v Supabase
+            const { error } = await supabase.auth.updateUser({
+                password: newPassword
+            });
+
+            if (error) {
+                showPasswordChangeError('Napaka pri spremembi gesla: ' + error.message);
+                return;
+            }
+
+            showPasswordChangeSuccess('Geslo je bilo uspešno spremenjeno!');
+            
+            // Počisti obrazec in zapri modal po 2 sekundah
+            setTimeout(() => {
+                changePasswordModal.classList.add('hidden');
+                clearPasswordForm();
+            }, 2000);
+
+        } catch (error) {
+            showPasswordChangeError('Napaka pri spremembi gesla: ' + error.message);
+        }
+    });
+
+    // Pomožne funkcije za spremembo gesla
+    function showPasswordChangeError(message) {
+        passwordChangeError.textContent = message;
+        passwordChangeError.classList.remove('hidden');
+        passwordChangeSuccess.classList.add('hidden');
+    }
+
+    function showPasswordChangeSuccess(message) {
+        passwordChangeSuccess.textContent = message;
+        passwordChangeSuccess.classList.remove('hidden');
+        passwordChangeError.classList.add('hidden');
+    }
+
+    function clearPasswordForm() {
+        currentPasswordInput.value = '';
+        newPasswordInput.value = '';
+        confirmPasswordInput.value = '';
+        passwordChangeError.classList.add('hidden');
+        passwordChangeSuccess.classList.add('hidden');
+    }
 
     // Pomožne funkcije za sporočila
     function showError(message) {
@@ -382,6 +498,19 @@ document.addEventListener('DOMContentLoaded', () => {
       
       elModalTitle.textContent = `${dayName}, ${dateObj.toLocaleDateString('sl-SI')}`;
       elModalMeta.textContent = `${term.start_time} - ${term.end_time}`;
+      
+      // Preveri, ali je nadomestni trener za ta termin
+      const substituteKey = `${termId}-${date}`;
+      if (window.substituteTrainerInfo && window.substituteTrainerInfo[substituteKey]) {
+        const subInfo = window.substituteTrainerInfo[substituteKey];
+        elModalMeta.innerHTML = `
+          ${term.start_time} - ${term.end_time}
+          <br><small style="color: #007bff; font-weight: bold;">
+            Nadomestujem: ${subInfo.originalTrainer}
+            ${subInfo.reason ? `<br>Razlog: ${subInfo.reason}` : ''}
+          </small>
+        `;
+      }
       
       loadEventData(termId, date);
       elModal.setAttribute('aria-hidden', 'false');
@@ -824,25 +953,28 @@ document.addEventListener('DOMContentLoaded', () => {
         );
         console.log('Filtrirani plavalci:', swimmers);
 
-        // Naloži prisotnost za trenerjeve termine
-        const { data: attendanceData, error: attendanceError } = await supabase
-          .from('attendance')
-          .select('*')
-          .in('term_id', userTerms);
+            // Naloži prisotnost za trenerjeve termine
+    const { data: attendanceData, error: attendanceError } = await supabase
+      .from('attendance')
+      .select('*')
+      .in('term_id', userTerms);
 
-        if (attendanceError) throw attendanceError;
+    if (attendanceError) throw attendanceError;
 
-        attendance = {};
-        if (attendanceData) {
-          attendanceData.forEach(record => {
-            const key = `${record.term_id}-${record.date}`;
-            if (!attendance[key]) attendance[key] = {};
-            attendance[key][record.swimmer_id] = {
-              present: record.present,
-              note: record.note || ''
-            };
-          });
-        }
+    attendance = {};
+    if (attendanceData) {
+      attendanceData.forEach(record => {
+        const key = `${record.term_id}-${record.date}`;
+        if (!attendance[key]) attendance[key] = {};
+        attendance[key][record.swimmer_id] = {
+          present: record.present,
+          note: record.note || ''
+        };
+      });
+    }
+    
+    // Naloži podatke o nadomestnih trenerjih
+    await loadSubstituteTrainerInfo();
 
         // Naloži status terminov
         const { data: statusData, error: statusError } = await supabase
@@ -876,5 +1008,331 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Inicializacija
     // loadDataFromSupabase() se kliče v checkAuth() in pri prijavi
+
+    // ===== NADOMESTNI TRENERJI =====
+    
+    // Naloži podatke za nadomestne trenerje
+    async function loadSubstituteData() {
+        try {
+            // Nastavi današnji datum kot privzeto vrednost
+            const today = new Date().toISOString().split('T')[0];
+            substituteDateInput.value = today;
+            
+            // Naloži vse trenerje za izbiro nadomestnega trenerja
+            await loadAllTrainers();
+            
+            // Posodobi sezname nadomestnih dogovorov
+            await loadMySubstitutions();
+            await loadSubstituteObligations();
+            
+            // Nastavi event listenerje
+            setupSubstituteEventListeners();
+            
+        } catch (error) {
+            console.error('Napaka pri nalaganju podatkov za nadomestne trenerje:', error);
+        }
+    }
+    
+    // Naloži vse trenerje
+    async function loadAllTrainers() {
+        try {
+            const { data: trainersData, error } = await supabase
+                .from('trainers')
+                .select('*')
+                .neq('user_id', currentUser.id); // Izključi trenutnega trenerja
+            
+            if (error) throw error;
+            
+            // Posodobi select za nadomestne trenerje
+            substituteTrainerSelect.innerHTML = '<option value="">Izberi nadomestnega trenerja</option>';
+            trainersData.forEach(trainer => {
+                const option = document.createElement('option');
+                option.value = trainer.id;
+                option.textContent = `${trainer.first_name} ${trainer.last_name}`;
+                substituteTrainerSelect.appendChild(option);
+            });
+            
+            // Posodobi select za termine (samo trenerjevi termini)
+            substituteTermSelect.innerHTML = '<option value="">Izberi termin</option>';
+            TERMS.forEach(term => {
+                const option = document.createElement('option');
+                option.value = term.id;
+                option.textContent = `${DAYNAME[term.day]} ${term.start_time}-${term.end_time}`;
+                substituteTermSelect.appendChild(option);
+            });
+            
+        } catch (error) {
+            console.error('Napaka pri nalaganju trenerjev:', error);
+        }
+    }
+    
+    // Naloži moje nadomestne dogovore
+    async function loadMySubstitutions() {
+        try {
+            const { data: substitutionsData, error } = await supabase
+                .rpc('get_trainer_substitutions', { trainer_email: currentUser.email });
+            
+            if (error) throw error;
+            
+            if (substitutionsData && substitutionsData.length > 0) {
+                const html = substitutionsData.map(sub => `
+                    <div class="substitution-item" style="border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 5px;">
+                        <div><strong>Termin:</strong> ${sub.term_id}</div>
+                        <div><strong>Datum:</strong> ${new Date(sub.substitute_date).toLocaleDateString('sl-SI')}</div>
+                        <div><strong>${sub.is_substitute ? 'Nadomestujem za:' : 'Nadomestuje me:'}</strong> ${sub.other_trainer_name}</div>
+                        <div><strong>Razlog:</strong> ${sub.reason || 'Ni razloga'}</div>
+                        ${!sub.is_substitute ? `<button class="btn warn" onclick="deleteSubstitution('${sub.id}')" style="margin-top: 5px;">Prekliči</button>` : ''}
+                    </div>
+                `).join('');
+                
+                mySubstitutionsList.innerHTML = html;
+            } else {
+                mySubstitutionsList.innerHTML = '<p class="muted">Ni nadomestnih dogovorov</p>';
+            }
+            
+        } catch (error) {
+            console.error('Napaka pri nalaganju nadomestnih dogovorov:', error);
+            mySubstitutionsList.innerHTML = '<p class="error">Napaka pri nalaganju podatkov</p>';
+        }
+    }
+    
+    // Naloži nadomestne obveznosti
+    async function loadSubstituteObligations() {
+        try {
+            const { data: obligationsData, error } = await supabase
+                .from('substitute_trainers')
+                .select(`
+                    *,
+                    original_trainer:trainers!substitute_trainers_original_trainer_id_fkey(first_name, last_name),
+                    term:terms(id, day, start_time, end_time)
+                `)
+                .eq('substitute_trainer_id', currentUser.id);
+            
+            if (error) throw error;
+            
+            if (obligationsData && obligationsData.length > 0) {
+                const html = obligationsData.map(obligation => `
+                    <div class="obligation-item" style="border: 1px solid #007bff; padding: 10px; margin: 5px 0; border-radius: 5px; background-color: #f8f9fa;">
+                        <div><strong>Termin:</strong> ${DAYNAME[obligation.term.day]} ${obligation.term.start_time}-${obligation.term.end_time}</div>
+                        <div><strong>Datum:</strong> ${new Date(obligation.substitute_date).toLocaleDateString('sl-SI')}</div>
+                        <div><strong>Nadomestujem:</strong> ${obligation.original_trainer.first_name} ${obligation.original_trainer.last_name}</div>
+                        <div><strong>Razlog:</strong> ${obligation.reason || 'Ni razloga'}</div>
+                    </div>
+                `).join('');
+                
+                substituteObligationsList.innerHTML = html;
+            } else {
+                substituteObligationsList.innerHTML = '<p class="muted">Ni nadomestnih obveznosti</p>';
+            }
+            
+        } catch (error) {
+            console.error('Napaka pri nalaganju nadomestnih obveznosti:', error);
+            substituteObligationsList.innerHTML = '<p class="error">Napaka pri nalaganju podatkov</p>';
+        }
+    }
+    
+    // Nastavi event listenerje za nadomestne trenerje
+    function setupSubstituteEventListeners() {
+        // Dodaj nadomestnega trenerja
+        addSubstituteBtn.addEventListener('click', handleAddSubstitute);
+        
+        // Modal event listenerji
+        closeConfirmSubstituteModalBtn.addEventListener('click', () => {
+            confirmSubstituteModal.style.display = 'none';
+        });
+        
+        cancelSubstituteBtn.addEventListener('click', () => {
+            confirmSubstituteModal.style.display = 'none';
+        });
+        
+        confirmSubstituteBtn.addEventListener('click', handleConfirmSubstitute);
+        
+        // Zapri modal ob kliku zunaj
+        window.addEventListener('click', (event) => {
+            if (event.target === confirmSubstituteModal) {
+                confirmSubstituteModal.style.display = 'none';
+            }
+        });
+    }
+    
+    // Obdelaj dodajanje nadomestnega trenerja
+    async function handleAddSubstitute() {
+        const termId = substituteTermSelect.value;
+        const date = substituteDateInput.value;
+        const substituteTrainerId = substituteTrainerSelect.value;
+        const reason = substituteReasonInput.value;
+        
+        if (!termId || !date || !substituteTrainerId) {
+            alert('Prosim, izpolnite vsa obvezna polja');
+            return;
+        }
+        
+        // Pokaži modal za potrditev
+        const selectedTerm = TERMS.find(t => t.id === termId);
+        const selectedTrainer = Array.from(substituteTrainerSelect.options).find(opt => opt.value === substituteTrainerId);
+        
+        substituteConfirmationDetails.innerHTML = `
+            <p><strong>Termin:</strong> ${DAYNAME[selectedTerm.day]} ${selectedTerm.start_time}-${selectedTerm.end_time}</p>
+            <p><strong>Datum:</strong> ${new Date(date).toLocaleDateString('sl-SI')}</p>
+            <p><strong>Nadomestni trener:</strong> ${selectedTrainer.textContent}</p>
+            <p><strong>Razlog:</strong> ${reason || 'Ni razloga'}</p>
+        `;
+        
+        confirmSubstituteModal.style.display = 'block';
+        
+        // Shrani podatke za potrditev
+        confirmSubstituteModal.dataset.termId = termId;
+        confirmSubstituteModal.dataset.date = date;
+        confirmSubstituteModal.dataset.substituteTrainerId = substituteTrainerId;
+        confirmSubstituteModal.dataset.reason = reason;
+    }
+    
+    // Obdelaj potrditev nadomestnega trenerja
+    async function handleConfirmSubstitute() {
+        try {
+            const termId = confirmSubstituteModal.dataset.termId;
+            const date = confirmSubstituteModal.dataset.date;
+            const substituteTrainerId = confirmSubstituteModal.dataset.substituteTrainerId;
+            const reason = confirmSubstituteModal.dataset.reason;
+            
+            // Najdi trenerja
+            const { data: trainerData, error: trainerError } = await supabase
+                .from('trainers')
+                .select('id')
+                .eq('user_id', currentUser.id)
+                .single();
+            
+            if (trainerError) throw trainerError;
+            
+            // Dodaj nadomestnega trenerja
+            const { error: insertError } = await supabase
+                .from('substitute_trainers')
+                .insert({
+                    original_trainer_id: trainerData.id,
+                    substitute_trainer_id: substituteTrainerId,
+                    term_id: termId,
+                    substitute_date: date,
+                    reason: reason
+                });
+            
+            if (insertError) throw insertError;
+            
+            // Zapri modal in počisti podatke
+            confirmSubstituteModal.style.display = 'none';
+            substituteTermSelect.value = '';
+            substituteDateInput.value = new Date().toISOString().split('T')[0];
+            substituteTrainerSelect.value = '';
+            substituteReasonInput.value = '';
+            
+            // Posodobi sezname
+            await loadMySubstitutions();
+            
+            alert('Nadomestni trener je bil uspešno dodan!');
+            
+        } catch (error) {
+            console.error('Napaka pri dodajanju nadomestnega trenerja:', error);
+            alert('Napaka pri dodajanju nadomestnega trenerja');
+        }
+    }
+    
+    // Funkcija za brisanje nadomestnega dogovora (globalna)
+    window.deleteSubstitution = async function(substitutionId) {
+        if (!confirm('Ali ste prepričani, da želite preklicati ta nadomestni dogovor?')) {
+            return;
+        }
+        
+        try {
+            const { error } = await supabase
+                .from('substitute_trainers')
+                .delete()
+                .eq('id', substitutionId);
+            
+            if (error) throw error;
+            
+            // Posodobi seznam
+            await loadMySubstitutions();
+            
+            alert('Nadomestni dogovor je bil preklican!');
+            
+        } catch (error) {
+            console.error('Napaka pri brisanju nadomestnega dogovora:', error);
+            alert('Napaka pri brisanju nadomestnega dogovora');
+        }
+    };
+    
+    // Naloži nadomestne termine za trenutni dan
+    async function loadSubstituteTerms() {
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            
+            // Najdi trenerja
+            const { data: trainerData, error: trainerError } = await supabase
+                .from('trainers')
+                .select('id')
+                .eq('user_id', currentUser.id)
+                .single();
+            
+            if (trainerError) throw trainerError;
+            
+            // Poišči nadomestne termine za danes
+            const { data: substituteData, error: substituteError } = await supabase
+                .from('substitute_trainers')
+                .select(`
+                    *,
+                    term:terms(*)
+                `)
+                .eq('substitute_trainer_id', trainerData.id)
+                .eq('substitute_date', today);
+            
+            if (substituteError) throw substituteError;
+            
+            // Dodaj nadomestne termine k userTerms
+            if (substituteData && substituteData.length > 0) {
+                const substituteTermIds = substituteData.map(sub => sub.term_id);
+                userTerms = [...new Set([...userTerms, ...substituteTermIds])];
+                
+                // Posodobi prikaz
+                userGroups.textContent = `${userTerms.length} skupin (vključno z nadomestnimi)`;
+                
+                // Ponovno naloži podatke z novimi termini
+                await loadDataFromSupabase();
+            }
+            
+        } catch (error) {
+            console.error('Napaka pri nalaganju nadomestnih terminov:', error);
+        }
+    }
+    
+    // Naloži informacije o nadomestnih trenerjih
+    async function loadSubstituteTrainerInfo() {
+        try {
+            // Shrani informacije o nadomestnih trenerjih za prikaz v modalih
+            window.substituteTrainerInfo = {};
+            
+            const { data: substituteData, error } = await supabase
+                .from('substitute_trainers')
+                .select(`
+                    *,
+                    original_trainer:trainers!substitute_trainers_original_trainer_id_fkey(first_name, last_name),
+                    substitute_trainer:trainers!substitute_trainers_substitute_trainer_id_fkey(first_name, last_name)
+                `);
+            
+            if (error) throw error;
+            
+            if (substituteData) {
+                substituteData.forEach(sub => {
+                    const key = `${sub.term_id}-${sub.substitute_date}`;
+                    window.substituteTrainerInfo[key] = {
+                        originalTrainer: `${sub.original_trainer.first_name} ${sub.original_trainer.last_name}`,
+                        substituteTrainer: `${sub.substitute_trainer.first_name} ${sub.substitute_trainer.last_name}`,
+                        reason: sub.reason
+                    };
+                });
+            }
+            
+        } catch (error) {
+            console.error('Napaka pri nalaganju informacij o nadomestnih trenerjih:', error);
+        }
+    }
 
 });
