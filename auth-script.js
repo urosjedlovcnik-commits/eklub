@@ -29,8 +29,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const substituteObligationsList = document.getElementById('substituteObligationsList');
   
   // UI elementi za prisotnost trenerja
-  const trainerAttendanceSection = document.getElementById('trainerAttendanceSection');
-  const trainerAttendanceTable = document.getElementById('trainerAttendanceTable');
+  let trainerAttendanceSection = null;
+  let trainerAttendanceTable = null;
+  
+  // Funkcija za inicializacijo elementov
+  function initializeTrainerElements() {
+    trainerAttendanceSection = document.getElementById('trainerAttendanceSection');
+    trainerAttendanceTable = document.getElementById('trainerAttendanceTable');
+    console.log('Inicializacija elementov za trenerja:', {
+      trainerAttendanceSection: !!trainerAttendanceSection,
+      trainerAttendanceTable: !!trainerAttendanceTable
+    });
+  }
   
 
   
@@ -730,7 +740,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentEventTermId = null;
   let currentEventDate = null;
 
-  function openEventModal(termId, date) {
+  async function openEventModal(termId, date) {
     currentEventTermId = termId;
     currentEventDate = date;
     
@@ -756,10 +766,10 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
     }
     
-           loadEventData(termId, date);
-     checkAndLoadTrainerAttendance(termId, date);
-     elModal.setAttribute('aria-hidden', 'false');
-     elModal.style.display = 'flex';
+    await loadEventData(termId, date);
+    await checkAndLoadTrainerAttendance(termId, date);
+    elModal.setAttribute('aria-hidden', 'false');
+    elModal.style.display = 'flex';
   }
 
   async function loadEventData(termId, date) {
@@ -1929,6 +1939,19 @@ document.addEventListener('DOMContentLoaded', () => {
    async function checkAndLoadTrainerAttendance(termId, date) {
        try {
            console.log('checkAndLoadTrainerAttendance - termId:', termId, 'date:', date);
+           console.log('trainerAttendanceSection element:', trainerAttendanceSection);
+           console.log('trainerAttendanceTable element:', trainerAttendanceTable);
+           
+           // Preveri, ali obstajajo potrebni elementi
+           if (!trainerAttendanceSection) {
+               console.log('Element trainerAttendanceSection ne obstaja, preskačem');
+               return;
+           }
+           
+           if (!trainerAttendanceTable) {
+               console.log('Element trainerAttendanceTable ne obstaja, preskačem');
+               return;
+           }
            
            // Najdi trenerja
            const { data: trainerData, error: trainerError } = await supabase
@@ -1959,15 +1982,11 @@ document.addEventListener('DOMContentLoaded', () => {
            // Če je trener nadomestni trener, prikaži sekcijo za prisotnost trenerja
            if (substituteData) {
                console.log('Trener je nadomestni trener, prikazujem sekcijo za prisotnost');
-               if (trainerAttendanceSection) {
-                   trainerAttendanceSection.style.display = 'block';
-                   await loadTrainerAttendance(termId, date);
-               }
+               trainerAttendanceSection.style.display = 'block';
+               await loadTrainerAttendance(termId, date);
            } else {
                console.log('Trener ni nadomestni trener, skrivam sekcijo za prisotnost');
-               if (trainerAttendanceSection) {
-                   trainerAttendanceSection.style.display = 'none';
-               }
+               trainerAttendanceSection.style.display = 'none';
            }
            
        } catch (error) {
@@ -1982,6 +2001,13 @@ document.addEventListener('DOMContentLoaded', () => {
    async function loadTrainerAttendance(termId, date) {
        try {
            console.log('loadTrainerAttendance - termId:', termId, 'date:', date);
+           console.log('trainerAttendanceTable element:', trainerAttendanceTable);
+           
+           // Preveri, ali obstajajo potrebni elementi
+           if (!trainerAttendanceTable) {
+               console.log('Element trainerAttendanceTable ne obstaja, preskačem');
+               return;
+           }
            
            // Najdi trenerja
            const { data: trainerData, error: trainerError } = await supabase
@@ -2013,22 +2039,20 @@ document.addEventListener('DOMContentLoaded', () => {
            const isPresent = attendanceData ? attendanceData.present : false;
            const note = attendanceData ? attendanceData.note || '' : '';
            
-           if (trainerAttendanceTable) {
-               trainerAttendanceTable.innerHTML = `
-                   <tr>
-                       <td>${trainerData.first_name} ${trainerData.last_name} (nadomestni trener)</td>
-                       <td>
-                           <input type="checkbox" ${isPresent ? 'checked' : ''} 
-                                  onchange="updateTrainerAttendance('${trainerData.id}', '${termId}', '${date}', ${!isPresent}, '${note}')">
-                       </td>
-                       <td>
-                           <input type="text" value="${note}" 
-                                  onchange="updateTrainerAttendance('${trainerData.id}', '${termId}', '${date}', ${isPresent}, this.value)" 
-                                  placeholder="Opomba">
-                       </td>
-                   </tr>
-               `;
-           }
+           trainerAttendanceTable.innerHTML = `
+               <tr>
+                   <td>${trainerData.first_name} ${trainerData.last_name} (nadomestni trener)</td>
+                   <td>
+                       <input type="checkbox" ${isPresent ? 'checked' : ''} 
+                              onchange="updateTrainerAttendance('${trainerData.id}', '${termId}', '${date}', ${!isPresent}, '${note}')">
+                   </td>
+                   <td>
+                       <input type="text" value="${note}" 
+                              onchange="updateTrainerAttendance('${trainerData.id}', '${termId}', '${date}', ${isPresent}, this.value)" 
+                              placeholder="Opomba">
+                   </td>
+               </tr>
+           `;
            
        } catch (error) {
            console.error('Napaka pri nalaganju prisotnosti trenerja:', error);
@@ -2104,6 +2128,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       if (elAttendanceTable && elSubstitutionTable) {
           console.log('Elementi so naloženi, začenjam z autentikacijo...');
+          initializeTrainerElements();
           checkAuth();
           // Naloži podatke za nadomestne trenerje
           loadSubstituteData();
@@ -2120,6 +2145,7 @@ document.addEventListener('DOMContentLoaded', () => {
               // Posodobi globalne reference
               elAttendanceTable = retryAttendanceTable;
               elSubstitutionTable = retrySubstitutionTable;
+              initializeTrainerElements();
               checkAuth();
               // Naloži podatke za nadomestne trenerje
               loadSubstituteData();
