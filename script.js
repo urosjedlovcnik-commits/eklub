@@ -898,44 +898,40 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    async function deleteTerm(termId) {
-        if (!confirm("Ali ste prepričani, da želite izbrisati ta termin?")) {
-            return;
-        }
+    async function deleteTerm(e){
+  const termId = e.currentTarget.dataset.termId;
+  if(!confirm("Ste prepričani, da želite izbrisati ta termin? Plavalci bodo izključeni iz termina.")){ return; }
+  
+  try {
+    const { error: attError } = await supabase.from('attendance').delete().eq('term_id', termId);
+    if(attError) throw attError;
+    
+    const { data: termStatusData, error: tsError } = await supabase.from('term_status').delete().eq('term_id', termId);
+    if(tsError) throw tsError;
+    
+    const { data: swimmerData, error: swError } = await supabase.from('swimmers').select('*').contains('terms', [termId]);
+    if(swError) throw swError;
 
-        const { error: attError } = await supabase
-            .from('attendance')
-            .delete()
-            .eq('term_id', termId);
-        
-        if (attError) { console.error("Napaka pri brisanju prisotnosti termina:", attError); alert("Napaka pri brisanju prisotnosti termina. Preverite konzolo."); return; }
+    const updates = swimmerData.map(s => {
+      s.terms = s.terms.filter(t => t !== termId);
+      return { id: s.id, terms: s.terms };
+    });
 
-        const { error: statusError } = await supabase
-            .from('term_status')
-            .delete()
-            .eq('term_id', termId);
-        
-        if (statusError) { console.error("Napaka pri brisanju statusa termina:", statusError); alert("Napaka pri brisanju statusa termina. Preverite konzolo."); return; }
-
-        const { error: termError } = await supabase
-            .from('terms')
-            .delete()
-            .eq('id', termId);
-
-        if (termError) { console.error("Napaka pri brisanju termina:", termError); alert("Napaka pri brisanju termina. Preverite konzolo."); return; }
-        
-        for (const swimmer of swimmers) {
-          if (swimmer.terms.includes(termId)) {
-            swimmer.terms = swimmer.terms.filter(t => t !== termId);
-            await supabase.from('swimmers').update({ terms: swimmer.terms }).eq('id', swimmer.id);
-          }
-        }
-        
-        TERMS = TERMS.filter(t => t.id !== termId);
-        await refreshSwimmerPanel();
-        await renderMonth();
-        alert("Termin uspešno izbrisan.");
+    if (updates.length > 0) {
+        const { error: updateError } = await supabase.from('swimmers').upsert(updates);
+        if(updateError) throw updateError;
     }
+
+    const { error } = await supabase.from('terms').delete().eq('id', termId);
+    if(error) throw error;
+    
+    await fetchAllData();
+    alert("Termin uspešno izbrisan.");
+  } catch(error) {
+    console.error("Napaka pri brisanju termina:", error);
+    alert("Napaka pri brisanju termina. Preverite konzolo.");
+  }
+}
 
     function openEditTermModal(termId) {
       editingTermId = termId;
