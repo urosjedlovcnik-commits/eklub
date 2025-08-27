@@ -41,23 +41,32 @@ document.addEventListener('DOMContentLoaded', () => {
     async function checkAuth() {
         console.log('=== CHECK AUTH START ===');
         
-        // DODAJAM DEBUGGER - odpri Developer Tools (F12) in poglej Console
-        debugger;
-        
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-            console.log('Uporabnik je prijavljen:', user.email);
-            currentUser = user;
-            await loadUserTerms();
-            showMainApp();
-            // Naloži podatke za trenerja po tem, ko so userTerms naloženi
-            await loadDataFromSupabase();
-            // Naloži podatke za nadomestne trenerje
-            await loadSubstituteData();
-            // Naloži nadomestne termine
-            await loadSubstituteTerms();
-        } else {
-            console.log('Uporabnik ni prijavljen');
+        try {
+            const { data: { user }, error } = await supabase.auth.getUser();
+            
+            if (error) {
+                console.error('Error getting user:', error);
+                showLoginScreen();
+                return;
+            }
+            
+            if (user) {
+                console.log('Uporabnik je prijavljen:', user.email);
+                currentUser = user;
+                await loadUserTerms();
+                showMainApp();
+                // Naloži podatke za trenerja po tem, ko so userTerms naloženi
+                await loadDataFromSupabase();
+                // Naloži podatke za nadomestne trenerje
+                await loadSubstituteData();
+                // Naloži nadomestne termine
+                await loadSubstituteTerms();
+            } else {
+                console.log('Uporabnik ni prijavljen');
+                showLoginScreen();
+            }
+        } catch (error) {
+            console.error('Error in checkAuth:', error);
             showLoginScreen();
         }
         console.log('=== CHECK AUTH END ===');
@@ -69,9 +78,6 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('=== LOAD USER TERMS START ===');
             console.log('Current user ID:', currentUser.id);
             console.log('Current user email:', currentUser.email);
-            
-            // DODAJAM DEBUGGER - odpri Developer Tools (F12) in poglej Console
-            debugger;
             
             // Najprej poiščemo trenerja v tabeli trenerjev
             console.log('Iščem trenerja v tabeli trainers...');
@@ -90,6 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Posodobi prikaz z napako
                 userName.textContent = 'Napaka pri nalaganju podatkov';
                 userGroups.textContent = 'Napaka';
+                showError('Trener ni najden v bazi podatkov. Kontaktirajte administratorja.');
                 return;
             }
 
@@ -145,6 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Posodobi prikaz z napako
             userName.textContent = 'Napaka pri nalaganju';
             userGroups.textContent = 'Napaka';
+            showError('Napaka pri nalaganju podatkov trenerja: ' + error.message);
         }
     }
 
@@ -166,14 +174,17 @@ document.addEventListener('DOMContentLoaded', () => {
         
         console.log('=== LOGIN ATTEMPT START ===');
         
-        const email = emailInput.value;
+        const email = emailInput.value.trim();
         const password = passwordInput.value;
         
         console.log('Email:', email);
         console.log('Password length:', password.length);
 
-        // DODAJAM DEBUGGER - odpri Developer Tools (F12) in poglej Console
-        debugger;
+        // Preveri, če so podatki vneseni
+        if (!email || !password) {
+            showError('Prosim vnesite email in geslo.');
+            return;
+        }
 
         try {
             console.log('Attempting to sign in with Supabase...');
@@ -186,7 +197,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (error) {
                 console.error('Login error:', error);
-                showError(error.message);
+                
+                // Prevedi napake v slovenščino
+                let errorMessage = error.message;
+                if (error.message.includes('Invalid login credentials')) {
+                    errorMessage = 'Napačen email ali geslo.';
+                } else if (error.message.includes('Email not confirmed')) {
+                    errorMessage = 'Email ni potrjen. Preverite svojo pošto.';
+                } else if (error.message.includes('Too many requests')) {
+                    errorMessage = 'Preveč poskusov prijave. Počakajte nekaj minut.';
+                }
+                
+                showError(errorMessage);
                 return;
             }
 
@@ -1160,9 +1182,6 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('=== LOAD DATA FROM SUPABASE START ===');
             console.log('userTerms:', userTerms);
             
-            // DODAJAM DEBUGGER - odpri Developer Tools (F12) in poglej Console
-            debugger;
-            
             // Če trener nima terminov, ne naloži podatkov
             if (!userTerms || userTerms.length === 0) {
                 TERMS = [];
@@ -1174,29 +1193,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
         
-        // Naloži samo termine trenerja
-        const { data: termsData, error: termsError } = await supabase
-          .from('terms')
-          .select('*')
-          .in('id', userTerms);
+            // Naloži samo termine trenerja
+            const { data: termsData, error: termsError } = await supabase
+              .from('terms')
+              .select('*')
+              .in('id', userTerms);
 
-        if (termsError) throw termsError;
-        TERMS = termsData || [];
+            if (termsError) throw termsError;
+            TERMS = termsData || [];
 
-        // Naloži plavalce, ki pripadajo trenerjevim terminom
-        const { data: swimmersData, error: swimmersError } = await supabase
-          .from('swimmers')
-          .select('*');
+            // Naloži plavalce, ki pripadajo trenerjevim terminom
+            const { data: swimmersData, error: swimmersError } = await supabase
+              .from('swimmers')
+              .select('*');
 
-        if (swimmersError) throw swimmersError;
-        swimmers = swimmersData || [];
+            if (swimmersError) throw swimmersError;
+            swimmers = swimmersData || [];
 
-        // Filtriraj plavalce, ki pripadajo trenerjevim terminom
-        swimmers = swimmers.filter(s => 
-          !s.is_deleted && s.terms.some(termId => userTerms.includes(termId))
-        );
-        console.log('Filtrirani plavalci za trenerja:', swimmers);
-        console.log('userTerms:', userTerms);
+            // Filtriraj plavalce, ki pripadajo trenerjevim terminom
+            swimmers = swimmers.filter(s => 
+              !s.is_deleted && s.terms.some(termId => userTerms.includes(termId))
+            );
+            console.log('Filtrirani plavalci za trenerja:', swimmers);
+            console.log('userTerms:', userTerms);
 
             // Naloži prisotnost za trenerjeve termine
     const { data: attendanceData, error: attendanceError } = await supabase
@@ -1235,7 +1254,7 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         }
 
-        // Posodobi UI
+                // Posodobi UI
         renderCalendar();
         updateSummary();
         updateSwimmerSelect();
