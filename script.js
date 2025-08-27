@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const elSwimmerSelect = document.getElementById("swimmerSelect");
     const elTermSelect = document.getElementById("termSelect");
     const elAssignTermBtn = document.getElementById("assignTermBtn");
-    const elDeleteSwimmerBtn = document.getElementById("deleteSwimmerBtn");
+    const elDeleteSwimmerBtn = document.getElementById("deleteSwimmerBtn"); 
     const elSwimmerInfo = document.getElementById("swimmerInfo");
     const elCsvInput = document.getElementById("csvInput");
     const elCsvTermsInput = document.getElementById("csvTermsInput");
@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const elModal = document.getElementById("eventModal");
     const elModalTitle = document.getElementById("modalTitle");
     const elModalMeta = document.getElementById("modalMeta");
-    const elAttendanceTable = document.getElementById("attendanceTable");
+    const elAttendanceTable = document.getElementById("attendanceTable"); // Popravljena vrstica
     const elToggleEventBtn = document.getElementById("toggleEventBtn");
     const elCloseModalBtn = document.getElementById("closeModalBtn");
     const elModalSwimmerSelect = document.getElementById("modalSwimmerSelect");
@@ -328,8 +328,29 @@ document.addEventListener('DOMContentLoaded', () => {
           btnPresent.textContent = "Prisoten";
           btnPresent.className = "btn";
           if (isInactive(date, termId)) { btnPresent.disabled = true; }
-          if (status === true) { btnPresent.classList.add("ok"); } else { btnPresent.classList.add("neutral"); }
+          
+          const btnAbsent = document.createElement("button");
+          btnAbsent.textContent = "Odsoten";
+          btnAbsent.className = "btn";
+          if (isInactive(date, termId)) { btnAbsent.disabled = true; }
+
+          if (status === true) {
+              btnPresent.classList.add("ok");
+              btnAbsent.classList.add("neutral");
+          } else if (status === false) {
+              btnAbsent.classList.add("warn");
+              btnPresent.classList.add("neutral");
+          } else {
+              btnPresent.classList.add("neutral");
+              btnAbsent.classList.add("neutral");
+          }
+
           btnPresent.addEventListener("click", async ()=>{
+            btnAbsent.classList.remove("warn");
+            btnPresent.classList.add("ok");
+            btnPresent.classList.remove("neutral");
+            btnAbsent.classList.add("neutral");
+            
             const { error } = await supabase
               .from('attendance')
               .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: true }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
@@ -340,12 +361,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
           });
           
-          const btnAbsent = document.createElement("button");
-          btnAbsent.textContent = "Odsoten";
-          btnAbsent.className = "btn";
-          if (isInactive(date, termId)) { btnAbsent.disabled = true; }
-          if (status === false) { btnAbsent.classList.add("warn"); } else { btnAbsent.classList.add("neutral"); }
           btnAbsent.addEventListener("click", async ()=>{
+            btnPresent.classList.remove("ok");
+            btnAbsent.classList.add("warn");
+            btnAbsent.classList.remove("neutral");
+            btnPresent.classList.add("neutral");
+
             const { error } = await supabase
               .from('attendance')
               .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: false }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
@@ -362,6 +383,11 @@ document.addEventListener('DOMContentLoaded', () => {
           btnRemove.className = "btn remove-btn";
           if (isInactive(date, termId)) { btnRemove.disabled = true; }
           btnRemove.addEventListener("click", async ()=>{
+              btnPresent.classList.remove("ok");
+              btnAbsent.classList.remove("warn");
+              btnPresent.classList.add("neutral");
+              btnAbsent.classList.add("neutral");
+
               const { error } = await supabase
                 .from('attendance')
                 .delete()
@@ -419,13 +445,15 @@ document.addEventListener('DOMContentLoaded', () => {
         elInactiveNote.textContent = "";
         elInactiveNote.style.display = "none";
       }
+
       elNotesInput.value = termStatusObj.notes || "";
-      elSaveNotesBtn.textContent = "Shrani zapisek";
+      elSaveNotesBtn.textContent = "Shrani opombo";
       elSaveNotesBtn.onclick = async () => {
         const notes = elNotesInput.value;
         const { error } = await supabase
           .from('term_status')
           .upsert({ date: ymd, term_id: termId, notes: notes }, { onConflict: ['date', 'term_id'] });
+        
         if (error) {
           console.error("Napaka pri shranjevanju zapiska:", error);
           alert("Napaka pri shranjevanju zapiska. Preverite konzolo.");
@@ -434,75 +462,75 @@ document.addEventListener('DOMContentLoaded', () => {
           alert("Zapisek shranjen!");
         }
       };
-
+      
       elToggleEventBtn.onclick = async () => {
         const currentStatus = getTermStatus(date, termId).status;
         const currentNote = getTermStatus(date, termId).note;
+
         if (currentStatus === "active") {
-          elNoteInput.value = currentNote;
-          openModal(elNoteModal);
+            elNoteInput.value = currentNote;
+            openModal(elNoteModal);
         } else {
-          const { error } = await supabase
-            .from('term_status')
-            .upsert({ date: ymd, term_id: termId, status: "active", note: null }, { onConflict: ['date', 'term_id'] });
-          if (error) {
-            console.error('Napaka pri aktiviranju statusa:', error);
-            alert('Napaka pri aktivaciji. Preverite konzolo.');
-            return;
-          }
-          await refreshDayData(date);
-          await openEvent(date, termId);
-          renderMonth();
+            const { error } = await supabase
+                .from('term_status')
+                .upsert({ date: ymd, term_id: termId, status: "active", note: null }, { onConflict: ['date', 'term_id'] });
+            if (error) {
+                console.error('Napaka pri aktiviranju statusa:', error);
+                alert('Napaka pri aktivaciji. Preverite konzolo.');
+                return;
+            }
+            await refreshDayData(date);
+            await openEvent(date, termId);
+            renderMonth();
         }
       };
-      
+
       elConfirmNoteBtn.onclick = async () => {
         const note = elNoteInput.value.trim();
         if (!note) {
           alert("Prosim, vnesite opombo pred potrditvijo.");
           return;
         }
+        
         const ymd = iso(modalCtx.date);
         const termId = modalCtx.termId;
+
         const { error } = await supabase
           .from('term_status')
           .upsert({ date: ymd, term_id: termId, status: "inactive", note }, { onConflict: ['date', 'term_id'] });
+        
         if (error) {
           console.error('Napaka pri posodabljanju statusa:', error);
           alert('Napaka pri deaktivaciji. Preverite konzolo.');
           return;
         }
+
         closeModal(elNoteModal);
         await refreshDayData(modalCtx.date);
         await openEvent(modalCtx.date, modalCtx.termId);
         renderMonth();
       };
-      elCancelNoteBtn.onclick = () => {
-        closeModal(elNoteModal);
-      };
-      elCloseNoteModalBtn.onclick = () => {
-        closeModal(elNoteModal);
-      };
+
+      elCancelNoteBtn.onclick = () => { closeModal(elNoteModal); };
+
+      elCloseNoteModalBtn.onclick = () => { closeModal(elNoteModal); };
+
       elNoteModal.addEventListener("click", (e) => {
         if (e.target === elNoteModal) {
           closeModal(elNoteModal);
         }
       });
+
       openModal(elModal);
     }
     
-    function openModal(modalEl){
-      modalEl.style.display = "flex";
-      modalEl.setAttribute("aria-hidden", "false");
-    }
+    // POSODOBLJENA FUNKCIJA ZA ODPRANJE MODALA
+    function openModal(modalEl){ modalEl.classList.add("show"); modalEl.setAttribute("aria-hidden", "false"); }
+    // POSODOBLJENA FUNKCIJA ZA ZAPIRANJE MODALA
+    function closeModal(modalEl){ modalEl.classList.remove("show"); modalEl.setAttribute("aria-hidden", "true"); }
 
-    function closeModal(modalEl){
-      modalEl.style.display = "none";
-      modalEl.setAttribute("aria-hidden", "true");
-    }
-    
-    elCloseModalBtn.addEventListener("click", ()=>{
-      closeModal(elModal);
+    elCloseModalBtn.addEventListener("click", ()=>{ 
+      closeModal(elModal); 
       renderMonth();
     });
 
@@ -517,12 +545,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const swimmerId = elModalSwimmerSelect.value;
       const swimmer = swimmers.find(s=>s.id === swimmerId);
       if(!swimmer) return;
+
       const ymd = iso(modalCtx.date);
       const { error } = await supabase
         .from('attendance')
         .upsert({ date: ymd, term_id: modalCtx.termId, swimmer_id: swimmer.id, status: true }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
-      if (error) {
-        console.error('Napaka pri dodajanju plavalca v trening:', error);
+      
+      if (error) { 
+        console.error('Napaka pri dodajanju plavalca v trening:', error); 
       } else {
         await refreshDayData(modalCtx.date);
         openEvent(modalCtx.date, modalCtx.termId);
@@ -536,445 +566,659 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = {};
       const monthStart = new Date(year, month, 1);
       const monthEnd = new Date(year, month + 1, 0);
-      const today = new Date(); today.setHours(0,0,0,0);
-      
+      const today = new Date();
+      today.setHours(0,0,0,0);
+
       swimmers.forEach(s => {
         res[s.id] = { first: s.first_name, last: s.last_name, att: 0, pos: 0 };
       });
 
       const allAttendance = Object.entries(attendance);
       for (const [date, termData] of allAttendance) {
-        const d = new Date(date); d.setHours(0,0,0,0);
+        const d = new Date(date);
+        d.setHours(0,0,0,0);
         if (d >= monthStart && d <= monthEnd) {
           for (const termId in termData) {
-            if (isInactive(d, termId)) continue;
             for (const swimmerId in termData[termId]) {
               if (termData[termId][swimmerId] === true && res[swimmerId]) {
-                res[swimmerId].att++;
+                res[swimmerId].att += 1;
               }
             }
           }
         }
       }
 
-      for (const [date, termData] of allAttendance) {
-        const d = new Date(date); d.setHours(0,0,0,0);
-        if (d >= monthStart && d <= monthEnd) {
-          for (const termId in termData) {
-            if (isInactive(d, termId)) continue;
-            const term = termById(termId);
-            if (!term) continue;
+      const currentDate = new Date(monthStart);
+      while (currentDate <= monthEnd) {
+        const ymd = iso(currentDate);
+        const todaysTerms = getTermsForDate(currentDate);
 
-            const assignedToTerm = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted);
-            for (const s of assignedToTerm) {
-              if(res[s.id]) {
-                res[s.id].pos++;
+        todaysTerms.forEach(term => {
+          const termIsActive = getTermStatus(currentDate, term.id).status === "active";
+          
+          if (termIsActive) {
+            swimmers.forEach(s => {
+              if (res[s.id] && s.terms.includes(term.id)) {
+                
+                if (s.is_deleted) {
+                  if (currentDate <= today) {
+                    res[s.id].pos += 1;
+                  }
+                } else {
+                  res[s.id].pos += 1;
+                }
               }
-            }
+            });
           }
-        }
+        });
+        currentDate.setDate(currentDate.getDate() + 1);
       }
-
       return res;
     }
 
-    function renderSummary(data) {
-      elSummaryBox.innerHTML = "";
-      if (Object.keys(data).length === 0) {
-        elSummaryBox.innerHTML = "<p class='muted'>Ni plavalcev za prikaz.</p>";
+
+    function renderSummary(summaryData) {
+        let html = `<table><thead><tr><th>Plavalec</th><th>Obiskani</th><th>Možni</th><th>Delež (%)</th></tr></thead><tbody>`;
+        const rows = Object.values(summaryData).filter(r => r.pos > 0).sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first));
+        if(rows.length===0) html += `<tr><td colspan="4" class="muted">Ni plavalcev.</td></tr>`;
+        rows.forEach(r=>{
+            const pct = r.pos > 0 ? (r.att / r.pos * 100).toFixed(1) : "0.0";
+            html += `<tr><td>${r.first} ${r.last}</td><td>${r.att}</td><td>${r.pos}</td><td>${pct}</td></tr>`;
+        });
+        html += `</tbody></table>`;
+        elSummaryBox.innerHTML = html;
+    }
+
+
+    // ===== Panel: upravljanje plavalcev in terminov =====
+    async function refreshSwimmerPanel(){
+      elSwimmerSelect.innerHTML = "";
+      swimmers.slice().filter(s => !s.is_deleted).sort((a,b)=> (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name)).forEach(s=>{
+        const o=document.createElement("option"); o.value=s.id; o.textContent=`${s.first_name} ${s.last_name}`; elSwimmerSelect.appendChild(o);
+      });
+      showSwimmerInfo();
+      renderTermsList();
+    }
+
+    function showSwimmerInfo(){
+      const sid = elSwimmerSelect.value;
+      const s = swimmers.find(x=>x.id===sid);
+      if (!s) {
+        elSwimmerInfo.innerHTML = "";
+        elTermSelect.innerHTML = "";
+        elAssignTermBtn.disabled = true;
+        elDeleteSwimmerBtn.disabled = true;
         return;
       }
-      
-      const table = document.createElement("table");
-      const thead = document.createElement("thead");
-      const tbody = document.createElement("tbody");
-      thead.innerHTML = "<tr><th>Plavalec</th><th>Prisotnost</th><th>Procent</th></tr>";
-      
-      Object.values(data).sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first)).forEach(s => {
-        const tr = document.createElement("tr");
-        const percentage = s.pos > 0 ? (s.att / s.pos * 100).toFixed(0) : 0;
-        let pClass = "unfilled";
-        if (percentage > 90) pClass = "ok";
-        else if (percentage > 50) pClass = "partial";
-        
-        tr.innerHTML = `<td>${s.first} ${s.last}</td><td>${s.att} / ${s.pos}</td><td><span class="${pClass}">${percentage}%</span></td>`;
-        tbody.appendChild(tr);
-      });
-      table.appendChild(thead);
-      table.appendChild(tbody);
-      elSummaryBox.appendChild(table);
-    }
     
-    elPrev.addEventListener("click", ()=>{ viewDate.setMonth(viewDate.getMonth()-1); renderMonth(); });
-    elNext.addEventListener("click", ()=>{ viewDate.setMonth(viewDate.getMonth()+1); renderMonth(); });
-    
-    // ===== Urejanje plavalcev =====
-    function refreshSwimmerPanel(){
-      elSwimmerSelect.innerHTML = "";
-      elSwimmerInfo.innerHTML = "";
-      const opt = document.createElement("option"); opt.textContent = "Izberi plavalca..."; opt.disabled=true; opt.selected=true; elSwimmerSelect.appendChild(opt);
+      const chips = s.terms.map(id => {
+        const t = termById(id);
+        const termLabel = t ? `${DAY_SHORT_NAME[t.day]} ${t.start_time.slice(0, 5)}–${t.end_time.slice(0, 5)}` : id;
+        return `
+            <span class="chip" data-term-id="${id}">
+                ${termLabel} 
+                <button class="remove-term-btn">✖</button>
+            </span>
+        `;
+      }).join(" ");
+      elSwimmerInfo.innerHTML = `<div><strong>Termini:</strong> ${chips || "<span class='muted'>ni dodeljenih</span>"}</div>`;
+      
+      document.querySelectorAll('.remove-term-btn').forEach(button => {
+        button.addEventListener('click', async (event) => {
+          const chipElement = event.target.closest('.chip');
+          if (!chipElement) return;
 
-      swimmers.filter(s=>!s.is_deleted).sort((a,b)=>(a.last_name+a.first_name).localeCompare(b.last_name+b.first_name)).forEach(s=>{
-        const opt = document.createElement("option"); opt.value=s.id; opt.textContent = `${s.first_name} ${s.last_name}`; elSwimmerSelect.appendChild(opt);
+          const termIdToRemove = chipElement.dataset.termId;
+          const swimmerToUpdate = swimmers.find(x => x.id === sid);
+          if (!swimmerToUpdate) return;
+    
+          swimmerToUpdate.terms = swimmerToUpdate.terms.filter(x => x !== termIdToRemove);
+    
+          const { error } = await supabase
+            .from('swimmers')
+            .update({ terms: swimmerToUpdate.terms })
+            .eq('id', sid);
+    
+          if (error) {
+            alert('Napaka pri odstranjevanju termina.');
+            console.error(error);
+          } else {
+            showSwimmerInfo();
+            renderMonth();
+            alert("Termin odstranjen in shranjen.");
+          }
+        });
       });
+    
+      elTermSelect.innerHTML = "";
+      const assignedTermIds = new Set(s.terms);
+      const unassignedTerms = TERMS.filter(t => !assignedTermIds.has(t.id));
+    
+      if (unassignedTerms.length > 0) {
+        unassignedTerms.forEach(t => {
+          const o = document.createElement("option");
+          o.value = t.id;
+          o.textContent = t.label;
+          elTermSelect.appendChild(o);
+        });
+        elAssignTermBtn.disabled = false;
+      } else {
+        const o = document.createElement("option");
+        o.textContent = "Vsi termini so že dodeljeni.";
+        o.disabled = true;
+        elTermSelect.appendChild(o);
+        elAssignTermBtn.disabled = true;
+      }
+      elDeleteSwimmerBtn.disabled = false;
     }
+    elSwimmerSelect.addEventListener("change", showSwimmerInfo);
 
     elAddSwimmerBtn.addEventListener("click", async ()=>{
-      const first=elNewFirst.value.trim(), last=elNewLast.value.trim();
-      if(!first || !last){ alert("Prosim, vnesite ime in priimek."); return; }
-      const { data, error } = await supabase.from('swimmers').insert([{ first_name:first, last_name:last, is_deleted: false, terms: [] }]).select();
-      if(error){ console.error('Napaka pri dodajanju plavalca:', error); alert("Napaka pri dodajanju. Preverite konzolo."); return; }
-      swimmers.push(data[0]);
-      elNewFirst.value=""; elNewLast.value="";
-      refreshSwimmerPanel();
-      renderMonth();
-    });
-
-    elSwimmerSelect.addEventListener("change", (e)=>{
-      const s = swimmers.find(s=>s.id === e.target.value);
-      if(!s) return;
-      elSwimmerInfo.innerHTML = `
-        <div class="form-group">
-          <p><strong>Ime:</strong> ${s.first_name}</p>
-          <p><strong>Priimek:</strong> ${s.last_name}</p>
-          <p><strong>Dodeljeni termini:</strong></p>
-          <ul id="assignedTermsList"></ul>
-        </div>
-      `;
-      const assignedList = document.getElementById("assignedTermsList");
-      const unassignedTerms = TERMS.filter(t=>!s.terms.includes(t.id)).sort((a,b)=>a.label.localeCompare(b.label));
-
-      if (unassignedTerms.length > 0) {
-        elTermSelect.innerHTML = "";
-        const opt = document.createElement("option"); opt.textContent = "Dodaj termin..."; opt.disabled=true; opt.selected=true; elTermSelect.appendChild(opt);
-        unassignedTerms.forEach(t => {
-          const opt = document.createElement("option"); opt.value = t.id; opt.textContent = t.label; elTermSelect.appendChild(opt);
-        });
-        elTermSelect.style.display = "block";
-        elAssignTermBtn.style.display = "block";
-      } else {
-        elTermSelect.style.display = "none";
-        elAssignTermBtn.style.display = "none";
+      const f = elNewFirst.value.trim(), l = elNewLast.value.trim();
+      if (!f || !l) { alert("Vnesi ime in priimek."); return; }
+      if(swimmers.some(s => s.first_name.toLowerCase() === f.toLowerCase() && s.last_name.toLowerCase() === l.toLowerCase() && !s.is_deleted)) {
+        alert("Plavalec s tem imenom že obstaja."); return;
       }
-      
-      elDeleteSwimmerBtn.style.display = "block";
-      elDeleteSwimmerBtn.dataset.swimmerId = s.id;
-      
-      renderAssignedTerms(s);
-    });
+      const newSwimmer = mkSwimmer(f, l, []);
+      const { data, error } = await supabase
+        .from('swimmers')
+        .insert([newSwimmer])
+        .select();
 
-    function renderAssignedTerms(swimmer){
-      const list = document.getElementById("assignedTermsList");
-      list.innerHTML = "";
-      swimmer.terms.sort((a,b)=> a.localeCompare(b)).forEach(termId=>{
-        const term = termById(termId);
-        if(!term) return;
-        const li = document.createElement("li");
-        li.innerHTML = `${term.label} <button class="btn remove-btn" data-term-id="${termId}" data-swimmer-id="${swimmer.id}">✖</button>`;
-        list.appendChild(li);
-      });
-      document.querySelectorAll("#assignedTermsList .remove-btn").forEach(btn=>{
-        btn.addEventListener("click", removeTermFromSwimmer);
-      });
-    }
+      if (error) {
+        alert('Napaka pri dodajanju plavalca.');
+        console.error(error);
+      } else {
+        swimmers.push(data[0]);
+        elNewFirst.value = ""; elNewLast.value = "";
+        refreshSwimmerPanel();
+        renderMonth();
+        alert("Plavalec uspešno dodan.");
+      }
+    });
 
     elAssignTermBtn.addEventListener("click", async ()=>{
-      const swimmerId = elSwimmerSelect.value;
-      const termId = elTermSelect.value;
-      if(!swimmerId || !termId) return;
-      const s = swimmers.find(s=>s.id===swimmerId);
-      if(!s) return;
-      const newTerms = [...s.terms, termId];
-      const { error } = await supabase.from('swimmers').update({ terms: newTerms }).eq('id', swimmerId);
-      if(error){ console.error('Napaka pri dodeljevanju termina:', error); }
-      s.terms = newTerms;
-      refreshSwimmerPanel();
-      elSwimmerSelect.value = swimmerId;
-      elSwimmerSelect.dispatchEvent(new Event('change'));
-      renderMonth();
-    });
+      const sid = elSwimmerSelect.value, tid = elTermSelect.value;
+      const s = swimmers.find(x=>x.id===sid); if(!s) return;
+      if (!s.terms.includes(tid)) s.terms.push(tid);
 
-    elDeleteSwimmerBtn.addEventListener("click", async (e)=>{
-      const swimmerId = e.target.dataset.swimmerId;
-      if(!confirm("Ste prepričani, da želite izbrisati tega plavalca?")){ return; }
-      const { error } = await supabase.from('swimmers').update({ is_deleted: true }).eq('id', swimmerId);
-      if(error){ console.error('Napaka pri brisanju plavalca:', error); alert("Napaka pri brisanju. Preverite konzolo."); return; }
-      swimmers = swimmers.filter(s=>s.id!==swimmerId);
-      refreshSwimmerPanel();
-      renderMonth();
-    });
+      const { error } = await supabase
+        .from('swimmers')
+        .update({ terms: s.terms })
+        .eq('id', sid);
 
-    async function removeTermFromSwimmer(e){
-      const swimmerId = e.target.dataset.swimmerId;
-      const termId = e.target.dataset.termId;
-      const s = swimmers.find(s=>s.id===swimmerId);
-      if(!s) return;
-      s.terms = s.terms.filter(t => t !== termId);
-      const { error } = await supabase.from('swimmers').update({ terms: s.terms }).eq('id', swimmerId);
-      if(error){ console.error('Napaka pri odstranjevanju termina:', error); }
-      refreshSwimmerPanel();
-      elSwimmerSelect.value = swimmerId;
-      elSwimmerSelect.dispatchEvent(new Event('change'));
-      renderMonth();
-    }
-
-    // ===== Uvoz in izvoz =====
-    elCsvInput.addEventListener("change", async (e)=>{
-      const file = e.target.files[0];
-      if(!file) return;
-      const text = await file.text();
-      const rows = text.split("\n").map(r=>r.trim()).filter(Boolean);
-      const header = rows[0].split(',').map(h=>h.trim());
-      const data = rows.slice(1).map(r=>{
-        const values=r.split(',').map(v=>v.trim());
-        return header.reduce((acc,h,i)=>{acc[h]=values[i] || ""; return acc;}, {});
-      });
-
-      const newSwimmers = data.map(d=>{
-        const terms = d.terms ? d.terms.split(',').map(t=>t.trim()).filter(Boolean) : [];
-        return { first_name: d.first_name, last_name: d.last_name, terms, is_deleted: false };
-      });
-      
-      const today = iso(new Date());
-
-      try {
-        await supabase.from('swimmers').delete().not('id', 'is.null');
-        await supabase.from('swimmers').insert(newSwimmers);
-        await supabase.from('attendance').delete().gte('date', today);
-        
-        await fetchAllData();
-        alert("Plavalci uspešno uvoženi.");
-      } catch (error) {
-        console.error("Napaka pri uvozu plavalcev:", error);
-        alert("Napaka pri uvozu. Preverite konzolo.");
-      }
-    });
-
-    elCsvTermsInput.addEventListener("change", async (e)=>{
-      const file = e.target.files[0];
-      if(!file) return;
-      const text = await file.text();
-      const rows = text.split("\n").map(r=>r.trim()).filter(Boolean);
-      const header = rows[0].split(',').map(h=>h.trim());
-      const data = rows.slice(1).map(r=>{
-        const values=r.split(',').map(v=>v.trim());
-        return header.reduce((acc,h,i)=>{acc[h]=values[i] || ""; a}, {});
-      });
-
-      const newTerms = data.map(d=>{
-        const dateFrom = parseDate(d.date_from);
-        const dateTo = parseDate(d.date_to);
-        const day = parseInt(d.day);
-        
-        if(!dateFrom || !dateTo || isNaN(day)) {
-          console.error(`Napaka pri razčlenjevanju vrstice: ${d.id}`);
-          return null;
-        }
-        
-        return {
-          id: d.id,
-          label: d.label || d.id,
-          day,
-          start_time: d.start_time,
-          end_time: d.end_time,
-          date_from: dateFrom,
-          date_to: dateTo
-        };
-      }).filter(Boolean);
-
-      try {
-        await supabase.from('terms').delete().not('id', 'is.null');
-        await supabase.from('terms').insert(newTerms);
-        await fetchAllData();
-        alert("Termini uspešno uvoženi.");
-      } catch(error) {
-        console.error("Napaka pri uvozu terminov:", error);
-        alert("Napaka pri uvozu terminov. Preverite konzolo.");
+      if (error) {
+        alert('Napaka pri dodeljevanju termina.');
+        console.error(error);
+      } else {
+        showSwimmerInfo();
+        renderMonth();
+        alert("Termin dodeljen in shranjen.");
       }
     });
     
-    function populateExportSelects() {
-      const currentYear = new Date().getFullYear();
-      const currentMonth = new Date().getMonth();
-
-      elExportMonthSelect.innerHTML = "";
-      for (let i = 0; i < 12; i++) {
-        const date = new Date(currentYear, i, 1);
-        const option = document.createElement("option");
-        option.value = i;
-        option.textContent = date.toLocaleDateString("sl-SI", { month: "long" });
-        if (i === currentMonth) {
-          option.selected = true;
-        }
-        elExportMonthSelect.appendChild(option);
+    elDeleteSwimmerBtn.addEventListener("click", async () => {
+      const sid = elSwimmerSelect.value;
+      if (!sid) {
+        alert("Prosim, izberite plavalca, ki ga želite izbrisati.");
+        return;
       }
 
-      elExportYearSelect.innerHTML = "";
-      const startYear = 2024;
-      for (let i = startYear; i <= currentYear + 1; i++) {
-        const option = document.createElement("option");
-        option.value = i;
-        option.textContent = i;
-        if (i === currentYear) {
-          option.selected = true;
-        }
-        elExportYearSelect.appendChild(option);
-      }
-    }
+      try {
+        const today = iso(new Date());
 
-    elExportCsvBtn.addEventListener("click", async () => {
-      const year = elExportYearSelect.value;
-      const month = elExportMonthSelect.value;
-      const monthIndex = parseInt(month, 10);
-      
-      const summaryData = calculateSummaryData(year, monthIndex);
-      
-      const header = ["Ime", "Priimek", "Prisotnost", "Procent Prisotnosti"];
-      const csvContent = "data:text/csv;charset=utf-8," 
-                         + header.join(",") + "\n"
-                         + Object.values(summaryData).map(s => {
-                           const percentage = s.pos > 0 ? (s.att / s.pos * 100).toFixed(0) : 0;
-                           return `${s.first},${s.last},${s.att}/${s.pos},"${percentage}%"`;
-                         }).join("\n");
-      
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement("a");
-      link.setAttribute("href", encodedUri);
-      link.setAttribute("download", `povzetek_prisotnosti_${year}-${monthIndex + 1}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+        const { error: attError } = await supabase
+          .from('attendance')
+          .delete()
+          .eq('swimmer_id', sid)
+          .gte('date', today);
+
+        if (attError) throw attError;
+
+        const { error: swimmerError } = await supabase
+          .from('swimmers')
+          .update({ is_deleted: true })
+          .eq('id', sid);
+
+        if (swimmerError) throw swimmerError;
+        
+        const deletedSwimmer = swimmers.find(s => s.id === sid);
+        if (deletedSwimmer) {
+            deletedSwimmer.is_deleted = true;
+        }
+        
+        await refreshSwimmerPanel();
+        await renderMonth();
+        alert("Plavalec uspešno izbrisan.");
+      } catch (error) {
+        console.error("Napaka pri brisanju plavalca:", error);
+        alert("Napaka pri brisanju plavalca. Prosim, preverite konzolo za podrobnosti. Morda gre za težavo z dovolilnicami v Supabase.");
+      }
     });
 
-    // ===== Upravljanje terminov =====
+
+    // ===== NOV TERMIN - DODANA FUNKCIJA =====
     elAddTermBtn.addEventListener("click", async ()=>{
-      const id = elNewTermDay.value + "-" + elNewTermStart.value.replace(':','-') + "-" + elNewTermEnd.value.replace(':','-');
-      const day = elNewTermDay.value;
+      const day = parseInt(elNewTermDay.value, 10);
       const start = elNewTermStart.value;
       const end = elNewTermEnd.value;
       const dateFrom = parseDate(elNewTermDateFrom.value);
       const dateTo = parseDate(elNewTermDateTo.value);
 
-      if(!id || !day || !start || !end || !dateFrom || !dateTo) {
-        alert("Prosim, izpolnite vsa polja za termin.");
+      if (!day || !start || !end || !dateFrom || !dateTo) {
+        alert("Prosim, izpolni vsa polja in preveri format datuma (dd / mm / yyyy).");
         return;
       }
-      
-      const newTerm = { id, day: DAY_SHORT_MAP[day.toLowerCase()], start_time: start, end_time: end, date_from: dateFrom, date_to: dateTo, label: `${DAY_SHORT_NAME[DAY_SHORT_MAP[day.toLowerCase()]]} ${start}-${end}`};
-      
-      try {
-        const { error } = await supabase.from('terms').insert([newTerm]);
-        if(error) throw error;
+
+      const newTermId = `${DAYNAME[day].toLowerCase().slice(0,3)}-${start.replace(':','-')}-${end.replace(':','-')}`;
+      const newLabel = `${DAYNAME[day]} ${start}–${end}`;
+
+      const newTerm = {
+        id: newTermId,
+        day: day,
+        start_time: start,
+        end_time: end,
+        label: newLabel,
+        date_from: dateFrom,
+        date_to: dateTo
+      };
+
+      const { data, error } = await supabase
+        .from('terms')
+        .upsert([newTerm]);
+
+      if (error) {
+        alert("Napaka pri dodajanju termina. Morda že obstaja ID s to kombinacijo dneva in časa.");
+        console.error(error);
+      } else {
         TERMS.push(newTerm);
-        renderTermList();
-        elNewTermDateFrom.value=""; elNewTermDateTo.value="";
-        alert("Termin uspešno dodan.");
-      } catch (error) {
-        console.error("Napaka pri dodajanju termina:", error);
-        alert("Napaka pri dodajanju termina. Preverite konzolo.");
+        elNewTermStart.value = "";
+        elNewTermEnd.value = "";
+        elNewTermDateFrom.value = "";
+        elNewTermDateTo.value = "";
+
+        await refreshSwimmerPanel();
+        await renderMonth();
+        alert("Nov termin uspešno dodan!");
       }
     });
 
-    function renderTermList(){
+    // ===== UREJANJE TERMINOV - SPREMENJENA FUNKCIJA =====
+    let editingTermId = null;
+
+    function renderTermsList() {
       elTermList.innerHTML = "";
-      TERMS.sort((a,b)=>a.label.localeCompare(b.label)).forEach(t=>{
-        const li=document.createElement("li");
-        li.innerHTML = `
-          ${t.label} (od: ${formatDate(t.date_from)}, do: ${formatDate(t.date_to)})
-          <button class="btn neutral edit-btn" data-term-id="${t.id}">Uredi</button>
-          <button class="btn remove-btn delete-btn" data-term-id="${t.id}">✖</button>
-        `;
-        elTermList.appendChild(li);
-      });
-      // Event delegation, da ne dodajamo poslušalcev vsakič znova
-      // Popravljeno za bolj robustno delovanje v vseh brskalnikih
-      document.querySelectorAll("#termList .edit-btn").forEach(btn=>{
-        btn.addEventListener("click", openEditTermModal);
+      
+      const activeTerms = TERMS.filter(t => !isPast(new Date(t.date_to)));
+      
+      if(activeTerms.length === 0){
+        elTermList.textContent = "Ni aktivnih terminov.";
+        elTermList.style.color = "var(--mut)";
+        return;
+      }
+      elTermList.style.color = "inherit";
+
+      activeTerms.forEach(t => {
+        const div = document.createElement("div");
+        div.className = "term-item";
+
+        const infoDiv = document.createElement("div");
+        infoDiv.className = "term-item-info";
+
+        const labelSpan = document.createElement("span");
+        labelSpan.className = "term-item-label";
+        labelSpan.textContent = `${DAY_SHORT_NAME[t.day]} ${t.start_time.slice(0, 5)}–${t.end_time.slice(0, 5)}`;
+        
+        const datesSpan = document.createElement("span");
+        datesSpan.className = "term-item-dates";
+        datesSpan.textContent = `Od: ${formatDate(t.date_from)}, do: ${formatDate(t.date_to)}`;
+
+        infoDiv.appendChild(labelSpan);
+        infoDiv.appendChild(datesSpan);
+        div.appendChild(infoDiv);
+
+        const actionsDiv = document.createElement("div");
+        
+        const editBtn = document.createElement("button");
+        editBtn.innerHTML = "Uredi";
+        editBtn.className = "btn neutral";
+        editBtn.style.marginRight = "6px";
+        editBtn.onclick = () => openEditTermModal(t.id);
+        actionsDiv.appendChild(editBtn);
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.innerHTML = "✖";
+        deleteBtn.className = "btn remove-btn";
+        deleteBtn.onclick = () => deleteTerm(t.id);
+        actionsDiv.appendChild(deleteBtn);
+
+        div.appendChild(actionsDiv);
+
+        elTermList.appendChild(div);
       });
     }
-    
-    // Dodan poslušalec na starševski element, ki posluša vse klike
-    elTermList.addEventListener("click", async (e) => {
-        const deleteButton = e.target.closest(".delete-btn");
-        if (deleteButton) {
-            const termId = deleteButton.dataset.termId;
-            if(!confirm("Ste prepričani, da želite izbrisati ta termin? Plavalci bodo izključeni iz termina.")){ return; }
-      
-            try {
-                const { error: attError } = await supabase.from('attendance').delete().eq('term_id', termId);
-                if(attError) throw attError;
-                
-                const { data: termStatusData, error: tsError } = await supabase.from('term_status').delete().eq('term_id', termId);
-                if(tsError) throw tsError;
-                
-                const { data: swimmerData, error: swError } = await supabase.from('swimmers').select('*').contains('terms', [termId]);
-                if(swError) throw swError;
 
-                const updates = swimmerData.map(s => {
-                    s.terms = s.terms.filter(t => t !== termId);
-                    return { id: s.id, terms: s.terms };
-                });
-
-                if (updates.length > 0) {
-                    const { error: updateError } = await supabase.from('swimmers').upsert(updates);
-                    if(updateError) throw updateError;
-                }
-
-                const { error } = await supabase.from('terms').delete().eq('id', termId);
-                if(error) throw error;
-                
-                await fetchAllData();
-                alert("Termin uspešno izbrisan.");
-            } catch(error) {
-                console.error("Napaka pri brisanju termina:", error);
-                alert("Napaka pri brisanju termina. Preverite konzolo.");
-            }
+    async function deleteTerm(termId) {
+        if (!confirm("Ali ste prepričani, da želite izbrisati ta termin?")) {
+            return;
         }
-    });
 
-    let editTermCtx = null;
-    function openEditTermModal(e){
-      const termId = e.target.dataset.termId;
+        const { error: attError } = await supabase
+            .from('attendance')
+            .delete()
+            .eq('term_id', termId);
+        
+        if (attError) { console.error("Napaka pri brisanju prisotnosti termina:", attError); alert("Napaka pri brisanju prisotnosti termina. Preverite konzolo."); return; }
+
+        const { error: statusError } = await supabase
+            .from('term_status')
+            .delete()
+            .eq('term_id', termId);
+        
+        if (statusError) { console.error("Napaka pri brisanju statusa termina:", statusError); alert("Napaka pri brisanju statusa termina. Preverite konzolo."); return; }
+
+        const { error: termError } = await supabase
+            .from('terms')
+            .delete()
+            .eq('id', termId);
+
+        if (termError) { console.error("Napaka pri brisanju termina:", termError); alert("Napaka pri brisanju termina. Preverite konzolo."); return; }
+        
+        for (const swimmer of swimmers) {
+          if (swimmer.terms.includes(termId)) {
+            swimmer.terms = swimmer.terms.filter(t => t !== termId);
+            await supabase.from('swimmers').update({ terms: swimmer.terms }).eq('id', swimmer.id);
+          }
+        }
+        
+        TERMS = TERMS.filter(t => t.id !== termId);
+        await refreshSwimmerPanel();
+        await renderMonth();
+        alert("Termin uspešno izbrisan.");
+    }
+
+    function openEditTermModal(termId) {
+      editingTermId = termId;
       const term = termById(termId);
-      if(!term) return;
-      editTermCtx = term;
+      if (!term) return;
+
       elEditTermModalTitle.textContent = `Uredi termin: ${term.label}`;
       elEditTermDateFrom.value = formatDate(term.date_from);
       elEditTermDateTo.value = formatDate(term.date_to);
+
       openModal(elEditTermModal);
     }
-    
-    elCloseEditTermModalBtn.addEventListener("click", ()=>{ closeModal(elEditTermModal); });
-    elEditTermModal.addEventListener("click", (e)=>{ if(e.target === elEditTermModal) closeModal(elEditTermModal); });
-    
-    elSaveEditTermBtn.addEventListener("click", async ()=>{
-      if(!editTermCtx) return;
-      const dateFrom = parseDate(elEditTermDateFrom.value);
-      const dateTo = parseDate(elEditTermDateTo.value);
-      if(!dateFrom || !dateTo){ alert("Neveljaven format datuma."); return; }
-      
-      const { error } = await supabase
-        .from('terms')
-        .update({ date_from: dateFrom, date_to: dateTo })
-        .eq('id', editTermCtx.id);
-        
-      if(error){
-        console.error('Napaka pri shranjevanju sprememb termina:', error);
-        alert("Napaka pri shranjevanju. Preverite konzolo.");
+
+    elCloseEditTermModalBtn.addEventListener("click", () => closeModal(elEditTermModal));
+    elEditTermModal.addEventListener("click", (e) => { if (e.target === elEditTermModal) closeModal(elEditTermModal); });
+    elSaveEditTermBtn.addEventListener("click", async () => {
+      const term = termById(editingTermId);
+      if (!term) return;
+
+      const newDateFrom = parseDate(elEditTermDateFrom.value);
+      const newDateTo = parseDate(elEditTermDateTo.value);
+
+      if (!newDateFrom || !newDateTo) {
+        alert("Prosim, izpolnite oba datuma v pravilnem formatu (dd / mm / yyyy).");
         return;
       }
       
-      editTermCtx.date_from = dateFrom;
-      editTermCtx.date_to = dateTo;
-      
-      closeModal(elEditTermModal);
-      await fetchAllData();
-      alert("Spremembe shranjene.");
+      const { error } = await supabase
+        .from('terms')
+        .update({ date_from: newDateFrom, date_to: newDateTo })
+        .eq('id', editingTermId);
+
+      if (error) {
+        alert("Napaka pri posodabljanju termina.");
+        console.error(error);
+      } else {
+        term.date_from = newDateFrom;
+        term.date_to = newDateTo;
+        closeModal(elEditTermModal);
+        await renderTermsList();
+        await renderMonth();
+        alert("Termin uspešno posodobljen.");
+      }
     });
 
+    // ===== CSV: uvoz plavalcev z možnostjo prepisa od danes naprej - SPREMENJENA LOGIKA =====
+    // Dodan opis za uporabnika
+    const instructionsSwimmers = `
+        <div class="muted" style="margin-bottom: 12px;">
+            **Navodila za uvoz plavalcev (CSV):**
+            * Datoteka mora vsebovati stolpce z glavo 'first_name', 'last_name' in 'terms'.
+            * V stolpec 'terms' vpišite ID-je terminov, ločene z vejico. ID-ji so vidni v tabeli 'terms' v Supabase.
+            * **Pozor:** Uvoz bo izbrisal vso prisotnost od danes naprej in posodobil termine vsem plavalcem, ki so v datoteki!
+            <br/>
+            **Primer:**
+            first_name,last_name,terms
+            Janez,Novak,pon-17-00-18-00,sre-17-00-18-00
+            Marija,Kovač,tor-16-00-17-00
+        </div>
+    `;
+    const csvSwimmerInputParent = elCsvInput.closest('.form-control');
+    if (csvSwimmerInputParent) {
+      csvSwimmerInputParent.insertAdjacentHTML('afterbegin', instructionsSwimmers);
+    }
 
-    // ===== Inicijalizacija =====
-    async function fetchAllData() {
+
+    elCsvInput.addEventListener("change", async (e)=>{
+      const file = e.target.files[0]; if(!file) return;
+      const txt = await file.text();
+      const lines = txt.split(/\r?\n/).filter(x=>x.trim().length > 0);
+      if(lines.length < 2) { alert("CSV je prazen ali napačno oblikovan."); return; }
+      const header = lines[0].split(",").map(h => h.trim());
+      const idxFirst = header.findIndex(h => h === "first_name");
+      const idxLast = header.findIndex(h => h === "last_name");
+      const termIdx = header.findIndex(h => h === "terms");
+
+      if (idxFirst === -1 || idxLast === -1 || termIdx === -1) {
+          alert("CSV mora imeti stolpce 'first_name', 'last_name' in 'terms'.");
+      }
+
+      const today = iso(new Date());
+      let importedSwimmers = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const cols = splitCsvLine(lines[i]); if (cols.length < termIdx) continue;
+        const first = (cols[idxFirst] || "").trim();
+        const last = (cols[idxLast] || "").trim();
+        if (!first || !last) continue;
+        const csvTermsRaw = (cols[termIdx] || "").split(",").map(t => t.trim()).filter(Boolean);
+        const csvTerms = csvTermsRaw.filter(id => TERMS.some(t => t.id === id));
+        importedSwimmers.push({ first_name: first, last_name: last, terms: [...new Set(csvTerms)] });
+      }
+
+      if (importedSwimmers.length === 0) {
+        alert("Ni plavalcev za uvoz.");
+        return;
+      }
+
+      const { data: existingSwimmers, error: fetchError } = await supabase
+        .from('swimmers')
+        .select('id, first_name, last_name, is_deleted');
+        
+      if (fetchError) {
+          console.error("Napaka pri nalaganju plavalcev:", fetchError);
+          alert("Napaka pri nalaganju plavalcev. Preverite konzolo.");
+          return;
+      }
+
+      const updates = [];
+      const inserts = [];
+
+      importedSwimmers.forEach(sData => {
+        const existing = existingSwimmers.find(s => s.first_name.toLowerCase() === sData.first_name.toLowerCase() && s.last_name.toLowerCase() === sData.last_name.toLowerCase() && !s.is_deleted);
+        
+        if (existing) {
+          updates.push({ id: existing.id, terms: sData.terms });
+        } else {
+          inserts.push(sData);
+        }
+      });
+      
+      const { error: insertError } = await supabase.from('swimmers').insert(inserts);
+      if (insertError) { console.error("Napaka pri vstavljanju novih plavalcev:", insertError); alert("Napaka pri vstavljanju novih plavalcev."); return; }
+
+      for (const update of updates) {
+        const { error } = await supabase.from('swimmers').update({ terms: update.terms }).eq('id', update.id);
+        if (error) { console.error("Napaka pri posodabljanju plavalca:", error); }
+      }
+      
+      const { error: attError } = await supabase.from('attendance').delete().gte('date', today);
+      const { error: statusError } = await supabase.from('term_status').delete().gte('date', today);
+
+      if (attError || statusError) {
+          console.warn("Opozorilo: Napaka pri čiščenju zgodovine od danes naprej.", attError, statusError);
+      }
+      
+      await loadDataFromSupabase();
+      await refreshSwimmerPanel();
+      await renderMonth();
+      alert(`Uvoz končan. Uvoženih plavalcev: ${importedSwimmers.length}. Vse nastavitve plavalcev so posodobljene.`);
+      e.target.value = "";
+    });
+
+    // ===== CSV: uvoz terminov - NOVA FUNKCIJA =====
+    // Dodan opis za uporabnika
+    const instructionsTerms = `
+        <div class="muted" style="margin-bottom: 12px;">
+            **Navodila za uvoz terminov (CSV):**
+            * Datoteka mora vsebovati stolpce z glavo 'id', 'day', 'start_time', 'end_time', 'date_from' in 'date_to'.
+            * ID mora biti edinstven za vsak termin (npr. 'pon-17-00-18-00').
+            * 'day' je številka dneva v tednu (1=ponedeljek, 7=nedelja).
+            * 'start_time' in 'end_time' morata biti v formatu 'HH:mm'.
+            * 'date_from' in 'date_to' morata biti v formatu 'dd / mm / yyyy'.
+        </div>
+    `;
+    const csvTermInputParent = elCsvTermsInput.closest('.form-control');
+    if (csvTermInputParent) {
+        csvTermInputParent.insertAdjacentHTML('afterbegin', instructionsTerms);
+    }
+    elCsvTermsInput.addEventListener("change", async (e) => {
+        const file = e.target.files[0]; if (!file) return;
+        const txt = await file.text();
+        const lines = txt.split(/\r?\n/).filter(x => x.trim().length > 0);
+        if (lines.length < 2) { alert("CSV je prazen ali napačno oblikovan."); return; }
+        
+        const header = lines[0].split(",").map(h => h.trim());
+        const idxId = header.findIndex(h => h === "id");
+        const idxDay = header.findIndex(h => h === "day");
+        const idxStart = header.findIndex(h => h === "start_time");
+        const idxEnd = header.findIndex(h => h === "end_time");
+        const idxFrom = header.findIndex(h => h === "date_from");
+        const idxTo = header.findIndex(h => h === "date_to");
+
+        if (idxId === -1 || idxDay === -1 || idxStart === -1 || idxEnd === -1 || idxFrom === -1 || idxTo === -1) {
+            alert("CSV mora vsebovati stolpce 'id', 'day', 'start_time', 'end_time', 'date_from' in 'date_to'.");
+            return;
+        }
+
+        let importedTerms = [];
+        let errors = [];
+
+        for (let i = 1; i < lines.length; i++) {
+            const cols = splitCsvLine(lines[i]);
+            if (cols.length < 6) continue;
+
+            const id = (cols[idxId] || "").trim();
+            const day = parseInt(cols[idxDay], 10);
+            const start = (cols[idxStart] || "").trim();
+            const end = (cols[idxEnd] || "").trim();
+            const dateFrom = parseDate(cols[idxFrom] || "");
+            const dateTo = parseDate(cols[idxTo] || "");
+
+            if (!id || isNaN(day) || !start || !end || !dateFrom || !dateTo) {
+                errors.push(`Vrsta ${i+1}: manjkajoči podatki ali napačen format.`);
+                continue;
+            }
+
+            const label = `${DAYNAME[day]} ${start}–${end}`;
+            importedTerms.push({ id, day, start_time: start, end_time: end, label, date_from: dateFrom, date_to: dateTo });
+        }
+        
+        if (errors.length > 0) {
+            alert("Napake pri uvozu: \n" + errors.join("\n"));
+            return;
+        }
+
+        const { error } = await supabase
+            .from('terms')
+            .upsert(importedTerms);
+        
+        if (error) {
+            alert("Napaka pri uvozu terminov.");
+            console.error(error);
+        } else {
+            await loadDataFromSupabase();
+            await refreshSwimmerPanel();
+            await renderMonth();
+            alert("Termini uspešno uvoženi in posodobljeni!");
+        }
+        e.target.value = "";
+    });
+
+    // Dodatna funkcija za pravilno branje CSV vrstic z vejicami v poljih
+    function splitCsvLine(line) {
+      const result = [];
+      let inQuotes = false;
+      let currentField = '';
+      for (let i = 1; i < line.length; i++) {
+        const char = line[i];
+        const prevChar = line[i-1];
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          result.push(currentField.trim());
+          currentField = '';
+        } else {
+          currentField += char;
+        }
+      }
+      result.push(currentField.trim());
+      return result;
+    }
+
+
+    // ===== UPRAVLJANJE DATUMA =====
+    elPrev.addEventListener("click", ()=>{ viewDate.setMonth(viewDate.getMonth()-1); renderMonth(); });
+    elNext.addEventListener("click", ()=>{ viewDate.setMonth(viewDate.getMonth()+1); renderMonth(); });
+
+    // ===== EXPORT CSV - DODANA FUNKCIJA =====
+    function populateExportSelects() {
+        const year = new Date().getFullYear();
+        elExportYearSelect.innerHTML = `<option>${year}</option><option>${year-1}</option>`;
+        const months = ["Januar", "Februar", "Marec", "April", "Maj", "Junij", "Julij", "Avgust", "September", "Oktober", "November", "December"];
+        elExportMonthSelect.innerHTML = months.map((m,i)=>`<option value="${i}">${m}</option>`).join("");
+        elExportMonthSelect.value = new Date().getMonth();
+    }
+
+    elExportCsvBtn.addEventListener("click", ()=>{
+        const month = parseInt(elExportMonthSelect.value, 10);
+        const year = parseInt(elExportYearSelect.value, 10);
+        const summary = calculateSummaryData(year, month);
+        
+        let csv = "\uFEFFfirst_name,last_name,attended,possible,percentage\n";
+        const rows = Object.values(summary).sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first));
+        rows.forEach(r=>{
+            const pct = r.pos > 0 ? (r.att / r.pos * 100).toFixed(1) : "0.0";
+            csv += `${r.first},${r.last},${r.att},${r.pos},${pct}\n`;
+        });
+        
+        const filename = `prisostnost_${year}-${String(month+1).padStart(2,'0')}.csv`;
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", filename);
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    });
+
+    // ===== Inicializacija vseh podatkov iz Supabase =====
+    async function loadDataFromSupabase(){
       try {
         const { data: termsData, error: termsError } = await supabase.from('terms').select('*');
         if (termsError) throw termsError;
@@ -1003,22 +1247,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         populateExportSelects();
         refreshSwimmerPanel();
-        renderTermList();
         renderMonth();
 
       } catch (error) {
-        console.error('Napaka pri nalaganju podatkov:', error);
+        console.error("Napaka pri nalaganju podatkov:", error);
+        alert("Napaka pri nalaganju podatkov iz baze. Preverite konzolo za podrobnosti.");
       }
     }
-    
-    const SUPABASE_URL = "https://tizjimlwfkoniixbetgr.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpemppbWx3ZmtvbmlpeGJldGdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MD...
-    const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    
-    fetchAllData();
-    
-    // Ob pravilni naložitvi stran, spremenimo nastavitve za SUPABASE, da je dostopen izven naloženih funkcij
-    window.SUPABASE_URL = SUPABASE_URL;
-    window.SUPABASE_ANON_KEY = SUPABASE_ANON_KEY;
-    window.supabase = supabase;
+
+    // Začetni zagon
+    loadDataFromSupabase();
 });
