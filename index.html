@@ -6,15 +6,136 @@
     <title>Vodenje prisotnosti - PKL</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* DODATNI STILI ZA IZBOLJŠAVE */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        /* Optimizacije za mobilni prikaz */
+        @media (max-width: 768px) {
+            .calendar-grid-labels span:nth-child(6),
+            .calendar-grid-labels span:nth-child(7) {
+                display: none;
+            }
+            
+            .calendar-grid {
+                grid-template-columns: repeat(5, 1fr);
+            }
+            
+            .calendar-grid .day:nth-child(7n+6),
+            .calendar-grid .day:nth-child(7n) {
+                display: none;
+            }
+            
+            .event {
+                font-size: 10px;
+                padding: 2px 4px;
+            }
+            
+            .stats-cards {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        
+        /* Animacije za boljšo UX */
+        .day {
+            transition: all 0.2s ease;
+        }
+        
+        .day:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .btn {
+            transition: all 0.2s ease;
+        }
+        
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+    </style>
 </head>
 <body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <p>Nalagam podatke...</p>
+    </div>
 
     <header>
         <h1>Vodenje prisotnosti - PKL</h1>
+        <div class="quick-actions">
+            <button class="btn primary-btn" id="todayBtn">Danes</button>
+            <button class="btn neutral" id="refreshBtn">Osveži</button>
+        </div>
     </header>
 
     <main>
+        <!-- OSTALA VSEBINA OSTANE ENAKA KOT V VAŠI DATOTEKI -->
         <div class="content">
+            <div class="stats-cards" id="statsContainer">
+                <!-- Tu se bodo prikazale statistike -->
+            </div>
+            
             <div class="box-panel">
                 <section>
                     <div class="calendar-header">
@@ -253,6 +374,86 @@
         </div>
     </div>
     
+	
+    <script>
+        // DODATNE FUNKCIONALNOSTI
+        document.addEventListener('DOMContentLoaded', () => {
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const todayBtn = document.getElementById('todayBtn');
+            const refreshBtn = document.getElementById('refreshBtn');
+            const statsContainer = document.getElementById('statsContainer');
+            
+            // Prikaz nalaganja
+            function showLoading() {
+                loadingOverlay.style.display = 'flex';
+            }
+            
+            function hideLoading() {
+                loadingOverlay.style.display = 'none';
+            }
+            
+            // Gumb za danes
+            todayBtn.addEventListener('click', () => {
+                viewDate = new Date();
+                viewDate.setDate(1);
+                renderMonth();
+            });
+            
+            // Gumb za osvežitev
+            refreshBtn.addEventListener('click', async () => {
+                showLoading();
+                await loadDataFromSupabase();
+                hideLoading();
+            });
+            
+            // Funkcija za prikaz statistik
+            function renderStats() {
+                const totalSwimmers = swimmers.filter(s => !s.is_deleted).length;
+                const totalTerms = TERMS.length;
+                
+                // Preštejemo aktivne termine v tekočem mesecu
+                const currentMonth = viewDate.getMonth();
+                const currentYear = viewDate.getFullYear();
+                const firstDay = new Date(currentYear, currentMonth, 1);
+                const lastDay = new Date(currentYear, currentMonth + 1, 0);
+                
+                let trainingCount = 0;
+                let currentDate = new Date(firstDay);
+                
+                while (currentDate <= lastDay) {
+                    const terms = getTermsForDate(currentDate);
+                    trainingCount += terms.length;
+                    currentDate.setDate(currentDate.getDate() + 1);
+                }
+                
+                statsContainer.innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-value">${totalSwimmers}</div>
+                        <div class="stat-label">Plavalcev</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${totalTerms}</div>
+                        <div class="stat-label">Terminov</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${trainingCount}</div>
+                        <div class="stat-label">Treningov</div>
+                    </div>
+                `;
+            }
+            
+            // Nadomestimo originalno renderMonth funkcijo z razširjeno različico
+            const originalRenderMonth = renderMonth;
+            renderMonth = function() {
+                originalRenderMonth();
+                renderStats();
+            };
+            
+            // Prikaz statistik ob nalaganju
+            setTimeout(renderStats, 1000);
+        });
+    </script>
+	
     <script src="script.js"></script>
     <script>
      const SUPABASE_URL = "https://tizjimlwfkoniixbetgr.supabase.co";
