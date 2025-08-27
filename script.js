@@ -7,16 +7,16 @@ document.addEventListener('DOMContentLoaded', () => {
     let attendance = {};
     let termStatus = {};
 
-    const DAYNAME = ["","Ponedeljek","Torek","Sreda","Četrtek","Petek","Sobota","Nedelja"];
+    const DAYNAME = ["", "Ponedeljek", "Torek", "Sreda", "Četrtek", "Petek", "Sobota", "Nedelja"];
     const DAY_SHORT_NAME = ["", "Pon.", "Tor.", "Sre.", "Čet.", "Pet.", "Sob.", "Ned."];
     const DAY_SHORT_MAP = {
-      "ponedeljek": 1, "pon": 1,
-      "torek": 2, "tor": 2,
-      "sreda": 3, "sre": 3,
-      "cetrtek": 4, "cet": 4,
-      "petek": 5, "pet": 5,
-      "sobota": 6, "sob": 6,
-      "nedelja": 7, "ned": 7
+        "ponedeljek": 1, "pon": 1,
+        "torek": 2, "tor": 2,
+        "sreda": 3, "sre": 3,
+        "cetrtek": 4, "cet": 4,
+        "petek": 5, "pet": 5,
+        "sobota": 6, "sob": 6,
+        "nedelja": 7, "ned": 7
     };
 
     // ===== UI elementi =====
@@ -100,11 +100,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 dayElement.classList.add('weekend');
             }
 
-            // Označevanje praznika - to še ni implementirano
-            // if (isHoliday(currentDate)) {
-            //     dayElement.classList.add('holiday');
-            // }
-
             // Prikaz dogodkov (terminov)
             const dayTerms = TERMS.filter(t => isDateInTerm(currentDate, t));
             const dayStatus = termStatus[dateStr] || {};
@@ -161,7 +156,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const to = new Date(term.date_to);
         return date >= from && date <= to;
     }
-
+    
+    // Funkcija za odpiranje modala
     function openDayModal(dateStr, events, dayOfWeek) {
         elDayModalTitle.textContent = `${DAY_SHORT_NAME[dayOfWeek]}, ${dateStr}`;
         elDayModalList.innerHTML = '';
@@ -194,7 +190,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const status = eventEl.dataset.status;
             attendanceStatus.className = `event-status ${status}`;
 
-            // Prikaz stanja
             if (status === 'complete') {
                 attendanceStatus.textContent = 'Popolna prisotnost';
             } else if (status === 'partial') {
@@ -206,7 +201,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             div.appendChild(attendanceStatus);
 
-            // Gumbi
             const buttonContainer = document.createElement('div');
             buttonContainer.className = 'event-buttons';
 
@@ -274,6 +268,106 @@ document.addEventListener('DOMContentLoaded', () => {
             })), new Date(date).getDay());
         };
     }
+    
+    async function importSwimmers(file) {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const text = event.target.result;
+        const rows = text.split('\n').map(row => row.trim()).filter(row => row);
+        const newSwimmers = rows.map(row => {
+          const [first_name, last_name, terms_str] = row.split(';');
+          return {
+            first_name,
+            last_name,
+            terms: terms_str ? terms_str.split(',').map(s => s.trim()) : []
+          };
+        });
+
+        try {
+          const { error } = await supabase.from('swimmers').upsert(newSwimmers, { onConflict: ['first_name', 'last_name'] });
+          if (error) throw error;
+          alert('Plavalci uspešno uvoženi!');
+          updateStateAndRender();
+        } catch (error) {
+          console.error('Napaka pri uvozu plavalcev:', error);
+          alert('Napaka pri uvozu plavalcev.');
+        }
+      };
+      reader.readAsText(file);
+    }
+    
+    async function importTerms(file) {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const text = event.target.result;
+        const rows = text.split('\n').map(row => row.trim()).filter(row => row);
+        const newTerms = rows.map(row => {
+          const [description, date_from, date_to, time, weekdays_str] = row.split(';');
+          return {
+            description,
+            date_from: date_from.trim(),
+            date_to: date_to.trim(),
+            time: time.trim(),
+            weekdays: weekdays_str.split(',').map(s => s.trim())
+          };
+        });
+
+        try {
+          const { error } = await supabase.from('terms').upsert(newTerms, { onConflict: ['description', 'date_from', 'time'] });
+          if (error) throw error;
+          alert('Termini uspešno uvoženi!');
+          updateStateAndRender();
+        } catch (error) {
+          console.error('Napaka pri uvozu terminov:', error);
+          alert('Napaka pri uvozu terminov.');
+        }
+      };
+      reader.readAsText(file);
+    }
+    
+    function formatDate(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${day}.${month}.${year}`;
+    }
+
+    // Dodana funkcija za brisanje termina
+    elDeleteTermBtn.addEventListener('click', async () => {
+        const termId = elSwimmerSelect.value;
+        if (!termId) {
+            alert('Prosim, izberite termin za izbris.');
+            return;
+        }
+
+        if (confirm('Ali ste prepričani, da želite izbrisati ta termin? Izbrisani bodo tudi vsi podatki o prisotnosti, povezani s tem terminom.')) {
+            try {
+                // Izbriši prisotnost
+                const { error: attendanceError } = await supabase.from('attendance')
+                    .delete()
+                    .eq('term_id', termId);
+                if (attendanceError) throw attendanceError;
+                
+                // Izbriši status termina
+                const { error: statusError } = await supabase.from('term_status')
+                    .delete()
+                    .eq('term_id', termId);
+                if (statusError) throw statusError;
+                    
+                // Izbriši termin
+                const { error: termError } = await supabase.from('terms')
+                    .delete()
+                    .eq('id', termId);
+                if (termError) throw termError;
+                
+                alert('Termin uspešno izbrisan!');
+                updateStateAndRender();
+            } catch (error) {
+                console.error("Napaka pri brisanju termina:", error.message);
+                alert("Napaka pri brisanju termina.");
+            }
+        }
+    });
 
     // Zapiranje modalov
     elCloseDayModalBtn.addEventListener('click', () => elDayModal.style.display = 'none');
@@ -315,7 +409,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Posodobi tudi dropdown za izvoz
         populateExportSelects();
     }
-
+    
     // Dodan popravek
     elAddSwimmerBtn.addEventListener('click', async () => {
         const first = elNewFirst.value.trim();
