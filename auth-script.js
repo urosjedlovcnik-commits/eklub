@@ -35,20 +35,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Preveri, če je uporabnik že prijavljen
   async function checkAuth() {
+      console.log('=== CHECK AUTH START ===');
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+          console.log('Uporabnik je prijavljen:', user.email);
           currentUser = user;
           await loadUserTerms();
           showMainApp();
-              // Naloži podatke za trenerja po tem, ko so userTerms naloženi
-  await loadDataFromSupabase();
-  // Naloži podatke za nadomestne trenerje
-  await loadSubstituteData();
-  // Naloži nadomestne termine
-  await loadSubstituteTerms();
-} else {
-  showLoginScreen();
-}
+          // Naloži podatke za trenerja po tem, ko so userTerms naloženi
+          await loadDataFromSupabase();
+          // Naloži podatke za nadomestne trenerje
+          await loadSubstituteData();
+          // Naloži nadomestne termine
+          await loadSubstituteTerms();
+      } else {
+          console.log('Uporabnik ni prijavljen');
+          showLoginScreen();
+      }
+      console.log('=== CHECK AUTH END ===');
   }
 
   // Naloži termine, ki pripadajo trenerju
@@ -56,20 +60,28 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
           console.log('=== LOAD USER TERMS START ===');
           console.log('Current user ID:', currentUser.id);
+          console.log('Current user email:', currentUser.email);
           
           // Najprej poiščemo trenerja v tabeli trenerjev
+          console.log('Iščem trenerja v tabeli trainers...');
           const { data: trainerData, error: trainerError } = await supabase
               .from('trainers')
               .select('*')
               .eq('user_id', currentUser.id)
               .single();
 
+          console.log('Rezultat iskanja trenerja:', { trainerData, trainerError });
+
           if (trainerError || !trainerData) {
               console.error('Trener ni najden:', trainerError);
               console.log('Poskušam najti trenerja z user_id:', currentUser.id);
+              
+              // Posodobi prikaz z napako
+              userName.textContent = 'Napaka pri nalaganju podatkov';
+              userGroups.textContent = 'Napaka';
               return;
           }
-          
+
           console.log('Najden trener:', trainerData);
 
           // Naložimo termine, ki pripadajo temu trenerju
@@ -79,25 +91,34 @@ document.addEventListener('DOMContentLoaded', () => {
               .select('term_id')
               .eq('trainer_id', trainerData.id);
 
+          console.log('Rezultat iskanja terminov:', { termsData, termsError });
+
           if (termsError) {
               console.error('Napaka pri nalaganju terminov:', termsError);
+              userName.textContent = `${trainerData.first_name} ${trainerData.last_name}`;
+              userGroups.textContent = 'Napaka pri nalaganju terminov';
               return;
           }
-          
-          console.log('Termini trenerja iz baze:', termsData);
 
           userTerms = termsData.map(t => t.term_id);
           console.log('Mapirani userTerms:', userTerms);
           
-          // Posodobi prikaz
-          userName.textContent = `${trainerData.first_name} ${trainerData.last_name}`;
+          // Posodobi prikaz - popravimo prikaz imena
+          console.log('Trainer data:', trainerData);
+          if (trainerData.first_name && trainerData.last_name) {
+              userName.textContent = `${trainerData.first_name} ${trainerData.last_name}`;
+              console.log('Set user name to:', userName.textContent);
+          } else {
+              userName.textContent = 'Neznan trener';
+              console.log('Set user name to: Neznan trener');
+          }
           userGroups.textContent = userTerms.length > 0 ? `${userTerms.length} skupin` : 'Ni skupin';
-          console.log('Posodobljen prikaz trenerja:', userName.textContent, userGroups.textContent);
+          console.log('Set user groups to:', userGroups.textContent);
           
           // Če trener nima terminov, prikaži sporočilo
           if (userTerms.length === 0) {
-              console.warn('Trener nima dodeljenih terminov');
               elSummaryBox.innerHTML = '<div class="error-message">Trener nima dodeljenih terminov. Kontaktirajte administratorja.</div>';
+              console.warn('Trener nima dodeljenih terminov');
           } else {
               console.log('Trener ima', userTerms.length, 'terminov');
           }
@@ -107,6 +128,10 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch (error) {
           console.error('Napaka pri nalaganju podatkov trenerja:', error);
           console.error('Napaka podrobnosti:', error.message);
+          
+          // Posodobi prikaz z napako
+          userName.textContent = 'Napaka pri nalaganju';
+          userGroups.textContent = 'Napaka';
       }
   }
 
@@ -384,54 +409,58 @@ document.addEventListener('DOMContentLoaded', () => {
     const daysInMonthCount = daysInMonth(year, month);
     const startWeekdayNum = startWeekday(year, month);
     
-    elMonthLabel.textContent = `${DAYNAME[month + 1]} ${year}`;
-    
-    let html = '';
-    let dayCount = 1;
-    
-    for (let week = 0; week < 6; week++) {
-      for (let dayOfWeek = 1; dayOfWeek <= 7; dayOfWeek++) {
-        if (week === 0 && dayOfWeek < startWeekdayNum) {
-          html += '<div class="calendar-day empty"></div>';
-        } else if (dayCount > daysInMonthCount) {
-          html += '<div class="calendar-day empty"></div>';
-        } else {
-          const date = new Date(year, month, dayCount);
-          const dateStr = iso(date);
-          const events = getEventsForDate(dateStr);
-          const isTodayClass = isToday(date) ? ' today' : '';
-          const isPastClass = isPast(date) ? ' past' : '';
-          
-          html += `<div class="calendar-day${isTodayClass}${isPastClass}" data-date="${dateStr}">`;
-          html += `<div class="day-number">${dayCount}</div>`;
-          
-          if (events.length > 0) {
-            events.forEach(event => {
-              const statusClass = getStatusClass(event.status);
-              html += `<div class="event ${statusClass}" data-term-id="${event.termId}" data-date="${dateStr}">`;
-              html += `<div class="event-time">${event.time}</div>`;
-              html += `<div class="event-count">${event.count}/${event.total}</div>`;
-              html += `</div>`;
-            });
-          }
-          
-          html += '</div>';
-          dayCount++;
-        }
-      }
+    elMonthLabel.textContent = new Date(year, month, 1).toLocaleDateString("sl-SI", {month:"long",year:"numeric"});
+    elCalendarGrid.innerHTML = "";
+
+    const pad = startWeekdayNum - 1;
+    for (let i = 0; i < pad; i++) {
+      const div = document.createElement("div");
+      div.className = "day disabled";
+      elCalendarGrid.appendChild(div);
     }
-    
-    elCalendarGrid.innerHTML = html;
-    
-    // Dodaj event listenerje za dogodke
-    document.querySelectorAll('.event').forEach(eventEl => {
-      eventEl.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const termId = eventEl.dataset.termId;
-        const date = eventEl.dataset.date;
-        openEventModal(termId, date);
+
+    for (let d = 1; d <= daysInMonthCount; d++) {
+      const date = new Date(year, month, d);
+      const day = document.createElement("div");
+      day.className = "day" + (isToday(date) ? " today" : "");
+      const num = document.createElement("div");
+      num.className = "num";
+      num.textContent = d;
+      day.appendChild(num);
+
+      const todays = getEventsForDate(iso(date));
+      todays.sort((a, b) => a.time.localeCompare(b.time));
+
+      todays.forEach(t => {
+        const e = document.createElement("div");
+        e.className = "event";
+        
+        // Dodaj status class
+        if (t.status) {
+          e.classList.add(t.status);
+        }
+        
+        e.innerHTML = `<span class="time">${t.time.slice(0, 5)}<span class="end-time">–${t.time.slice(6, 11)}</span></span>`;
+        e.title = t.time;
+        e.dataset.termId = t.termId;
+        day.appendChild(e);
       });
-    });
+
+      // Dodaj event listener za dan
+      if (todays.length > 0) {
+        day.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (todays.length === 1) {
+            openEventModal(todays[0].termId, iso(date));
+          } else {
+            // Če je več terminov, odpri modal za izbiro
+            openDayModal(date);
+          }
+        });
+      }
+      
+      elCalendarGrid.appendChild(day);
+    }
   }
 
   function getEventsForDate(dateStr) {
@@ -439,33 +468,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const date = new Date(dateStr);
     const dayOfWeek = date.getDay() === 0 ? 7 : date.getDay();
     
-    console.log(`getEventsForDate: ${dateStr}, dayOfWeek: ${dayOfWeek}, TERMS.length: ${TERMS.length}, userTerms:`, userTerms);
-    
     TERMS.forEach(term => {
       // Preveri, če termin pripada trenerju
       if (!userTerms.includes(term.id)) {
-        console.log(`Termin ${term.id} ne pripada trenerju`);
         return;
       }
-      
-      console.log(`Preverjam termin ${term.id}, dan: ${term.day}, date_from: ${term.date_from}, date_to: ${term.date_to}`);
       
       if (term.day === dayOfWeek) {
         // Podatki iz baze so v ISO formatu (YYYY-MM-DD), ne potrebujemo parseDate
         const termDateFrom = new Date(term.date_from);
         const termDateTo = new Date(term.date_to);
         
-        console.log(`Termin ${term.id}: termDateFrom: ${termDateFrom}, termDateTo: ${termDateTo}, date: ${date}`);
-        
         if (termDateFrom && termDateTo && date >= termDateFrom && date <= termDateTo) {
-          const termKey = `${term.id}-${dateStr}`;
-          const termAtt = attendance[termKey] || {};
+          // Uporabi isto strukturo kot v glavni strani
+          const termAtt = attendance[dateStr]?.[term.id] || {};
           const assignedSwimmers = swimmers.filter(s => s.terms.includes(term.id) && !s.is_deleted);
           const assignedSwimmerIds = assignedSwimmers.map(s => s.id);
           const markedAssignedSwimmersCount = assignedSwimmerIds.filter(id => termAtt.hasOwnProperty(id)).length;
           const totalAssignedCount = assignedSwimmers.length;
           
           let status = 'active';
+          const termKey = `${term.id}-${dateStr}`;
           if (termStatus[termKey]) {
             status = termStatus[termKey].status;
           } else if (markedAssignedSwimmersCount === 0) {
@@ -497,6 +520,39 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // ===== MODAL ZA IZBIRO DNEVA =====
+  function openDayModal(date) {
+    const todaysTerms = getEventsForDate(iso(date)).sort((a, b) => a.time.localeCompare(b.time));
+    elDayModalTitle.textContent = `Termini za ${date.toLocaleDateString("sl-SI", { weekday: 'long', day: 'numeric', month: 'long' })}`;
+    elDayModalList.innerHTML = "";
+
+    if (todaysTerms.length === 0) {
+      elDayModalList.innerHTML = "<p class='muted' style='text-align: center;'>Na ta dan ni terminov.</p>";
+    } else {
+      todaysTerms.forEach(t => {
+        const e = document.createElement("div");
+        e.className = "event";
+        
+        if (t.status) {
+          e.classList.add(t.status);
+        }
+
+        e.innerHTML = `<span class="time">${t.time.slice(0, 5)}<span class="end-time">–${t.time.slice(6, 11)}</span></span>`;
+        
+        e.addEventListener("click", () => {
+          closeDayModal();
+          openEventModal(t.termId, iso(date));
+        });
+        elDayModalList.appendChild(e);
+      });
+    }
+    elDayModal.style.display = 'flex';
+  }
+
+  function closeDayModal() {
+    elDayModal.style.display = 'none';
+  }
+
   // ===== MODAL ZA DOGODKE =====
   let currentEventTermId = null;
   let currentEventDate = null;
@@ -512,14 +568,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const dayName = DAYNAME[dateObj.getDay() === 0 ? 7 : dateObj.getDay()];
     
     elModalTitle.textContent = `${dayName}, ${dateObj.toLocaleDateString('sl-SI')}`;
-    elModalMeta.textContent = `${term.start_time} - ${term.end_time}`;
+    elModalMeta.textContent = `${term.start_time.slice(0, 5)} - ${term.end_time.slice(0, 5)}`;
     
     // Preveri, ali je nadomestni trener za ta termin
     const substituteKey = `${termId}-${date}`;
     if (window.substituteTrainerInfo && window.substituteTrainerInfo[substituteKey]) {
       const subInfo = window.substituteTrainerInfo[substituteKey];
       elModalMeta.innerHTML = `
-        ${term.start_time} - ${term.end_time}
+        ${term.start_time.slice(0, 5)} - ${term.end_time.slice(0, 5)}
         <br><small style="color: #007bff; font-weight: bold;">
           Nadomestujem: ${subInfo.originalTrainer}
           ${subInfo.reason ? `<br>Razlog: ${subInfo.reason}` : ''}
@@ -534,7 +590,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function loadEventData(termId, date) {
     const termKey = `${termId}-${date}`;
-    const termAtt = attendance[termKey] || {};
+    // Uporabi isto strukturo kot v glavni strani
+    if (!attendance[date]) attendance[date] = {};
+    if (!attendance[date][termId]) attendance[date][termId] = {};
+    const termAtt = attendance[date][termId];
     const termStat = termStatus[termKey];
     
     // Naloži prisotnost
@@ -546,12 +605,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!attError && attData) {
       attData.forEach(record => {
-        termAtt[record.swimmer_id] = {
-          present: record.present,
-          note: record.note || ''
-        };
+        termAtt[record.swimmer_id] = record.present;
       });
-      attendance[termKey] = termAtt;
     }
 
     // Naloži status termina
@@ -572,7 +627,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderEventTables(termId, date) {
     const termKey = `${termId}-${date}`;
-    const termAtt = attendance[termKey] || {};
+    // Uporabi isto strukturo kot v glavni strani
+    const termAtt = attendance[date]?.[termId] || {};
     
     // Filtriraj plavalce, ki pripadajo trenerju
     const assignedSwimmers = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted);
@@ -597,17 +653,17 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       regularSwimmers.sort((a,b) => (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name))
         .forEach(s => {
-          const att = termAtt[s.id] || { present: false, note: '' };
+          const isPresent = termAtt[s.id] || false;
           const row = document.createElement('tr');
           row.innerHTML = `
             <td>${s.first_name} ${s.last_name}</td>
             <td>
-              <input type="checkbox" ${att.present ? 'checked' : ''} 
-                     onchange="updateAttendance('${s.id}', ${att.present}, '${att.note}')">
+              <input type="checkbox" ${isPresent ? 'checked' : ''} 
+                     onchange="updateAttendance('${s.id}', ${!isPresent}, '')">
             </td>
             <td>
-              <input type="text" value="${att.note}" 
-                     onchange="updateAttendance('${s.id}', ${att.present}, this.value)" 
+              <input type="text" value="" 
+                     onchange="updateAttendance('${s.id}', ${isPresent}, this.value)" 
                      placeholder="Opomba">
             </td>
           `;
@@ -622,17 +678,17 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       substitutionSwimmers.sort((a,b) => (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name))
         .forEach(s => {
-          const att = termAtt[s.id] || { present: false, note: '' };
+          const isPresent = termAtt[s.id] || false;
           const row = document.createElement('tr');
           row.innerHTML = `
             <td>${s.first_name} ${s.last_name}</td>
             <td>
-              <input type="checkbox" ${att.present ? 'checked' : ''} 
-                     onchange="updateAttendance('${s.id}', ${att.present}, '${att.note}')">
+              <input type="checkbox" ${isPresent ? 'checked' : ''} 
+                     onchange="updateAttendance('${s.id}', ${!isPresent}, '')">
             </td>
             <td>
-              <input type="text" value="${att.note}" 
-                     onchange="updateAttendance('${s.id}', ${att.present}, this.value)" 
+              <input type="text" value="" 
+                     onchange="updateAttendance('${s.id}', ${isPresent}, this.value)" 
                      placeholder="Opomba">
             </td>
           `;
@@ -680,10 +736,11 @@ document.addEventListener('DOMContentLoaded', () => {
   window.updateAttendance = async function(swimmerId, present, note) {
     if (!currentEventTermId || !currentEventDate) return;
     
-    const termKey = `${currentEventTermId}-${currentEventDate}`;
-    if (!attendance[termKey]) attendance[termKey] = {};
+    // Uporabi isto strukturo kot v glavni strani
+    if (!attendance[currentEventDate]) attendance[currentEventDate] = {};
+    if (!attendance[currentEventDate][currentEventTermId]) attendance[currentEventDate][currentEventTermId] = {};
     
-    attendance[termKey][swimmerId] = { present, note };
+    attendance[currentEventDate][currentEventTermId][swimmerId] = present;
     
     try {
       const { error } = await supabase
@@ -711,52 +768,78 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateSummary() {
     const year = currentYear;
     const month = currentMonth;
-    const daysInMonthCount = daysInMonth(year, month);
     
-    let totalEvents = 0;
-    let totalPresent = 0;
-    let totalAbsent = 0;
-    let totalInactive = 0;
-    
-    for (let day = 1; day <= daysInMonthCount; day++) {
-      const date = new Date(year, month, day);
-      const dateStr = iso(date);
-      const events = getEventsForDate(dateStr);
-      
-      events.forEach(event => {
-        totalEvents++;
+    // Uporabi isto logiko kot v glavni strani
+    const res = {};
+    const monthStart = new Date(year, month, 1);
+    const monthEnd = new Date(year, month + 1, 0);
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    // Inicializacija podatkov za vse plavalce (aktivne in izbrisane)
+    swimmers.forEach(s => {
+      res[s.id] = { first: s.first_name, last: s.last_name, att: 0, pos: 0 };
+    });
+
+    // Zanka za izračun prisotnosti (att)
+    const allAttendance = Object.entries(attendance);
+    for (const [date, termData] of allAttendance) {
+      const d = new Date(date);
+      d.setHours(0,0,0,0);
+      if (d >= monthStart && d <= monthEnd) {
+        for (const termId in termData) {
+          // Preveri, če termin pripada trenerju
+          if (!userTerms.includes(termId)) continue;
+          
+          for (const swimmerId in termData[termId]) {
+            if (termData[termId][swimmerId] === true && res[swimmerId]) {
+              res[swimmerId].att += 1;
+            }
+          }
+        }
+      }
+    }
+
+    // Zanka za izračun možnih obiskov (pos)
+    const currentDate = new Date(monthStart);
+    while (currentDate <= monthEnd) {
+      const ymd = iso(currentDate);
+      const todaysTerms = getEventsForDate(ymd);
+
+      todaysTerms.forEach(term => {
+        const termIsActive = term.status === "active";
         
-        if (event.status === 'inactive') {
-          totalInactive++;
-        } else {
-          totalPresent += event.count;
-          totalAbsent += (event.total - event.count);
+        if (termIsActive) {
+          swimmers.forEach(s => {
+            if (res[s.id] && s.terms.includes(term.termId)) {
+              
+              if (s.is_deleted) {
+                // Plavalec je izbrisan, štejemo samo, če je datum v preteklosti
+                if (currentDate <= today) {
+                  res[s.id].pos += 1;
+                }
+              } else {
+                // Plavalec je aktiven, štejemo vse možne obiske
+                res[s.id].pos += 1;
+              }
+            }
+          });
         }
       });
+      currentDate.setDate(currentDate.getDate() + 1);
     }
     
-    const summary = `
-      <div class="summary-grid">
-        <div class="summary-item">
-          <div class="summary-number">${totalEvents}</div>
-          <div class="summary-label">Skupaj terminov</div>
-        </div>
-        <div class="summary-item">
-          <div class="summary-number">${totalPresent}</div>
-          <div class="summary-label">Prisotni</div>
-        </div>
-        <div class="summary-item">
-          <div class="summary-number">${totalAbsent}</div>
-          <div class="summary-label">Odsotni</div>
-        </div>
-        <div class="summary-item">
-          <div class="summary-number">${totalInactive}</div>
-          <div class="summary-label">Deaktivirani</div>
-        </div>
-      </div>
-    `;
-    
-    elSummaryBox.innerHTML = summary;
+    // Prikaži povzetek
+    let html = `<table><thead><tr><th>Plavalec</th><th>Obiskani</th><th>Možni</th><th>Delež (%)</th></tr></thead><tbody>`;
+    // Filtriramo plavalce, ki nimajo nobenega možnega obiska
+    const rows = Object.values(res).filter(r => r.pos > 0).sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first));
+    if(rows.length===0) html += `<tr><td colspan="4" class="muted">Ni plavalcev.</td></tr>`;
+    rows.forEach(r=>{
+        const pct = r.pos > 0 ? (r.att / r.pos * 100).toFixed(1) : "0.0";
+        html += `<tr><td>${r.first} ${r.last}</td><td>${r.att}</td><td>${r.pos}</td><td>${pct}</td></tr>`;
+    });
+    html += `</tbody></table>`;
+    elSummaryBox.innerHTML = html;
   }
 
   // ===== UPRAVLJANJE PLAVALCEV =====
@@ -783,7 +866,7 @@ document.addEventListener('DOMContentLoaded', () => {
       .forEach(term => {
         const o = document.createElement('option');
         o.value = term.id;
-        o.textContent = `${DAYNAME[term.day]} ${term.start_time}-${term.end_time}`;
+                    o.textContent = `${DAYNAME[term.day]} ${term.start_time.slice(0, 5)}-${term.end_time.slice(0, 5)}`;
         elTermSelect.appendChild(o);
       });
   }
@@ -797,7 +880,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     const assignedTerms = TERMS.filter(t => s.terms.includes(t.id) && userTerms.includes(t.id));
-    const termNames = assignedTerms.map(t => `${DAYNAME[t.day]} ${t.start_time}-${t.end_time}`).join(', ');
+    const termNames = assignedTerms.map(t => `${DAYNAME[t.day]} ${t.start_time.slice(0, 5)}-${t.end_time.slice(0, 5)}`).join(', ');
     
     elSwimmerInfo.textContent = `Dodeljeni termini: ${termNames || 'Ni dodeljenih terminov'}`;
   }
@@ -924,15 +1007,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   elSwimmerSelect.addEventListener('change', showSwimmerInfo);
 
+  // Event listenerji za day modal
+  elCloseDayModalBtn.addEventListener('click', closeDayModal);
+  elDayModal.addEventListener('click', (e) => {
+    if (e.target === elDayModal) closeDayModal();
+  });
+
   // ===== NALAGANJE PODATKOV =====
   async function loadDataFromSupabase() {
     try {
-      console.log('=== LOAD DATA FROM SUPABASE START ===');
-      console.log('Nalaganje podatkov za trenerja. userTerms:', userTerms);
-      
       // Če trener nima terminov, ne naloži podatkov
       if (!userTerms || userTerms.length === 0) {
-        console.log('Trener nima terminov, preskačem nalaganje podatkov');
         TERMS = [];
         swimmers = [];
         attendance = {};
@@ -953,11 +1038,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (termsError) throw termsError;
       TERMS = termsData || [];
-      console.log('Naloženi termini:', TERMS);
-      console.log('Število naloženih terminov:', TERMS.length);
-      if (TERMS.length > 0) {
-        console.log('Prvi termin:', TERMS[0]);
-      }
 
       // Naloži plavalce, ki pripadajo trenerjevim terminom
       const { data: swimmersData, error: swimmersError } = await supabase
@@ -971,7 +1051,6 @@ document.addEventListener('DOMContentLoaded', () => {
       swimmers = swimmers.filter(s => 
         !s.is_deleted && s.terms.some(termId => userTerms.includes(termId))
       );
-      console.log('Filtrirani plavalci:', swimmers);
 
           // Naloži prisotnost za trenerjeve termine
   const { data: attendanceData, error: attendanceError } = await supabase
@@ -984,12 +1063,10 @@ document.addEventListener('DOMContentLoaded', () => {
   attendance = {};
   if (attendanceData) {
     attendanceData.forEach(record => {
-      const key = `${record.term_id}-${record.date}`;
-      if (!attendance[key]) attendance[key] = {};
-      attendance[key][record.swimmer_id] = {
-        present: record.present,
-        note: record.note || ''
-      };
+      // Uporabi isto strukturo kot v glavni strani
+      if (!attendance[record.date]) attendance[record.date] = {};
+      if (!attendance[record.date][record.term_id]) attendance[record.date][record.term_id] = {};
+      attendance[record.date][record.term_id][record.swimmer_id] = record.present;
     });
   }
   
@@ -1019,11 +1096,8 @@ document.addEventListener('DOMContentLoaded', () => {
       updateTermSelect();
       showSwimmerInfo();
 
-      console.log('=== LOAD DATA FROM SUPABASE END ===');
-
     } catch (error) {
       console.error('Napaka pri nalaganju podatkov:', error);
-      console.error('Napaka podrobnosti:', error.message);
       alert('Napaka pri nalaganju podatkov');
     }
   }
@@ -1058,10 +1132,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // Naloži vse trenerje
   async function loadAllTrainers() {
       try {
+          console.log('Nalaganje vseh trenerjev...');
+          
           const { data: trainersData, error } = await supabase
               .from('trainers')
               .select('*')
               .neq('user_id', currentUser.id); // Izključi trenutnega trenerja
+          
+          console.log('Rezultat nalaganja trenerjev:', { trainersData, error });
           
           if (error) throw error;
           
@@ -1079,9 +1157,11 @@ document.addEventListener('DOMContentLoaded', () => {
           TERMS.forEach(term => {
               const option = document.createElement('option');
               option.value = term.id;
-              option.textContent = `${DAYNAME[term.day]} ${term.start_time}-${term.end_time}`;
+              option.textContent = `${DAYNAME[term.day]} ${term.start_time.slice(0, 5)}-${term.end_time.slice(0, 5)}`;
               substituteTermSelect.appendChild(option);
           });
+          
+          console.log('Posodobljeni select elementi za nadomestne trenerje');
           
       } catch (error) {
           console.error('Napaka pri nalaganju trenerjev:', error);
@@ -1091,8 +1171,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Naloži moje nadomestne dogovore
   async function loadMySubstitutions() {
       try {
+          console.log('Nalaganje nadomestnih dogovorov za:', currentUser.email);
+          
           const { data: substitutionsData, error } = await supabase
               .rpc('get_trainer_substitutions', { trainer_email: currentUser.email });
+          
+          console.log('Rezultat get_trainer_substitutions:', { substitutionsData, error });
           
           if (error) throw error;
           
@@ -1114,13 +1198,28 @@ document.addEventListener('DOMContentLoaded', () => {
           
       } catch (error) {
           console.error('Napaka pri nalaganju nadomestnih dogovorov:', error);
-          mySubstitutionsList.innerHTML = '<p class="error">Napaka pri nalaganju podatkov</p>';
+          mySubstitutionsList.innerHTML = '<p class="error">Napaka pri nalaganju podatkov: ' + error.message + '</p>';
       }
   }
   
   // Naloži nadomestne obveznosti
   async function loadSubstituteObligations() {
       try {
+          console.log('Nalaganje nadomestnih obveznosti za trenerja ID:', currentUser.id);
+          
+          // Najprej poiščimo trenerja v tabeli trenerjev
+          const { data: trainerData, error: trainerError } = await supabase
+              .from('trainers')
+              .select('id')
+              .eq('user_id', currentUser.id)
+              .single();
+          
+          if (trainerError || !trainerData) {
+              console.error('Trener ni najden za nadomestne obveznosti:', trainerError);
+              substituteObligationsList.innerHTML = '<p class="error">Trener ni najden</p>';
+              return;
+          }
+          
           const { data: obligationsData, error } = await supabase
               .from('substitute_trainers')
               .select(`
@@ -1128,14 +1227,16 @@ document.addEventListener('DOMContentLoaded', () => {
                   original_trainer:trainers!substitute_trainers_original_trainer_id_fkey(first_name, last_name),
                   term:terms(id, day, start_time, end_time)
               `)
-              .eq('substitute_trainer_id', currentUser.id);
+              .eq('substitute_trainer_id', trainerData.id);
+          
+          console.log('Rezultat nadomestnih obveznosti:', { obligationsData, error });
           
           if (error) throw error;
           
           if (obligationsData && obligationsData.length > 0) {
               const html = obligationsData.map(obligation => `
                   <div class="obligation-item" style="border: 1px solid #007bff; padding: 10px; margin: 5px 0; border-radius: 5px; background-color: #f8f9fa;">
-                      <div><strong>Termin:</strong> ${DAYNAME[obligation.term.day]} ${obligation.term.start_time}-${obligation.term.end_time}</div>
+                      <div><strong>Termin:</strong> ${DAYNAME[obligation.term.day]} ${obligation.term.start_time.slice(0, 5)}-${obligation.term.end_time.slice(0, 5)}</div>
                       <div><strong>Datum:</strong> ${new Date(obligation.substitute_date).toLocaleDateString('sl-SI')}</div>
                       <div><strong>Nadomestujem:</strong> ${obligation.original_trainer.first_name} ${obligation.original_trainer.last_name}</div>
                       <div><strong>Razlog:</strong> ${obligation.reason || 'Ni razloga'}</div>
@@ -1149,7 +1250,7 @@ document.addEventListener('DOMContentLoaded', () => {
           
       } catch (error) {
           console.error('Napaka pri nalaganju nadomestnih obveznosti:', error);
-          substituteObligationsList.innerHTML = '<p class="error">Napaka pri nalaganju podatkov</p>';
+          substituteObligationsList.innerHTML = '<p class="error">Napaka pri nalaganju podatkov: ' + error.message + '</p>';
       }
   }
   
@@ -1194,7 +1295,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const selectedTrainer = Array.from(substituteTrainerSelect.options).find(opt => opt.value === substituteTrainerId);
       
       substituteConfirmationDetails.innerHTML = `
-          <p><strong>Termin:</strong> ${DAYNAME[selectedTerm.day]} ${selectedTerm.start_time}-${selectedTerm.end_time}</p>
+          <p><strong>Termin:</strong> ${DAYNAME[selectedTerm.day]} ${selectedTerm.start_time.slice(0, 5)}-${selectedTerm.end_time.slice(0, 5)}</p>
           <p><strong>Datum:</strong> ${new Date(date).toLocaleDateString('sl-SI')}</p>
           <p><strong>Nadomestni trener:</strong> ${selectedTrainer.textContent}</p>
           <p><strong>Razlog:</strong> ${reason || 'Ni razloga'}</p>
