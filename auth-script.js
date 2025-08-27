@@ -756,7 +756,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (regularSwimmers.length === 0) {
       const tr = document.createElement('tr');
       const td = document.createElement('td');
-      td.colSpan = 4;
+      td.colSpan = 2;
       td.className = 'muted';
       td.textContent = 'Ni dodeljenih plavalcev za ta termin.';
       tr.appendChild(td);
@@ -766,21 +766,59 @@ document.addEventListener('DOMContentLoaded', () => {
         .forEach(s => {
           const isPresent = termAtt[s.id] || false;
           const row = document.createElement('tr');
-          row.innerHTML = `
-            <td>${s.first_name} ${s.last_name}</td>
-            <td>
-              <input type="checkbox" ${isPresent ? 'checked' : ''} 
-                     onchange="updateAttendance('${s.id}', ${!isPresent})">
-            </td>
-            <td>
-              <input type="text" value="" 
-                     onchange="updateAttendance('${s.id}', ${isPresent})" 
-                     placeholder="Opomba">
-            </td>
-            <td>
-              <button class="btn remove-btn" onclick="removeSwimmerFromEvent('${s.id}')" title="Odstrani plavalca iz treninga">✖</button>
-            </td>
-          `;
+          
+          const td1 = document.createElement('td');
+          td1.textContent = `${s.first_name} ${s.last_name}`;
+          
+          const td2 = document.createElement('td');
+          td2.style.display = "flex";
+          td2.style.gap = "4px";
+          td2.style.alignItems = "center";
+          
+          // Gumb "Prisoten"
+          const btnPresent = document.createElement("button");
+          btnPresent.textContent = "Prisoten";
+          btnPresent.className = "btn";
+          if (isPresent === true) {
+            btnPresent.classList.add("ok");
+          } else {
+            btnPresent.classList.add("neutral");
+          }
+          btnPresent.addEventListener("click", async () => {
+            await updateAttendance(s.id, true);
+            renderEventTables(termId, date);
+          });
+          
+          // Gumb "Odsoten"
+          const btnAbsent = document.createElement("button");
+          btnAbsent.textContent = "Odsoten";
+          btnAbsent.className = "btn";
+          if (isPresent === false) {
+            btnAbsent.classList.add("warn");
+          } else {
+            btnAbsent.classList.add("neutral");
+          }
+          btnAbsent.addEventListener("click", async () => {
+            await updateAttendance(s.id, false);
+            renderEventTables(termId, date);
+          });
+          
+          // Gumb za odstranitev
+          const btnRemove = document.createElement("button");
+          btnRemove.innerHTML = "✖";
+          btnRemove.className = "btn remove-btn";
+          btnRemove.addEventListener("click", async () => {
+            await removeSwimmerFromEvent(s.id);
+            renderEventTables(termId, date);
+          });
+          
+          td2.appendChild(btnPresent);
+          td2.appendChild(btnAbsent);
+          td2.appendChild(btnRemove);
+          
+          row.appendChild(td1);
+          row.appendChild(td2);
+          
           elAttendanceTable.appendChild(row);
         });
     }
@@ -790,7 +828,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (substitutionSwimmers.length === 0) {
       const tr = document.createElement('tr');
       const td = document.createElement('td');
-      td.colSpan = 4;
+      td.colSpan = 2;
       td.className = 'muted';
       td.textContent = 'Ni nadomeščanja.';
       tr.appendChild(td);
@@ -800,21 +838,59 @@ document.addEventListener('DOMContentLoaded', () => {
         .forEach(s => {
           const isPresent = termAtt[s.id] || false;
           const row = document.createElement('tr');
-          row.innerHTML = `
-            <td>${s.first_name} ${s.last_name}</td>
-            <td>
-              <input type="checkbox" ${isPresent ? 'checked' : ''} 
-                     onchange="updateAttendance('${s.id}', ${!isPresent})">
-            </td>
-            <td>
-              <input type="text" value="" 
-                     onchange="updateAttendance('${s.id}', ${isPresent})" 
-                     placeholder="Opomba">
-            </td>
-            <td>
-              <button class="btn remove-btn" onclick="removeSwimmerFromEvent('${s.id}')" title="Odstrani nadomestnega plavalca iz treninga">✖</button>
-            </td>
-          `;
+          
+          const td1 = document.createElement('td');
+          td1.textContent = `${s.first_name} ${s.last_name}`;
+          
+          const td2 = document.createElement('td');
+          td2.style.display = "flex";
+          td2.style.gap = "4px";
+          td2.style.alignItems = "center";
+          
+          // Gumb "Prisoten"
+          const btnPresent = document.createElement("button");
+          btnPresent.textContent = "Prisoten";
+          btnPresent.className = "btn";
+          if (isPresent === true) {
+            btnPresent.classList.add("ok");
+          } else {
+            btnPresent.classList.add("neutral");
+          }
+          btnPresent.addEventListener("click", async () => {
+            await updateAttendance(s.id, true);
+            renderEventTables(termId, date);
+          });
+          
+          // Gumb "Odsoten"
+          const btnAbsent = document.createElement("button");
+          btnAbsent.textContent = "Odsoten";
+          btnAbsent.className = "btn";
+          if (isPresent === false) {
+            btnAbsent.classList.add("warn");
+          } else {
+            btnAbsent.classList.add("neutral");
+          }
+          btnAbsent.addEventListener("click", async () => {
+            await updateAttendance(s.id, false);
+            renderEventTables(termId, date);
+          });
+          
+          // Gumb za odstranitev
+          const btnRemove = document.createElement("button");
+          btnRemove.innerHTML = "✖";
+          btnRemove.className = "btn remove-btn";
+          btnRemove.addEventListener("click", async () => {
+            await removeSwimmerFromEvent(s.id);
+            renderEventTables(termId, date);
+          });
+          
+          td2.appendChild(btnPresent);
+          td2.appendChild(btnAbsent);
+          td2.appendChild(btnRemove);
+          
+          row.appendChild(td1);
+          row.appendChild(td2);
+          
           elSubstitutionTable.appendChild(row);
         });
     }
