@@ -1,6 +1,7 @@
 :root{
   --pri:#2563eb; --ok:#16a34a; --warn:#dc2626; --mut:#6b7280; --bg:#f5f7fa; --border:#e5e7eb;
   --unfilled:#fecaca; --complete:#bbf7d0;
+  --partial:#ff9800;
 }
 *{box-sizing:border-box}
 body{font-family:system-ui, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); color:#0f172a; margin:30px 18px 18px;}
@@ -17,12 +18,14 @@ h1{margin:0 0 12px;text-align:center}
 .calendar{grid-column:1 / -1;background:#fff;border:1px solid var(--border);border-radius:12px;padding:8px}
 .calendar-head{
   display:grid;
+  /* Zožitev sobot in nedelj na namiznem prikazu */
   grid-template-columns:repeat(5,1fr) 0.5fr 0.5fr;
   gap:6px;margin-bottom:6px
 }
 .calendar-head div{font-weight:600;text-align:center;padding:6px 0;background:#eff6ff;border-radius:8px}
 .calendar-grid{
   display:grid;
+  /* Zožitev sobot in nedelj na namiznem prikazu */
   grid-template-columns:repeat(5,1fr) 0.5fr 0.5fr;
   gap:6px
 }
@@ -34,6 +37,7 @@ h1{margin:0 0 12px;text-align:center}
 .event .time{font-variant-numeric:tabular-nums}
 .event.unfilled{background:var(--unfilled); border-color:#fca5a5}
 .event.complete{background:var(--complete); border-color:#86efac}
+.event.partial{background:var(--partial); border-color:#f7911c; color:#fff;}
 .event.disabled{background:#e5e7eb;color:#6b7280;text-decoration:line-through;border-color:#d1d5db}
 .card{background:#fff;border:1px solid var(--border);border-radius:12px}
 .card h3{margin:0;padding:10px 12px;border-bottom:1px solid var(--border)}
@@ -47,11 +51,40 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
 .flex-col{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
 /* Modal */
 .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center;padding:18px;z-index:100}
-.modal .box{background:#fff;border-radius:12px;max-width:680px;width:100%;border:1px solid var(--border);box-shadow:0 10px 30px rgba(0,0,0,.15); position:fixed; top:10%; left:50%; transform:translate(-50%, 0);}
+.modal .box{background:#fff;border:1px solid var(--border);border-radius:12px;max-width:680px;width:100%;box-shadow:0 10px 30px rgba(0,0,0,.15); position:fixed; top:10%; left:50%; transform:translate(-50%, 0);}
 .modal .box-header{display:flex;align-items:center;justify-content:space-between;padding:12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
 .modal .box-body{padding:12px}
-.chips{display:flex;gap:6px;flex-wrap:wrap}
-.chip{background:#f1f5f9;border:1px solid var(--border);border-radius:999px;padding:2px 8px;font-size:12px}
+.chips{display:flex;gap:10px; flex-wrap:wrap; margin-bottom: 12px;}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px;
+  border: 1px solid #ffffff;
+  border-radius: 999px;
+  background-color: #f8fafc;
+  color: #4b5563;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+  font-family: inherit;
+  gap: 4px;
+}
+.chip:hover {
+  background-color: #e5e7eb;
+}
+.chip .remove-term-btn {
+  border: none;
+  background: transparent;
+  color: #4b5563;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  margin: 0;
+}
 .csv-options{max-width:1200px;margin:12px auto;padding:12px;background:#fff;border:1px solid var(--border);border-radius:12px;}
 .csv-options .inner{padding:12px}
 .csv-export-controls{
@@ -66,8 +99,6 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
 .csv-export-controls .btn {
   flex-grow: 0;
 }
-
-/* Stil za gumb Odstrani/križec */
 .btn.remove-btn {
   background: none;
   border: none;
@@ -88,14 +119,11 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
 .term-item-info { display: flex; flex-direction: column; gap: 2px; }
 .term-item-label { font-weight: 600; }
 .term-item-dates { font-size: 12px; color: var(--mut); }
-
-/* Dodaten modal za izbiro termina na določen dan */
 .day-modal .day-modal-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-/* Stili za novo modalno okno za opombo */
 #noteModal {
   display: none;
   position: fixed;
@@ -109,7 +137,6 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   justify-content: center;
   align-items: center;
 }
-
 #noteModal .modal-content {
   background-color: #fefefe;
   padding: 20px;
@@ -143,7 +170,8 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   font-weight: bold;
   cursor: pointer;
 }
-#noteModal .close-btn:hover, #noteModal .close-btn:focus {
+#noteModal .close-btn:hover,
+#noteModal .close-btn:focus {
   color: black;
   text-decoration: none;
 }
@@ -153,50 +181,25 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   padding: 8px;
   box-sizing: border-box;
 }
-
-/* MEDIA QUERIES ZA ODZIVNOST */
 @media (max-width: 768px) {
-  /* Namesto skrivanja, zožanje vikend stolpcev */
-  .calendar-head{
-    grid-template-columns:repeat(5,1fr) 0.5fr 0.5fr;
+  #noteModal .modal-content {
+    padding: 15px;
   }
-  .calendar-grid{
-    grid-template-columns:repeat(5,1fr) 0.5fr 0.5fr;
-  }
-  
-  body {
-    margin: 10px;
-    font-size: 14px;
-  }
-  h1 {
-    font-size: 24px;
-  }
-  .toolbar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-  }
-  .toolbar .left, .toolbar .right {
-    display: flex;
-    flex-direction: row;
-    gap: 8px;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-  .grid {
-    grid-template-columns: 1fr;
-  }
-  .calendar-head {
-    font-size: 12px;
-  }
+}
+/* Media Query za mobilni prikaz */
+@media (max-width: 768px) {
+  body { margin: 10px; font-size: 14px; }
+  h1 { font-size: 24px; }
+  .toolbar { flex-direction: column; align-items: stretch; gap: 8px; }
+  .toolbar .left, .toolbar .right { display: flex; flex-direction: row; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .grid { grid-template-columns: 1fr; }
+  .calendar-head { font-size: 12px; }
   .day { 
     min-height: 90px;
     padding: 4px;
     overflow: hidden;
   }
-  .day .num {
-    font-size: 14px;
-  }
+  .day .num { font-size: 14px; }
   .event { 
     font-size: 10px; 
     padding: 2px 4px;
@@ -204,13 +207,26 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   .event .time {
     font-size: 10px;
   }
-}
-@media (min-width: 769px) {
-  /* Zožitev sobot in nedelj na namiznem prikazu */
-  .calendar-head{
-    grid-template-columns:repeat(5,1fr) 0.5fr 0.5fr;
+  .event .end-time {
+    display: none; /* Skrije čas konca termina na mobilnih napravah */
   }
-  .calendar-grid{
-    grid-template-columns:repeat(5,1fr) 0.5fr 0.5fr;
+  .day:not(.disabled) .event:nth-child(n+4) {
+    display: none;
   }
+  .more-events-indicator {
+    font-size: 12px;
+    text-align: center;
+    margin-top: 4px;
+    color: var(--mut);
+  }
+  .card h3 { font-size: 16px; padding: 8px 10px; }
+  .card .inner { padding: 8px; }
+  .btn { padding: 6px 10px; font-size: 13px; }
+  .modal .box { max-width: 95%; top: 10%; transform: translate(-50%, 0); }
+  .modal .box-header { flex-direction: column; align-items: flex-start; }
+  .modal .box-header .row { flex-wrap: wrap; margin-top: 8px; }
+  input[type="text"], input[type="date"], input[type="time"], select { font-size: 14px; }
+  .csv-options .inner{ flex-direction: column; gap: 8px; }
+  .csv-export-controls{ flex-direction: column; gap: 8px; }
+  .csv-export-controls > * { width: 100%; }
 }
