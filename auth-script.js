@@ -671,7 +671,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         events.push({
           termId: term.id,
-          time: `${term.start_time}-${term.end_time}`,
+          time: `${term.start_time.slice(0, 5)}-${term.end_time.slice(0, 5)}`,
           count: markedAssignedSwimmersCount,
           total: totalAssignedCount,
           status: status
