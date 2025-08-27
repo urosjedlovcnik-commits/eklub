@@ -442,14 +442,15 @@ document.addEventListener('DOMContentLoaded', () => {
           const termDateTo = new Date(term.date_to);
           
           if (termDateFrom && termDateTo && date >= termDateFrom && date <= termDateTo) {
-            const termKey = `${term.id}-${dateStr}`;
-            const termAtt = attendance[termKey] || {};
+            // Uporabi isto strukturo kot v glavni strani
+            const termAtt = attendance[dateStr]?.[term.id] || {};
             const assignedSwimmers = swimmers.filter(s => s.terms.includes(term.id) && !s.is_deleted);
             const assignedSwimmerIds = assignedSwimmers.map(s => s.id);
             const markedAssignedSwimmersCount = assignedSwimmerIds.filter(id => termAtt.hasOwnProperty(id)).length;
             const totalAssignedCount = assignedSwimmers.length;
             
             let status = 'active';
+            const termKey = `${term.id}-${dateStr}`;
             if (termStatus[termKey]) {
               status = termStatus[termKey].status;
             } else if (markedAssignedSwimmersCount === 0) {
@@ -551,7 +552,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadEventData(termId, date) {
       const termKey = `${termId}-${date}`;
-      const termAtt = attendance[termKey] || {};
+      // Uporabi isto strukturo kot v glavni strani
+      if (!attendance[date]) attendance[date] = {};
+      if (!attendance[date][termId]) attendance[date][termId] = {};
+      const termAtt = attendance[date][termId];
       const termStat = termStatus[termKey];
       
       // Naloži prisotnost
@@ -563,12 +567,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (!attError && attData) {
         attData.forEach(record => {
-          termAtt[record.swimmer_id] = {
-            present: record.present,
-            note: record.note || ''
-          };
+          termAtt[record.swimmer_id] = record.present;
         });
-        attendance[termKey] = termAtt;
       }
 
       // Naloži status termina
@@ -589,7 +589,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderEventTables(termId, date) {
       const termKey = `${termId}-${date}`;
-      const termAtt = attendance[termKey] || {};
+      // Uporabi isto strukturo kot v glavni strani
+      const termAtt = attendance[date]?.[termId] || {};
       
       // Filtriraj plavalce, ki pripadajo trenerju
       const assignedSwimmers = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted);
@@ -614,17 +615,17 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         regularSwimmers.sort((a,b) => (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name))
           .forEach(s => {
-            const att = termAtt[s.id] || { present: false, note: '' };
+            const isPresent = termAtt[s.id] || false;
             const row = document.createElement('tr');
             row.innerHTML = `
               <td>${s.first_name} ${s.last_name}</td>
               <td>
-                <input type="checkbox" ${att.present ? 'checked' : ''} 
-                       onchange="updateAttendance('${s.id}', ${att.present}, '${att.note}')">
+                <input type="checkbox" ${isPresent ? 'checked' : ''} 
+                       onchange="updateAttendance('${s.id}', ${!isPresent}, '')">
               </td>
               <td>
-                <input type="text" value="${att.note}" 
-                       onchange="updateAttendance('${s.id}', ${att.present}, this.value)" 
+                <input type="text" value="" 
+                       onchange="updateAttendance('${s.id}', ${isPresent}, this.value)" 
                        placeholder="Opomba">
               </td>
             `;
@@ -639,17 +640,17 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         substitutionSwimmers.sort((a,b) => (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name))
           .forEach(s => {
-            const att = termAtt[s.id] || { present: false, note: '' };
+            const isPresent = termAtt[s.id] || false;
             const row = document.createElement('tr');
             row.innerHTML = `
               <td>${s.first_name} ${s.last_name}</td>
               <td>
-                <input type="checkbox" ${att.present ? 'checked' : ''} 
-                       onchange="updateAttendance('${s.id}', ${att.present}, '${att.note}')">
+                <input type="checkbox" ${isPresent ? 'checked' : ''} 
+                       onchange="updateAttendance('${s.id}', ${!isPresent}, '')">
               </td>
               <td>
-                <input type="text" value="${att.note}" 
-                       onchange="updateAttendance('${s.id}', ${att.present}, this.value)" 
+                <input type="text" value="" 
+                       onchange="updateAttendance('${s.id}', ${isPresent}, this.value)" 
                        placeholder="Opomba">
               </td>
             `;
@@ -697,10 +698,11 @@ document.addEventListener('DOMContentLoaded', () => {
     window.updateAttendance = async function(swimmerId, present, note) {
       if (!currentEventTermId || !currentEventDate) return;
       
-      const termKey = `${currentEventTermId}-${currentEventDate}`;
-      if (!attendance[termKey]) attendance[termKey] = {};
+      // Uporabi isto strukturo kot v glavni strani
+      if (!attendance[currentEventDate]) attendance[currentEventDate] = {};
+      if (!attendance[currentEventDate][currentEventTermId]) attendance[currentEventDate][currentEventTermId] = {};
       
-      attendance[termKey][swimmerId] = { present, note };
+      attendance[currentEventDate][currentEventTermId][swimmerId] = present;
       
       try {
         const { error } = await supabase
@@ -728,52 +730,78 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateSummary() {
       const year = currentYear;
       const month = currentMonth;
-      const daysInMonthCount = daysInMonth(year, month);
       
-      let totalEvents = 0;
-      let totalPresent = 0;
-      let totalAbsent = 0;
-      let totalInactive = 0;
-      
-      for (let day = 1; day <= daysInMonthCount; day++) {
-        const date = new Date(year, month, day);
-        const dateStr = iso(date);
-        const events = getEventsForDate(dateStr);
-        
-        events.forEach(event => {
-          totalEvents++;
+      // Uporabi isto logiko kot v glavni strani
+      const res = {};
+      const monthStart = new Date(year, month, 1);
+      const monthEnd = new Date(year, month + 1, 0);
+      const today = new Date();
+      today.setHours(0,0,0,0);
+
+      // Inicializacija podatkov za vse plavalce (aktivne in izbrisane)
+      swimmers.forEach(s => {
+        res[s.id] = { first: s.first_name, last: s.last_name, att: 0, pos: 0 };
+      });
+
+      // Zanka za izračun prisotnosti (att)
+      const allAttendance = Object.entries(attendance);
+      for (const [date, termData] of allAttendance) {
+        const d = new Date(date);
+        d.setHours(0,0,0,0);
+        if (d >= monthStart && d <= monthEnd) {
+          for (const termId in termData) {
+            // Preveri, če termin pripada trenerju
+            if (!userTerms.includes(termId)) continue;
+            
+            for (const swimmerId in termData[termId]) {
+              if (termData[termId][swimmerId] === true && res[swimmerId]) {
+                res[swimmerId].att += 1;
+              }
+            }
+          }
+        }
+      }
+
+      // Zanka za izračun možnih obiskov (pos)
+      const currentDate = new Date(monthStart);
+      while (currentDate <= monthEnd) {
+        const ymd = iso(currentDate);
+        const todaysTerms = getEventsForDate(ymd);
+
+        todaysTerms.forEach(term => {
+          const termIsActive = term.status === "active";
           
-          if (event.status === 'inactive') {
-            totalInactive++;
-          } else {
-            totalPresent += event.count;
-            totalAbsent += (event.total - event.count);
+          if (termIsActive) {
+            swimmers.forEach(s => {
+              if (res[s.id] && s.terms.includes(term.termId)) {
+                
+                if (s.is_deleted) {
+                  // Plavalec je izbrisan, štejemo samo, če je datum v preteklosti
+                  if (currentDate <= today) {
+                    res[s.id].pos += 1;
+                  }
+                } else {
+                  // Plavalec je aktiven, štejemo vse možne obiske
+                  res[s.id].pos += 1;
+                }
+              }
+            });
           }
         });
+        currentDate.setDate(currentDate.getDate() + 1);
       }
       
-      const summary = `
-        <div class="summary-grid">
-          <div class="summary-item">
-            <div class="summary-number">${totalEvents}</div>
-            <div class="summary-label">Skupaj terminov</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-number">${totalPresent}</div>
-            <div class="summary-label">Prisotni</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-number">${totalAbsent}</div>
-            <div class="summary-label">Odsotni</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-number">${totalInactive}</div>
-            <div class="summary-label">Deaktivirani</div>
-          </div>
-        </div>
-      `;
-      
-      elSummaryBox.innerHTML = summary;
+      // Prikaži povzetek
+      let html = `<table><thead><tr><th>Plavalec</th><th>Obiskani</th><th>Možni</th><th>Delež (%)</th></tr></thead><tbody>`;
+      // Filtriramo plavalce, ki nimajo nobenega možnega obiska
+      const rows = Object.values(res).filter(r => r.pos > 0).sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first));
+      if(rows.length===0) html += `<tr><td colspan="4" class="muted">Ni plavalcev.</td></tr>`;
+      rows.forEach(r=>{
+          const pct = r.pos > 0 ? (r.att / r.pos * 100).toFixed(1) : "0.0";
+          html += `<tr><td>${r.first} ${r.last}</td><td>${r.att}</td><td>${r.pos}</td><td>${pct}</td></tr>`;
+      });
+      html += `</tbody></table>`;
+      elSummaryBox.innerHTML = html;
     }
 
     // ===== UPRAVLJANJE PLAVALCEV =====
@@ -997,12 +1025,10 @@ document.addEventListener('DOMContentLoaded', () => {
     attendance = {};
     if (attendanceData) {
       attendanceData.forEach(record => {
-        const key = `${record.term_id}-${record.date}`;
-        if (!attendance[key]) attendance[key] = {};
-        attendance[key][record.swimmer_id] = {
-          present: record.present,
-          note: record.note || ''
-        };
+        // Uporabi isto strukturo kot v glavni strani
+        if (!attendance[record.date]) attendance[record.date] = {};
+        if (!attendance[record.date][record.term_id]) attendance[record.date][record.term_id] = {};
+        attendance[record.date][record.term_id][record.swimmer_id] = record.present;
       });
     }
     
