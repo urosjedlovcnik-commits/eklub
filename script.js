@@ -525,9 +525,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // POSODOBLJENA FUNKCIJA ZA ODPRANJE MODALA
-    function openModal(modalEl){ modalEl.classList.add("show"); modalEl.setAttribute("aria-hidden", "false"); }
+  function openModal(modalEl) {
+    modalEl.style.display = 'flex';
+    modalEl.setAttribute("aria-hidden", "false");
+    // Prisilimo browser reflow pred dodajanjem show class
+    modalEl.offsetHeight;
+    modalEl.classList.add("show");
+}
     // POSODOBLJENA FUNKCIJA ZA ZAPIRANJE MODALA
-    function closeModal(modalEl){ modalEl.classList.remove("show"); modalEl.setAttribute("aria-hidden", "true"); }
+ function closeModal(modalEl) {
+    modalEl.classList.remove("show");
+    modalEl.setAttribute("aria-hidden", "true");
+    // Počakamo, da se animacija konča, preden skrijemo modal
+    setTimeout(() => {
+        if (!modalEl.classList.contains("show")) {
+            modalEl.style.display = 'none';
+        }
+    }, 300);
+}
 
     elCloseModalBtn.addEventListener("click", ()=>{ 
       closeModal(elModal); 
@@ -897,14 +912,82 @@ document.addEventListener('DOMContentLoaded', () => {
         elTermList.appendChild(div);
       });
     }
+function openEditTermModal(termId) {
+    editingTermId = termId;
+    const term = termById(termId);
+    if (!term) {
+        console.error("Termin ne obstaja:", termId);
+        return;
+    }
 
-    async function deleteTerm(termId) {
+    elEditTermModalTitle.textContent = `Uredi termin: ${term.label}`;
+    elEditTermDateFrom.value = formatDate(term.date_from);
+    elEditTermDateTo.value = formatDate(term.date_to);
+
+    openModal(elEditTermModal);
+}
+elSaveEditTermBtn.addEventListener("click", async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const term = termById(editingTermId);
+    if (!term) {
+        alert("Napaka: termin ne obstaja.");
+        return;
+    }
+
+    const newDateFrom = parseDate(elEditTermDateFrom.value);
+    const newDateTo = parseDate(elEditTermDateTo.value);
+
+    if (!newDateFrom || !newDateTo) {
+        alert("Prosim, izpolnite oba datuma v pravilnem formatu (dd / mm / yyyy).");
+        return;
+    }
+    
+    if (newDateFrom > newDateTo) {
+        alert("Datum 'od' ne more biti večji od datuma 'do'.");
+        return;
+    }
+    
+    try {
+        const { error } = await supabase
+            .from('terms')
+            .update({ 
+                date_from: newDateFrom, 
+                date_to: newDateTo 
+            })
+            .eq('id', editingTermId);
+
+        if (error) {
+            console.error("Supabase napaka:", error);
+            alert("Napaka pri posodabljanju termina. Preverite konzolo.");
+            return;
+        }
+
+        // Posodobi lokalne podatke
+        term.date_from = newDateFrom;
+        term.date_to = newDateTo;
+        
+        closeModal(elEditTermModal);
+        await renderTermsList();
+        await renderMonth();
+        alert("Termin uspešno posodobljen.");
+        
+    } catch (error) {
+        console.error("Nepričakovana napaka:", error);
+        alert("Nepričakovana napaka pri posodabljanju termina.");
+    }
+});
+    // Popravljena funkcija za brisanje terminov
+async function deleteTerm(termId) {
     if (!confirm("Ali ste prepričani, da želite izbrisati ta termin?")) {
         return;
     }
 
     try {
-        // Brisanje prisotnosti termina
+        console.log("Brišem termin:", termId);
+        
+        // 1. Brisanje prisotnosti termina
         const { error: attError } = await supabase
             .from('attendance')
             .delete()
@@ -916,7 +999,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return; 
         }
 
-        // Brisanje statusa termina
+        // 2. Brisanje statusa termina
         const { error: statusError } = await supabase
             .from('term_status')
             .delete()
@@ -924,11 +1007,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (statusError) { 
             console.error("Napaka pri brisanju statusa termina:", statusError); 
-            alert("Napaka pri brisanju statusa termina. Preverite konzolo."); 
+            alert("Napaka pri brisanje statusa termina. Preverite konzolo."); 
             return; 
         }
 
-        // Brisanje termina
+        // 3. Brisanje termina
         const { error: termError } = await supabase
             .from('terms')
             .delete()
@@ -940,33 +1023,40 @@ document.addEventListener('DOMContentLoaded', () => {
             return; 
         }
         
-        // Odstranjevanje termina iz plavalcev - uporabi for...of namesto forEach
-        for (const swimmer of swimmers) {
+        // 4. Posodobi plavalce - uporabi standardno for zanko
+        const swimmersToUpdate = [];
+        for (let i = 0; i < swimmers.length; i++) {
+            const swimmer = swimmers[i];
             if (swimmer.terms.includes(termId)) {
                 swimmer.terms = swimmer.terms.filter(t => t !== termId);
-                const { error: swimmerError } = await supabase
-                    .from('swimmers')
-                    .update({ terms: swimmer.terms })
-                    .eq('id', swimmer.id);
-                
-                if (swimmerError) {
-                    console.error("Napaka pri posodabljanju plavalca:", swimmerError);
-                    // Ne prekinjamo celotne operacije, samo zabeležimo napako
-                }
+                swimmersToUpdate.push(swimmer);
             }
         }
         
-        // Posodobi lokalne podatke
+        // Posodobi plavalce v bazi
+        for (let i = 0; i < swimmersToUpdate.length; i++) {
+            const swimmer = swimmersToUpdate[i];
+            const { error: swimmerError } = await supabase
+                .from('swimmers')
+                .update({ terms: swimmer.terms })
+                .eq('id', swimmer.id);
+            
+            if (swimmerError) {
+                console.error("Napaka pri posodabljanju plavalca:", swimmer.first_name, swimmer.last_name, swimmerError);
+            }
+        }
+        
+        // 5. Posodobi lokalne podatke
         TERMS = TERMS.filter(t => t.id !== termId);
         
-        // Osveži vmesnik
+        // 6. Osveži vmesnik
         await refreshSwimmerPanel();
         await renderMonth();
         alert("Termin uspešno izbrisan.");
         
     } catch (error) {
         console.error("Nepričakovana napaka pri brisanju termina:", error);
-        alert("Nepričakovana napaka pri brisanju termina. Preverite konzolo.");
+        alert("Nepričakovana napaka pri brisanju termina. Preverite konzolo za podrobnosti.");
     }
 }
 

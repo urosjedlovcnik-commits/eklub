@@ -337,7 +337,7 @@ th {
 }
 
 .modal {
-    display: none;
+    display: none; /* Pomembno: eksplicitno none za začetek */
     position: fixed;
     z-index: 1000;
     left: 0;
@@ -348,16 +348,15 @@ th {
     background-color: rgba(0, 0, 0, 0.4);
     align-items: center;
     justify-content: center;
-    transition: opacity 0.3s ease, visibility 0s 0.3s;
     opacity: 0;
     visibility: hidden;
+    transition: opacity 0.3s ease;
 }
 
 .modal.show {
     opacity: 1;
     visibility: visible;
-    display: flex; /* Dodano, da se prepreči preblisk ob prikazu */
-    transition: opacity 0.3s ease;
+    /* display: flex je nastavljen v JavaScript funkciji openModal */
 }
 
 .modal-content {
