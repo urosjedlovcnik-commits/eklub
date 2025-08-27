@@ -104,17 +104,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===== Pomožne funkcije =====
     function mkSwimmer(first,last,terms=[]){ return { first_name:first, last_name:last, terms:[...new Set(terms)] }; }
-    function iso(d){ return d.toISOString().slice(0,10); }
-    function daysInMonth(y,m){ return new Date(y,m+1,0).getDate(); }
-    function isToday(d){ const t=new Date(); return d.getFullYear()==t.getFullYear() && d.getMonth()==t.getMonth() && d.getDate()==t.getDate(); }
-    function isPast(d){ const t=new Date(); t.setHours(0,0,0,0); return d.getTime() < t.getTime(); }
-    function startWeekday(y,m){ let w=new Date(y,m,1).getDay(); return w===0?7:w; } // pon=1
+    function iso(d){ 
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    function daysInMonth(y,m){ return new Date(y,m+1,0,12,0,0).getDate(); }
+    function isToday(d){ const t=new Date(); t.setHours(12,0,0,0); return d.getFullYear()==t.getFullYear() && d.getMonth()==t.getMonth() && d.getDate()==t.getDate(); }
+    function isPast(d){ const t=new Date(); t.setHours(12,0,0,0); return d.getTime() < t.getTime(); }
+    function startWeekday(y,m){ let w=new Date(y,m,1,12,0,0).getDay(); return w===0?7:w; } // pon=1
 
     function parseDate(dateStr) {
       const parts = dateStr.split(/[\s/.]/).filter(Boolean);
       if (parts.length !== 3) return null;
       const [day, month, year] = parts.map(Number);
-      const date = new Date(year, month - 1, day);
+      const date = new Date(year, month - 1, day, 12, 0, 0);
       if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
         return null;
       }
@@ -174,11 +179,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // ===== Pogled meseca =====
-    let viewDate = new Date(); viewDate.setDate(1);
+    let viewDate = new Date(); viewDate.setDate(1); viewDate.setHours(12,0,0,0);
 
     function renderMonth(){
       const y=viewDate.getFullYear(), m=viewDate.getMonth();
-      elMonthLabel.textContent = new Date(y,m,1).toLocaleDateString("sl-SI", {month:"long",year:"numeric"});
+      elMonthLabel.textContent = new Date(y,m,1,12,0,0).toLocaleDateString("sl-SI", {month:"long",year:"numeric"});
       elCalendarGrid.innerHTML = "";
 
       const pad = startWeekday(y,m)-1;
@@ -188,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const dim = daysInMonth(y,m);
       for(let d=1; d<=dim; d++){
-        const date = new Date(y,m,d);
+        const date = new Date(y,m,d,12,0,0);
         const day = document.createElement("div");
         day.className="day"+(isToday(date)?" today":"");
         const num = document.createElement("div"); num.className="num"; num.textContent=d; day.appendChild(num);
@@ -809,7 +814,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     async function openEvent(date, termId){
-      modalCtx = { date:new Date(date), termId };
+      modalCtx = { date:new Date(date.getTime()), termId };
       const t = termById(termId);
       elModalTitle.textContent = `${t.label}`;
       
