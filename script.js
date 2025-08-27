@@ -1122,7 +1122,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      const newTermId = `${DAYNAME[day].toLowerCase().slice(0,3)}-${start.replace(':','-')}-${end.replace(':','-')}`;
+      // Popravi formatiranje ID-ja termina - dodaj pomišljaj med uro in minuto
+      const startFormatted = start.replace(':', '-');
+      const endFormatted = end.replace(':', '-');
+      const newTermId = `${DAYNAME[day].toLowerCase().slice(0,3)}-${startFormatted}-${endFormatted}`;
       const newLabel = `${DAYNAME[day]} ${start}–${end}`;
 
       const newTerm = {
