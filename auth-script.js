@@ -58,42 +58,80 @@ document.addEventListener('DOMContentLoaded', () => {
     // Naloži termine, ki pripadajo trenerju
     async function loadUserTerms() {
         try {
+            console.log('=== LOAD USER TERMS START ===');
+            console.log('Current user ID:', currentUser.id);
+            console.log('Current user email:', currentUser.email);
+            
             // Najprej poiščemo trenerja v tabeli trenerjev
+            console.log('Iščem trenerja v tabeli trainers...');
             const { data: trainerData, error: trainerError } = await supabase
                 .from('trainers')
                 .select('*')
                 .eq('user_id', currentUser.id)
                 .single();
 
+            console.log('Rezultat iskanja trenerja:', { trainerData, trainerError });
+
             if (trainerError || !trainerData) {
                 console.error('Trener ni najden:', trainerError);
+                console.log('Poskušam najti trenerja z user_id:', currentUser.id);
+                
+                // Posodobi prikaz z napako
+                userName.textContent = 'Napaka pri nalaganju podatkov';
+                userGroups.textContent = 'Napaka';
                 return;
             }
 
+            console.log('Najden trener:', trainerData);
+
             // Naložimo termine, ki pripadajo temu trenerju
+            console.log('Iščem termine za trenerja z ID:', trainerData.id);
             const { data: termsData, error: termsError } = await supabase
                 .from('trainer_terms')
                 .select('term_id')
                 .eq('trainer_id', trainerData.id);
 
+            console.log('Rezultat iskanja terminov:', { termsData, termsError });
+
             if (termsError) {
                 console.error('Napaka pri nalaganju terminov:', termsError);
+                userName.textContent = `${trainerData.first_name} ${trainerData.last_name}`;
+                userGroups.textContent = 'Napaka pri nalaganju terminov';
                 return;
             }
 
             userTerms = termsData.map(t => t.term_id);
+            console.log('Mapirani userTerms:', userTerms);
             
-            // Posodobi prikaz
-            userName.textContent = `${trainerData.first_name} ${trainerData.last_name}`;
+            // Posodobi prikaz - popravimo prikaz imena
+            console.log('Trainer data:', trainerData);
+            if (trainerData.first_name && trainerData.last_name) {
+                userName.textContent = `${trainerData.first_name} ${trainerData.last_name}`;
+                console.log('Set user name to:', userName.textContent);
+            } else {
+                userName.textContent = 'Neznan trener';
+                console.log('Set user name to: Neznan trener');
+            }
             userGroups.textContent = userTerms.length > 0 ? `${userTerms.length} skupin` : 'Ni skupin';
+            console.log('Set user groups to:', userGroups.textContent);
             
             // Če trener nima terminov, prikaži sporočilo
             if (userTerms.length === 0) {
                 elSummaryBox.innerHTML = '<div class="error-message">Trener nima dodeljenih terminov. Kontaktirajte administratorja.</div>';
+                console.warn('Trener nima dodeljenih terminov');
+            } else {
+                console.log('Trener ima', userTerms.length, 'terminov');
             }
+            
+            console.log('=== LOAD USER TERMS END ===');
             
         } catch (error) {
             console.error('Napaka pri nalaganju podatkov trenerja:', error);
+            console.error('Napaka podrobnosti:', error.message);
+            
+            // Posodobi prikaz z napako
+            userName.textContent = 'Napaka pri nalaganju';
+            userGroups.textContent = 'Napaka';
         }
     }
 
@@ -530,14 +568,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const dayName = DAYNAME[dateObj.getDay() === 0 ? 7 : dateObj.getDay()];
       
       elModalTitle.textContent = `${dayName}, ${dateObj.toLocaleDateString('sl-SI')}`;
-      elModalMeta.textContent = `${term.start_time} - ${term.end_time}`;
+      elModalMeta.textContent = `${term.start_time.slice(0, 5)} - ${term.end_time.slice(0, 5)}`;
       
       // Preveri, ali je nadomestni trener za ta termin
       const substituteKey = `${termId}-${date}`;
       if (window.substituteTrainerInfo && window.substituteTrainerInfo[substituteKey]) {
         const subInfo = window.substituteTrainerInfo[substituteKey];
         elModalMeta.innerHTML = `
-          ${term.start_time} - ${term.end_time}
+          ${term.start_time.slice(0, 5)} - ${term.end_time.slice(0, 5)}
           <br><small style="color: #007bff; font-weight: bold;">
             Nadomestujem: ${subInfo.originalTrainer}
             ${subInfo.reason ? `<br>Razlog: ${subInfo.reason}` : ''}
@@ -828,7 +866,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .forEach(term => {
           const o = document.createElement('option');
           o.value = term.id;
-          o.textContent = `${DAYNAME[term.day]} ${term.start_time}-${term.end_time}`;
+                      o.textContent = `${DAYNAME[term.day]} ${term.start_time.slice(0, 5)}-${term.end_time.slice(0, 5)}`;
           elTermSelect.appendChild(o);
         });
     }
@@ -842,7 +880,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       
       const assignedTerms = TERMS.filter(t => s.terms.includes(t.id) && userTerms.includes(t.id));
-      const termNames = assignedTerms.map(t => `${DAYNAME[t.day]} ${t.start_time}-${t.end_time}`).join(', ');
+      const termNames = assignedTerms.map(t => `${DAYNAME[t.day]} ${t.start_time.slice(0, 5)}-${t.end_time.slice(0, 5)}`).join(', ');
       
       elSwimmerInfo.textContent = `Dodeljeni termini: ${termNames || 'Ni dodeljenih terminov'}`;
     }
@@ -1119,7 +1157,7 @@ document.addEventListener('DOMContentLoaded', () => {
             TERMS.forEach(term => {
                 const option = document.createElement('option');
                 option.value = term.id;
-                option.textContent = `${DAYNAME[term.day]} ${term.start_time}-${term.end_time}`;
+                option.textContent = `${DAYNAME[term.day]} ${term.start_time.slice(0, 5)}-${term.end_time.slice(0, 5)}`;
                 substituteTermSelect.appendChild(option);
             });
             
@@ -1198,7 +1236,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (obligationsData && obligationsData.length > 0) {
                 const html = obligationsData.map(obligation => `
                     <div class="obligation-item" style="border: 1px solid #007bff; padding: 10px; margin: 5px 0; border-radius: 5px; background-color: #f8f9fa;">
-                        <div><strong>Termin:</strong> ${DAYNAME[obligation.term.day]} ${obligation.term.start_time}-${obligation.term.end_time}</div>
+                        <div><strong>Termin:</strong> ${DAYNAME[obligation.term.day]} ${obligation.term.start_time.slice(0, 5)}-${obligation.term.end_time.slice(0, 5)}</div>
                         <div><strong>Datum:</strong> ${new Date(obligation.substitute_date).toLocaleDateString('sl-SI')}</div>
                         <div><strong>Nadomestujem:</strong> ${obligation.original_trainer.first_name} ${obligation.original_trainer.last_name}</div>
                         <div><strong>Razlog:</strong> ${obligation.reason || 'Ni razloga'}</div>
@@ -1257,7 +1295,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const selectedTrainer = Array.from(substituteTrainerSelect.options).find(opt => opt.value === substituteTrainerId);
         
         substituteConfirmationDetails.innerHTML = `
-            <p><strong>Termin:</strong> ${DAYNAME[selectedTerm.day]} ${selectedTerm.start_time}-${selectedTerm.end_time}</p>
+            <p><strong>Termin:</strong> ${DAYNAME[selectedTerm.day]} ${selectedTerm.start_time.slice(0, 5)}-${selectedTerm.end_time.slice(0, 5)}</p>
             <p><strong>Datum:</strong> ${new Date(date).toLocaleDateString('sl-SI')}</p>
             <p><strong>Nadomestni trener:</strong> ${selectedTrainer.textContent}</p>
             <p><strong>Razlog:</strong> ${reason || 'Ni razloga'}</p>
