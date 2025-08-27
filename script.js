@@ -463,41 +463,349 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Nova funkcija za osvežitev podatkov za določen dan
-    async function refreshDayData(date) {
-      const ymd = iso(date);
-      
-      const { data: attData, error: attError } = await supabase
-        .from('attendance')
-        .select('*')
-        .eq('date', ymd);
-      
-      if (attError) { console.error('Napaka pri osveževanju prisotnosti za dan:', attError); return; }
-      
-      const { data: statusData, error: statusError } = await supabase
-        .from('term_status')
-        .select('*')
-        .eq('date', ymd);
+         // Nova funkcija za osvežitev podatkov za določen dan
+     async function refreshDayData(date) {
+       const ymd = iso(date);
+       
+       const { data: attData, error: attError } = await supabase
+         .from('attendance')
+         .select('*')
+         .eq('date', ymd);
+       
+       if (attError) { console.error('Napaka pri osveževanju prisotnosti za dan:', attError); return; }
+       
+       const { data: statusData, error: statusError } = await supabase
+         .from('term_status')
+         .select('*')
+         .eq('date', ymd);
 
-      if (statusError) { console.error('Napaka pri osveževanju statusa termina za dan:', statusError); return; }
-      
-      attendance[ymd] = attData.reduce((acc, row) => {
-        acc[row.term_id] = acc[row.term_id] || {};
-        acc[row.term_id][row.swimmer_id] = row.status;
-        return acc;
-      }, {});
+       if (statusError) { console.error('Napaka pri osveževanju statusa termina za dan:', statusError); return; }
+       
+       attendance[ymd] = attData.reduce((acc, row) => {
+         acc[row.term_id] = acc[row.term_id] || {};
+         acc[row.term_id][row.swimmer_id] = row.status;
+         return acc;
+       }, {});
 
-      termStatus[ymd] = statusData.reduce((acc, row) => {
-        acc[row.term_id] = { status: row.status, note: row.note, notes: row.notes };
-        return acc;
-      }, {});
-      
-      // NOVO: Če je modal odprt za ta datum, osveži tudi modal
-      if (modalCtx && modalCtx.date && iso(modalCtx.date) === ymd) {
-        console.log('Osvežujem modal za datum:', ymd);
-        await openEvent(modalCtx.date, modalCtx.termId);
-      }
-    }
+       termStatus[ymd] = statusData.reduce((acc, row) => {
+         acc[row.term_id] = { status: row.status, note: row.note, notes: row.notes };
+         return acc;
+       }, {});
+     }
+
+     // Nova funkcija za osvežitev modala (brez odpiranja)
+     async function refreshModal() {
+       if (!modalCtx || !modalCtx.date || !modalCtx.termId) return;
+       
+       const ymd = iso(modalCtx.date);
+       const termId = modalCtx.termId;
+       
+       // Osveži samo podatke za ta termin
+       const { data, error } = await supabase
+         .from('attendance')
+         .select('swimmer_id, status')
+         .eq('date', ymd)
+         .eq('term_id', termId);
+       
+       if (error) {
+         console.error('Napaka pri osveževanju modala:', error);
+         return;
+       }
+       
+       // Posodobi lokalne podatke
+       const termAtt = data.reduce((acc, row) => {
+         acc[row.swimmer_id] = row.status;
+         return acc;
+       }, {});
+       
+       attendance[ymd] = { ...attendance[ymd], [termId]: termAtt };
+       
+       // Osveži samo prikaz v modalu, ne odpiraj ga na novo
+       await renderModalContent(modalCtx.date, termId);
+     }
+
+     // Nova funkcija za osvežitev vsebine modala (brez odpiranja)
+     async function renderModalContent(date, termId) {
+       const ymd = iso(date);
+       const t = termById(termId);
+       if (!t) return;
+       
+       // Osveži naslov in meta informacije
+       elModalTitle.textContent = `${t.label}`;
+       
+       const trainerInfo = await getTermTrainerInfo(termId, ymd);
+       elModalMeta.innerHTML = `
+         <span class="chip">${formatDate(ymd)}</span>
+         <span class="chip">${DAYNAME[t.day]}</span>
+         ${trainerInfo ? `<span class="chip">Trener: ${trainerInfo}</span>` : ''}
+       `;
+       
+       // Osveži tabele prisotnosti
+       await refreshModalTables(date, termId);
+       
+       // Osveži ostale elemente
+       await refreshModalOtherElements(date, termId);
+     }
+
+     // Funkcija za osvežitev tabel v modalu
+     async function refreshModalTables(date, termId) {
+       const ymd = iso(date);
+       const termAtt = attendance[ymd]?.[termId] || {};
+       
+       // Osveži tabelo prisotnosti
+       await refreshAttendanceTable(date, termId, termAtt);
+       
+       // Osveži tabelo nadomeščanja
+       await refreshSubstitutionTable(date, termId, termAtt);
+       
+       // Osveži dropdown za dodajanje plavalcev
+       await refreshSwimmerDropdown(date, termId);
+     }
+
+     // Funkcija za osvežitev tabele prisotnosti
+     async function refreshAttendanceTable(date, termId, termAtt) {
+       elAttendanceTable.innerHTML = "";
+       
+       // Redno dodeljeni plavalci
+       const assignedSwimmers = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted);
+       
+       if (assignedSwimmers.length === 0) {
+         const tr = document.createElement("tr");
+         const td = document.createElement("td");
+         td.colSpan = 2;
+         td.className = "muted";
+         td.textContent = "Ni dodeljenih plavalcev za ta termin.";
+         tr.appendChild(td);
+         elAttendanceTable.appendChild(tr);
+         return;
+       }
+       
+       assignedSwimmers.sort((a, b) => (a.last_name + a.first_name).localeCompare(b.last_name + b.first_name))
+         .forEach(s => {
+           const tr = document.createElement("tr");
+           const td1 = document.createElement("td");
+           td1.textContent = `${s.first_name} ${s.last_name}`;
+           
+           const td2 = document.createElement("td");
+           td2.style.display = "flex";
+           td2.style.gap = "4px";
+           td2.style.alignItems = "center";
+           
+           const status = termAtt[s.id];
+           const btnPresent = document.createElement("button");
+           btnPresent.textContent = "Prisoten";
+           btnPresent.className = "btn";
+           if (isInactive(date, termId)) { btnPresent.disabled = true; }
+           if (status === true) { btnPresent.classList.add("ok"); } else { btnPresent.classList.add("neutral"); }
+           btnPresent.addEventListener("click", async () => {
+             const { error } = await supabase
+               .from('attendance')
+               .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: true }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
+             if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
+               await refreshDayData(date);
+               await refreshModal();
+               renderMonth();
+             }
+           });
+           
+           const btnAbsent = document.createElement("button");
+           btnAbsent.textContent = "Odsoten";
+           btnAbsent.className = "btn";
+           if (isInactive(date, termId)) { btnAbsent.disabled = true; }
+           if (status === false) { btnAbsent.classList.add("warn"); } else { btnAbsent.classList.add("neutral"); }
+           btnAbsent.addEventListener("click", async () => {
+             const { error } = await supabase
+               .from('attendance')
+               .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: false }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
+             if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
+               await refreshDayData(date);
+               await refreshModal();
+               refreshSwimmerPanel();
+               renderMonth();
+             }
+           });
+           
+           const btnRemove = document.createElement("button");
+           btnRemove.innerHTML = "✖";
+           btnRemove.className = "btn remove-btn";
+           if (isInactive(date, termId)) { btnRemove.disabled = true; }
+           btnRemove.addEventListener("click", async () => {
+             const { error } = await supabase
+               .from('attendance')
+               .delete()
+               .eq('date', ymd)
+               .eq('term_id', termId)
+               .eq('swimmer_id', s.id);
+             if (error) { console.error('Napaka pri brisanju prisotnosti:', error); } else {
+               await refreshDayData(date);
+               await refreshModal();
+               refreshSwimmerPanel();
+               renderMonth();
+             }
+           });
+           
+           tr.appendChild(td1);
+           tr.appendChild(td2);
+           
+           td2.appendChild(btnPresent);
+           td2.appendChild(btnAbsent);
+           td2.appendChild(btnRemove);
+           
+           elAttendanceTable.appendChild(tr);
+         });
+     }
+
+     // Funkcija za osvežitev tabele nadomeščanja
+     async function refreshSubstitutionTable(date, termId, termAtt) {
+       elSubstitutionTable.innerHTML = "";
+       
+       // Plavalci z vneseno prisotnostjo, ki NISO redno dodeljeni temu terminu
+       const assignedSwimmerIds = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted).map(s => s.id);
+       const substitutionSwimmers = Object.keys(termAtt)
+         .map(swimmerId => swimmers.find(s => s.id === swimmerId))
+         .filter(s => s && !assignedSwimmerIds.includes(s.id) && !s.is_deleted);
+       
+       if (substitutionSwimmers.length === 0) {
+         const tr = document.createElement("tr");
+         const td = document.createElement("td");
+         td.colSpan = 2;
+         td.className = "muted";
+         td.textContent = "Ni nadomeščanja.";
+         tr.appendChild(td);
+         elSubstitutionTable.appendChild(tr);
+         return;
+       }
+       
+       substitutionSwimmers.sort((a, b) => (a.last_name + a.first_name).localeCompare(b.last_name + b.first_name))
+         .forEach(s => {
+           const tr = document.createElement("tr");
+           const td1 = document.createElement("td");
+           td1.textContent = `${s.first_name} ${s.last_name}`;
+           
+           const td2 = document.createElement("td");
+           td2.style.display = "flex";
+           td2.style.gap = "4px";
+           td2.style.alignItems = "center";
+           
+           const status = termAtt[s.id];
+           const btnPresent = document.createElement("button");
+           btnPresent.textContent = "Prisoten";
+           btnPresent.className = "btn";
+           if (isInactive(date, termId)) { btnPresent.disabled = true; }
+           if (status === true) { btnPresent.classList.add("ok"); } else { btnPresent.classList.add("neutral"); }
+           btnPresent.addEventListener("click", async () => {
+             const { error } = await supabase
+               .from('attendance')
+               .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: true }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
+             if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
+               await refreshDayData(date);
+               await refreshModal();
+               renderMonth();
+             }
+           });
+           
+           const btnAbsent = document.createElement("button");
+           btnAbsent.textContent = "Odsoten";
+           btnAbsent.className = "btn";
+           if (isInactive(date, termId)) { btnAbsent.disabled = true; }
+           if (status === false) { btnAbsent.classList.add("warn"); } else { btnAbsent.classList.add("neutral"); }
+           btnAbsent.addEventListener("click", async () => {
+             const { error } = await supabase
+               .from('attendance')
+               .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: false }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
+             if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
+               await refreshDayData(date);
+               await refreshModal();
+               refreshSwimmerPanel();
+               renderMonth();
+             }
+           });
+           
+           const btnRemove = document.createElement("button");
+           btnRemove.innerHTML = "✖";
+           btnRemove.className = "btn remove-btn";
+           if (isInactive(date, termId)) { btnRemove.disabled = true; }
+           btnRemove.addEventListener("click", async () => {
+             const { error } = await supabase
+               .from('attendance')
+               .delete()
+               .eq('date', ymd)
+               .eq('term_id', termId)
+               .eq('swimmer_id', s.id);
+             if (error) { console.error('Napaka pri brisanju prisotnosti:', error); } else {
+               await refreshDayData(date);
+               await refreshModal();
+               refreshSwimmerPanel();
+               renderMonth();
+             }
+           });
+           
+           tr.appendChild(td1);
+           tr.appendChild(td2);
+           
+           td2.appendChild(btnPresent);
+           td2.appendChild(btnAbsent);
+           td2.appendChild(btnRemove);
+           
+           elSubstitutionTable.appendChild(tr);
+         });
+     }
+
+     // Funkcija za osvežitev dropdown-a za dodajanje plavalcev
+     async function refreshSwimmerDropdown(date, termId) {
+       elModalSwimmerSelect.innerHTML = "";
+       
+       const ymd = iso(date);
+       const termAtt = attendance[ymd]?.[termId] || {};
+       const allSwimmerIds = Object.keys(termAtt);
+       
+       const unassigned = swimmers.filter(s => !allSwimmerIds.includes(s.id) && !s.is_deleted)
+         .sort((a, b) => (a.last_name + a.first_name).localeCompare(b.last_name + b.first_name));
+       
+       if (unassigned.length > 0) {
+         unassigned.forEach(s => {
+           const o = document.createElement("option");
+           o.value = s.id;
+           o.textContent = `${s.first_name} ${s.last_name}`;
+           elModalSwimmerSelect.appendChild(o);
+         });
+         elAddToEventBtn.style.display = "inline-block";
+         elModalSwimmerSelect.style.display = "inline-block";
+       } else {
+         const o = document.createElement("option");
+         o.textContent = "Vsi plavalci so že v treningu ali nadomeščanju.";
+         o.disabled = true;
+         elModalSwimmerSelect.appendChild(o);
+         elAddToEventBtn.style.display = "none";
+         elModalSwimmerSelect.style.display = "none";
+       }
+     }
+
+     // Funkcija za osvežitev ostalih elementov v modalu
+     async function refreshModalOtherElements(date, termId) {
+       const ymd = iso(date);
+       const termStatusObj = getTermStatus(date, termId);
+       
+       // Osveži status termina
+       if (termStatusObj.status === "inactive") {
+         elToggleEventBtn.textContent = "Aktiviraj trening";
+         elInactiveNoteText.textContent = termStatusObj.note;
+         elInactiveNote.style.display = "block";
+       } else {
+         elToggleEventBtn.textContent = "Deaktiviraj trening";
+         elInactiveNoteText.textContent = "";
+         elInactiveNote.style.display = "none";
+       }
+       
+       // Osveži opombe o treningu
+       elNotesInput.value = termStatusObj.notes || "";
+       
+       // Osveži informacije o nadomestnem trenerju
+       await showSubstituteTrainerInfo(termId, ymd);
+       
+       // Osveži prisotnost trenerja
+       await loadTrainerAttendance(termId, ymd);
+     }
 
 
     async function openEvent(date, termId){
@@ -516,8 +824,11 @@ document.addEventListener('DOMContentLoaded', () => {
       
       const ymd = iso(date);
       
-      // Ključni popravek: zagotovitev svežih podatkov ob odprtju modala
-      await refreshDayData(date);
+             // Ključni popravek: zagotovitev svežih podatkov ob odprtju modala
+       await refreshDayData(date);
+       
+       // Osveži modal z najnovejšimi podatki
+       await refreshModal();
       
       // Prikaži informacije o nadomestnem trenerju
       await showSubstituteTrainerInfo(termId, ymd);
@@ -1563,11 +1874,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Posodobi kalendar in povzetek
         renderMonth();
         
-        // NOVO: Če je modal odprt, osveži tudi modal
-        if (modalCtx && modalCtx.date && modalCtx.termId) {
-          console.log('Ročno osveževanje modala za termin:', modalCtx.termId);
-          await openEvent(modalCtx.date, modalCtx.termId);
-        }
+                 // NOVO: Če je modal odprt, osveži tudi modal
+         if (modalCtx && modalCtx.date && modalCtx.termId) {
+           console.log('Ročno osveževanje modala za termin:', modalCtx.termId);
+           await refreshModal();
+         }
         
         console.log('Podatki ročno osveženi');
       } catch (error) {
@@ -1771,11 +2082,11 @@ document.addEventListener('DOMContentLoaded', () => {
          // Posodobi kalendar
          renderMonth();
          
-         // NOVO: Če je modal odprt, osveži tudi modal
-         if (modalCtx && modalCtx.date && modalCtx.termId) {
-           console.log('Avtomatsko osveževanje modala za termin:', modalCtx.termId);
-           await openEvent(modalCtx.date, modalCtx.termId);
-         }
+                    // NOVO: Če je modal odprt, osveži tudi modal
+           if (modalCtx && modalCtx.date && modalCtx.termId) {
+             console.log('Avtomatsko osveževanje modala za termin:', modalCtx.termId);
+             await refreshModal();
+           }
          
          console.log('Kalendar in modal avtomatsko osveženi');
        } catch (error) {
