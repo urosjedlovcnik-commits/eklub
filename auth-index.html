@@ -200,70 +200,6 @@
         <h3>Povzetek udeležbe (za prikazani mesec)</h3>
         <div class="inner" id="summaryBox">Nalaganje podatkov...</div>
       </div>
-
-      <div class="card">
-        <h3>Upravljanje plavalcev</h3>
-        <div class="inner">
-          <div class="flex-col">
-            <div class="row" style="width:100%;align-items:stretch;gap:4px">
-              <input type="text" id="newFirst" placeholder="Ime">
-              <input type="text" id="newLast" placeholder="Priimek">
-              <button class="btn ok" id="addSwimmerBtn" style="width:auto">Dodaj</button>
-            </div>
-            <div class="row" style="width:100%;align-items:stretch;gap:4px">
-              <select id="swimmerSelect"></select>
-              <select id="termSelect"></select>
-              <button class="btn pri" id="assignTermBtn" style="width:auto">Dodeli</button>
-              <button id="deleteSwimmerBtn" class="btn warn">Zbriši plavalca</button>
-            </div>
-          </div>
-          <div id="swimmerInfo" class="muted"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="grid" style="margin-top:12px">
-      <div class="card">
-        <h3>Dodaj nov termin</h3>
-        <div class="inner">
-          <div class="row">
-            <label for="newTermDay">Dan:</label>
-            <select id="newTermDay">
-              <option value="1">Ponedeljek</option>
-              <option value="2">Torek</option>
-              <option value="3">Sreda</option>
-              <option value="4">Četrtek</option>
-              <option value="5">Petek</option>
-              <option value="6">Sobota</option>
-              <option value="7">Nedelja</option>
-            </select>
-          </div>
-          <div class="row">
-            <label for="newTermStart">Začetna ura:</label>
-            <input type="time" id="newTermStart">
-          </div>
-          <div class="row">
-            <label for="newTermEnd">Končna ura:</label>
-            <input type="time" id="newTermEnd">
-          </div>
-          <div class="row">
-            <label for="newTermDateFrom">Datum trajanja od:</label>
-            <input type="text" id="newTermDateFrom" placeholder="dd / mm / yyyy">
-          </div>
-          <div class="row">
-            <label for="newTermDateTo">do:</label>
-            <input type="text" id="newTermDateTo" placeholder="dd / mm / yyyy">
-          </div>
-          <button class="btn pri" id="addTermBtn">Dodaj termin</button>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3>Upravljanje terminov</h3>
-        <div class="inner">
-          <div class="term-list" id="termList"></div>
-        </div>
-      </div>
     </div>
 
     <div class="grid" style="margin-top:12px">
@@ -316,8 +252,21 @@
           <button class="close-btn" id="closeModalBtn">&times;</button>
         </div>
         <div class="box-body">
+          <div class="trainer-attendance-section">
+            <h4>Prisotnost trenerja</h4>
+            <div class="trainer-attendance-controls">
+              <label>
+                <input type="checkbox" id="trainerPresentCheckbox">
+                Trener je prisoten
+              </label>
+              <input type="text" id="trainerNoteInput" placeholder="Opomba trenerja" style="margin-left: 10px; width: 200px;">
+            </div>
+          </div>
+          
+          <hr style="margin: 20px 0; border: none; border-top: 1px solid var(--border);">
+          
           <div class="attendance-section">
-            <h4>Prisotnost</h4>
+            <h4>Prisotnost plavalcev</h4>
             <table class="attendance-table">
               <thead>
                 <tr>
@@ -400,18 +349,7 @@
       </div>
     </div>
 
-    <!-- CSV Export -->
-    <div class="card csv-options">
-      <h3>Izvoz CSV</h3>
-      <div class="inner">
-        <h4>Izvoz povzetka</h4>
-        <div class="csv-export-controls">
-          <select id="exportMonthSelect"></select>
-          <select id="exportYearSelect"></select>
-          <button class="btn" id="exportCsvBtn">Izvozi</button>
-        </div>
-      </div>
-    </div>
+
 
     <!-- Modal za spremembo gesla -->
     <div class="modal" id="changePasswordModal" role="dialog" aria-modal="true" aria-hidden="true">

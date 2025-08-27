@@ -88,6 +88,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Elementi za opombe o treningu
     const elNotesInput = document.getElementById("notesInput");
     const elSaveNotesBtn = document.getElementById("saveNotesBtn");
+    
+    // UI elementi za prisotnost trenerjev
+    const elTrainerAttendanceBox = document.getElementById("trainerAttendanceBox");
+    const elTrainerPresentCheckbox = document.getElementById("trainerPresentCheckbox");
+    const elTrainerNoteInput = document.getElementById("trainerNoteInput");
+    const elSubstituteTrainerInfo = document.getElementById("substituteTrainerInfo");
+    const elSubstituteTrainerName = document.getElementById("substituteTrainerName");
+    const elSubstituteTrainerReason = document.getElementById("substituteTrainerReason");
 
 
     // ===== Pomožne funkcije =====
@@ -284,6 +292,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===== MODAL: odpranje dogodka =====
     let modalCtx = { date:null, termId:null };
+    
+    // Funkcija za prikaz informacij o nadomestnem trenerju
+    async function showSubstituteTrainerInfo(termId, date) {
+        try {
+            const { data: substituteData, error } = await supabase
+                .from('substitute_trainers')
+                .select(`
+                    *,
+                    original_trainer:trainers!substitute_trainers_original_trainer_id_fkey(first_name, last_name),
+                    substitute_trainer:trainers!substitute_trainers_substitute_trainer_id_fkey(first_name, last_name)
+                `)
+                .eq('term_id', termId)
+                .eq('substitute_date', date)
+                .single();
+            
+            if (error && error.code !== 'PGRST116') {
+                throw error;
+            }
+            
+            if (substituteData) {
+                elSubstituteTrainerInfo.style.display = 'block';
+                elSubstituteTrainerName.textContent = `${substituteData.substitute_trainer.first_name} ${substituteData.substitute_trainer.last_name}`;
+                elSubstituteTrainerReason.textContent = substituteData.reason || 'Ni razloga';
+            } else {
+                elSubstituteTrainerInfo.style.display = 'none';
+            }
+            
+        } catch (error) {
+            console.error('Napaka pri nalaganju informacij o nadomestnem trenerju:', error);
+            elSubstituteTrainerInfo.style.display = 'none';
+        }
+    }
 
     // Nova funkcija za osvežitev podatkov za določen dan
     async function refreshDayData(date) {
@@ -329,6 +369,9 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Ključni popravek: zagotovitev svežih podatkov ob odprtju modala
       await refreshDayData(date);
+      
+      // Prikaži informacije o nadomestnem trenerju
+      await showSubstituteTrainerInfo(termId, ymd);
       
       // Asinhrono pridobivanje prisotnosti za ta termin na ta dan
       const { data, error } = await supabase
@@ -1369,11 +1412,50 @@ document.addEventListener('DOMContentLoaded', () => {
         renderTrainersList();
         await loadSubstituteTrainers();
         renderMonth();
+        renderTrainerAttendance();
 
       } catch (error) {
         console.error("Napaka pri nalaganju podatkov:", error);
         alert("Napaka pri nalaganju podatkov iz baze. Preverite konzolo za podrobnosti.");
       }
+    }
+
+    // Funkcija za prikaz prisotnosti trenerjev
+    async function renderTrainerAttendance() {
+        try {
+            const currentYear = new Date().getFullYear();
+            const currentMonth = new Date().getMonth() + 1;
+            
+            const { data: attendanceData, error } = await supabase
+                .rpc('get_trainer_attendance_summary', {
+                    year_param: currentYear,
+                    month_param: currentMonth
+                });
+            
+            if (error) throw error;
+            
+            if (attendanceData && attendanceData.length > 0) {
+                let html = '<table><thead><tr><th>Trener</th><th>Skupaj terminov</th><th>Prisotni</th><th>Delež (%)</th></tr></thead><tbody>';
+                
+                attendanceData.forEach(trainer => {
+                    html += `<tr>
+                        <td>${trainer.trainer_name}</td>
+                        <td>${trainer.total_sessions}</td>
+                        <td>${trainer.present_sessions}</td>
+                        <td>${trainer.attendance_percentage}%</td>
+                    </tr>`;
+                });
+                
+                html += '</tbody></table>';
+                elTrainerAttendanceBox.innerHTML = html;
+            } else {
+                elTrainerAttendanceBox.innerHTML = '<p class="muted">Ni podatkov o prisotnosti trenerjev za ta mesec.</p>';
+            }
+            
+        } catch (error) {
+            console.error('Napaka pri nalaganju prisotnosti trenerjev:', error);
+            elTrainerAttendanceBox.innerHTML = '<p class="error">Napaka pri nalaganju podatkov</p>';
+        }
     }
 
     // Začetni zagon
@@ -1399,7 +1481,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (substituteData && substituteData.length > 0) {
           const html = substituteData.map(sub => `
             <div class="substitute-item" style="border: 1px solid #007bff; padding: 12px; margin: 8px 0; border-radius: 6px; background: #f8f9fa;">
-              <div><strong>Termin:</strong> ${DAYNAME[sub.term.day]} ${sub.term.start_time}-${sub.term.end_time}</div>
+              <div><strong>Termin:</strong> ${DAYNAME[sub.term.day]} ${sub.term.start_time.slice(0, 5)}-${sub.term.end_time.slice(0, 5)}</div>
               <div><strong>Datum:</strong> ${new Date(sub.substitute_date).toLocaleDateString('sl-SI')}</div>
               <div><strong>Originalni trener:</strong> ${sub.original_trainer.first_name} ${sub.original_trainer.last_name}</div>
               <div><strong>Nadomestni trener:</strong> ${sub.substitute_trainer.first_name} ${sub.substitute_trainer.last_name}</div>

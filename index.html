@@ -34,6 +34,13 @@
     </div>
 
     <div class="card">
+      <h3>Prisotnost trenerjev</h3>
+      <div class="inner" id="trainerAttendanceBox">Nalaganje podatkov...</div>
+    </div>
+  </div>
+
+  <div class="grid" style="margin-top:12px">
+    <div class="card">
       <h3>Upravljanje plavalcev</h3>
       <div class="inner">
         <div class="flex-col">
@@ -132,6 +139,26 @@
           <strong style="display:block; margin-bottom:4px;">Opomba:</strong>
           <span id="inactiveNoteText"></span>
         </div>
+        
+        <!-- Informacije o nadomestnem trenerju -->
+        <div id="substituteTrainerInfo" style="display:none; margin-bottom:12px; padding:10px; background:#e3f2fd; border-radius:8px; border:1px solid #2196f3;">
+          <strong style="display:block; margin-bottom:4px;">Nadomestni trener:</strong>
+          <span id="substituteTrainerName"></span>
+          <div id="substituteTrainerReason" style="margin-top:4px; font-size:0.9em;"></div>
+        </div>
+        
+        <!-- Prisotnost trenerja -->
+        <div class="trainer-attendance-section" style="margin-bottom:12px;">
+          <h4 style="margin:0 0 8px 0;">Prisotnost trenerja</h4>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <label>
+              <input type="checkbox" id="trainerPresentCheckbox">
+              Trener je prisoten
+            </label>
+            <input type="text" id="trainerNoteInput" placeholder="Opomba trenerja" style="flex:1; max-width:200px;">
+          </div>
+        </div>
+        
         <table id="attendanceTable">
           <thead><tr><th>Plavalec</th><th>Prisotnost</th></tr></thead>
           <tbody></tbody>
