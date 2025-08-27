@@ -30,6 +30,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const trainerAttendanceSection = document.getElementById('trainerAttendanceSection');
   const trainerAttendanceTable = document.getElementById('trainerAttendanceTable');
   
+  // UI elementi za pregled skupin
+  const groupsOverview = document.getElementById('groupsOverview');
+  
   // Modal elementi za nadomestne trenerje
   const confirmSubstituteModal = document.getElementById('confirmSubstituteModal');
   const substituteConfirmationDetails = document.getElementById('substituteConfirmationDetails');
@@ -48,6 +51,8 @@ document.addEventListener('DOMContentLoaded', () => {
           showMainApp();
           // Naloži podatke za trenerja po tem, ko so userTerms naloženi
           await loadDataFromSupabase();
+          // Posodobi pregled skupin
+          updateGroupsOverview();
           // Naloži podatke za nadomestne trenerje
           await loadSubstituteData();
           // Naloži nadomestne termine
@@ -129,6 +134,11 @@ document.addEventListener('DOMContentLoaded', () => {
               console.log('Trener ima', userTerms.length, 'terminov');
           }
           
+          // Posodobi pregled skupin
+          if (groupsOverview) {
+              updateGroupsOverview();
+          }
+          
           console.log('=== LOAD USER TERMS END ===');
           
       } catch (error) {
@@ -176,6 +186,8 @@ document.addEventListener('DOMContentLoaded', () => {
           showMainApp();
           // Naloži podatke za trenerja po tem, ko so userTerms naloženi
           await loadDataFromSupabase();
+          // Posodobi pregled skupin
+          updateGroupsOverview();
           showSuccess('Uspešna prijava!');
           
       } catch (error) {
@@ -495,7 +507,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (termDateFrom && termDateTo && date >= termDateFrom && date <= termDateTo) {
           // Uporabi isto strukturo kot v glavni strani
           const termAtt = attendance[dateStr]?.[term.id] || {};
-          const assignedSwimmers = swimmers.filter(s => s.terms.includes(term.id) && !s.is_deleted);
+          const assignedSwimmers = swimmers.filter(s => s.terms && s.terms.includes(term.id));
           const assignedSwimmerIds = assignedSwimmers.map(s => s.id);
           const markedAssignedSwimmersCount = assignedSwimmerIds.filter(id => termAtt.hasOwnProperty(id)).length;
           const totalAssignedCount = assignedSwimmers.length;
@@ -649,7 +661,8 @@ document.addEventListener('DOMContentLoaded', () => {
      console.log('swimmers:', swimmers);
      
      // Filtriraj plavalce, ki pripadajo trenerju
-     const assignedSwimmers = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted);
+     // Vključi tudi izbrisane plavalce za zgodovinske podatke
+     const assignedSwimmers = swimmers.filter(s => s.terms && s.terms.includes(termId));
      console.log('assignedSwimmers:', assignedSwimmers);
      
      const assignedSwimmerIds = assignedSwimmers.map(s => s.id);
@@ -663,7 +676,7 @@ document.addEventListener('DOMContentLoaded', () => {
      );
      
      const regularSwimmers = assignedSwimmers.filter(s => 
-       termAtt[s.id] !== undefined || !s.is_deleted
+       termAtt[s.id] !== undefined || true // Vključi vse plavalce, tudi brez prisotnosti
      );
 
     // Render attendance table
@@ -789,6 +802,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const year = currentYear;
     const month = currentMonth;
     
+    console.log('=== UPDATE SUMMARY START ===');
+    console.log('swimmers:', swimmers);
+    console.log('userTerms:', userTerms);
+    console.log('TERMS:', TERMS);
+    
     // Uporabi isto logiko kot v glavni strani
     const res = {};
     const monthStart = new Date(year, month, 1);
@@ -796,9 +814,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const today = new Date();
     today.setHours(0,0,0,0);
 
-    // Inicializacija podatkov za vse plavalce (aktivne in izbrisane)
+    // Inicializacija podatkov za vse plavalce trenerja
     swimmers.forEach(s => {
-      res[s.id] = { first: s.first_name, last: s.last_name, att: 0, pos: 0 };
+      res[s.id] = { 
+        first: s.first_name, 
+        last: s.last_name, 
+        att: 0, 
+        pos: 0,
+        groups: [], // Dodaj seznam skupin
+        isDeleted: s.is_deleted || false
+      };
+      
+      // Dodaj skupine, v katerih je plavalec
+      if (s.terms) {
+        s.terms.forEach(termId => {
+          if (userTerms.includes(termId)) {
+            const term = TERMS.find(t => t.id === termId);
+            if (term) {
+              const dayName = DAYNAME[term.day];
+              const timeRange = `${term.start_time.slice(0, 5)}-${term.end_time.slice(0, 5)}`;
+              res[s.id].groups.push(`${dayName} ${timeRange}`);
+            }
+          }
+        });
+      }
     });
 
     // Zanka za izračun prisotnosti (att)
@@ -831,7 +870,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (termIsActive) {
           swimmers.forEach(s => {
-            if (res[s.id] && s.terms.includes(term.termId)) {
+            if (res[s.id] && s.terms && s.terms.includes(term.termId)) {
               
               if (s.is_deleted) {
                 // Plavalec je izbrisan, štejemo samo, če je datum v preteklosti
@@ -850,16 +889,53 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Prikaži povzetek
-    let html = `<table><thead><tr><th>Plavalec</th><th>Obiskani</th><th>Možni</th><th>Delež (%)</th></tr></thead><tbody>`;
+    let html = `<table><thead><tr><th>Plavalec</th><th>Skupine</th><th>Obiskani</th><th>Možni</th><th>Delež (%)</th></tr></thead><tbody>`;
+    
     // Filtriramo plavalce, ki nimajo nobenega možnega obiska
     const rows = Object.values(res).filter(r => r.pos > 0).sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first));
-    if(rows.length===0) html += `<tr><td colspan="4" class="muted">Ni plavalcev.</td></tr>`;
-    rows.forEach(r=>{
+    
+    if(rows.length === 0) {
+      html += `<tr><td colspan="5" class="muted">Ni plavalcev v skupinah trenerja.</td></tr>`;
+    } else {
+      rows.forEach(r => {
         const pct = r.pos > 0 ? (r.att / r.pos * 100).toFixed(1) : "0.0";
-        html += `<tr><td>${r.first} ${r.last}</td><td>${r.att}</td><td>${r.pos}</td><td>${pct}</td></tr>`;
-    });
+        const groupsText = r.groups.length > 0 ? r.groups.join(', ') : 'Ni skupin';
+        const swimmerName = r.isDeleted ? `<span style="text-decoration: line-through; color: #999;">${r.first} ${r.last}</span>` : `${r.first} ${r.last}`;
+        
+        html += `<tr>
+          <td>${swimmerName}</td>
+          <td><small>${groupsText}</small></td>
+          <td>${r.att}</td>
+          <td>${r.pos}</td>
+          <td>${pct}</td>
+        </tr>`;
+      });
+    }
+    
     html += `</tbody></table>`;
+    
+    // Dodaj informacijo o skupinah trenerja
+    if (TERMS.length > 0) {
+      html += `<div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">
+        <h4>Skupine trenerja (${TERMS.length})</h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">`;
+      
+      TERMS.forEach(term => {
+        const dayName = DAYNAME[term.day];
+        const timeRange = `${term.start_time.slice(0, 5)}-${term.end_time.slice(0, 5)}`;
+        const swimmersInGroup = swimmers.filter(s => s.terms && s.terms.includes(term.id)).length;
+        
+        html += `<div style="padding: 10px; background: white; border-radius: 5px; border: 1px solid #dee2e6;">
+          <strong>${dayName} ${timeRange}</strong><br>
+          <small>Plavalci: ${swimmersInGroup}</small>
+        </div>`;
+      });
+      
+      html += `</div></div>`;
+    }
+    
     elSummaryBox.innerHTML = html;
+    console.log('=== UPDATE SUMMARY END ===');
   }
 
 
@@ -873,6 +949,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     renderCalendar();
     updateSummary();
+    updateGroupsOverview();
   });
 
   elNext.addEventListener('click', () => {
@@ -883,6 +960,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     renderCalendar();
     updateSummary();
+    updateGroupsOverview();
   });
 
   elCloseModalBtn.addEventListener('click', () => {
@@ -912,6 +990,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       
+      console.log('=== LOAD DATA FROM SUPABASE START ===');
+      console.log('userTerms:', userTerms);
+      
       // Naloži samo termine trenerja
       const { data: termsData, error: termsError } = await supabase
         .from('terms')
@@ -920,40 +1001,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (termsError) throw termsError;
       TERMS = termsData || [];
+      console.log('Naloženi termini:', TERMS);
 
-      // Naloži plavalce, ki pripadajo trenerjevim terminom
+      // Naloži VSE plavalce (vključno z izbrisanimi za zgodovinske podatke)
       const { data: swimmersData, error: swimmersError } = await supabase
         .from('swimmers')
         .select('*');
 
       if (swimmersError) throw swimmersError;
-      swimmers = swimmersData || [];
-
+      
       // Filtriraj plavalce, ki pripadajo trenerjevim terminom
-      swimmers = swimmers.filter(s => 
-        !s.is_deleted && s.terms.some(termId => userTerms.includes(termId))
-      );
+      // Plavalec pripada trenerju, če ima vsaj en termin, ki je v userTerms
+      swimmers = (swimmersData || []).filter(s => {
+        // Preveri, če plavalec ima katerikoli termin, ki pripada trenerju
+        const hasMatchingTerm = s.terms && s.terms.some(termId => userTerms.includes(termId));
+        console.log(`Plavalec ${s.first_name} ${s.last_name}: terms=${s.terms}, hasMatchingTerm=${hasMatchingTerm}`);
+        return hasMatchingTerm;
+      });
+      
+      console.log('Filtirani plavalci za trenerja:', swimmers);
 
-          // Naloži prisotnost za trenerjeve termine
-  const { data: attendanceData, error: attendanceError } = await supabase
-    .from('attendance')
-    .select('*')
-    .in('term_id', userTerms);
+      // Naloži prisotnost za trenerjeve termine
+      const { data: attendanceData, error: attendanceError } = await supabase
+        .from('attendance')
+        .select('*')
+        .in('term_id', userTerms);
 
-  if (attendanceError) throw attendanceError;
+      if (attendanceError) throw attendanceError;
 
-  attendance = {};
-  if (attendanceData) {
-    attendanceData.forEach(record => {
-      // Uporabi isto strukturo kot v glavni strani
-      if (!attendance[record.date]) attendance[record.date] = {};
-      if (!attendance[record.date][record.term_id]) attendance[record.date][record.term_id] = {};
-      attendance[record.date][record.term_id][record.swimmer_id] = record.present;
-    });
-  }
-  
-  // Naloži podatke o nadomestnih trenerjih
-  await loadSubstituteTrainerInfo();
+      attendance = {};
+      if (attendanceData) {
+        attendanceData.forEach(record => {
+          // Uporabi isto strukturo kot v glavni strani
+          if (!attendance[record.date]) attendance[record.date] = {};
+          if (!attendance[record.date][record.term_id]) attendance[record.date][record.term_id] = {};
+          attendance[record.date][record.term_id][record.swimmer_id] = record.present;
+        });
+      }
+      
+      // Naloži podatke o nadomestnih trenerjih
+      await loadSubstituteTrainerInfo();
 
       // Naloži status terminov
       const { data: statusData, error: statusError } = await supabase
@@ -971,9 +1058,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       }
 
+      console.log('=== LOAD DATA FROM SUPABASE END ===');
+      console.log('TERMS:', TERMS.length, 'swimmers:', swimmers.length, 'attendance keys:', Object.keys(attendance));
+
       // Posodobi UI
       renderCalendar();
       updateSummary();
+      updateGroupsOverview();
 
     } catch (error) {
       console.error('Napaka pri nalaganju podatkov:', error);
@@ -1448,6 +1539,63 @@ document.addEventListener('DOMContentLoaded', () => {
            alert('Napaka pri shranjevanju prisotnosti trenerja');
        }
    };
+
+  // Posodobi pregled skupin
+  function updateGroupsOverview() {
+    if (!groupsOverview) return;
+    
+    console.log('=== UPDATE GROUPS OVERVIEW START ===');
+    console.log('TERMS:', TERMS);
+    console.log('swimmers:', swimmers);
+    
+    if (!TERMS || TERMS.length === 0) {
+      groupsOverview.innerHTML = '<div class="muted">Trener nima dodeljenih skupin.</div>';
+      return;
+    }
+    
+    let html = '<div class="groups-overview">';
+    
+    TERMS.forEach(term => {
+      const dayName = DAYNAME[term.day];
+      const timeRange = `${term.start_time.slice(0, 5)}-${term.end_time.slice(0, 5)}`;
+      const termSwimmers = swimmers.filter(s => s.terms && s.terms.includes(term.id));
+      const activeSwimmers = termSwimmers.filter(s => !s.is_deleted);
+      const deletedSwimmers = termSwimmers.filter(s => s.is_deleted);
+      
+      html += `<div class="group-card">
+        <h4 class="group-title">${dayName} ${timeRange}</h4>
+        <div class="group-stats">
+          <strong>Skupaj plavalcev:</strong> ${termSwimmers.length}
+        </div>
+        <div class="group-stats">
+          <strong>Aktivni:</strong> ${activeSwimmers.length}
+          ${deletedSwimmers.length > 0 ? `<br><small>Izbrisani: ${deletedSwimmers.length}</small>` : ''}
+        </div>
+        <div class="group-stats">
+          <strong>Plavalci v skupini:</strong>
+          <div class="swimmers-list">`;
+      
+      if (termSwimmers.length === 0) {
+        html += '<div class="muted">Ni plavalcev</div>';
+      } else {
+        termSwimmers.sort((a, b) => (a.last_name + a.first_name).localeCompare(b.last_name + b.first_name))
+          .forEach(swimmer => {
+            const swimmerClass = swimmer.is_deleted ? 'swimmer-item swimmer-deleted' : 'swimmer-item';
+            const swimmerName = swimmer.is_deleted 
+              ? `${swimmer.first_name} ${swimmer.last_name}`
+              : `${swimmer.first_name} ${swimmer.last_name}`;
+            html += `<div class="${swimmerClass}">${swimmerName}</div>`;
+          });
+      }
+      
+      html += `</div></div></div>`;
+    });
+    
+    html += '</div>';
+    groupsOverview.innerHTML = html;
+    
+    console.log('=== UPDATE GROUPS OVERVIEW END ===');
+  }
 
   // Naloži informacije o nadomestnih trenerjih
   async function loadSubstituteTrainerInfo() {

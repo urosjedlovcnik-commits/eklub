@@ -144,6 +144,65 @@
 .btn.neutral:hover {
   background: #5a6268;
 }
+
+/* Stili za pregled skupin */
+.groups-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 15px;
+}
+
+.group-card {
+  padding: 15px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.group-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.group-title {
+  margin: 0 0 10px 0;
+  color: #007bff;
+  font-size: 1.1em;
+}
+
+.group-stats {
+  margin-bottom: 10px;
+  font-size: 0.9em;
+}
+
+.group-stats small {
+  color: #999;
+}
+
+.swimmers-list {
+  max-height: 150px;
+  overflow-y: auto;
+  margin-top: 5px;
+  border-top: 1px solid #eee;
+  padding-top: 10px;
+}
+
+.swimmer-item {
+  padding: 2px 0;
+  font-size: 0.9em;
+  border-bottom: 1px solid #f8f9fa;
+}
+
+.swimmer-item:last-child {
+  border-bottom: none;
+}
+
+.swimmer-deleted {
+  text-decoration: line-through;
+  color: #999;
+}
 </style>
 </head>
 <body>
@@ -196,6 +255,11 @@
     </div>
 
     <div class="grid" style="margin-top:12px">
+      <div class="card">
+        <h3>Skupine trenerja</h3>
+        <div class="inner" id="groupsOverview">Nalaganje skupin...</div>
+      </div>
+
       <div class="card">
         <h3>Povzetek udeležbe (za prikazani mesec)</h3>
         <div class="inner" id="summaryBox">Nalaganje podatkov...</div>
