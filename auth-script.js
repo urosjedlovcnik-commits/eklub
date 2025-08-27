@@ -935,29 +935,63 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ===== UPRAVLJANJE PRISOTNOSTI =====
+  // Funkcija za osvežitev podatkov za določen dan (kompatibilna z script.js)
+  async function refreshDayData(date) {
+    const ymd = iso(date);
+    
+    const { data: attData, error: attError } = await supabase
+      .from('attendance')
+      .select('*')
+      .eq('date', ymd);
+    
+    if (attError) { console.error('Napaka pri osveževanju prisotnosti za dan:', attError); return; }
+    
+    const { data: statusData, error: statusError } = await supabase
+      .from('term_status')
+      .select('*')
+      .eq('date', ymd);
+
+    if (statusError) { console.error('Napaka pri osveževanju statusa termina za dan:', statusError); return; }
+    
+    attendance[ymd] = attData.reduce((acc, row) => {
+      acc[row.term_id] = acc[row.term_id] || {};
+      acc[row.term_id][row.swimmer_id] = row.status;
+      return acc;
+    }, {});
+
+    termStatus[ymd] = statusData.reduce((acc, row) => {
+      acc[row.term_id] = { status: row.status, note: row.note, notes: row.notes };
+      return acc;
+    }, {});
+  }
+
+  // Uporabi isto funkcijo kot v glavni strani (script.js)
   window.updateAttendance = async function(swimmerId, present) {
     if (!currentEventTermId || !currentEventDate) return;
     
-    // Uporabi isto strukturo kot v glavni strani
-    if (!attendance[currentEventDate]) attendance[currentEventDate] = {};
-    if (!attendance[currentEventDate][currentEventTermId]) attendance[currentEventDate][currentEventTermId] = {};
-    
-    attendance[currentEventDate][currentEventTermId][swimmerId] = present;
-    
     try {
+      // Uporabi isto strukturo kot v glavni strani
       const { error } = await supabase
         .from('attendance')
-        .upsert({
-          term_id: currentEventTermId,
-          date: currentEventDate,
-          swimmer_id: swimmerId,
-          status: present
+        .upsert({ 
+          date: currentEventDate, 
+          term_id: currentEventTermId, 
+          swimmer_id: swimmerId, 
+          status: present 
+        }, { 
+          onConflict: ['date', 'term_id', 'swimmer_id'] 
         });
 
       if (error) throw error;
       
+      // Osveži podatke za dan (kompatibilno z script.js)
+      await refreshDayData(new Date(currentEventDate));
+      
       // Posodobi povzetek
       updateSummary();
+      
+      // Posodobi tudi kalendar (če je potrebno)
+      renderCalendar();
       
     } catch (error) {
       console.error('Napaka pri shranjevanju prisotnosti:', error);
@@ -965,7 +999,37 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // ===== DODAJANJE PLAVALCEV V TRENING =====
+  // ===== UPRAVLJANJE PLAVALCEV V TRENINGU =====
+  // Funkcija za odstranitev plavalca iz treninga (kompatibilna z script.js)
+  window.removeSwimmerFromEvent = async function(swimmerId) {
+    if (!currentEventTermId || !currentEventDate) return;
+    
+    try {
+      // Odstrani iz baze (kompatibilno z script.js)
+      const { error } = await supabase
+        .from('attendance')
+        .delete()
+        .eq('date', currentEventDate)
+        .eq('term_id', currentEventTermId)
+        .eq('swimmer_id', swimmerId);
+
+      if (error) throw error;
+      
+      // Osveži podatke za dan (kompatibilno z script.js)
+      await refreshDayData(new Date(currentEventDate));
+      
+      // Posodobi povzetek
+      updateSummary();
+      
+      // Posodobi tudi kalendar (če je potrebno)
+      renderCalendar();
+      
+    } catch (error) {
+      console.error('Napaka pri odstranjevanju plavalca:', error);
+      alert('Napaka pri odstranjevanju plavalca');
+    }
+  };
+
   // Dodaj event listener za gumb dodajanja plavalcev
   elAddToEventBtn.addEventListener('click', async () => {
     const swimmerId = elModalSwimmerSelect.value;
@@ -990,11 +1054,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // Posodobi lokalne podatke
-      if (!attendance[currentEventDate]) attendance[currentEventDate] = {};
-      if (!attendance[currentEventDate][currentEventTermId]) attendance[currentEventDate][currentEventTermId] = {};
-      attendance[currentEventDate][currentEventTermId][swimmer.id] = true;
-
+      // Osveži podatke za dan (kompatibilno z script.js)
+      await refreshDayData(new Date(currentEventDate));
+      
       // Ponovno naloži podatke dogodka
       await loadEventData(currentEventTermId, currentEventDate);
       
