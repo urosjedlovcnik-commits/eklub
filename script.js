@@ -524,10 +524,8 @@ document.addEventListener('DOMContentLoaded', () => {
       openModal(elModal);
     }
     
-    // POSODOBLJENA FUNKCIJA ZA ODPRANJE MODALA
-    function openModal(modalEl){ modalEl.classList.add("show"); modalEl.setAttribute("aria-hidden", "false"); }
-    // POSODOBLJENA FUNKCIJA ZA ZAPIRANJE MODALA
-    function closeModal(modalEl){ modalEl.classList.remove("show"); modalEl.setAttribute("aria-hidden", "true"); }
+    function openModal(modalEl){ modalEl.style.display = "flex"; modalEl.setAttribute("aria-hidden", "false"); }
+    function closeModal(modalEl){ modalEl.style.display = "none"; modalEl.setAttribute("aria-hidden", "true"); }
 
     elCloseModalBtn.addEventListener("click", ()=>{ 
       closeModal(elModal); 
@@ -846,56 +844,95 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===== UREJANJE TERMINOV - SPREMENJENA FUNKCIJA =====
     let editingTermId = null;
 
-    function renderTerms(){
+    function renderTermsList() {
       elTermList.innerHTML = "";
-      TERMS.sort((a,b)=>{
-        if(a.day!==b.day) return a.day-b.day;
-        return a.start_time.localeCompare(b.start_time);
+      
+      const activeTerms = TERMS.filter(t => !isPast(new Date(t.date_to)));
+      
+      if(activeTerms.length === 0){
+        elTermList.textContent = "Ni aktivnih terminov.";
+        elTermList.style.color = "var(--mut)";
+        return;
+      }
+      elTermList.style.color = "inherit";
+
+      activeTerms.forEach(t => {
+        const div = document.createElement("div");
+        div.className = "term-item";
+
+        const infoDiv = document.createElement("div");
+        infoDiv.className = "term-item-info";
+
+        const labelSpan = document.createElement("span");
+        labelSpan.className = "term-item-label";
+        labelSpan.textContent = `${DAY_SHORT_NAME[t.day]} ${t.start_time.slice(0, 5)}–${t.end_time.slice(0, 5)}`;
+        
+        const datesSpan = document.createElement("span");
+        datesSpan.className = "term-item-dates";
+        datesSpan.textContent = `Od: ${formatDate(t.date_from)}, do: ${formatDate(t.date_to)}`;
+
+        infoDiv.appendChild(labelSpan);
+        infoDiv.appendChild(datesSpan);
+        div.appendChild(infoDiv);
+
+        const actionsDiv = document.createElement("div");
+        
+        const editBtn = document.createElement("button");
+        editBtn.innerHTML = "Uredi";
+        editBtn.className = "btn neutral";
+        editBtn.style.marginRight = "6px";
+        editBtn.onclick = () => openEditTermModal(t.id);
+        actionsDiv.appendChild(editBtn);
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.innerHTML = "✖";
+        deleteBtn.className = "btn remove-btn";
+        deleteBtn.onclick = () => deleteTerm(t.id);
+        actionsDiv.appendChild(deleteBtn);
+
+        div.appendChild(actionsDiv);
+
+        elTermList.appendChild(div);
       });
-      TERMS.forEach(t=>{
-        const li = document.createElement("li");
-        li.className = "term-item";
-        li.dataset.id = t.id;
-        li.innerHTML = `
-          <div class="term-item-info">
-            <span class="term-item-label">${t.label} (${DAY_SHORT_NAME[t.day]}, ${t.start_time.slice(0,5)}-${t.end_time.slice(0,5)})</span>
-            <span class="term-item-dates">Od: ${formatDate(t.date_from)} Do: ${formatDate(t.date_to)}</span>
-          </div>
-          <div class="term-item-actions">
-            <button class="btn neutral edit-btn" data-id="${t.id}">Uredi</button>
-            <button class="btn warn delete-btn" data-id="${t.id}">Izbriši</špan>
-          </div>
-        `;
+    }
 
-        elTermList.appendChild(li);
+    async function deleteTerm(termId) {
+        if (!confirm("Ali ste prepričani, da želite izbrisati ta termin?")) {
+            return;
+        }
 
-        const editBtn = li.querySelector(".edit-btn");
-        editBtn.addEventListener("click", () => {
-          const term = termById(t.id);
-          if (term) {
-            currentEditTermId = t.id;
-            elEditTermModalTitle.textContent = `Urejanje termina: ${term.label}`;
-            elEditTermDateFrom.value = formatDate(term.date_from);
-            elEditTermDateTo.value = formatDate(term.date_to);
-            openModal(elEditTermModal);
+        const { error: attError } = await supabase
+            .from('attendance')
+            .delete()
+            .eq('term_id', termId);
+        
+        if (attError) { console.error("Napaka pri brisanju prisotnosti termina:", attError); alert("Napaka pri brisanju prisotnosti termina. Preverite konzolo."); return; }
+
+        const { error: statusError } = await supabase
+            .from('term_status')
+            .delete()
+            .eq('term_id', termId);
+        
+        if (statusError) { console.error("Napaka pri brisanju statusa termina:", statusError); alert("Napaka pri brisanju statusa termina. Preverite konzolo."); return; }
+
+        const { error: termError } = await supabase
+            .from('terms')
+            .delete()
+            .eq('id', termId);
+
+        if (termError) { console.error("Napaka pri brisanju termina:", termError); alert("Napaka pri brisanju termina. Preverite konzolo."); return; }
+        
+        for (const swimmer of swimmers) {
+          if (swimmer.terms.includes(termId)) {
+            swimmer.terms = swimmer.terms.filter(t => t !== termId);
+            await supabase.from('swimmers').update({ terms: swimmer.terms }).eq('id', swimmer.id);
           }
-        });
-
-        const deleteBtn = li.querySelector(".delete-btn");
-        deleteBtn.addEventListener("click", async () => {
-            const { error } = await supabase.from('terms').delete().eq('id', t.id);
-            if (error) {
-                console.error("Napaka pri brisanju termina:", error);
-            } else {
-                await loadDataAndRender();
-            }
-        });
-      });
-
-      elTermSelect.innerHTML = "";
-      TERMS.sort((a,b)=>a.label.localeCompare(b.label)).forEach(t=>{
-        const o=document.createElement("option"); o.value=t.id; o.textContent=t.label; elTermSelect.appendChild(o);
-      });
+        }
+        
+        TERMS = TERMS.filter(t => t.id !== termId);
+        await refreshSwimmerPanel();
+        await renderMonth();
+        alert("Termin uspešno izbrisan.");
     }
 
     function openEditTermModal(termId) {
