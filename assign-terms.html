@@ -303,9 +303,12 @@
         trainerSelect.appendChild(option);
       });
 
-      // Termini
+      // Termini - prikaži samo nedodeljene
       termSelect.innerHTML = '<option value="">Izberi termin</option>';
-      terms.forEach(term => {
+      const assignedTermIds = assignments.map(a => a.term_id);
+      const unassignedTerms = terms.filter(term => !assignedTermIds.includes(term.id));
+      
+      unassignedTerms.forEach(term => {
         const option = document.createElement('option');
         option.value = term.id;
         option.textContent = `${getDayName(term.day)} ${term.start_time}-${term.end_time}`;
