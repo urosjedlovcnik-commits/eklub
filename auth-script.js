@@ -27,8 +27,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const substituteObligationsList = document.getElementById('substituteObligationsList');
   
   // UI elementi za prisotnost trenerja
-  const trainerPresentCheckbox = document.getElementById('trainerPresentCheckbox');
-  const trainerNoteInput = document.getElementById('trainerNoteInput');
+  const trainerAttendanceSection = document.getElementById('trainerAttendanceSection');
+  const trainerAttendanceTable = document.getElementById('trainerAttendanceTable');
   
   // Modal elementi za nadomestne trenerje
   const confirmSubstituteModal = document.getElementById('confirmSubstituteModal');
@@ -566,6 +566,17 @@ document.addEventListener('DOMContentLoaded', () => {
     elDayModal.style.display = 'none';
   }
 
+  // Pomožne funkcije za modal
+  function openModal(modal) {
+    modal.style.display = 'flex';
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeModal(modal) {
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+  }
+
   // ===== MODAL ZA DOGODKE =====
   let currentEventTermId = null;
   let currentEventDate = null;
@@ -596,10 +607,10 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
     }
     
-    loadEventData(termId, date);
-    loadTrainerAttendance(termId, date);
-    elModal.setAttribute('aria-hidden', 'false');
-    elModal.style.display = 'flex';
+           loadEventData(termId, date);
+     checkAndLoadTrainerAttendance(termId, date);
+     elModal.setAttribute('aria-hidden', 'false');
+     elModal.style.display = 'flex';
   }
 
   async function loadEventData(termId, date) {
@@ -639,106 +650,112 @@ document.addEventListener('DOMContentLoaded', () => {
     updateModalButtons(termStat);
   }
 
-       function renderEventTables(termId, date) {
-     const termKey = `${termId}-${date}`;
-     // Uporabi isto strukturo kot v glavni strani
-     const termAtt = attendance[date]?.[termId] || {};
-     
-     console.log('renderEventTables - termId:', termId, 'date:', date);
-     console.log('termAtt:', termAtt);
-     console.log('swimmers:', swimmers);
-     
-     // Filtriraj plavalce, ki pripadajo trenerju
-     const assignedSwimmers = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted);
-     console.log('assignedSwimmers:', assignedSwimmers);
-     
-     const assignedSwimmerIds = assignedSwimmers.map(s => s.id);
-     
-     const swimmersWithAttendance = Object.keys(termAtt).map(swimmerId => 
-       swimmers.find(s => s.id === swimmerId)
-     ).filter(Boolean);
-     
-     const substitutionSwimmers = swimmersWithAttendance.filter(s => 
-       !assignedSwimmerIds.includes(s.id)
-     );
-     
-     const regularSwimmers = assignedSwimmers.filter(s => 
-       termAtt[s.id] !== undefined || !s.is_deleted
-     );
-
-    // Render attendance table
-    elAttendanceTable.innerHTML = '';
-    if (regularSwimmers.length === 0) {
-      elAttendanceTable.innerHTML = '<tr><td colspan="3" class="muted">Ni plavalcev</td></tr>';
-    } else {
-      regularSwimmers.sort((a,b) => (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name))
-        .forEach(s => {
-          const isPresent = termAtt[s.id] || false;
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td>${s.first_name} ${s.last_name}</td>
-            <td>
-              <input type="checkbox" ${isPresent ? 'checked' : ''} 
-                     onchange="updateAttendance('${s.id}', ${!isPresent}, '')">
-            </td>
-            <td>
-              <input type="text" value="" 
-                     onchange="updateAttendance('${s.id}', ${isPresent}, this.value)" 
-                     placeholder="Opomba">
-            </td>
-          `;
-          elAttendanceTable.appendChild(row);
-        });
-    }
-
-    // Render substitution table
-    elSubstitutionTable.innerHTML = '';
-    if (substitutionSwimmers.length === 0) {
-      elSubstitutionTable.innerHTML = '<tr><td colspan="3" class="muted">Ni nadomestnih plavalcev</td></tr>';
-    } else {
-      substitutionSwimmers.sort((a,b) => (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name))
-        .forEach(s => {
-          const isPresent = termAtt[s.id] || false;
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td>${s.first_name} ${s.last_name}</td>
-            <td>
-              <input type="checkbox" ${isPresent ? 'checked' : ''} 
-                     onchange="updateAttendance('${s.id}', ${!isPresent}, '')">
-            </td>
-            <td>
-              <input type="text" value="" 
-                     onchange="updateAttendance('${s.id}', ${isPresent}, this.value)" 
-                     placeholder="Opomba">
-            </td>
-          `;
-          elSubstitutionTable.appendChild(row);
-        });
-    }
-
-    // Update swimmer select
-    elModalSwimmerSelect.innerHTML = '';
-    const allSwimmersInEvent = [...regularSwimmers, ...substitutionSwimmers];
-    const currentEventSwimmerIds = allSwimmersInEvent.map(s => s.id);
-    const unassigned = swimmers.filter(s => 
-      !currentEventSwimmerIds.includes(s.id) && !s.is_deleted
+           function renderEventTables(termId, date) {
+    const termKey = `${termId}-${date}`;
+    // Uporabi isto strukturo kot v glavni strani
+    const termAtt = attendance[date]?.[termId] || {};
+    
+    console.log('renderEventTables - termId:', termId, 'date:', date);
+    console.log('termAtt:', termAtt);
+    console.log('swimmers:', swimmers);
+    
+    // Filtriraj plavalce, ki pripadajo trenerju
+    const assignedSwimmers = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted);
+    console.log('assignedSwimmers:', assignedSwimmers);
+    console.log('termId:', termId);
+    console.log('swimmers:', swimmers);
+    
+    const assignedSwimmerIds = assignedSwimmers.map(s => s.id);
+    
+    const swimmersWithAttendance = Object.keys(termAtt).map(swimmerId => 
+      swimmers.find(s => s.id === swimmerId)
+    ).filter(Boolean);
+    
+    const substitutionSwimmers = swimmersWithAttendance.filter(s => 
+      !assignedSwimmerIds.includes(s.id)
     );
+    
+    const regularSwimmers = assignedSwimmers;
 
-    if (unassigned.length > 0) {
-      unassigned.sort((a,b) => (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name))
-        .forEach(s => {
-          const o = document.createElement('option');
-          o.value = s.id;
-          o.textContent = `${s.first_name} ${s.last_name}`;
-          elModalSwimmerSelect.appendChild(o);
-        });
-      elModalSwimmerSelect.style.display = 'inline-block';
-    } else {
-      const o = document.createElement('option');
-      o.value = '';
-      o.textContent = 'Ni več plavalcev';
-      elModalSwimmerSelect.appendChild(o);
-      elModalSwimmerSelect.style.display = 'none';
+    // Render attendance table - preveri, ali element obstaja
+    if (elAttendanceTable) {
+      elAttendanceTable.innerHTML = '';
+      if (regularSwimmers.length === 0) {
+        elAttendanceTable.innerHTML = '<tr><td colspan="3" class="muted">Ni plavalcev</td></tr>';
+      } else {
+        regularSwimmers.sort((a,b) => (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name))
+          .forEach(s => {
+            const isPresent = termAtt[s.id] || false;
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td>${s.first_name} ${s.last_name}</td>
+              <td>
+                <input type="checkbox" ${isPresent ? 'checked' : ''} 
+                       onchange="updateAttendance('${s.id}', ${!isPresent}, '')">
+              </td>
+              <td>
+                <input type="text" value="" 
+                       onchange="updateAttendance('${s.id}', ${isPresent}, this.value)" 
+                       placeholder="Opomba">
+              </td>
+            `;
+            elAttendanceTable.appendChild(row);
+          });
+      }
+    }
+
+    // Render substitution table - preveri, ali element obstaja
+    if (elSubstitutionTable) {
+      elSubstitutionTable.innerHTML = '';
+      if (substitutionSwimmers.length === 0) {
+        elSubstitutionTable.innerHTML = '<tr><td colspan="3" class="muted">Ni nadomestnih plavalcev</td></tr>';
+      } else {
+        substitutionSwimmers.sort((a,b) => (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name))
+          .forEach(s => {
+            const isPresent = termAtt[s.id] || false;
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td>${s.first_name} ${s.last_name}</td>
+              <td>
+                <input type="checkbox" ${isPresent ? 'checked' : ''} 
+                       onchange="updateAttendance('${s.id}', ${!isPresent}, '')">
+              </td>
+              <td>
+                <input type="text" value="" 
+                       onchange="updateAttendance('${s.id}', ${isPresent}, this.value)" 
+                       placeholder="Opomba">
+              </td>
+            `;
+            elSubstitutionTable.appendChild(row);
+          });
+      }
+    }
+
+    // Update swimmer select - preveri, ali element obstaja
+    if (elModalSwimmerSelect) {
+      elModalSwimmerSelect.innerHTML = '';
+      const allSwimmersInEvent = [...regularSwimmers, ...substitutionSwimmers];
+      const currentEventSwimmerIds = allSwimmersInEvent.map(s => s.id);
+      const unassigned = swimmers.filter(s => 
+        !currentEventSwimmerIds.includes(s.id) && !s.is_deleted
+      );
+
+      if (unassigned.length > 0) {
+        unassigned.sort((a,b) => (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name))
+          .forEach(s => {
+            const o = document.createElement('option');
+            o.value = s.id;
+            o.textContent = `${s.first_name} ${s.last_name}`;
+            elModalSwimmerSelect.appendChild(o);
+          });
+        elModalSwimmerSelect.style.display = 'inline-block';
+      } else {
+        const o = document.createElement('option');
+        o.value = '';
+        o.textContent = 'Ni več plavalcev';
+        elModalSwimmerSelect.appendChild(o);
+        elModalSwimmerSelect.style.display = 'none';
+      }
     }
   }
 
@@ -849,17 +866,19 @@ document.addEventListener('DOMContentLoaded', () => {
       currentDate.setDate(currentDate.getDate() + 1);
     }
     
-    // Prikaži povzetek
-    let html = `<table><thead><tr><th>Plavalec</th><th>Obiskani</th><th>Možni</th><th>Delež (%)</th></tr></thead><tbody>`;
-    // Filtriramo plavalce, ki nimajo nobenega možnega obiska
-    const rows = Object.values(res).filter(r => r.pos > 0).sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first));
-    if(rows.length===0) html += `<tr><td colspan="4" class="muted">Ni plavalcev.</td></tr>`;
-    rows.forEach(r=>{
-        const pct = r.pos > 0 ? (r.att / r.pos * 100).toFixed(1) : "0.0";
-        html += `<tr><td>${r.first} ${r.last}</td><td>${r.att}</td><td>${r.pos}</td><td>${pct}</td></tr>`;
-    });
-    html += `</tbody></table>`;
-    elSummaryBox.innerHTML = html;
+           // Prikaži povzetek
+     if (elSummaryBox) {
+       let html = `<table><thead><tr><th>Plavalec</th><th>Obiskani</th><th>Možni</th><th>Delež (%)</th></tr></thead><tbody>`;
+       // Filtriramo plavalce, ki nimajo nobenega možnega obiska
+       const rows = Object.values(res).filter(r => r.pos > 0).sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first));
+       if(rows.length===0) html += `<tr><td colspan="4" class="muted">Ni plavalcev.</td></tr>`;
+       rows.forEach(r=>{
+           const pct = r.pos > 0 ? (r.att / r.pos * 100).toFixed(1) : "0.0";
+           html += `<tr><td>${r.first} ${r.last}</td><td>${r.att}</td><td>${r.pos}</td><td>${pct}</td></tr>`;
+       });
+       html += `</tbody></table>`;
+       elSummaryBox.innerHTML = html;
+     }
   }
 
 
@@ -892,11 +911,217 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-  // Event listenerji za day modal
-  elCloseDayModalBtn.addEventListener('click', closeDayModal);
-  elDayModal.addEventListener('click', (e) => {
-    if (e.target === elDayModal) closeDayModal();
+  // ===== UPRAVLJANJE PLAVALCEV IN TERMINOV =====
+  
+  // UI elementi za upravljanje plavalcev in terminov
+  const elNewFirst = document.getElementById("newFirst");
+  const elNewLast = document.getElementById("newLast");
+  const elAddSwimmerBtn = document.getElementById("addSwimmerBtn");
+  const elSwimmerSelect = document.getElementById("swimmerSelect");
+  const elTermSelect = document.getElementById("termSelect");
+  const elAssignTermBtn = document.getElementById("assignTermBtn");
+  const elDeleteSwimmerBtn = document.getElementById("deleteSwimmerBtn");
+  const elSwimmerInfo = document.getElementById("swimmerInfo");
+  const elNewTermDay = document.getElementById("newTermDay");
+  const elNewTermStart = document.getElementById("newTermStart");
+  const elNewTermEnd = document.getElementById("newTermEnd");
+  const elNewTermDateFrom = document.getElementById("newTermDateFrom");
+  const elNewTermDateTo = document.getElementById("newTermDateTo");
+  const elAddTermBtn = document.getElementById("addTermBtn");
+  const elTermList = document.getElementById("termList");
+  const elExportMonthSelect = document.getElementById("exportMonthSelect");
+  const elExportYearSelect = document.getElementById("exportYearSelect");
+  const elExportCsvBtn = document.getElementById("exportCsvBtn");
+
+  // Funkcije za upravljanje plavalcev
+  function updateSwimmerSelect() {
+    if (!elSwimmerSelect) return;
+    elSwimmerSelect.innerHTML = '';
+    // Filtriraj plavalce, ki pripadajo trenerjevim terminom
+    const relevantSwimmers = swimmers.filter(s => 
+      !s.is_deleted && s.terms.some(termId => userTerms.includes(termId))
+    );
+    
+    relevantSwimmers.sort((a,b) => (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name))
+      .forEach(s => {
+        const o = document.createElement('option');
+        o.value = s.id;
+        o.textContent = `${s.first_name} ${s.last_name}`;
+        elSwimmerSelect.appendChild(o);
+      });
+  }
+
+  function updateTermSelect() {
+    if (!elTermSelect) return;
+    elTermSelect.innerHTML = '';
+    // Prikaži samo termine trenerja
+    TERMS.filter(term => userTerms.includes(term.id))
+      .forEach(term => {
+        const o = document.createElement('option');
+        o.value = term.id;
+        o.textContent = `${DAYNAME[term.day]} ${term.start_time}-${term.end_time}`;
+        elTermSelect.appendChild(o);
+      });
+  }
+
+  function showSwimmerInfo() {
+    if (!elSwimmerInfo) return;
+    const sid = elSwimmerSelect.value;
+    const s = swimmers.find(x => x.id === sid);
+    if (!s) {
+      elSwimmerInfo.textContent = '';
+      return;
+    }
+    
+    const assignedTerms = TERMS.filter(t => s.terms.includes(t.id) && userTerms.includes(t.id));
+    const termNames = assignedTerms.map(t => `${DAYNAME[t.day]} ${t.start_time}-${t.end_time}`).join(', ');
+    
+    elSwimmerInfo.textContent = `Dodeljeni termini: ${termNames || 'Ni dodeljenih terminov'}`;
+  }
+
+  // Event listenerji za upravljanje plavalcev
+  if (elAddSwimmerBtn) {
+    elAddSwimmerBtn.addEventListener('click', async () => {
+    const f = elNewFirst.value.trim();
+    const l = elNewLast.value.trim();
+    
+    if (!f || !l) {
+      alert('Prosim, vnesite ime in priimek');
+      return;
+    }
+
+    if (swimmers.some(s => s.first_name.toLowerCase() === f.toLowerCase() && s.last_name.toLowerCase() === l.toLowerCase() && !s.is_deleted)) {
+      alert('Plavalec že obstaja');
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('swimmers')
+        .insert([{ first_name: f, last_name: l, terms: [] }])
+        .select();
+
+      if (error) throw error;
+
+      swimmers.push(data[0]);
+      updateSwimmerSelect();
+      elNewFirst.value = '';
+      elNewLast.value = '';
+      
+    } catch (error) {
+      console.error('Napaka pri dodajanju plavalca:', error);
+      alert('Napaka pri dodajanju plavalca');
+    }
   });
+
+  elAssignTermBtn.addEventListener('click', async () => {
+    const sid = elSwimmerSelect.value, tid = elTermSelect.value;
+    const s = swimmers.find(x => x.id === sid);
+    if (!s) return;
+
+    if (s.terms.includes(tid)) {
+      alert('Plavalec je že dodeljen temu terminu');
+      return;
+    }
+
+    try {
+      s.terms.push(tid);
+      const { error } = await supabase
+        .from('swimmers')
+        .update({ terms: s.terms })
+        .eq('id', sid);
+
+      if (error) throw error;
+
+      showSwimmerInfo();
+      
+    } catch (error) {
+      console.error('Napaka pri dodelitvi termina:', error);
+      alert('Napaka pri dodelitvi termina');
+    }
+  });
+
+  elDeleteSwimmerBtn.addEventListener('click', async () => {
+    const sid = elSwimmerSelect.value;
+    if (!sid) {
+      alert('Prosim, izberite plavalca');
+      return;
+    }
+
+    if (!confirm('Ali ste prepričani, da želite zbrisati tega plavalca?')) {
+      return;
+    }
+
+    try {
+      const { error: swimmerError } = await supabase
+        .from('swimmers')
+        .update({ is_deleted: true })
+        .eq('id', sid);
+
+      if (swimmerError) throw swimmerError;
+
+      // Označi plavalca kot izbrisanega
+      const swimmerToUpdate = swimmers.find(x => x.id === sid);
+      if (swimmerToUpdate) {
+        swimmerToUpdate.is_deleted = true;
+      }
+
+      updateSwimmerSelect();
+      showSwimmerInfo();
+      
+    } catch (error) {
+      console.error('Napaka pri brisanju plavalca:', error);
+      alert('Napaka pri brisanju plavalca. Prosim, preverite konzolo za podrobnosti.');
+    }
+  });
+
+  elSwimmerSelect.addEventListener('change', showSwimmerInfo);
+
+  // Funkcije za upravljanje plavalcev
+  function updateSwimmerSelect() {
+    if (!elSwimmerSelect) return;
+    elSwimmerSelect.innerHTML = '';
+    // Filtriraj plavalce, ki pripadajo trenerjevim terminom
+    const relevantSwimmers = swimmers.filter(s => 
+      !s.is_deleted && s.terms.some(termId => userTerms.includes(termId))
+    );
+    
+    relevantSwimmers.sort((a,b) => (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name))
+      .forEach(s => {
+        const o = document.createElement('option');
+        o.value = s.id;
+        o.textContent = `${s.first_name} ${s.last_name}`;
+        elSwimmerSelect.appendChild(o);
+      });
+  }
+
+  function updateTermSelect() {
+    if (!elTermSelect) return;
+    elTermSelect.innerHTML = '';
+    // Prikaži samo termine trenerja
+    TERMS.filter(term => userTerms.includes(term.id))
+      .forEach(term => {
+        const o = document.createElement('option');
+        o.value = term.id;
+        o.textContent = `${DAYNAME[term.day]} ${term.start_time}-${term.end_time}`;
+        elTermSelect.appendChild(o);
+      });
+  }
+
+  function showSwimmerInfo() {
+    if (!elSwimmerInfo || !elSwimmerSelect) return;
+    const sid = elSwimmerSelect.value;
+    const s = swimmers.find(x => x.id === sid);
+    if (!s) {
+      elSwimmerInfo.textContent = '';
+      return;
+    }
+    
+    const assignedTerms = TERMS.filter(t => s.terms.includes(t.id) && userTerms.includes(t.id));
+    const termNames = assignedTerms.map(t => `${DAYNAME[t.day]} ${t.start_time}-${t.end_time}`).join(', ');
+    
+    elSwimmerInfo.textContent = `Dodeljeni termini: ${termNames || 'Ni dodeljenih terminov'}`;
+  }
 
   // ===== NALAGANJE PODATKOV =====
   async function loadDataFromSupabase() {
@@ -933,6 +1158,8 @@ document.addEventListener('DOMContentLoaded', () => {
       swimmers = swimmers.filter(s => 
         !s.is_deleted && s.terms.some(termId => userTerms.includes(termId))
       );
+      console.log('Filtrirani plavalci za trenerja:', swimmers);
+      console.log('userTerms:', userTerms);
 
           // Naloži prisotnost za trenerjeve termine
   const { data: attendanceData, error: attendanceError } = await supabase
@@ -974,6 +1201,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // Posodobi UI
       renderCalendar();
       updateSummary();
+      updateSwimmerSelect();
+      updateTermSelect();
+      showSwimmerInfo();
 
     } catch (error) {
       console.error('Napaka pri nalaganju podatkov:', error);
@@ -1321,7 +1551,54 @@ document.addEventListener('DOMContentLoaded', () => {
       }
   }
   
-       // Naloži prisotnost trenerja
+       // Preveri, ali je trener nadomestni trener in naloži prisotnost
+   async function checkAndLoadTrainerAttendance(termId, date) {
+       try {
+           console.log('checkAndLoadTrainerAttendance - termId:', termId, 'date:', date);
+           
+           // Najdi trenerja
+           const { data: trainerData, error: trainerError } = await supabase
+               .from('trainers')
+               .select('id')
+               .eq('user_id', currentUser.id)
+               .single();
+           
+           if (trainerError) throw trainerError;
+           
+           console.log('Trener ID:', trainerData.id);
+           
+           // Preveri, ali je trener nadomestni trener za ta termin in datum
+           const { data: substituteData, error: substituteError } = await supabase
+               .from('substitute_trainers')
+               .select('*')
+               .eq('substitute_trainer_id', trainerData.id)
+               .eq('term_id', termId)
+               .eq('substitute_date', date)
+               .single();
+           
+           console.log('Nadomestni podatki:', { substituteData, substituteError });
+           
+           if (substituteError && substituteError.code !== 'PGRST116') {
+               throw substituteError;
+           }
+           
+           // Če je trener nadomestni trener, prikaži sekcijo za prisotnost trenerja
+           if (substituteData) {
+               console.log('Trener je nadomestni trener, prikazujem sekcijo za prisotnost');
+               trainerAttendanceSection.style.display = 'block';
+               await loadTrainerAttendance(termId, date);
+           } else {
+               console.log('Trener ni nadomestni trener, skrivam sekcijo za prisotnost');
+               trainerAttendanceSection.style.display = 'none';
+           }
+           
+       } catch (error) {
+           console.error('Napaka pri preverjanju nadomestnega trenerja:', error);
+           trainerAttendanceSection.style.display = 'none';
+       }
+   }
+   
+   // Naloži prisotnost trenerja
    async function loadTrainerAttendance(termId, date) {
        try {
            console.log('loadTrainerAttendance - termId:', termId, 'date:', date);
@@ -1329,7 +1606,7 @@ document.addEventListener('DOMContentLoaded', () => {
            // Najdi trenerja
            const { data: trainerData, error: trainerError } = await supabase
                .from('trainers')
-               .select('id')
+               .select('id, first_name, last_name')
                .eq('user_id', currentUser.id)
                .single();
            
@@ -1352,59 +1629,55 @@ document.addEventListener('DOMContentLoaded', () => {
                throw attendanceError;
            }
            
-           // Nastavi vrednosti
-           if (attendanceData) {
-               trainerPresentCheckbox.checked = attendanceData.present;
-               trainerNoteInput.value = attendanceData.note || '';
-           } else {
-               trainerPresentCheckbox.checked = false;
-               trainerNoteInput.value = '';
-           }
+           // Prikaži prisotnost trenerja v tabeli
+           const isPresent = attendanceData ? attendanceData.present : false;
+           const note = attendanceData ? attendanceData.note || '' : '';
            
-           // Dodaj event listenerje
-           trainerPresentCheckbox.onchange = () => saveTrainerAttendance(termId, date);
-           trainerNoteInput.onchange = () => saveTrainerAttendance(termId, date);
+           trainerAttendanceTable.innerHTML = `
+               <tr>
+                   <td>${trainerData.first_name} ${trainerData.last_name} (nadomestni trener)</td>
+                   <td>
+                       <input type="checkbox" ${isPresent ? 'checked' : ''} 
+                              onchange="updateTrainerAttendance('${trainerData.id}', '${termId}', '${date}', ${!isPresent}, '${note}')">
+                   </td>
+                   <td>
+                       <input type="text" value="${note}" 
+                              onchange="updateTrainerAttendance('${trainerData.id}', '${termId}', '${date}', ${isPresent}, this.value)" 
+                              placeholder="Opomba">
+                   </td>
+               </tr>
+           `;
            
        } catch (error) {
            console.error('Napaka pri nalaganju prisotnosti trenerja:', error);
        }
    }
   
-  // Shrani prisotnost trenerja
-  async function saveTrainerAttendance(termId, date) {
-      try {
-          // Najdi trenerja
-          const { data: trainerData, error: trainerError } = await supabase
-              .from('trainers')
-              .select('id')
-              .eq('user_id', currentUser.id)
-              .single();
-          
-          if (trainerError) throw trainerError;
-          
-          const present = trainerPresentCheckbox.checked;
-          const note = trainerNoteInput.value;
-          
-          // Shrani prisotnost
-          const { error: upsertError } = await supabase
-              .from('trainer_attendance')
-              .upsert({
-                  trainer_id: trainerData.id,
-                  term_id: termId,
-                  date: date,
-                  present: present,
-                  note: note
-              });
-          
-          if (upsertError) throw upsertError;
-          
-          console.log('Prisotnost trenerja shranjena');
-          
-      } catch (error) {
-          console.error('Napaka pri shranjevanju prisotnosti trenerja:', error);
-          alert('Napaka pri shranjevanju prisotnosti trenerja');
-      }
-  }
+       // Posodobi prisotnost trenerja (globalna funkcija)
+   window.updateTrainerAttendance = async function(trainerId, termId, date, present, note) {
+       try {
+           console.log('updateTrainerAttendance - trainerId:', trainerId, 'termId:', termId, 'date:', date, 'present:', present, 'note:', note);
+           
+           // Shrani prisotnost
+           const { error: upsertError } = await supabase
+               .from('trainer_attendance')
+               .upsert({
+                   trainer_id: trainerId,
+                   term_id: termId,
+                   date: date,
+                   present: present,
+                   note: note
+               });
+           
+           if (upsertError) throw upsertError;
+           
+           console.log('Prisotnost trenerja shranjena');
+           
+       } catch (error) {
+           console.error('Napaka pri shranjevanju prisotnosti trenerja:', error);
+           alert('Napaka pri shranjevanju prisotnosti trenerja');
+       }
+   };
 
   // Naloži informacije o nadomestnih trenerjih
   async function loadSubstituteTrainerInfo() {
@@ -1437,5 +1710,17 @@ document.addEventListener('DOMContentLoaded', () => {
           console.error('Napaka pri nalaganju informacij o nadomestnih trenerjih:', error);
       }
   }
+
+  // Event listenerji za day modal - preveri, ali elementi obstajajo
+  if (elCloseDayModalBtn) {
+    elCloseDayModalBtn.addEventListener('click', closeDayModal);
+  }
+  if (elDayModal) {
+    elDayModal.addEventListener('click', (e) => {
+      if (e.target === elDayModal) closeDayModal();
+    });
+  }
+
+
 
 });
