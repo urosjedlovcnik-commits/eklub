@@ -635,7 +635,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Naloži nove podatke
       attData.forEach(record => {
-        attendance[date][termId][record.swimmer_id] = record.present;
+        attendance[date][termId][record.swimmer_id] = record.status;
       });
       
       console.log('Naložena prisotnost za termin', termId, 'na dan', date, ':', attendance[date][termId]);
@@ -701,7 +701,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tr.appendChild(td);
       elAttendanceTable.appendChild(tr);
     } else {
-      regularSwimmers.sort((a,b) => (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name))
+                regularSwimmers.sort((a,b) => (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name))
         .forEach(s => {
           const isPresent = termAtt[s.id] || false;
           const row = document.createElement('tr');
@@ -709,11 +709,11 @@ document.addEventListener('DOMContentLoaded', () => {
             <td>${s.first_name} ${s.last_name}</td>
             <td>
               <input type="checkbox" ${isPresent ? 'checked' : ''} 
-                     onchange="updateAttendance('${s.id}', ${!isPresent}, '')">
+                     onchange="updateAttendance('${s.id}', ${!isPresent})">
             </td>
             <td>
               <input type="text" value="" 
-                     onchange="updateAttendance('${s.id}', ${isPresent}, this.value)" 
+                     onchange="updateAttendance('${s.id}', ${isPresent})" 
                      placeholder="Opomba">
             </td>
             <td>
@@ -798,7 +798,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ===== UPRAVLJANJE PRISOTNOSTI =====
-  window.updateAttendance = async function(swimmerId, present, note) {
+  window.updateAttendance = async function(swimmerId, present) {
     if (!currentEventTermId || !currentEventDate) return;
     
     // Uporabi isto strukturo kot v glavni strani
@@ -814,8 +814,7 @@ document.addEventListener('DOMContentLoaded', () => {
           term_id: currentEventTermId,
           date: currentEventDate,
           swimmer_id: swimmerId,
-          present: present,
-          note: note
+          status: present
         });
 
       if (error) throw error;
@@ -845,8 +844,7 @@ document.addEventListener('DOMContentLoaded', () => {
           date: currentEventDate,
           term_id: currentEventTermId,
           swimmer_id: swimmer.id,
-          present: true,
-          note: ''
+          status: true
         }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
       
       if (error) {
@@ -1150,7 +1148,7 @@ document.addEventListener('DOMContentLoaded', () => {
           // Uporabi isto strukturo kot v glavni strani
           if (!attendance[record.date]) attendance[record.date] = {};
           if (!attendance[record.date][record.term_id]) attendance[record.date][record.term_id] = {};
-          attendance[record.date][record.term_id][record.swimmer_id] = record.present;
+          attendance[record.date][record.term_id][record.swimmer_id] = record.status;
         });
       }
       
