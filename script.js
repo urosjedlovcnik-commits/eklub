@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Stanja bodo naložena asinhrono
     let TERMS = [];
     let swimmers = [];
+    let trainers = [];
     let attendance = {};
     let termStatus = {};
 
@@ -49,6 +50,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const elAddTermBtn = document.getElementById("addTermBtn");
     // Upravljanje terminov
     const elTermList = document.getElementById("termList");
+    // Trenerji
+    const elTrainersList = document.getElementById("trainersList");
     // Modal
     const elModal = document.getElementById("eventModal");
     const elModalTitle = document.getElementById("modalTitle");
@@ -1018,6 +1021,33 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
+    // Prikaži seznam trenerjev
+    function renderTrainersList() {
+      elTrainersList.innerHTML = '';
+      
+      if (trainers.length === 0) {
+        elTrainersList.innerHTML = '<p class="muted">Ni trenerjev v sistemu.</p>';
+        return;
+      }
+
+      trainers.forEach(trainer => {
+        const div = document.createElement('div');
+        div.className = 'trainer-item';
+        div.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee;';
+        div.innerHTML = `
+          <div class="trainer-info">
+            <strong>${trainer.first_name} ${trainer.last_name}</strong>
+            <br>
+            <small class="muted">${trainer.email}</small>
+          </div>
+          <div class="trainer-actions">
+            <a href="assign-terms.html" class="btn small">Dodeli termine</a>
+          </div>
+        `;
+        elTrainersList.appendChild(div);
+      });
+    }
+
     async function deleteTerm(termId) {
         if (!confirm("Ali ste prepričani, da želite izbrisati ta termin?")) {
             return;
@@ -1309,6 +1339,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (swimmersError) throw swimmersError;
         swimmers = swimmersData;
         
+        // Naloži trenerje
+        const { data: trainersData, error: trainersError } = await supabase.from('trainers').select('*').order('first_name, last_name');
+        if (trainersError) throw trainersError;
+        trainers = trainersData || [];
+        
         const { data: attendanceData, error: attendanceError } = await supabase.from('attendance').select('*');
         if (attendanceError) throw attendanceError;
         attendance = attendanceData.reduce((acc, row) => {
@@ -1328,6 +1363,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         populateExportSelects();
         refreshSwimmerPanel();
+        renderTrainersList();
         renderMonth();
 
       } catch (error) {
