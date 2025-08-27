@@ -1721,7 +1721,4 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-
-
 });
-
