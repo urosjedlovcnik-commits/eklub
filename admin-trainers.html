@@ -152,6 +152,14 @@
   background: #d4edda;
   border-radius: 4px;
 }
+
+.warning-message {
+  color: #856404;
+  margin-top: 10px;
+  padding: 10px;
+  background: #fff3cd;
+  border-radius: 4px;
+}
 </style>
 </head>
 <body>
@@ -171,7 +179,7 @@
           </div>
           <div>
             <label for="trainerPassword">Geslo:</label>
-            <input type="password" id="trainerPassword" placeholder="Pustite prazno za obstoječega">
+            <input type="password" id="trainerPassword" placeholder="Obvezno za novega trenerja">
           </div>
           <div>
             <label for="trainerFirstName">Ime:</label>
@@ -323,7 +331,13 @@
 
     function showMessage(message, type = 'success') {
       formMessage.textContent = message;
-      formMessage.className = type === 'error' ? 'error-message' : 'success-message';
+      if (type === 'error') {
+        formMessage.className = 'error-message';
+      } else if (type === 'warning') {
+        formMessage.className = 'warning-message';
+      } else {
+        formMessage.className = 'success-message';
+      }
       setTimeout(() => {
         formMessage.textContent = '';
         formMessage.className = '';
@@ -334,6 +348,7 @@
       trainerForm.reset();
       editingTrainerId = null;
       saveTrainerBtn.textContent = 'Shrani trenerja';
+      trainerPassword.placeholder = 'Obvezno za novega trenerja';
     }
 
     // Uredi trenerja
@@ -346,7 +361,7 @@
       trainerFirstName.value = trainer.first_name;
       trainerLastName.value = trainer.last_name;
       trainerPassword.value = '';
-      trainerPassword.placeholder = 'Pustite prazno za obstoječega';
+      trainerPassword.placeholder = 'Geslo se ne more spremeniti tukaj';
       saveTrainerBtn.textContent = 'Posodobi trenerja';
     }
 
@@ -365,7 +380,7 @@
 
         if (termsError) throw termsError;
 
-        // Nato zbriši trenerja
+        // Nato zbriši trenerja iz trainers tabele
         const { error: trainerError } = await supabase
           .from('trainers')
           .delete()
@@ -373,7 +388,7 @@
 
         if (trainerError) throw trainerError;
 
-        showMessage('Trener uspešno izbrisan');
+        showMessage('Trener uspešno izbrisan iz sistema. Opomba: Auth račun trenerja ni bil izbrisan.', 'warning');
         loadData();
       } catch (error) {
         console.error('Napaka pri brisanju trenerja:', error);
@@ -395,6 +410,12 @@
         return;
       }
 
+      // Preveri, če je geslo obvezno (samo za novega trenerja)
+      if (!editingTrainerId && !password) {
+        showMessage('Geslo je obvezno za novega trenerja', 'error');
+        return;
+      }
+
       try {
         if (editingTrainerId) {
           // Posodobi obstoječega trenerja
@@ -409,25 +430,25 @@
 
           if (error) throw error;
 
-          // Če je bilo vneseno novo geslo, posodobi tudi v auth
+          // Če je bilo vneseno novo geslo, prikaži opozorilo
           if (password) {
-            // Opomba: To zahteva admin pravice v Supabase
-            console.log('Geslo je bilo spremenjeno, vendar ga ni mogoče posodobiti preko klienta');
+            showMessage('Opomba: Geslo ni bilo spremenjeno. Za spremembo gesla se trener mora prijaviti in uporabiti "Pozabljeno geslo" funkcijo.', 'warning');
+          } else {
+            showMessage('Trener uspešno posodobljen');
           }
-
-          showMessage('Trener uspešno posodobljen');
         } else {
           // Ustvari novega trenerja
-          if (!password) {
-            showMessage('Geslo je obvezno za novega trenerja', 'error');
-            return;
-          }
-
-          // Najprej ustvari uporabnika v auth
-          const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+          // Ustvari uporabnika preko signup procesa
+          const { data: authData, error: authError } = await supabase.auth.signUp({
             email: email,
             password: password,
-            email_confirm: true
+            options: {
+              data: {
+                first_name: firstName,
+                last_name: lastName,
+                role: 'trainer'
+              }
+            }
           });
 
           if (authError) throw authError;
@@ -438,7 +459,8 @@
             .insert([{
               email: email,
               first_name: firstName,
-              last_name: lastName
+              last_name: lastName,
+              user_id: authData.user.id
             }])
             .select()
             .single();
