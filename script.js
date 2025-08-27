@@ -493,36 +493,36 @@ document.addEventListener('DOMContentLoaded', () => {
        }, {});
      }
 
-     // Nova funkcija za osvežitev modala (brez odpiranja)
-     async function refreshModal() {
-       if (!modalCtx || !modalCtx.date || !modalCtx.termId) return;
-       
-       const ymd = iso(modalCtx.date);
-       const termId = modalCtx.termId;
-       
-       // Osveži samo podatke za ta termin
-       const { data, error } = await supabase
-         .from('attendance')
-         .select('swimmer_id, status')
-         .eq('date', ymd)
-         .eq('term_id', termId);
-       
-       if (error) {
-         console.error('Napaka pri osveževanju modala:', error);
-         return;
-       }
-       
-       // Posodobi lokalne podatke
-       const termAtt = data.reduce((acc, row) => {
-         acc[row.swimmer_id] = row.status;
-         return acc;
-       }, {});
-       
-       attendance[ymd] = { ...attendance[ymd], [termId]: termAtt };
-       
-       // Osveži samo prikaz v modalu, ne odpiraj ga na novo
-       await renderModalContent(modalCtx.date, termId);
-     }
+           // Nova funkcija za osvežitev modala (brez odpiranja)
+      async function refreshModal() {
+        if (!modalCtx || !modalCtx.date || !modalCtx.termId) return;
+        
+        const ymd = iso(modalCtx.date);
+        const termId = modalCtx.termId;
+        
+        // Osveži samo podatke za ta termin
+        const { data, error } = await supabase
+          .from('attendance')
+          .select('swimmer_id, status')
+          .eq('date', ymd)
+          .eq('term_id', termId);
+        
+        if (error) {
+          console.error('Napaka pri osveževanju modala:', error);
+          return;
+        }
+        
+        // Posodobi lokalne podatke
+        const termAtt = data.reduce((acc, row) => {
+          acc[row.swimmer_id] = row.status;
+          return acc;
+        }, {});
+        
+        attendance[ymd] = { ...attendance[ymd], [termId]: termAtt };
+        
+        // Osveži samo prikaz v modalu, ne odpiraj ga na novo
+        await renderModalContent(modalCtx.date, termId);
+      }
 
      // Nova funkcija za osvežitev vsebine modala (brez odpiranja)
      async function renderModalContent(date, termId) {
@@ -826,9 +826,6 @@ document.addEventListener('DOMContentLoaded', () => {
       
              // Ključni popravek: zagotovitev svežih podatkov ob odprtju modala
        await refreshDayData(date);
-       
-       // Osveži modal z najnovejšimi podatki
-       await refreshModal();
       
       // Prikaži informacije o nadomestnem trenerju
       await showSubstituteTrainerInfo(termId, ymd);
