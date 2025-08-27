@@ -674,10 +674,23 @@ document.addEventListener('DOMContentLoaded', () => {
      console.log('renderEventTables - termId:', termId, 'date:', date);
      console.log('termAtt:', termAtt);
      console.log('swimmers:', swimmers);
+     console.log('userTerms:', userTerms);
+     console.log('termId type:', typeof termId);
+     console.log('termId v userTerms:', userTerms.includes(termId));
      
            // KLJUČNI POPRAVEK: Pravilno filtriranje plavalcev
       // Redno dodeljeni plavalci (tisti, ki so dodeljeni temu terminu)
-      const assignedSwimmers = swimmers.filter(s => s.terms && s.terms.includes(termId) && !s.is_deleted);
+      console.log('\n--- Filtriranje plavalcev za termin ---');
+      console.log('Termin ID:', termId);
+      console.log('Vsi plavalci:', swimmers);
+      
+      const assignedSwimmers = swimmers.filter(s => {
+        const hasTerm = s.terms && s.terms.includes(termId);
+        const notDeleted = !s.is_deleted;
+        console.log(`Plavalec ${s.first_name} ${s.last_name}: hasTerm=${hasTerm}, notDeleted=${notDeleted}`);
+        return hasTerm && notDeleted;
+      });
+      
       console.log('assignedSwimmers:', assignedSwimmers);
       
       const assignedSwimmerIds = assignedSwimmers.map(s => s.id);
@@ -1135,10 +1148,29 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Filtriraj plavalce, ki pripadajo trenerjevim terminom
       // Plavalec pripada trenerju, če ima vsaj en termin, ki je v userTerms
+      console.log('userTerms type:', typeof userTerms);
+      console.log('userTerms is array:', Array.isArray(userTerms));
+      
       swimmers = (swimmersData || []).filter(s => {
         // Preveri, če plavalec ima katerikoli termin, ki pripada trenerju
-        const hasMatchingTerm = s.terms && s.terms.some(termId => userTerms.includes(termId));
-        console.log(`Plavalec ${s.first_name} ${s.last_name}: terms=${s.terms}, hasMatchingTerm=${hasMatchingTerm}`);
+        console.log(`\n--- Preverjam plavalca: ${s.first_name} ${s.last_name} ---`);
+        console.log(`Plavalec ID: ${s.id}`);
+        console.log(`Plavalec terms:`, s.terms);
+        console.log(`Plavalec terms type:`, typeof s.terms);
+        console.log(`Plavalec terms is array:`, Array.isArray(s.terms));
+        
+        if (!s.terms || !Array.isArray(s.terms)) {
+          console.log(`Plavalec ${s.first_name} ${s.last_name} nima terms array-ja`);
+          return false;
+        }
+        
+        const hasMatchingTerm = s.terms.some(termId => {
+          const isIncluded = userTerms.includes(termId);
+          console.log(`Termin ${termId}: v userTerms? ${isIncluded}`);
+          return isIncluded;
+        });
+        
+        console.log(`Plavalec ${s.first_name} ${s.last_name}: hasMatchingTerm=${hasMatchingTerm}`);
         return hasMatchingTerm;
       });
       
