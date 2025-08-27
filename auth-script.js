@@ -157,20 +157,30 @@ document.addEventListener('DOMContentLoaded', () => {
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
+        console.log('=== LOGIN ATTEMPT START ===');
+        
         const email = emailInput.value;
         const password = passwordInput.value;
+        
+        console.log('Email:', email);
+        console.log('Password length:', password.length);
 
         try {
+            console.log('Attempting to sign in with Supabase...');
             const { data, error } = await supabase.auth.signInWithPassword({
                 email: email,
                 password: password
             });
 
+            console.log('Supabase response:', { data, error });
+
             if (error) {
+                console.error('Login error:', error);
                 showError(error.message);
                 return;
             }
 
+            console.log('Login successful, user data:', data.user);
             currentUser = data.user;
             await loadUserTerms();
             showMainApp();
@@ -178,7 +188,10 @@ document.addEventListener('DOMContentLoaded', () => {
             await loadDataFromSupabase();
             showSuccess('Uspešna prijava!');
             
+            console.log('=== LOGIN ATTEMPT END ===');
+            
         } catch (error) {
+            console.error('Exception during login:', error);
             showError('Napaka pri prijavi: ' + error.message);
         }
     });
@@ -326,6 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Preveri autentikacijo ob nalaganju
+    console.log('=== PAGE LOADED, CHECKING AUTH ===');
     checkAuth();
 
     // ===== GLAVNA APLIKACIJA =====
@@ -408,10 +422,17 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentMonth = currentDate.getMonth();
 
     function renderCalendar() {
+      console.log('=== RENDER CALENDAR START ===');
+      console.log('currentYear:', currentYear, 'currentMonth:', currentMonth);
+      console.log('TERMS.length:', TERMS.length);
+      console.log('userTerms:', userTerms);
+      
       const year = currentYear;
       const month = currentMonth;
       const daysInMonthCount = daysInMonth(year, month);
       const startWeekdayNum = startWeekday(year, month);
+      
+      console.log('daysInMonthCount:', daysInMonthCount, 'startWeekdayNum:', startWeekdayNum);
       
       elMonthLabel.textContent = new Date(year, month, 1).toLocaleDateString("sl-SI", {month:"long",year:"numeric"});
       elCalendarGrid.innerHTML = "";
@@ -1720,5 +1741,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target === elDayModal) closeDayModal();
       });
     }
+
+    // Preveri autentikacijo ob nalaganju
+    console.log('=== PAGE LOADED, CHECKING AUTH ===');
+    checkAuth();
 
 });
