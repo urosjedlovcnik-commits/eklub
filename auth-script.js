@@ -24,6 +24,8 @@ document.addEventListener('DOMContentLoaded', () => {
             currentUser = user;
             await loadUserTerms();
             showMainApp();
+            // Naloži podatke za trenerja po tem, ko so userTerms naloženi
+            await loadDataFromSupabase();
         } else {
             showLoginScreen();
         }
@@ -41,10 +43,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (trainerError || !trainerData) {
                 console.error('Trener ni najden:', trainerError);
+                console.log('Poskušam najti trenerja z user_id:', currentUser.id);
                 return;
             }
+            
+            console.log('Najden trener:', trainerData);
 
             // Naložimo termine, ki pripadajo temu trenerju
+            console.log('Iščem termine za trenerja z ID:', trainerData.id);
             const { data: termsData, error: termsError } = await supabase
                 .from('trainer_terms')
                 .select('term_id')
@@ -54,15 +60,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Napaka pri nalaganju terminov:', termsError);
                 return;
             }
+            
+            console.log('Termini trenerja iz baze:', termsData);
 
             userTerms = termsData.map(t => t.term_id);
+            console.log('Mapirani userTerms:', userTerms);
             
             // Posodobi prikaz
             userName.textContent = `${trainerData.first_name} ${trainerData.last_name}`;
             userGroups.textContent = userTerms.length > 0 ? `${userTerms.length} skupin` : 'Ni skupin';
+            console.log('Posodobljen prikaz trenerja:', userName.textContent, userGroups.textContent);
+            
+            // Če trener nima terminov, prikaži sporočilo
+            if (userTerms.length === 0) {
+                console.warn('Trener nima dodeljenih terminov');
+                elSummaryBox.innerHTML = '<div class="error-message">Trener nima dodeljenih terminov. Kontaktirajte administratorja.</div>';
+            } else {
+                console.log('Trener ima', userTerms.length, 'terminov');
+            }
             
         } catch (error) {
             console.error('Napaka pri nalaganju podatkov trenerja:', error);
+            console.error('Napaka podrobnosti:', error.message);
         }
     }
 
@@ -76,8 +95,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function showMainApp() {
         loginScreen.classList.add('hidden');
         mainApp.classList.remove('hidden');
-        // Naloži podatke za trenerja
-        loadDataFromSupabase();
     }
 
     // Prijava
@@ -101,6 +118,8 @@ document.addEventListener('DOMContentLoaded', () => {
             currentUser = data.user;
             await loadUserTerms();
             showMainApp();
+            // Naloži podatke za trenerja po tem, ko so userTerms naloženi
+            await loadDataFromSupabase();
             showSuccess('Uspešna prijava!');
             
         } catch (error) {
@@ -244,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const daysInMonthCount = daysInMonth(year, month);
       const startWeekdayNum = startWeekday(year, month);
       
-      elMonthLabel.textContent = `${DAYNAME[1]} ${year}`;
+      elMonthLabel.textContent = `${DAYNAME[month + 1]} ${year}`;
       
       let html = '';
       let dayCount = 1;
@@ -764,6 +783,23 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===== NALAGANJE PODATKOV =====
     async function loadDataFromSupabase() {
       try {
+        console.log('Nalaganje podatkov za trenerja. userTerms:', userTerms);
+        
+        // Če trener nima terminov, ne naloži podatkov
+        if (!userTerms || userTerms.length === 0) {
+          console.log('Trener nima terminov, preskačem nalaganje podatkov');
+          TERMS = [];
+          swimmers = [];
+          attendance = {};
+          termStatus = {};
+          renderCalendar();
+          updateSummary();
+          updateSwimmerSelect();
+          updateTermSelect();
+          showSwimmerInfo();
+          return;
+        }
+        
         // Naloži samo termine trenerja
         const { data: termsData, error: termsError } = await supabase
           .from('terms')
@@ -772,6 +808,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (termsError) throw termsError;
         TERMS = termsData || [];
+        console.log('Naloženi termini:', TERMS);
 
         // Naloži plavalce, ki pripadajo trenerjevim terminom
         const { data: swimmersData, error: swimmersError } = await supabase
@@ -785,6 +822,7 @@ document.addEventListener('DOMContentLoaded', () => {
         swimmers = swimmers.filter(s => 
           !s.is_deleted && s.terms.some(termId => userTerms.includes(termId))
         );
+        console.log('Filtrirani plavalci:', swimmers);
 
         // Naloži prisotnost za trenerjeve termine
         const { data: attendanceData, error: attendanceError } = await supabase
@@ -831,13 +869,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
       } catch (error) {
         console.error('Napaka pri nalaganju podatkov:', error);
+        console.error('Napaka podrobnosti:', error.message);
         alert('Napaka pri nalaganju podatkov');
       }
     }
 
     // Inicializacija
-    if (currentUser) {
-      loadDataFromSupabase();
-    }
+    // loadDataFromSupabase() se kliče v checkAuth() in pri prijavi
 
 });
