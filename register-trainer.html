@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Registracija trenerja</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.register-container {
+  max-width: 500px;
+  margin: 100px auto;
+  padding: 30px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.register-container h1 {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #333;
+}
+
+.register-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form-group label {
+  font-weight: 500;
+  color: #333;
+}
+
+.form-group input {
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+.register-form button {
+  padding: 12px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.register-form button:hover {
+  background: #0056b3;
+}
+
+.error-message {
+  color: #dc3545;
+  text-align: center;
+  margin-top: 10px;
+  padding: 10px;
+  background: #f8d7da;
+  border-radius: 4px;
+}
+
+.success-message {
+  color: #28a745;
+  text-align: center;
+  margin-top: 10px;
+  padding: 10px;
+  background: #d4edda;
+  border-radius: 4px;
+}
+
+.login-link {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.login-link a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.login-link a:hover {
+  text-decoration: underline;
+}
+</style>
+</head>
+<body>
+  <div class="register-container">
+    <h1>Registracija trenerja</h1>
+    
+    <form id="registerForm" class="register-form">
+      <div class="form-group">
+        <label for="firstName">Ime:</label>
+        <input type="text" id="firstName" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="lastName">Priimek:</label>
+        <input type="text" id="lastName" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="email">E-pošta:</label>
+        <input type="email" id="email" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="password">Geslo:</label>
+        <input type="password" id="password" required minlength="6">
+      </div>
+      
+      <div class="form-group">
+        <label for="confirmPassword">Potrdi geslo:</label>
+        <input type="password" id="confirmPassword" required minlength="6">
+      </div>
+      
+      <button type="submit">Registriraj se</button>
+    </form>
+    
+    <div id="message"></div>
+    
+    <div class="login-link">
+      <p>Že imate račun? <a href="auth-index.html">Prijavite se</a></p>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL = "https://tizjimlwfkoniixbetgr.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpemppbWx3ZmtvbmlpeGJldGdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzNDgyNzgsImV4cCI6MjA3MDkyNDI3OH0.Oess7TCevLH3mO0aWxfL5M0Kb_XHEKUBYRYRXKQkdgk";
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const registerForm = document.getElementById('registerForm');
+    const messageDiv = document.getElementById('message');
+
+    function showMessage(message, type = 'success') {
+      messageDiv.textContent = message;
+      messageDiv.className = type === 'error' ? 'error-message' : 'success-message';
+    }
+
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const firstName = document.getElementById('firstName').value.trim();
+      const lastName = document.getElementById('lastName').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+
+      // Preveri, če se gesli ujemata
+      if (password !== confirmPassword) {
+        showMessage('Gesli se ne ujemata', 'error');
+        return;
+      }
+
+      // Preveri dolžino gesla
+      if (password.length < 6) {
+        showMessage('Geslo mora biti dolgo vsaj 6 znakov', 'error');
+        return;
+      }
+
+      try {
+        // Registriraj uporabnika v Supabase Auth
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: email,
+          password: password
+        });
+
+        if (authError) {
+          showMessage('Napaka pri registraciji: ' + authError.message, 'error');
+          return;
+        }
+
+        if (authData.user) {
+          // Dodaj trenerja v tabelo trainers
+          const { error: trainerError } = await supabase
+            .from('trainers')
+            .insert([{
+              user_id: authData.user.id,
+              email: email,
+              first_name: firstName,
+              last_name: lastName
+            }]);
+
+          if (trainerError) {
+            showMessage('Napaka pri dodajanju trenerja: ' + trainerError.message, 'error');
+            return;
+          }
+
+          showMessage('Registracija uspešna! Preverite e-pošto za potrditev računa.', 'success');
+          
+          // Počisti obrazec
+          registerForm.reset();
+          
+          // Preusmeri na prijavo po 3 sekundah
+          setTimeout(() => {
+            window.location.href = 'auth-index.html';
+          }, 3000);
+        }
+
+      } catch (error) {
+        console.error('Napaka pri registraciji:', error);
+        showMessage('Napaka pri registraciji: ' + error.message, 'error');
+      }
+    });
+  </script>
+</body>
+</html>

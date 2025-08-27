@@ -242,30 +242,45 @@
         console.log('=== LOAD DATA START ===');
         
         // Naloži trenerje
+        console.log('Poskušam naložiti trenerje...');
         const { data: trainersData, error: trainersError } = await supabase
           .from('trainers')
           .select('*')
           .order('first_name, last_name');
 
-        if (trainersError) throw trainersError;
+        console.log('Rezultat nalaganja trenerjev:', { trainersData, trainersError });
+        
+        if (trainersError) {
+          console.error('Napaka pri nalaganju trenerjev:', trainersError);
+          throw trainersError;
+        }
+        
         trainers = trainersData || [];
         
         console.log('Naloženi trenerji:', trainers);
         console.log('Število trenerjev:', trainers.length);
 
         // Naloži termine
+        console.log('Poskušam naložiti termine...');
         const { data: termsData, error: termsError } = await supabase
           .from('terms')
           .select('*')
           .order('day, start_time');
 
-        if (termsError) throw termsError;
+        console.log('Rezultat nalaganja terminov:', { termsData, termsError });
+        
+        if (termsError) {
+          console.error('Napaka pri nalaganju terminov:', termsError);
+          throw termsError;
+        }
+        
         terms = termsData || [];
         
         console.log('Naloženi termini:', terms);
         console.log('Število terminov:', terms.length);
 
         // Naloži povezave
+        console.log('Poskušam naložiti povezave...');
         const { data: assignmentsData, error: assignmentsError } = await supabase
           .from('trainer_terms')
           .select(`
@@ -275,7 +290,13 @@
           `)
           .order('created_at', { ascending: false });
 
-        if (assignmentsError) throw assignmentsError;
+        console.log('Rezultat nalaganja povezav:', { assignmentsData, assignmentsError });
+        
+        if (assignmentsError) {
+          console.error('Napaka pri nalaganju povezav:', assignmentsError);
+          throw assignmentsError;
+        }
+        
         assignments = assignmentsData || [];
         
         console.log('Naložene povezave:', assignments);
@@ -294,6 +315,9 @@
 
     // Prikaži select elemente
     function renderSelects() {
+      console.log('=== RENDER SELECTS START ===');
+      console.log('Trenerji za render:', trainers);
+      
       // Trenerji
       trainerSelect.innerHTML = '<option value="">Izberi trenerja</option>';
       trainers.forEach(trainer => {
@@ -301,7 +325,10 @@
         option.value = trainer.id;
         option.textContent = `${trainer.first_name} ${trainer.last_name}`;
         trainerSelect.appendChild(option);
+        console.log('Dodal opcijo za trenerja:', trainer.first_name, trainer.last_name);
       });
+      
+      console.log('Število opcij v trainerSelect:', trainerSelect.options.length);
 
       // Termini - prikaži samo nedodeljene
       termSelect.innerHTML = '<option value="">Izberi termin</option>';
@@ -311,7 +338,7 @@
       unassignedTerms.forEach(term => {
         const option = document.createElement('option');
         option.value = term.id;
-        option.textContent = `${getDayName(term.day)} ${term.start_time}-${term.end_time}`;
+        option.textContent = `${getDayName(term.day)} ${term.start_time.slice(0, 5)}-${term.end_time.slice(0, 5)}`;
         termSelect.appendChild(option);
       });
     }
@@ -332,9 +359,9 @@
         
         row.innerHTML = `
           <td>${trainer ? `${trainer.first_name} ${trainer.last_name}` : 'N/A'}</td>
-          <td>${term ? `${getDayName(term.day)} ${term.start_time}-${term.end_time}` : 'N/A'}</td>
+          <td>${term ? `${getDayName(term.day)} ${term.start_time.slice(0, 5)}-${term.end_time.slice(0, 5)}` : 'N/A'}</td>
           <td>${term ? getDayName(term.day) : 'N/A'}</td>
-          <td>${term ? `${term.start_time}-${term.end_time}` : 'N/A'}</td>
+          <td>${term ? `${term.start_time.slice(0, 5)}-${term.end_time.slice(0, 5)}` : 'N/A'}</td>
           <td>${new Date(assignment.created_at).toLocaleDateString('sl-SI')}</td>
           <td>
             <button class="btn-delete" onclick="deleteAssignment('${assignment.id}')">Zbriši</button>
@@ -353,7 +380,7 @@
         const trainerAssignments = assignments.filter(a => a.trainer_id === trainer.id);
         const trainerTerms = trainerAssignments.map(a => {
           const term = terms.find(t => t.id === a.term_id);
-          return term ? `${getDayName(term.day)} ${term.start_time}-${term.end_time}` : a.term_id;
+          return term ? `${getDayName(term.day)} ${term.start_time.slice(0, 5)}-${term.end_time.slice(0, 5)}` : a.term_id;
         });
 
         const card = document.createElement('div');
