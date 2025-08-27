@@ -803,11 +803,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Posodobi UI
-    renderEventTables(termId, date);
+    await renderEventTables(termId, date);
     updateModalButtons(termStatus[termKey]);
   }
 
-       function renderEventTables(termId, date) {
+       async function renderEventTables(termId, date) {
   // Preveri, ali so potrebni elementi naloženi
   if (!elAttendanceTable || !elSubstitutionTable) {
     console.error('Potrebni elementi niso naloženi:', {
@@ -894,7 +894,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           btnPresent.addEventListener("click", async () => {
             await updateAttendance(s.id, true);
-            renderEventTables(termId, date);
+            await renderEventTables(termId, date);
           });
           
           // Gumb "Odsoten"
@@ -908,7 +908,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           btnAbsent.addEventListener("click", async () => {
             await updateAttendance(s.id, false);
-            renderEventTables(termId, date);
+            await renderEventTables(termId, date);
           });
           
           // Gumb za odstranitev
@@ -917,7 +917,7 @@ document.addEventListener('DOMContentLoaded', () => {
           btnRemove.className = "btn remove-btn";
           btnRemove.addEventListener("click", async () => {
             await removeSwimmerFromEvent(s.id);
-            renderEventTables(termId, date);
+            await renderEventTables(termId, date);
           });
           
           td2.appendChild(btnPresent);
@@ -966,7 +966,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           btnPresent.addEventListener("click", async () => {
             await updateAttendance(s.id, true);
-            renderEventTables(termId, date);
+            await renderEventTables(termId, date);
           });
           
           // Gumb "Odsoten"
@@ -980,7 +980,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           btnAbsent.addEventListener("click", async () => {
             await updateAttendance(s.id, false);
-            renderEventTables(termId, date);
+            await renderEventTables(termId, date);
           });
           
           // Gumb za odstranitev
@@ -989,7 +989,7 @@ document.addEventListener('DOMContentLoaded', () => {
           btnRemove.className = "btn remove-btn";
           btnRemove.addEventListener("click", async () => {
             await removeSwimmerFromEvent(s.id);
-            renderEventTables(termId, date);
+            await renderEventTables(termId, date);
           });
           
           td2.appendChild(btnPresent);
@@ -1007,8 +1007,21 @@ document.addEventListener('DOMContentLoaded', () => {
     elModalSwimmerSelect.innerHTML = '';
     const allSwimmersInEvent = [...regularSwimmers, ...substitutionSwimmers];
     const currentEventSwimmerIds = allSwimmersInEvent.map(s => s.id);
-    const unassigned = swimmers.filter(s => 
-      !currentEventSwimmerIds.includes(s.id) && !s.is_deleted
+    
+    // Naloži vse plavalce iz baze, ne samo tiste, ki so dodeljeni trenerju
+    const { data: allSwimmersData, error: allSwimmersError } = await supabase
+      .from('swimmers')
+      .select('*')
+      .eq('is_deleted', false)
+      .order('last_name, first_name');
+    
+    if (allSwimmersError) {
+      console.error('Napaka pri nalaganju vseh plavalcev:', allSwimmersError);
+      return;
+    }
+    
+    const unassigned = allSwimmersData.filter(s => 
+      !currentEventSwimmerIds.includes(s.id)
     );
 
     if (unassigned.length > 0) {
