@@ -172,14 +172,21 @@ document.addEventListener('DOMContentLoaded', () => {
       trainerNotesInput.focus();
     }
     
-    // Funkcija za skrivanje prostora za opombe trenerjev
-    function hideTrainerNotesSection() {
-      const trainerNotesSection = document.getElementById('trainerNotesSection');
-      const trainerNotesInput = document.getElementById('trainerNotesInput');
-      
-      trainerNotesSection.style.display = 'none';
-      trainerNotesInput.value = '';
-    }
+         // Funkcija za skrivanje prostora za opombe trenerjev
+     function hideTrainerNotesSection() {
+       const trainerNotesSection = document.getElementById('trainerNotesSection');
+       const trainerNotesInput = document.getElementById('trainerNotesInput');
+       
+       trainerNotesSection.style.display = 'none';
+       trainerNotesInput.value = '';
+     }
+     
+     // Funkcija za osvežitev podatkov v trenutnem modalu
+     async function refreshModalData(date, termId) {
+       await refreshDayData(date);
+       // Ponovno prikaži trenutni modal z osveženimi podatki
+       await openEvent(date, termId);
+     }
 
     // POPRAVEK: Prenovljena in poenostavljena logika barvnega kodiranja
     function getAttendanceStatus(date, termId) {
@@ -517,8 +524,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             console.log('🔍 DEBUG: Lokalni podatki posodobljeni:', trainerAttendance[ymd][termId][trainer.id]);
             
-            await refreshDayData(date);
-            openEvent(date, termId);
+            // Osveži podatke v trenutnem modalu
+            await refreshModalData(date, termId);
           });
           
           btnAbsent.addEventListener("click", async () => {
@@ -541,8 +548,8 @@ document.addEventListener('DOMContentLoaded', () => {
               
               console.log('🔍 DEBUG: Lokalni podatki posodobljeni:', trainerAttendance[ymd][termId][trainer.id]);
               
-              await refreshDayData(date);
-              openEvent(date, termId);
+              // Osveži podatke v trenutnem modalu
+              await refreshModalData(date, termId);
             }
           });
           
@@ -601,8 +608,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
               console.log('🔍 DEBUG: Plavalec prisotnost posodobljena v Supabase');
               // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
-              await refreshDayData(date);
-              openEvent(date, termId);
+              await refreshModalData(date, termId);
               renderMonth();
             }
           });
@@ -635,8 +641,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
               console.log('🔍 DEBUG: Plavalec prisotnost posodobljena v Supabase');
               // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
-              await refreshDayData(date);
-              openEvent(date, termId);
+              await refreshModalData(date, termId);
               renderMonth();
             }
           });
