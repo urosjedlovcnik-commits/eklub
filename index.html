@@ -55,6 +55,20 @@
           <thead><tr><th>Trener</th><th>Prisotnost</th></tr></thead>
           <tbody></tbody>
         </table>
+        
+        <!-- Dodajam prostor za opombe trenerjev -->
+        <div id="trainerNotesSection" style="display:none; margin-top:12px;">
+          <h4>Opombe o odsotnosti trenerjev</h4>
+          <div class="notes-section">
+            <label for="trainerNotesInput" class="muted">Nadomestni trener:</label>
+            <textarea id="trainerNotesInput" placeholder="Vnesite ime in priimek nadomestnega trenerja"></textarea>
+            <div class="row" style="margin-top:8px;">
+              <button id="saveTrainerNotesBtn" class="btn ok">Shrani opombo</button>
+              <button id="cancelTrainerNotesBtn" class="btn neutral">Prekliči</button>
+            </div>
+          </div>
+        </div>
+        
         <hr style="margin:12px 0;border:none;border-top:1px solid var(--border)">
         
         <h4>Prisotnost plavalcev</h4>
