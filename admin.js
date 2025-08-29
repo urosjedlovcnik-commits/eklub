@@ -1452,7 +1452,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const startDate = new Date(year, month, 1);
         const endDate = new Date(year, month + 1, 0);
         
-        let summary = '<table><thead><tr><th>Trener</th><th>Termin</th><th>Skupaj</th><th>Prisoten</th><th>Odsoten</th><th>% prisotnosti</th></tr></thead><tbody>';
+        let summary = '<table><thead><tr><th>Trener</th><th>Termin</th><th>Skupaj</th><th>Prisoten</th><th>Odsoten</th><th>Nadomestni trener</th></tr></thead><tbody>';
         
         const trainerStats = {};
         
@@ -1476,7 +1476,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 term: term,
                                 total: 0,
                                 present: 0,
-                                absent: 0
+                                absent: 0,
+                                substituteTrainers: new Set() // Uporabimo Set za unikatne nadomestne trenerje
                             };
                         }
                         
@@ -1488,6 +1489,21 @@ document.addEventListener('DOMContentLoaded', () => {
                                 trainerStats[key].present++;
                             } else if (trainerAtt.present === false) {
                                 trainerStats[key].absent++;
+                                
+                                // Dodaj nadomestnega trenerja, če je opomba
+                                if (trainerAtt.note) {
+                                    let substituteTrainerName = trainerAtt.note;
+                                    
+                                    // Če je opomba ID trenerja, poišči ime in priimek
+                                    if (trainerAtt.note && !isNaN(trainerAtt.note) && trainerAtt.note !== '') {
+                                        const substituteTrainer = trainers.find(t => t.id === trainerAtt.note);
+                                        if (substituteTrainer) {
+                                            substituteTrainerName = `${substituteTrainer.first_name} ${substituteTrainer.last_name}`;
+                                        }
+                                    }
+                                    
+                                    trainerStats[key].substituteTrainers.add(substituteTrainerName);
+                                }
                             }
                         }
                     });
@@ -1497,8 +1513,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Prikaži rezultate
         Object.values(trainerStats).forEach(stat => {
-            const percentage = stat.total > 0 ? Math.round((stat.present / stat.total) * 100) : 0;
-            const percentageClass = percentage >= 80 ? 'ok' : percentage >= 60 ? 'neutral' : 'warn';
+            // Pretvori Set nadomestnih trenerjev v berljiv seznam
+            const substituteTrainersList = Array.from(stat.substituteTrainers).join(', ') || '-';
             
             summary += `
                 <tr>
@@ -1507,7 +1523,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${stat.total}</td>
                     <td class="ok">${stat.present}</td>
                     <td class="warn">${stat.absent}</td>
-                    <td class="${percentageClass}">${percentage}%</td>
+                    <td>${substituteTrainersList}</td>
                 </tr>
             `;
         });
