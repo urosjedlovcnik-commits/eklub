@@ -362,6 +362,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (statusError) { console.error('Napaka pri osveževanju statusa termina za dan:', statusError); return; }
       
+      // Osveži podatke o prisotnosti trenerjev
+      const { data: trainerAttData, error: trainerAttError } = await supabase
+        .from('trainer_attendance')
+        .select('*')
+        .eq('date', ymd);
+      
+      if (trainerAttError) { 
+        console.error('Napaka pri osveževanju prisotnosti trenerjev za dan:', trainerAttError); 
+      } else {
+        trainerAttendance[ymd] = trainerAttData.reduce((acc, row) => {
+          if (!acc[row.term_id]) acc[row.term_id] = {};
+          acc[row.term_id][row.trainer_id] = { present: row.present, note: row.note };
+          return acc;
+        }, {});
+      }
+      
       attendance[ymd] = attData.reduce((acc, row) => {
         acc[row.term_id] = acc[row.term_id] || {};
         acc[row.term_id][row.swimmer_id] = row.status;
