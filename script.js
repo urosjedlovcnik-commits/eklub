@@ -422,8 +422,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return acc;
       }, {});
       
-      // KRUCIALNA SPREMENJAVA: Namesto, da prepišemo, podatke združimo.
-      attendance[ymd] = { ...attendance[ymd], [termId]: termAtt };
+      // POSODOBITEV: Osvežimo lokalne podatke o prisotnosti
+      if (!attendance[ymd]) attendance[ymd] = {};
+      attendance[ymd][termId] = termAtt;
 
       // >>> POPRAVEK: tukaj je težava. Namesto da filtriramo, zgradimo seznam vseh, ki so relevantni.
       // Ločimo plavalce na redno dodeljene in nadomeščanje
@@ -533,7 +534,14 @@ document.addEventListener('DOMContentLoaded', () => {
           btnPresent.textContent = "Prisoten";
           btnPresent.className = "btn";
           if (isInactive(date, termId)) { btnPresent.disabled = true; }
-          if (status === true) { btnPresent.classList.add("ok"); } else { btnPresent.classList.add("neutral"); }
+          
+          // Pravilno barvno kodiranje za plavalce
+          if (status === true) { 
+            btnPresent.classList.add("ok"); 
+          } else { 
+            btnPresent.classList.add("neutral"); 
+          }
+          
           btnPresent.addEventListener("click", async ()=>{
             const newStatus = status === true ? false : true;
             const { error } = await supabase
@@ -551,7 +559,14 @@ document.addEventListener('DOMContentLoaded', () => {
           btnAbsent.textContent = "Odsoten";
           btnAbsent.className = "btn";
           if (isInactive(date, termId)) { btnAbsent.disabled = true; }
-          if (status === false) { btnAbsent.classList.add("warn"); } else { btnAbsent.classList.add("neutral"); }
+          
+          // Pravilno barvno kodiranje za plavalce
+          if (status === false) { 
+            btnAbsent.classList.add("warn"); 
+          } else { 
+            btnAbsent.classList.add("neutral"); 
+          }
+          
           btnAbsent.addEventListener("click", async ()=>{
             const newStatus = status === false ? true : false;
             const { error } = await supabase
