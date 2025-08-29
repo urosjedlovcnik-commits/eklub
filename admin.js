@@ -1361,8 +1361,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // Ustvari CSV vsebino
         let csv = 'Datum,Termin,Plavalci,Prisotnost,Opombe\n';
         
-        const startDate = new Date(year, month, 1);
-        const endDate = new Date(year, month + 1, 0);
+        // Ustvari datume v CET časovnem pasu
+        const startDate = new Date(year, month, 1, 0, 0, 0, 0);
+        const endDate = new Date(year, month + 1, 0, 23, 59, 59, 999);
+        
+        // Nastavi na CET čas (UTC+1 ali UTC+2 odvisno od poletnega časa)
+        startDate.setHours(startDate.getHours() + 1);
+        endDate.setHours(endDate.getHours() + 1);
         
         for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
             const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
@@ -1473,8 +1478,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const startDate = new Date(year, month, 1);
-        const endDate = new Date(year, month + 1, 0);
+        // Ustvari datume v CET časovnem pasu
+        const startDate = new Date(year, month, 1, 0, 0, 0, 0);
+        const endDate = new Date(year, month + 1, 0, 23, 59, 59, 999);
+        
+        // Nastavi na CET čas (UTC+1 ali UTC+2 odvisno od poletnega časa)
+        startDate.setHours(startDate.getHours() + 1);
+        endDate.setHours(endDate.getHours() + 1);
         
         let summary = '<table><thead><tr><th>Trener</th><th>Skupaj</th><th>Prisoten</th><th>Odsoten</th></tr></thead><tbody>';
         
@@ -1630,8 +1640,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const startDate = new Date(year, month, 1);
-        const endDate = new Date(year, month + 1, 0);
+        // Ustvari datume v CET časovnem pasu
+        const startDate = new Date(year, month, 1, 0, 0, 0, 0);
+        const endDate = new Date(year, month + 1, 0, 23, 59, 59, 999);
+        
+        // Nastavi na CET čas (UTC+1 ali UTC+2 odvisno od poletnega časa)
+        startDate.setHours(startDate.getHours() + 1);
+        endDate.setHours(endDate.getHours() + 1);
         
         let notes = '<table><thead><tr><th>Datum</th><th>Termin</th><th>Trener</th><th>Nadomestni trener</th></tr></thead><tbody>';
         
@@ -1778,8 +1793,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Funkcija za izračun povzetka udeležbe plavalcev
     function calculateSwimmerSummaryData(year, month) {
         const res = {};
-        const monthStart = new Date(year, month, 1);
-        const monthEnd = new Date(year, month + 1, 0);
+        // Ustvari datume v CET časovnem pasu
+        const monthStart = new Date(year, month, 1, 0, 0, 0, 0);
+        const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
+        
+        // Nastavi na CET čas (UTC+1 ali UTC+2 odvisno od poletnega časa)
+        monthStart.setHours(monthStart.getHours() + 1);
+        monthEnd.setHours(monthEnd.getHours() + 1);
+        
         const today = new Date();
         today.setHours(0,0,0,0);
 
@@ -1869,8 +1890,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Funkcija za nalaganje podatkov o prisotnosti za določen mesec
     async function loadAttendanceForMonth(year, month) {
-        const monthStart = new Date(year, month, 1);
-        const monthEnd = new Date(year, month + 1, 0);
+        // Ustvari datume v CET časovnem pasu
+        const monthStart = new Date(year, month, 1, 0, 0, 0, 0);
+        const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
+        
+        // Nastavi na CET čas (UTC+1 ali UTC+2 odvisno od poletnega časa)
+        monthStart.setHours(monthStart.getHours() + 1);
+        monthEnd.setHours(monthEnd.getHours() + 1);
         
         try {
             const { data, error } = await supabase
