@@ -71,9 +71,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===== Pomožne funkcije =====
     function mkSwimmer(first,last,terms=[]){ return { first_name:first, last_name:last, terms:[...new Set(terms)] }; }
     function iso(d){ 
-      // Prilagodi na CET časovni pas (UTC+1 ali UTC+2)
-      const cetDate = new Date(d.getTime() + (60 * 60 * 1000)); // Dodaj 1 uro za CET
-      return cetDate.toISOString().slice(0,10); 
+      // Prilagodi na CET/CEST časovni pas (UTC+1 zimski čas ali UTC+2 poletni čas)
+      // Ustvari nov Date objekt z lokalnim časom v CET/CEST
+      const year = d.getFullYear();
+      const month = d.getMonth();
+      const day = d.getDate();
+      
+      // Ustvari datum v lokalni časovni coni (CET/CEST)
+      const localDate = new Date(year, month, day);
+      
+      // Formatira datum kot ISO string (YYYY-MM-DD)
+      const isoString = localDate.getFullYear() + '-' + 
+                       String(localDate.getMonth() + 1).padStart(2, '0') + '-' + 
+                       String(localDate.getDate()).padStart(2, '0');
+      
+      console.log('🔍 DEBUG: iso() - vhodni datum:', d, 'izhodni ISO:', isoString);
+      return isoString;
     }
     function daysInMonth(y,m){ return new Date(y,m+1,0).getDate(); }
     function isToday(d){ const t=new Date(); return d.getFullYear()==t.getFullYear() && d.getMonth()==t.getMonth() && d.getDate()==t.getDate(); }
