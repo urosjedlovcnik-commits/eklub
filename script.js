@@ -126,6 +126,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function updateTrainerAttendance(date, termId, trainerId, present, note = '') {
+      console.log('🔍 DEBUG: updateTrainerAttendance klican z:', { date, termId, trainerId, present, note });
+      
       if (useLocalStorage) {
         // Za localStorage bi potrebovali ločeno tabelo trainer_attendance
         return;
@@ -146,10 +148,12 @@ document.addEventListener('DOMContentLoaded', () => {
           if (error) {
             console.error('Napaka pri posodabljanju prisotnosti trenerja:', error);
           } else {
+            console.log('🔍 DEBUG: Uspešno shranjeno v Supabase');
             // Posodobi lokalno stanje
             if (!trainerAttendance[date]) trainerAttendance[date] = {};
             if (!trainerAttendance[date][termId]) trainerAttendance[date][termId] = {};
             trainerAttendance[date][termId][trainerId] = { present, note };
+            console.log('🔍 DEBUG: Lokalno stanje posodobljeno:', trainerAttendance[date][termId][trainerId]);
           }
         } catch (error) {
           console.error('Napaka pri posodabljanju prisotnosti trenerja:', error);
@@ -1297,17 +1301,27 @@ document.addEventListener('DOMContentLoaded', () => {
         const substituteTrainerName = document.getElementById('trainerNotesTextarea').value.trim();
 
         if (substituteTrainerId || substituteTrainerName) {
+          console.log('🔍 DEBUG: Shranjevanje nadomestnega trenerja');
+          console.log('🔍 DEBUG: Datum:', date, 'Termin ID:', termId, 'Originalni trener ID:', trainerId);
+          
           if (substituteTrainerId) {
             // Če je izbran trener iz dropdown-a - doda prisotnost nadomestnega trenerja
             const substituteTrainer = trainers.find(t => t.id === substituteTrainerId);
+            console.log('🔍 DEBUG: Nadomestni trener:', substituteTrainer);
+            
             if (substituteTrainer) {
-              // Doda prisotnost nadomestnega trenerja (ne kot opombo)
+              // Doda prisotnost nadomestnega trenerja
+              console.log('🔍 DEBUG: Dodajam prisotnost nadomestnega trenerja:', substituteTrainerId);
               await updateTrainerAttendance(date, termId, substituteTrainerId, true, '');
+              
+              // Doda opombo o odsotnosti originalnega trenerja z ID-jem nadomestnega trenerja
+              console.log('🔍 DEBUG: Dodajam opombo o odsotnosti originalnega trenerja z nadomestnim ID-jem');
+              await updateTrainerAttendance(date, termId, trainerId, false, substituteTrainerId);
             }
-            // Ni potrebno shraniti opombe, ker se nadomestni trener šteje kot prisotnega
           } else {
             // Če je vneseno ime novega trenerja - shrani kot opombo
             const noteToSave = substituteTrainerName;
+            console.log('🔍 DEBUG: Shranjevanje imena novega trenerja kot opombe:', noteToSave);
             // Shrani opombo o nadomestnem trenerju
             await updateTrainerAttendance(date, termId, trainerId, false, noteToSave);
           }
