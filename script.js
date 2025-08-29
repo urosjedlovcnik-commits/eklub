@@ -2,9 +2,12 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     // Konfiguracija Supabase
-    const supabaseUrl = 'https://iqwzywmjufktrfrbowqm.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlxd3p5d21qdWZrdHJmcmJvd3FtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU2NjU3NzMsImV4cCI6MjA1MTI0MTc3M30.dHT6mlqz6y02uJgzO0KKq7sIIkpvzlhfYmwjOEUr8lo';
+    const supabaseUrl = 'https://tizjimlwfkoniixbetgr.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpemppbWx3ZmtvbmlpeGJldGdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzNDgyNzgsImV4cCI6MjA3MDkyNDI3OH0.Oess7TCevLH3mO0aWxfL5M0Kb_XHEKUBYRYRXKQkdgk';
     const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    
+    // Uporaba Supabase namesto localStorage
+    const useLocalStorage = false;
 
     // Stanja bodo naložena asinhrono
     let TERMS = [];
@@ -724,46 +727,115 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===== Nalaganje podatkov =====
     async function loadTerms() {
-      const { data, error } = await supabase.from('terms').select('*');
-      if (error) console.error('Napaka pri nalaganju terminov:', error);
-      else {
-        TERMS = data.map(t => ({
-          ...t,
-          label: `${DAY_SHORT_NAME[t.day]} ${t.start_time.slice(0, 5)}–${t.end_time.slice(0, 5)}`
-        }));
+      if (useLocalStorage) {
+        // Uporaba localStorage
+        const termsData = localStorage.getItem('terms');
+        if (termsData) {
+          const data = JSON.parse(termsData);
+          TERMS = data.map(t => ({
+            ...t,
+            label: `${DAY_SHORT_NAME[t.day]} ${t.start_time.slice(0, 5)}–${t.end_time.slice(0, 5)}`
+          }));
+        }
+      } else {
+        // Uporaba Supabase (ko bo CORS problem rešen)
+        try {
+          const { data, error } = await supabase.from('terms').select('*');
+          if (error) console.error('Napaka pri nalaganju terminov:', error);
+          else {
+            TERMS = data.map(t => ({
+              ...t,
+              label: `${DAY_SHORT_NAME[t.day]} ${t.start_time.slice(0, 5)}–${t.end_time.slice(0, 5)}`
+            }));
+          }
+        } catch (error) {
+          console.error('Napaka pri nalaganju terminov:', error);
+        }
       }
     }
 
     async function loadSwimmers() {
-      const { data, error } = await supabase.from('swimmers').select('*');
-      if (error) console.error('Napaka pri nalaganju plavalcev:', error);
-      else swimmers = data;
+      if (useLocalStorage) {
+        // Uporaba localStorage
+        const swimmersData = localStorage.getItem('swimmers');
+        if (swimmersData) {
+          swimmers = JSON.parse(swimmersData);
+        }
+      } else {
+        // Uporaba Supabase (ko bo CORS problem rešen)
+        try {
+          const { data, error } = await supabase.from('swimmers').select('*');
+          if (error) console.error('Napaka pri nalaganju plavalcev:', error);
+          else swimmers = data;
+        } catch (error) {
+          console.error('Napaka pri nalaganju plavalcev:', error);
+        }
+      }
     }
 
     async function loadAttendance() {
-      const { data, error } = await supabase.from('attendance').select('*');
-      if (error) console.error('Napaka pri nalaganju prisotnosti:', error);
-      else {
-        attendance = data.reduce((acc, row) => {
-          const date = row.date;
-          if (!acc[date]) acc[date] = {};
-          if (!acc[date][row.term_id]) acc[date][row.term_id] = {};
-          acc[date][row.term_id][row.swimmer_id] = row.status;
-          return acc;
-        }, {});
+      if (useLocalStorage) {
+        // Uporaba localStorage
+        const attendanceData = localStorage.getItem('attendance');
+        if (attendanceData) {
+          const data = JSON.parse(attendanceData);
+          attendance = data.reduce((acc, row) => {
+            const date = row.date;
+            if (!acc[date]) acc[date] = {};
+            if (!acc[date][row.term_id]) acc[date][row.term_id] = {};
+            acc[date][row.term_id][row.swimmer_id] = row.status;
+            return acc;
+          }, {});
+        }
+      } else {
+        // Uporaba Supabase (ko bo CORS problem rešen)
+        try {
+          const { data, error } = await supabase.from('attendance').select('*');
+          if (error) console.error('Napaka pri nalaganju prisotnosti:', error);
+          else {
+            attendance = data.reduce((acc, row) => {
+              const date = row.date;
+              if (!acc[date]) acc[date] = {};
+              if (!acc[date][row.term_id]) acc[date][row.term_id] = {};
+              acc[date][row.term_id][row.swimmer_id] = row.status;
+              return acc;
+          }, {});
+          }
+        } catch (error) {
+          console.error('Napaka pri nalaganju prisotnosti:', error);
+        }
       }
     }
 
     async function loadTermStatus() {
-      const { data, error } = await supabase.from('term_status').select('*');
-      if (error) console.error('Napaka pri nalaganju statusa terminov:', error);
-      else {
-        termStatus = data.reduce((acc, row) => {
-          const date = row.date;
-          if (!acc[date]) acc[date] = {};
-          acc[date][row.term_id] = { status: row.status, note: row.note, notes: row.notes };
-          return acc;
-        }, {});
+      if (useLocalStorage) {
+        // Uporaba localStorage
+        const termStatusData = localStorage.getItem('termStatus');
+        if (termStatusData) {
+          const data = JSON.parse(termStatusData);
+          termStatus = data.reduce((acc, row) => {
+            const date = row.date;
+            if (!acc[date]) acc[date] = {};
+            acc[date][row.term_id] = { status: row.status, note: row.note, notes: row.notes };
+            return acc;
+          }, {});
+        }
+      } else {
+        // Uporaba Supabase (ko bo CORS problem rešen)
+        try {
+          const { data, error } = await supabase.from('term_status').select('*');
+          if (error) console.error('Napaka pri nalaganju statusa terminov:', error);
+          else {
+            termStatus = data.reduce((acc, row) => {
+              const date = row.date;
+              if (!acc[date]) acc[date] = {};
+              acc[date][row.term_id] = { status: row.status, note: row.note, notes: row.notes };
+              return acc;
+          }, {});
+          }
+        } catch (error) {
+          console.error('Napaka pri nalaganju statusa terminov:', error);
+        }
       }
     }
 
