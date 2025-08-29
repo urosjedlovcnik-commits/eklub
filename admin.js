@@ -1552,6 +1552,53 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
+        // Dodaj debug informacije
+        console.log('🔍 DEBUG: trainerStats:', trainerStats);
+        console.log('🔍 DEBUG: trainerAttendance za september 2025:', trainerAttendance);
+        
+        // Dodatno: preveri vse trenerje iz trainer_attendance za ta mesec
+        // in dodaj tiste, ki morda niso bili vključeni v zgornji logiki
+        Object.keys(trainerAttendance).forEach(date => {
+            const currentDate = new Date(date);
+            if (currentDate >= startDate && currentDate <= endDate) {
+                Object.keys(trainerAttendance[date]).forEach(termId => {
+                    Object.keys(trainerAttendance[date][termId]).forEach(trainerId => {
+                        const trainer = trainers.find(t => t.id === trainerId && !t.is_deleted);
+                        if (trainer) {
+                            const key = `${trainer.id}`;
+                            if (!trainerStats[key]) {
+                                trainerStats[key] = {
+                                    trainer: trainer,
+                                    total: 0,
+                                    present: 0,
+                                    absent: 0
+                                };
+                            }
+                            
+                            // Preveri, ali je ta termin že bil štejen
+                            const term = TERMS.find(t => t.id === termId);
+                            if (term) {
+                                const dayOfWeek = currentDate.getDay() === 0 ? 7 : currentDate.getDay();
+                                if (term.day === dayOfWeek && date >= term.date_from && date <= term.date_to) {
+                                    // Termin je veljaven, dodaj prisotnost
+                                    trainerStats[key].total++;
+                                    
+                                    const trainerAtt = trainerAttendance[date][termId][trainerId];
+                                    if (trainerAtt) {
+                                        if (trainerAtt.present === true) {
+                                            trainerStats[key].present++;
+                                        } else if (trainerAtt.present === false) {
+                                            trainerStats[key].absent++;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                });
+            }
+        });
+        
         // Prikaži rezultate
         Object.values(trainerStats).forEach(stat => {
             summary += `
