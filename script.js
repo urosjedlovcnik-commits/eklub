@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    async function updateTrainerAttendance(date, termId, trainerId, present) {
+    async function updateTrainerAttendance(date, termId, trainerId, present, note = '') {
       if (useLocalStorage) {
         // Za localStorage bi potrebovali ločeno tabelo trainer_attendance
         return;
@@ -137,7 +137,8 @@ document.addEventListener('DOMContentLoaded', () => {
               date, 
               term_id: termId, 
               trainer_id: trainerId, 
-              present 
+              present,
+              note
             }, { 
               onConflict: ['date', 'term_id', 'trainer_id'] 
             });
@@ -148,12 +149,29 @@ document.addEventListener('DOMContentLoaded', () => {
             // Posodobi lokalno stanje
             if (!trainerAttendance[date]) trainerAttendance[date] = {};
             if (!trainerAttendance[date][termId]) trainerAttendance[date][termId] = {};
-            trainerAttendance[date][termId][trainerId] = { present, note: '' };
+            trainerAttendance[date][termId][trainerId] = { present, note };
           }
         } catch (error) {
           console.error('Napaka pri posodabljanju prisotnosti trenerja:', error);
         }
       }
+    }
+
+    // Funkcija za odpiranje modalnega okna za opombe trenerjev
+    function openTrainerNoteModal(date, termId, trainerId, trainerName) {
+      const modal = document.getElementById('trainerNoteModal');
+      const trainerNameSpan = document.getElementById('trainerNoteModalTrainerName');
+      const noteInput = document.getElementById('trainerNoteInput');
+      
+      trainerNameSpan.textContent = trainerName;
+      noteInput.value = '';
+      
+      // Shrani podatke za kasnejšo uporabo
+      modal.setAttribute('data-date', date);
+      modal.setAttribute('data-term-id', termId);
+      modal.setAttribute('data-trainer-id', trainerId);
+      
+      modal.style.display = 'flex';
     }
 
     // POPRAVEK: Prenovljena in poenostavljena logika barvnega kodiranja
@@ -425,9 +443,14 @@ document.addEventListener('DOMContentLoaded', () => {
           
           const btnPresent = document.createElement("button");
           btnPresent.textContent = "Prisoten";
-          btnPresent.className = "btn";
+          btnPresent.className = "btn present";
           if (isInactive(date, termId)) { btnPresent.disabled = true; }
-          if (isPresent === true) { btnPresent.classList.add("ok"); } else { btnPresent.classList.add("neutral"); }
+          if (isPresent === true) { 
+            btnPresent.classList.add("ok"); 
+            btnPresent.classList.add("present");
+          } else { 
+            btnPresent.classList.add("neutral"); 
+          }
           btnPresent.addEventListener("click", async () => {
             await updateTrainerAttendance(ymd, termId, trainer.id, true);
             await refreshDayData(date);
@@ -436,13 +459,17 @@ document.addEventListener('DOMContentLoaded', () => {
           
           const btnAbsent = document.createElement("button");
           btnAbsent.textContent = "Odsoten";
-          btnAbsent.className = "btn";
+          btnAbsent.className = "btn absent";
           if (isInactive(date, termId)) { btnAbsent.disabled = true; }
-          if (isPresent === false) { btnAbsent.classList.add("warn"); } else { btnPresent.classList.add("neutral"); }
+          if (isPresent === false) { 
+            btnAbsent.classList.add("warn"); 
+            btnAbsent.classList.add("absent");
+          } else { 
+            btnAbsent.classList.add("neutral"); 
+          }
           btnAbsent.addEventListener("click", async () => {
-            await updateTrainerAttendance(ymd, termId, trainer.id, false);
-            await refreshDayData(date);
-            openEvent(date, termId);
+            // Odpri modalno okno za opombe
+            openTrainerNoteModal(ymd, termId, trainer.id, trainer.first_name + ' ' + trainer.last_name);
           });
           
           td2.appendChild(btnPresent);
@@ -1020,6 +1047,51 @@ document.addEventListener('DOMContentLoaded', () => {
       await Promise.all([loadTerms(), loadSwimmers(), loadTrainers(), loadAttendance(), loadTrainerAttendance(), loadTermStatus()]);
       renderMonth();
     }
+
+    // ===== Event listenerji za modalno okno trenerjev =====
+    document.addEventListener('DOMContentLoaded', () => {
+      const closeTrainerNoteModalBtn = document.getElementById('closeTrainerNoteModalBtn');
+      const cancelTrainerNoteBtn = document.getElementById('cancelTrainerNoteBtn');
+      const confirmTrainerNoteBtn = document.getElementById('confirmTrainerNoteBtn');
+      const trainerNoteModal = document.getElementById('trainerNoteModal');
+
+      if (closeTrainerNoteModalBtn) {
+        closeTrainerNoteModalBtn.addEventListener('click', () => {
+          trainerNoteModal.style.display = 'none';
+        });
+      }
+
+      if (cancelTrainerNoteBtn) {
+        cancelTrainerNoteBtn.addEventListener('click', () => {
+          trainerNoteModal.style.display = 'none';
+        });
+      }
+
+      if (confirmTrainerNoteBtn) {
+        confirmTrainerNoteBtn.addEventListener('click', async () => {
+          const date = trainerNoteModal.getAttribute('data-date');
+          const termId = trainerNoteModal.getAttribute('data-term-id');
+          const trainerId = trainerNoteModal.getAttribute('data-trainer-id');
+          const note = document.getElementById('trainerNoteInput').value.trim();
+
+          if (note) {
+            await updateTrainerAttendance(date, termId, trainerId, false, note);
+            await refreshDayData(new Date(date));
+            openEvent(new Date(date), termId);
+            trainerNoteModal.style.display = 'none';
+          } else {
+            alert('Prosim vnesite ime nadomestnega trenerja');
+          }
+        });
+      }
+
+      // Zapri modal ob kliku zunaj
+      window.addEventListener('click', (e) => {
+        if (e.target === trainerNoteModal) {
+          trainerNoteModal.style.display = 'none';
+        }
+      });
+    });
 
     // ===== Inicializacija =====
     loadAllData();

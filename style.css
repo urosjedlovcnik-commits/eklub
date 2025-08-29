@@ -139,7 +139,8 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   justify-content: center;
   align-items: center;
 }
-#noteModal .modal-content {
+#noteModal .modal-content,
+#trainerNoteModal .modal-content {
   background-color: #fefefe;
   padding: 20px;
   border-radius: 8px;
@@ -149,35 +150,43 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   display: flex;
   flex-direction: column;
 }
-#noteModal .modal-header {
+#noteModal .modal-header,
+#trainerNoteModal .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
 }
-#noteModal .modal-body {
+#noteModal .modal-body,
+#trainerNoteModal .modal-body {
   margin-bottom: 1rem;
 }
-#noteModal .modal-footer {
+#noteModal .modal-footer,
+#trainerNoteModal .modal-footer {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
 }
-#noteModal .modal-title {
+#noteModal .modal-title,
+#trainerNoteModal .modal-title {
   margin: 0;
 }
-#noteModal .close-btn {
+#noteModal .close-btn,
+#trainerNoteModal .close-btn {
   color: #aaa;
   font-size: 28px;
   font-weight: bold;
   cursor: pointer;
 }
 #noteModal .close-btn:hover,
-#noteModal .close-btn:focus {
+#noteModal .close-btn:focus,
+#trainerNoteModal .close-btn:hover,
+#trainerNoteModal .close-btn:focus {
   color: black;
   text-decoration: none;
 }
-#noteModal textarea {
+#noteModal textarea,
+#trainerNoteModal textarea {
   width: 100%;
   border: 1px solid #ccc;
   padding: 8px;

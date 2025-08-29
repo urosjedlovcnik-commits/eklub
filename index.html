@@ -120,6 +120,24 @@
         </div>
     </div>
 </div>
+
+<div id="trainerNoteModal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title">Odsotnost trenerja</h5>
+            <span class="close-btn" id="closeTrainerNoteModalBtn">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p><strong id="trainerNoteModalTrainerName"></strong> bo odsoten.</p>
+            <p>Prosim, vnesite ime in priimek nadomestnega trenerja:</p>
+            <textarea id="trainerNoteInput" rows="3" placeholder="Ime in priimek nadomestnega trenerja"></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn neutral" id="cancelTrainerNoteBtn">Prekliči</button>
+            <button class="btn ok" id="confirmTrainerNoteBtn">Potrdi</button>
+        </div>
+    </div>
+</div>
 	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 	<script src="./script.js"></script>
 </body>

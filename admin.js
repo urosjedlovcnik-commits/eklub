@@ -288,6 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateTrainersList();
             updateExportSelects();
             updateTrainerSummaryControls();
+            calculateTrainerNotesData(); // Prikaži opombe trenerjev
             console.log('UI posodobljen');
             
             // Debug informacije
@@ -1284,6 +1285,14 @@ document.addEventListener('DOMContentLoaded', () => {
         calculateTrainerSummaryData();
     });
 
+    // ===== Event listener za osvežitev opomb trenerjev =====
+    const elRefreshTrainerNotesBtn = document.getElementById('refreshTrainerNotesBtn');
+    if (elRefreshTrainerNotesBtn) {
+        elRefreshTrainerNotesBtn.addEventListener('click', () => {
+            calculateTrainerNotesData();
+        });
+    }
+
     // ===== Funkcije za povzetek trenerjev =====
     function calculateTrainerSummaryData() {
         const month = parseInt(elTrainerSummaryMonthSelect.value);
@@ -1366,6 +1375,76 @@ document.addEventListener('DOMContentLoaded', () => {
         elTrainerSummaryBox.innerHTML = summary;
     }
 
+    // ===== Funkcije za opombe trenerjev =====
+    function calculateTrainerNotesData() {
+        const month = parseInt(document.getElementById('trainerNotesMonthSelect').value);
+        const year = parseInt(document.getElementById('trainerNotesYearSelect').value);
+        
+        if (month === undefined || year === undefined) {
+            document.getElementById('trainerNotesBox').innerHTML = '<p class="muted">Prosim izberite mesec in leto</p>';
+            return;
+        }
+
+        const startDate = new Date(year, month, 1);
+        const endDate = new Date(year, month + 1, 0);
+        
+        let notes = '<table><thead><tr><th>Datum</th><th>Termin</th><th>Trener</th><th>Nadomestni trener</th></tr></thead><tbody>';
+        
+        const trainerNotes = [];
+        
+        // Iteriraj po vseh dnevih v mesecu
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+            const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
+            const isoDate = iso(d);
+            
+            TERMS.forEach(term => {
+                if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
+                    // Poišči trenerje za ta termin
+                    const trainersForTerm = trainers.filter(t => 
+                        t.terms && t.terms.includes(term.id) && !t.is_deleted
+                    );
+                    
+                    trainersForTerm.forEach(trainer => {
+                        const trainerAtt = trainerAttendance[isoDate]?.[term.id]?.[trainer.id];
+                        if (trainerAtt && trainerAtt.present === false && trainerAtt.note) {
+                            trainerNotes.push({
+                                date: isoDate,
+                                term: term,
+                                trainer: trainer,
+                                note: trainerAtt.note
+                            });
+                        }
+                    });
+                }
+            });
+        }
+        
+        // Sortiraj po datumu (najnovejši prvi)
+        trainerNotes.sort((a, b) => new Date(b.date) - new Date(a.date));
+        
+        // Prikaži rezultate
+        if (trainerNotes.length === 0) {
+            notes = '<p class="muted">Ni opomb o odsotnosti trenerjev za izbrani mesec</p>';
+        } else {
+            trainerNotes.forEach(note => {
+                const dateStr = formatDate(note.date);
+                const timeStr = `${DAY_SHORT_NAME[note.term.day]} ${note.term.start_time}-${note.term.end_time}`;
+                
+                notes += `
+                    <tr>
+                        <td>${dateStr}</td>
+                        <td>${timeStr}</td>
+                        <td>${note.trainer.first_name} ${note.trainer.last_name}</td>
+                        <td>${note.note}</td>
+                    </tr>
+                `;
+            });
+            notes += '</tbody></table>';
+        }
+        
+        document.getElementById('trainerNotesBox').innerHTML = notes;
+    }
+
     function updateTrainerSummaryControls() {
         // Mesec
         elTrainerSummaryMonthSelect.innerHTML = '';
@@ -1387,6 +1466,32 @@ document.addEventListener('DOMContentLoaded', () => {
             elTrainerSummaryYearSelect.appendChild(option);
         }
         elTrainerSummaryYearSelect.value = currentYear;
+
+        // Kontrole za opombe trenerjev
+        const elTrainerNotesMonthSelect = document.getElementById('trainerNotesMonthSelect');
+        const elTrainerNotesYearSelect = document.getElementById('trainerNotesYearSelect');
+        
+        if (elTrainerNotesMonthSelect) {
+            elTrainerNotesMonthSelect.innerHTML = '';
+            for (let i = 1; i <= 12; i++) {
+                const option = document.createElement('option');
+                option.value = i - 1;
+                option.textContent = new Date(2024, i - 1, 1).toLocaleDateString('sl-SI', { month: 'long' });
+                elTrainerNotesMonthSelect.appendChild(option);
+            }
+            elTrainerNotesMonthSelect.value = new Date().getMonth();
+        }
+
+        if (elTrainerNotesYearSelect) {
+            elTrainerNotesYearSelect.innerHTML = '';
+            for (let i = currentYear - 2; i <= currentYear + 1; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = i;
+                elTrainerNotesYearSelect.appendChild(option);
+            }
+            elTrainerNotesYearSelect.value = currentYear;
+        }
     }
 
     // ===== Inicializacija =====
