@@ -101,6 +101,92 @@
     margin-bottom: 20px;
   }
 }
+
+/* Stili za termine po dnevih */
+.day-section {
+  margin-bottom: 30px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.day-section h4 {
+  background: #f8f9fa;
+  margin: 0;
+  padding: 15px;
+  border-bottom: 1px solid #ddd;
+  color: #333;
+  font-size: 18px;
+}
+
+.term-card {
+  border-bottom: 1px solid #eee;
+  padding: 20px;
+}
+
+.term-card:last-child {
+  border-bottom: none;
+}
+
+.term-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.term-time {
+  font-weight: bold;
+  font-size: 16px;
+  color: #333;
+}
+
+.term-period {
+  color: #666;
+  font-size: 14px;
+}
+
+.term-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.term-swimmers {
+  margin-top: 15px;
+}
+
+.term-swimmers strong {
+  display: block;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.swimmers-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.remove-term-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 10px;
+  cursor: pointer;
+  margin-left: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remove-term-btn:hover {
+  background: #c82333;
+}
 </style>
 </head>
 <body>
@@ -172,16 +258,7 @@
               </div>
             </div>
 
-            <div class="card">
-              <h3>Pregled terminov</h3>
-              <div class="inner">
-                <div class="summary-controls">
-                  <button class="btn" id="refreshTermsBtn">Osveži</button>
-                </div>
-                <div id="termsBox">Nalaganje podatkov...</div>
-              </div>
-            </div>
-    </div>
+
   </div>
 
   <!-- Sekcija za upravljanje terminov -->

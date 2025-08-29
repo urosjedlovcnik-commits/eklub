@@ -114,9 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const elRefreshTrainerSummaryBtn = document.getElementById("refreshTrainerSummaryBtn");
     const elTrainerSummaryBox = document.getElementById("trainerSummaryBox");
     
-    // UI elementi za pregled terminov
-    const elRefreshTermsBtn = document.getElementById("refreshTermsBtn");
-    const elTermsBox = document.getElementById("termsBox");
+
     
     const elEditTermModal = document.getElementById("editTermModal");
     const elEditTermDateFrom = document.getElementById("editTermDateFrom");
@@ -318,8 +316,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Osveži povzetek udeležbe plavalcev
             await refreshSwimmerSummary();
             
-            // Prikaži pregled terminov
-            renderTerms();
+
             
             console.log('UI posodobljen');
             
@@ -816,7 +813,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Posodobi lokalno stanje
                 TERMS = TERMS.filter(t => t.id !== termId);
                 updateTermList();
-                renderTerms();
                 alert('Termin uspešno izbrisan.');
             } catch (error) {
                 console.error('Napaka pri brisanju termina:', error);
@@ -922,39 +918,72 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const table = document.createElement('table');
-        table.innerHTML = `
-            <thead>
-                <tr>
-                    <th>Dan</th>
-                    <th>Ura</th>
-                    <th>Trajanje</th>
-                    <th>Akcije</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        `;
-
-        const tbody = table.querySelector('tbody');
+        // Grupiraj termine po dnevih
+        const termsByDay = {};
         TERMS.forEach(term => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${DAYNAME[term.day]}</td>
-                <td>${term.start_time} - ${term.end_time}</td>
-                <td>${formatDate(term.date_from)} - ${formatDate(term.date_to)}</td>
-                <td>
-                    <button class="btn" onclick="editTerm('${term.id}')" style="font-size: 12px; padding: 4px 8px; margin-right: 4px;">
-                        Uredi
-                    </button>
-                    <button class="btn warn" onclick="deleteTerm('${term.id}')" style="font-size: 12px; padding: 4px 8px;">
-                        Zbriši
-                    </button>
-                </td>
-            `;
-            tbody.appendChild(row);
+            if (!termsByDay[term.day]) {
+                termsByDay[term.day] = [];
+            }
+            termsByDay[term.day].push(term);
         });
 
-        elTermList.appendChild(table);
+        // Ustvari HTML za vsak dan
+        Object.keys(termsByDay).sort().forEach(day => {
+            const dayName = DAYNAME[parseInt(day)];
+            const dayTerms = termsByDay[day];
+            
+            // Ustvari sekcijo za dan
+            const daySection = document.createElement('div');
+            daySection.className = 'day-section';
+            daySection.innerHTML = `<h4>${dayName}</h4>`;
+            
+            dayTerms.forEach(term => {
+                const termCard = document.createElement('div');
+                termCard.className = 'term-card';
+                
+                // Poišči plavalce za ta termin
+                const assignedSwimmers = swimmers.filter(s => 
+                    s.terms && s.terms.includes(term.id) && !s.is_deleted
+                );
+                
+                let swimmersList = '';
+                if (assignedSwimmers.length > 0) {
+                    swimmersList = assignedSwimmers.map(s => `
+                        <span class="chip" data-term-id="${term.id}" data-swimmer-id="${s.id}">
+                            ${s.first_name} ${s.last_name}
+                            <button class="remove-term-btn" onclick="removeTermFromSwimmer('${s.id}', '${term.id}')" title="Odstrani iz termina">✖</button>
+                        </span>
+                    `).join(' ');
+                } else {
+                    swimmersList = '<span class="muted">Brez dodeljenih plavalcev</span>';
+                }
+                
+                termCard.innerHTML = `
+                    <div class="term-header">
+                        <span class="term-time">${term.start_time} - ${term.end_time}</span>
+                        <span class="term-period">${formatDate(term.date_from)} - ${formatDate(term.date_to)}</span>
+                        <div class="term-actions">
+                            <button class="btn small" onclick="editTerm('${term.id}')" style="font-size: 12px; padding: 4px 8px; margin-right: 4px;">
+                                Uredi
+                            </button>
+                            <button class="btn small warn" onclick="deleteTerm('${term.id}')" style="font-size: 12px; padding: 4px 8px;">
+                                Zbriši termin
+                            </button>
+                        </div>
+                    </div>
+                    <div class="term-swimmers">
+                        <strong>Dodeljeni plavalci:</strong>
+                        <div class="swimmers-chips">
+                            ${swimmersList}
+                        </div>
+                    </div>
+                `;
+                
+                daySection.appendChild(termCard);
+            });
+            
+            elTermList.appendChild(daySection);
+        });
     }
 
     // ===== Dodajanje terminov =====
@@ -1124,7 +1153,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 term.date_to = dateTo;
                 updateTermList();
                 updateSwimmersList();
-                renderTerms(); // Osveži prikaz terminov
+
                 elEditTermModal.style.display = 'none';
             } catch (error) {
                 console.error('Napaka pri shranjevanju termina:', error);
@@ -1416,12 +1445,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ===== Event listener za osvežitev pregleda terminov =====
-    if (elRefreshTermsBtn) {
-        elRefreshTermsBtn.addEventListener('click', () => {
-            refreshTerms();
-        });
-    }
+
 
     // ===== Event listener za izbiro plavalca pri dodeljevanju terminov =====
     if (elSwimmerSelect) {
@@ -1753,43 +1777,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return res;
     }
 
-    // Funkcija za prikaz terminov
-    function renderTerms() {
-        let html = `<table><thead><tr><th>Dan</th><th>Čas</th><th>Obdobje</th><th>Status</th><th>Akcije</th></tr></thead><tbody>`;
-        
-        if (TERMS.length === 0) {
-            html += `<tr><td colspan="5" class="muted">Ni terminov.</td></tr>`;
-        } else {
-            TERMS.forEach(term => {
-                const dayNames = ["", "Ponedeljek", "Torek", "Sreda", "Četrtek", "Petek", "Sobota", "Nedelja"];
-                const dayName = dayNames[term.day] || "Neznano";
-                const timeRange = `${term.start_time.slice(0, 5)} - ${term.end_time.slice(0, 5)}`;
-                const dateRange = `${formatDate(term.date_from)} - ${formatDate(term.date_to)}`;
-                
-                html += `<tr>
-                    <td>${dayName}</td>
-                    <td>${timeRange}</td>
-                    <td>${dateRange}</td>
-                    <td><span class="status active">Aktiven</span></td>
-                    <td>
-                        <button class="btn small" onclick="editTerm(${term.id})">Uredi</button>
-                        <button class="btn small warn" onclick="deleteTerm(${term.id})">Zbriši</button>
-                    </td>
-                </tr>`;
-            });
-        }
-        
-        html += `</tbody></table>`;
-        elTermsBox.innerHTML = html;
-    }
 
-    // Funkcija za osvežitev pregleda terminov
-    async function refreshTerms() {
-        // Osveži podatke o terminih
-        await loadTerms();
-        // Prikaži termin
-        renderTerms();
-    }
+
+
 
     // Funkcija za prikaz povzetka udeležbe plavalcev
     function renderSwimmerSummary(summaryData) {
