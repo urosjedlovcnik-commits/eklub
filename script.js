@@ -1093,6 +1093,35 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
 
+    // ===== Event listenerji za prostor opomb trenerjev =====
+    const saveTrainerNotesBtn = document.getElementById('saveTrainerNotesBtn');
+    const cancelTrainerNotesBtn = document.getElementById('cancelTrainerNotesBtn');
+    const trainerNotesSection = document.getElementById('trainerNotesSection');
+
+    if (saveTrainerNotesBtn) {
+      saveTrainerNotesBtn.addEventListener('click', async () => {
+        const date = trainerNotesSection.getAttribute('data-date');
+        const termId = trainerNotesSection.getAttribute('data-term-id');
+        const trainerId = trainerNotesSection.getAttribute('data-trainer-id');
+        const note = document.getElementById('trainerNotesInput').value.trim();
+
+        if (note) {
+          await updateTrainerAttendance(date, termId, trainerId, false, note);
+          await refreshDayData(new Date(date));
+          openEvent(new Date(date), termId);
+          hideTrainerNotesSection();
+        } else {
+          alert('Prosim vnesite ime nadomestnega trenerja');
+        }
+      });
+    }
+
+    if (cancelTrainerNotesBtn) {
+      cancelTrainerNotesBtn.addEventListener('click', () => {
+        hideTrainerNotesSection();
+      });
+    }
+
     // ===== Inicializacija =====
     loadAllData();
 });
