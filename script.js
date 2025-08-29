@@ -167,6 +167,10 @@ document.addEventListener('DOMContentLoaded', () => {
       trainerNotesSection.setAttribute('data-term-id', termId);
       trainerNotesSection.setAttribute('data-trainer-id', trainerId);
       
+      // Prikaži obstoječo opombo, če je že vnešena
+      const existingNote = trainerAttendance[date]?.[termId]?.[trainerId]?.note || '';
+      trainerNotesInput.value = existingNote;
+      
       // Prikaži sekcijo
       trainerNotesSection.style.display = 'block';
       trainerNotesInput.focus();
@@ -471,9 +475,12 @@ document.addEventListener('DOMContentLoaded', () => {
       // Redno dodeljeni plavalci z vneseno prisotnostjo ali brez
       const regularSwimmers = assignedSwimmers.filter(s => termAtt[s.id] !== undefined || !s.is_deleted);
       
-      // Prikaži prisotnost trenerjev
-      elTrainerAttendanceTable.innerHTML = "";
-      const trainersForTerm = await getTrainersForTerm(termId);
+             // Skrij prostor za opombe ob odprtju modala
+       hideTrainerNotesSection();
+       
+       // Prikaži prisotnost trenerjev
+       elTrainerAttendanceTable.innerHTML = "";
+       const trainersForTerm = await getTrainersForTerm(termId);
       if (trainersForTerm.length === 0) {
         const tr = document.createElement("tr");
         const td = document.createElement("td"); 
@@ -538,48 +545,61 @@ document.addEventListener('DOMContentLoaded', () => {
             const newStatus = isPresent === true ? false : true;
             console.log('🔍 DEBUG: Novo stanje:', newStatus);
             
-            await updateTrainerAttendance(ymd, termId, trainer.id, newStatus);
-            // Posodobi lokalne podatke
-            if (!trainerAttendance[ymd]) trainerAttendance[ymd] = {};
-            if (!trainerAttendance[ymd][termId]) trainerAttendance[ymd][termId] = {};
-            trainerAttendance[ymd][termId][trainer.id] = { present: newStatus, note: trainerAttendance[ymd]?.[termId]?.[trainer.id]?.note || '' };
-            
-            console.log('🔍 DEBUG: Lokalni podatki posodobljeni:', trainerAttendance[ymd][termId][trainer.id]);
-            
-            // Osveži podatke v trenutnem modalu
-            await refreshModalData(date, termId);
+                         await updateTrainerAttendance(ymd, termId, trainer.id, newStatus);
+             // Posodobi lokalne podatke
+             if (!trainerAttendance[ymd]) trainerAttendance[ymd] = {};
+             if (!trainerAttendance[ymd][termId]) trainerAttendance[ymd][termId] = {};
+             trainerAttendance[ymd][termId][trainer.id] = { present: newStatus, note: trainerAttendance[ymd]?.[termId]?.[trainer.id]?.note || '' };
+             
+             console.log('🔍 DEBUG: Lokalni podatki posodobljeni:', trainerAttendance[ymd][termId][trainer.id]);
+             
+             // Skrij prostor za opombe, če je trener sedaj prisoten
+             if (newStatus === true) {
+               hideTrainerNotesSection();
+             }
+             
+             // Osveži podatke v trenutnem modalu
+             await refreshModalData(date, termId);
           });
           
-          btnAbsent.addEventListener("click", async () => {
-            console.log('🔍 DEBUG: Trener gumb Odsoten kliknjen');
-            console.log('🔍 DEBUG: Trenutno stanje isPresent:', isPresent);
-            console.log('🔍 DEBUG: Trener ID:', trainer.id);
-            
-            if (isPresent === false) {
-              console.log('🔍 DEBUG: Trener je že odsoten, prikazujem prostor za opombe');
-              // Če je trener že odsoten, prikaži prostor za opombe
-              showTrainerNotesSection(ymd, termId, trainer.id, trainer.first_name + ' ' + trainer.last_name);
-            } else {
-              console.log('🔍 DEBUG: Trener je prisoten, označujem kot odsotnega');
-              // Če je trener prisoten, ga označi kot odsotnega
-              await updateTrainerAttendance(ymd, termId, trainer.id, false);
-              // Posodobi lokalne podatke
-              if (!trainerAttendance[ymd]) trainerAttendance[ymd] = {};
-              if (!trainerAttendance[ymd][termId]) trainerAttendance[ymd][termId] = {};
-              trainerAttendance[ymd][termId][trainer.id] = { present: false, note: trainerAttendance[ymd]?.[termId]?.[trainer.id]?.note || '' };
-              
-              console.log('🔍 DEBUG: Lokalni podatki posodobljeni:', trainerAttendance[ymd][termId][trainer.id]);
-              
-              // Osveži podatke v trenutnem modalu
-              await refreshModalData(date, termId);
-            }
-          });
+                     btnAbsent.addEventListener("click", async () => {
+             console.log('🔍 DEBUG: Trener gumb Odsoten kliknjen');
+             console.log('🔍 DEBUG: Trenutno stanje isPresent:', isPresent);
+             console.log('🔍 DEBUG: Trener ID:', trainer.id);
+             
+             if (isPresent === false) {
+               console.log('🔍 DEBUG: Trener je že odsoten, prikazujem prostor za opombe');
+               // Če je trener že odsoten, prikaži prostor za opombe
+               showTrainerNotesSection(ymd, termId, trainer.id, trainer.first_name + ' ' + trainer.last_name);
+             } else {
+               console.log('🔍 DEBUG: Trener je prisoten, označujem kot odsotnega');
+               // Če je trener prisoten, ga označi kot odsotnega
+               await updateTrainerAttendance(ymd, termId, trainer.id, false);
+               // Posodobi lokalne podatke
+               if (!trainerAttendance[ymd]) trainerAttendance[ymd] = {};
+               if (!trainerAttendance[ymd][termId]) trainerAttendance[ymd][termId] = {};
+               trainerAttendance[ymd][termId][trainer.id] = { present: false, note: trainerAttendance[ymd]?.[termId]?.[trainer.id]?.note || '' };
+               
+               console.log('🔍 DEBUG: Lokalni podatki posodobljeni:', trainerAttendance[ymd][termId][trainer.id]);
+               
+               // Prikaži prostor za opombe po označitvi kot odsotnega
+               showTrainerNotesSection(ymd, termId, trainer.id, trainer.first_name + ' ' + trainer.last_name);
+               
+               // Osveži podatke v trenutnem modalu
+               await refreshModalData(date, termId);
+             }
+           });
           
-          td2.appendChild(btnPresent);
-          td2.appendChild(btnAbsent);
-          tr.appendChild(td1);
-          tr.appendChild(td2);
-          elTrainerAttendanceTable.appendChild(tr);
+                     td2.appendChild(btnPresent);
+           td2.appendChild(btnAbsent);
+           tr.appendChild(td1);
+           tr.appendChild(td2);
+           elTrainerAttendanceTable.appendChild(tr);
+           
+           // Prikaži prostor za opombe, če je trener odsoten
+           if (isPresent === false) {
+             showTrainerNotesSection(ymd, termId, trainer.id, trainer.first_name + ' ' + trainer.last_name);
+           }
         });
       }
 
