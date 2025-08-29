@@ -53,9 +53,9 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
 .flex-col{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
 /* Modal */
 .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center;padding:18px;z-index:100}
-.modal .box{background:#fff;border:1px solid var(--border);border-radius:12px;max-width:680px;width:100%;box-shadow:0 10px 30px rgba(0,0,0,.15); position:fixed; top:10%; left:50%; transform:translate(-50%, 0);}
-.modal .box-header{display:flex;align-items:center;justify-content:space-between;padding:12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
-.modal .box-body{padding:12px}
+.modal .box{background:#fff;border:1px solid var(--border);border-radius:12px;max-width:680px;width:100%;box-shadow:0 10px 30px rgba(0,0,0,.15); position:fixed; top:10%; left:50%; transform:translate(-50%, 0); max-height:80vh; overflow:hidden; display:flex; flex-direction:column;}
+.modal .box-header{display:flex;align-items:center;justify-content:space-between;padding:12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px; flex-shrink:0;}
+.modal .box-body{padding:12px; overflow-y:auto; flex:1;}
 .chips{display:flex;gap:10px; flex-wrap:wrap; margin-bottom: 12px;}
 .chip {
   display: inline-flex;
