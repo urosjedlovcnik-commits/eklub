@@ -50,6 +50,44 @@
   display: block;
 }
 
+/* Stili za termine kot "chips" */
+.chip {
+  display: inline-block;
+  background: #e5e7eb;
+  border: 1px solid #d1d5db;
+  border-radius: 16px;
+  padding: 4px 12px;
+  margin: 2px;
+  font-size: 12px;
+  position: relative;
+}
+
+.chip .remove-term-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  margin-left: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.chip .remove-term-btn:hover {
+  background: #dc2626;
+}
+
+.terms-cell {
+  max-width: 300px;
+  word-wrap: break-word;
+}
+
 .back-to-main {
   position: fixed;
   top: 20px;

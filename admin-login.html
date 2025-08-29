@@ -174,12 +174,26 @@
       const loginBtn = document.getElementById('loginBtn');
       const errorMessage = document.getElementById('errorMessage');
       
-      // Preveri, če je uporabnik že prijavljen
-      const isLoggedIn = sessionStorage.getItem('adminLoggedIn');
-      if (isLoggedIn === 'true') {
-        window.location.href = 'admin.html';
-        return;
-      }
+              // Preveri, če je uporabnik že prijavljen
+        const isLoggedIn = localStorage.getItem('adminLoggedIn');
+        const loginTime = localStorage.getItem('adminLoginTime');
+        
+        if (isLoggedIn === 'true' && loginTime) {
+            // Preveri, če je login še veljaven (7 dni)
+            const loginDate = new Date(parseInt(loginTime));
+            const now = new Date();
+            const daysDiff = (now - loginDate) / (1000 * 60 * 60 * 24);
+            
+            if (daysDiff < 7) {
+                window.location.href = 'admin.html';
+                return;
+            } else {
+                // Login je potekel, počisti podatke
+                localStorage.removeItem('adminLoggedIn');
+                localStorage.removeItem('adminEmail');
+                localStorage.removeItem('adminLoginTime');
+            }
+        }
       
       function showError(message) {
         errorMessage.textContent = message;
@@ -212,9 +226,10 @@
           if (email === 'uros.jedlovcnik@gmail.com') {
             // Preveri geslo (za demo uporabo preprosto geslo)
             if (password === 'admin123') {
-              // Uspešna prijava
-              sessionStorage.setItem('adminLoggedIn', 'true');
-              sessionStorage.setItem('adminEmail', email);
+              // Uspešna prijava - shrani v localStorage za 7 dni
+              localStorage.setItem('adminLoggedIn', 'true');
+              localStorage.setItem('adminEmail', email);
+              localStorage.setItem('adminLoginTime', Date.now().toString());
               window.location.href = 'admin.html';
             } else {
               showError('Napačno geslo');

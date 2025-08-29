@@ -1,25 +1,43 @@
 // Admin stran za upravljanje plavalne šole
 document.addEventListener('DOMContentLoaded', () => {
     // Preveri, če je uporabnik prijavljen
-    const isLoggedIn = sessionStorage.getItem('adminLoggedIn');
-    if (isLoggedIn !== 'true') {
+    const isLoggedIn = localStorage.getItem('adminLoggedIn');
+    const loginTime = localStorage.getItem('adminLoginTime');
+    
+    if (isLoggedIn !== 'true' || !loginTime) {
+        window.location.href = 'admin-login.html';
+        return;
+    }
+    
+    // Preveri, če je login še veljaven (7 dni)
+    const loginDate = new Date(parseInt(loginTime));
+    const now = new Date();
+    const daysDiff = (now - loginDate) / (1000 * 60 * 60 * 24);
+    
+    if (daysDiff >= 7) {
+        // Login je potekel, počisti podatke
+        localStorage.removeItem('adminLoggedIn');
+        localStorage.removeItem('adminEmail');
+        localStorage.removeItem('adminLoginTime');
         window.location.href = 'admin-login.html';
         return;
     }
     
     // Preveri, če je email administrator
-    const adminEmail = sessionStorage.getItem('adminEmail');
+    const adminEmail = localStorage.getItem('adminEmail');
     if (adminEmail !== 'uros.jedlovcnik@gmail.com') {
-        sessionStorage.removeItem('adminLoggedIn');
-        sessionStorage.removeItem('adminEmail');
+        localStorage.removeItem('adminLoggedIn');
+        localStorage.removeItem('adminEmail');
+        localStorage.removeItem('adminLoginTime');
         window.location.href = 'admin-login.html';
         return;
     }
     
-    // Prikaži email administratorja
+    // Prikaži email administratorja in preostale dni
     const adminInfo = document.getElementById('adminInfo');
     if (adminInfo) {
-        adminInfo.textContent = `Pozdravljeni, ${adminEmail}`;
+        const remainingDays = Math.ceil(7 - daysDiff);
+        adminInfo.textContent = `Pozdravljeni, ${adminEmail} (login velja še ${remainingDays} dni)`;
     }
 
     // Konfiguracija Supabase
@@ -243,18 +261,28 @@ document.addEventListener('DOMContentLoaded', () => {
         swimmers.forEach(swimmer => {
             if (!swimmer.is_deleted) {
                 const row = document.createElement('tr');
-                const termsText = swimmer.terms.map(termId => {
+                
+                // Ustvari termine kot "chips" z možnostjo brisanja
+                const termsChips = swimmer.terms.map(termId => {
                     const term = TERMS.find(t => t.id === termId);
-                    return term ? `${DAY_SHORT_NAME[term.day]} ${term.start_time}-${term.end_time}` : termId;
-                }).join(', ');
+                    if (term) {
+                        return `
+                            <span class="chip" data-term-id="${termId}" data-swimmer-id="${swimmer.id}">
+                                ${DAY_SHORT_NAME[term.day]} ${term.start_time}-${term.end_time}
+                                <button class="remove-term-btn" onclick="removeTermFromSwimmer('${swimmer.id}', '${termId}')" title="Odstrani termin">✖</button>
+                            </span>
+                        `;
+                    }
+                    return `<span class="chip" data-term-id="${termId}">${termId}</span>`;
+                }).join(' ');
 
                 row.innerHTML = `
                     <td>${swimmer.first_name}</td>
                     <td>${swimmer.last_name}</td>
-                    <td>${termsText || 'Brez terminov'}</td>
+                    <td class="terms-cell">${termsChips || '<span class="muted">Brez terminov</span>'}</td>
                     <td>
                         <button class="btn warn" onclick="deleteSwimmer('${swimmer.id}')" style="font-size: 12px; padding: 4px 8px;">
-                            Zbriši
+                            Zbriši plavalca
                         </button>
                     </td>
                 `;
@@ -359,31 +387,60 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // ===== Odstranjevanje terminov iz plavalcev =====
+    window.removeTermFromSwimmer = async function(swimmerId, termId) {
+        const swimmer = swimmers.find(s => s.id === swimmerId);
+        if (swimmer) {
+            try {
+                // Odstrani termin iz plavalca
+                const updatedTerms = swimmer.terms.filter(t => t !== termId);
+                
+                const { error } = await supabase
+                    .from('swimmers')
+                    .update({ terms: updatedTerms })
+                    .eq('id', swimmerId);
+
+                if (error) {
+                    console.error('Napaka pri odstranjevanju termina:', error);
+                    alert('Napaka pri odstranjevanju termina. Preverite konzolo.');
+                    return;
+                }
+
+                // Posodobi lokalno stanje
+                swimmer.terms = updatedTerms;
+                updateSwimmersList();
+                alert('Termin uspešno odstranjen iz plavalca.');
+            } catch (error) {
+                console.error('Napaka pri odstranjevanju termina:', error);
+                alert('Napaka pri odstranjevanju termina.');
+            }
+        }
+    };
+
     // ===== Brisanje plavalcev =====
     window.deleteSwimmer = async function(swimmerId) {
-        if (confirm('Ali ste prepričani, da želite zbrisati tega plavalca?')) {
-            const swimmer = swimmers.find(s => s.id === swimmerId);
-            if (swimmer) {
-                try {
-                    const { error } = await supabase
-                        .from('swimmers')
-                        .update({ is_deleted: true })
-                        .eq('id', swimmerId);
+        const swimmer = swimmers.find(s => s.id === swimmerId);
+        if (swimmer) {
+            try {
+                const { error } = await supabase
+                    .from('swimmers')
+                    .update({ is_deleted: true })
+                    .eq('id', swimmerId);
 
-                    if (error) {
-                        console.error('Napaka pri brisanju plavalca:', error);
-                        alert('Napaka pri brisanju plavalca. Preverite konzolo.');
-                        return;
-                    }
-
-                    // Posodobi lokalno stanje
-                    swimmer.is_deleted = true;
-                    updateSwimmerSelects();
-                    updateSwimmersList();
-                } catch (error) {
+                if (error) {
                     console.error('Napaka pri brisanju plavalca:', error);
-                    alert('Napaka pri brisanju plavalca.');
+                    alert('Napaka pri brisanju plavalca. Preverite konzolo.');
+                    return;
                 }
+
+                // Posodobi lokalno stanje
+                swimmer.is_deleted = true;
+                updateSwimmerSelects();
+                updateSwimmersList();
+                alert('Plavalec uspešno izbrisan.');
+            } catch (error) {
+                console.error('Napaka pri brisanju plavalca:', error);
+                alert('Napaka pri brisanju plavalca.');
             }
         }
     };
@@ -418,8 +475,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${term.start_time} - ${term.end_time}</td>
                 <td>${formatDate(term.date_from)} - ${formatDate(term.date_to)}</td>
                 <td>
-                    <button class="btn" onclick="editTerm('${term.id}')" style="font-size: 12px; padding: 4px 8px;">
+                    <button class="btn" onclick="editTerm('${term.id}')" style="font-size: 12px; padding: 4px 8px; margin-right: 4px;">
                         Uredi
+                    </button>
+                    <button class="btn warn" onclick="deleteTerm('${term.id}')" style="font-size: 12px; padding: 4px 8px;">
+                        Zbriši
                     </button>
                 </td>
             `;
@@ -488,6 +548,68 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Napaka pri dodajanju termina.');
         }
     });
+
+    // ===== Brisanje terminov =====
+    window.deleteTerm = async function(termId) {
+        try {
+            // Najprej odstrani termin iz vseh plavalcev
+            for (const swimmer of swimmers) {
+                if (swimmer.terms.includes(termId)) {
+                    const updatedTerms = swimmer.terms.filter(t => t !== termId);
+                    await supabase
+                        .from('swimmers')
+                        .update({ terms: updatedTerms })
+                        .eq('id', swimmer.id);
+                    swimmer.terms = updatedTerms;
+                }
+            }
+
+            // Izbriši status terminov
+            const { error: statusError } = await supabase
+                .from('term_status')
+                .delete()
+                .eq('term_id', termId);
+            
+            if (statusError) {
+                console.error('Napaka pri brisanju statusa terminov:', statusError);
+            }
+
+            // Izbriši prisotnost
+            const { error: attendanceError } = await supabase
+                .from('attendance')
+                .delete()
+                .eq('term_id', termId);
+            
+            if (attendanceError) {
+                console.error('Napaka pri brisanju prisotnosti:', attendanceError);
+            }
+
+            // Izbriši termin
+            const { error: termError } = await supabase
+                .from('terms')
+                .delete()
+                .eq('id', termId);
+
+            if (termError) {
+                console.error('Napaka pri brisanju termina:', termError);
+                alert('Napaka pri brisanju termina. Preverite konzolo.');
+                return;
+            }
+
+            // Posodobi lokalno stanje
+            TERMS = TERMS.filter(t => t.id !== termId);
+            
+            // Posodobi UI
+            updateTermSelects();
+            updateTermList();
+            updateSwimmersList();
+            
+            alert('Termin uspešno izbrisan iz sistema.');
+        } catch (error) {
+            console.error('Napaka pri brisanju termina:', error);
+            alert('Napaka pri brisanju termina.');
+        }
+    };
 
     // ===== Urejanje terminov =====
     window.editTerm = function(termId) {
@@ -797,8 +919,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
             if (confirm('Ali se res želite odjaviti?')) {
-                sessionStorage.removeItem('adminLoggedIn');
-                sessionStorage.removeItem('adminEmail');
+                localStorage.removeItem('adminLoggedIn');
+                localStorage.removeItem('adminEmail');
+                localStorage.removeItem('adminLoginTime');
                 window.location.href = 'admin-login.html';
             }
         });
