@@ -1487,13 +1487,14 @@ document.addEventListener('DOMContentLoaded', () => {
             
             TERMS.forEach(term => {
                 if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
-                    // Poišči trenerje za ta termin
+                    // Poišči trenerje za ta termin (redno dodeljeni)
                     const trainersForTerm = trainers.filter(t => 
                         t.terms && t.terms.includes(term.id) && !t.is_deleted
                     );
                     
+                    // Dodaj redno dodeljene trenerje
                     trainersForTerm.forEach(trainer => {
-                        const key = `${trainer.id}`; // Samo trener ID, ne po terminih
+                        const key = `${trainer.id}`;
                         if (!trainerStats[key]) {
                             trainerStats[key] = {
                                 trainer: trainer,
@@ -1514,6 +1515,39 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         }
                     });
+                    
+                    // Dodaj nadomestne trenerje iz trainer_attendance (ki niso redno dodeljeni)
+                    if (trainerAttendance[isoDate]?.[term.id]) {
+                        Object.keys(trainerAttendance[isoDate][term.id]).forEach(trainerId => {
+                            // Preveri, če trener ni že vključen kot redno dodeljen
+                            const isRegularlyAssigned = trainersForTerm.some(t => t.id === trainerId);
+                            if (!isRegularlyAssigned) {
+                                const trainer = trainers.find(t => t.id === trainerId && !t.is_deleted);
+                                if (trainer) {
+                                    const key = `${trainer.id}`;
+                                    if (!trainerStats[key]) {
+                                        trainerStats[key] = {
+                                            trainer: trainer,
+                                            total: 0,
+                                            present: 0,
+                                            absent: 0
+                                        };
+                                    }
+                                    
+                                    trainerStats[key].total++;
+                                    
+                                    const trainerAtt = trainerAttendance[isoDate][term.id][trainerId];
+                                    if (trainerAtt) {
+                                        if (trainerAtt.present === true) {
+                                            trainerStats[key].present++;
+                                        } else if (trainerAtt.present === false) {
+                                            trainerStats[key].absent++;
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
                 }
             });
         }
