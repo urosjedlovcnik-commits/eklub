@@ -113,6 +113,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const elTrainerSummaryYearSelect = document.getElementById("trainerSummaryYearSelect");
     const elRefreshTrainerSummaryBtn = document.getElementById("refreshTrainerSummaryBtn");
     const elTrainerSummaryBox = document.getElementById("trainerSummaryBox");
+    
+    // UI elementi za pregled terminov
+    const elRefreshTermsBtn = document.getElementById("refreshTermsBtn");
+    const elTermsBox = document.getElementById("termsBox");
+    
     const elEditTermModal = document.getElementById("editTermModal");
     const elEditTermDateFrom = document.getElementById("editTermDateFrom");
     const elEditTermDateTo = document.getElementById("editTermDateTo");
@@ -312,6 +317,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Osveži povzetek udeležbe plavalcev
             await refreshSwimmerSummary();
+            
+            // Prikaži pregled terminov
+            renderTerms();
             
             console.log('UI posodobljen');
             
@@ -773,6 +781,50 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // ===== Upravljanje terminov =====
+    window.editTerm = async function(termId) {
+        const term = TERMS.find(t => t.id === termId);
+        if (term) {
+            // Popolni modal za urejanje
+            elEditTermDateFrom.value = term.date_from;
+            elEditTermDateTo.value = term.date_to;
+            
+            // Shrani ID termina za kasnejšo uporabo
+            elEditTermModal.setAttribute('data-term-id', termId);
+            
+            // Prikaži modal
+            elEditTermModal.style.display = 'block';
+        }
+    };
+
+    window.deleteTerm = async function(termId) {
+        const term = TERMS.find(t => t.id === termId);
+        if (term) {
+            try {
+                // Izbriši termin iz Supabase
+                const { error } = await supabase
+                    .from('terms')
+                    .delete()
+                    .eq('id', termId);
+
+                if (error) {
+                    console.error('Napaka pri brisanju termina:', error);
+                    alert('Napaka pri brisanju termina. Preverite konzolo.');
+                    return;
+                }
+
+                // Posodobi lokalno stanje
+                TERMS = TERMS.filter(t => t.id !== termId);
+                updateTermList();
+                renderTerms();
+                alert('Termin uspešno izbrisan.');
+            } catch (error) {
+                console.error('Napaka pri brisanju termina:', error);
+                alert('Napaka pri brisanju termina.');
+            }
+        }
+    };
+
     // ===== Brisanje plavalcev =====
     window.deleteSwimmer = async function(swimmerId) {
         const swimmer = swimmers.find(s => s.id === swimmerId);
@@ -1072,6 +1124,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 term.date_to = dateTo;
                 updateTermList();
                 updateSwimmersList();
+                renderTerms(); // Osveži prikaz terminov
                 elEditTermModal.style.display = 'none';
             } catch (error) {
                 console.error('Napaka pri shranjevanju termina:', error);
@@ -1360,6 +1413,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (elRefreshSwimmerSummaryBtn) {
         elRefreshSwimmerSummaryBtn.addEventListener('click', () => {
             refreshSwimmerSummary();
+        });
+    }
+
+    // ===== Event listener za osvežitev pregleda terminov =====
+    if (elRefreshTermsBtn) {
+        elRefreshTermsBtn.addEventListener('click', () => {
+            refreshTerms();
         });
     }
 
@@ -1664,6 +1724,44 @@ document.addEventListener('DOMContentLoaded', () => {
             currentDate.setDate(currentDate.getDate() + 1);
         }
         return res;
+    }
+
+    // Funkcija za prikaz terminov
+    function renderTerms() {
+        let html = `<table><thead><tr><th>Dan</th><th>Čas</th><th>Obdobje</th><th>Status</th><th>Akcije</th></tr></thead><tbody>`;
+        
+        if (TERMS.length === 0) {
+            html += `<tr><td colspan="5" class="muted">Ni terminov.</td></tr>`;
+        } else {
+            TERMS.forEach(term => {
+                const dayNames = ["", "Ponedeljek", "Torek", "Sreda", "Četrtek", "Petek", "Sobota", "Nedelja"];
+                const dayName = dayNames[term.day] || "Neznano";
+                const timeRange = `${term.start_time.slice(0, 5)} - ${term.end_time.slice(0, 5)}`;
+                const dateRange = `${formatDate(term.date_from)} - ${formatDate(term.date_to)}`;
+                
+                html += `<tr>
+                    <td>${dayName}</td>
+                    <td>${timeRange}</td>
+                    <td>${dateRange}</td>
+                    <td><span class="status active">Aktiven</span></td>
+                    <td>
+                        <button class="btn small" onclick="editTerm(${term.id})">Uredi</button>
+                        <button class="btn small warn" onclick="deleteTerm(${term.id})">Zbriši</button>
+                    </td>
+                </tr>`;
+            });
+        }
+        
+        html += `</tbody></table>`;
+        elTermsBox.innerHTML = html;
+    }
+
+    // Funkcija za osvežitev pregleda terminov
+    async function refreshTerms() {
+        // Osveži podatke o terminih
+        await loadTerms();
+        // Prikaži termin
+        renderTerms();
     }
 
     // Funkcija za prikaz povzetka udeležbe plavalcev
