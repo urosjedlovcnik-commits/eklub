@@ -108,6 +108,7 @@
   border: 1px solid #ddd;
   border-radius: 8px;
   overflow: hidden;
+  max-width: 100%;
 }
 
 .day-section h4 {
@@ -122,6 +123,7 @@
 .term-card {
   border-bottom: 1px solid #eee;
   padding: 20px;
+  max-width: 100%;
 }
 
 .term-card:last-child {
@@ -135,26 +137,31 @@
   margin-bottom: 15px;
   flex-wrap: wrap;
   gap: 10px;
+  max-width: 100%;
 }
 
 .term-time {
   font-weight: bold;
   font-size: 16px;
   color: #333;
+  min-width: 120px;
 }
 
 .term-period {
   color: #666;
   font-size: 14px;
+  min-width: 150px;
 }
 
 .term-actions {
   display: flex;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .term-swimmers {
   margin-top: 15px;
+  max-width: 100%;
 }
 
 .term-swimmers strong {
@@ -167,6 +174,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  max-width: 100%;
 }
 
 .remove-term-btn {
@@ -186,6 +194,60 @@
 
 .remove-term-btn:hover {
   background: #c82333;
+}
+
+/* Dodatni stili za boljšo pozicioniranje */
+.term-list {
+  max-width: 100%;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.grid {
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+/* Centriranje vsebine terminov */
+#terms-section .grid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+#terms-section .card {
+  width: 100%;
+  max-width: 800px;
+}
+
+/* Centriranje vsebine v karticah */
+#terms-section .inner {
+  text-align: left;
+}
+
+/* Centriranje gumbov in vnosnih polj */
+#terms-section .row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+#terms-section label {
+  min-width: 120px;
+  text-align: right;
+}
+
+#terms-section input,
+#terms-section select {
+  min-width: 150px;
+}
+
+#terms-section button {
+  margin: 0 auto;
 }
 </style>
 </head>
