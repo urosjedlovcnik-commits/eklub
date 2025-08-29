@@ -1,5 +1,26 @@
 // Admin stran za upravljanje plavalne šole
 document.addEventListener('DOMContentLoaded', () => {
+    // Preveri, če je uporabnik prijavljen
+    const isLoggedIn = sessionStorage.getItem('adminLoggedIn');
+    if (isLoggedIn !== 'true') {
+        window.location.href = 'admin-login.html';
+        return;
+    }
+    
+    // Preveri, če je email administrator
+    const adminEmail = sessionStorage.getItem('adminEmail');
+    if (adminEmail !== 'uros.jedlovcnik@gmail.com') {
+        sessionStorage.removeItem('adminLoggedIn');
+        sessionStorage.removeItem('adminEmail');
+        window.location.href = 'admin-login.html';
+        return;
+    }
+    
+    // Prikaži email administratorja
+    const adminInfo = document.getElementById('adminInfo');
+    if (adminInfo) {
+        adminInfo.textContent = `Pozdravljeni, ${adminEmail}`;
+    }
 
     // Stanja bodo naložena asinhrono
     let TERMS = [];
@@ -610,6 +631,18 @@ document.addEventListener('DOMContentLoaded', () => {
         link.click();
         document.body.removeChild(link);
     });
+
+    // ===== Odjava =====
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            if (confirm('Ali se res želite odjaviti?')) {
+                sessionStorage.removeItem('adminLoggedIn');
+                sessionStorage.removeItem('adminEmail');
+                window.location.href = 'admin-login.html';
+            }
+        });
+    }
 
     // ===== Inicializacija =====
     loadData();
