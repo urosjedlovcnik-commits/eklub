@@ -161,28 +161,70 @@ document.addEventListener('DOMContentLoaded', () => {
     function showTrainerNotesSection(date, termId, trainerId, trainerName) {
       const trainerNotesSection = document.getElementById('trainerNotesSection');
       const trainerNotesInput = document.getElementById('trainerNotesInput');
+      const trainerNotesTextarea = document.getElementById('trainerNotesTextarea');
       
       // Shrani podatke za kasnejšo uporabo
       trainerNotesSection.setAttribute('data-date', date);
       trainerNotesSection.setAttribute('data-term-id', termId);
       trainerNotesSection.setAttribute('data-trainer-id', trainerId);
       
+      // Napolni dropdown z vsemi trenerji (razen trenutnega)
+      trainerNotesInput.innerHTML = '<option value="">Izberi trenerja...</option>';
+      trainers.forEach(trainer => {
+        if (trainer.id !== trainerId && !trainer.is_deleted) {
+          const option = document.createElement('option');
+          option.value = trainer.id;
+          option.textContent = `${trainer.first_name} ${trainer.last_name}`;
+          trainerNotesInput.appendChild(option);
+        }
+      });
+      
       // Prikaži obstoječo opombo, če je že vnešena
       const existingNote = trainerAttendance[date]?.[termId]?.[trainerId]?.note || '';
-      trainerNotesInput.value = existingNote;
+      if (existingNote) {
+        // Preveri, ali je opomba ID trenerja ali besedilo
+        const substituteTrainer = trainers.find(t => t.id === existingNote);
+        if (substituteTrainer) {
+          // Če je ID trenerja, izberi v dropdown
+          trainerNotesInput.value = substituteTrainer.id;
+          trainerNotesTextarea.value = '';
+        } else {
+          // Če je besedilo, prikaži v textarea
+          trainerNotesTextarea.value = existingNote;
+          trainerNotesInput.value = '';
+        }
+      } else {
+        // Počisti oba polja, če ni obstoječe opombe
+        trainerNotesInput.value = '';
+        trainerNotesTextarea.value = '';
+      }
       
       // Prikaži sekcijo
       trainerNotesSection.style.display = 'block';
-      trainerNotesInput.focus();
+      
+      // Dodaj event listenerje za medsebojno izključevanje
+      trainerNotesInput.addEventListener('change', () => {
+        if (trainerNotesInput.value) {
+          trainerNotesTextarea.value = '';
+        }
+      });
+      
+      trainerNotesTextarea.addEventListener('input', () => {
+        if (trainerNotesTextarea.value.trim()) {
+          trainerNotesInput.value = '';
+        }
+      });
     }
     
          // Funkcija za skrivanje prostora za opombe trenerjev
      function hideTrainerNotesSection() {
        const trainerNotesSection = document.getElementById('trainerNotesSection');
        const trainerNotesInput = document.getElementById('trainerNotesInput');
+       const trainerNotesTextarea = document.getElementById('trainerNotesTextarea');
        
        trainerNotesSection.style.display = 'none';
-       trainerNotesInput.value = '';
+       trainerNotesInput.innerHTML = '<option value="">Izberi trenerja...</option>';
+       trainerNotesTextarea.value = '';
      }
      
      // Funkcija za osvežitev podatkov v trenutnem modalu
@@ -1251,14 +1293,40 @@ document.addEventListener('DOMContentLoaded', () => {
         const date = trainerNotesSection.getAttribute('data-date');
         const termId = trainerNotesSection.getAttribute('data-term-id');
         const trainerId = trainerNotesSection.getAttribute('data-trainer-id');
-        const note = document.getElementById('trainerNotesInput').value.trim();
+        const substituteTrainerId = document.getElementById('trainerNotesInput').value.trim();
+        const substituteTrainerName = document.getElementById('trainerNotesTextarea').value.trim();
 
-        if (note) {
-          await updateTrainerAttendance(date, termId, trainerId, false, note);
+        if (substituteTrainerId || substituteTrainerName) {
+          let noteToSave = '';
+          
+          if (substituteTrainerId) {
+            // Če je izbran trener iz dropdown-a
+            noteToSave = substituteTrainerId;
+            
+            // Doda prisotnost nadomestnega trenerja
+            const substituteTrainer = trainers.find(t => t.id === substituteTrainerId);
+            if (substituteTrainer) {
+              // Preveri, ali je nadomestni trener že dodeljen temu terminu
+              if (substituteTrainer.terms && substituteTrainer.terms.includes(termId)) {
+                // Če je dodeljen, doda prisotnost
+                await updateTrainerAttendance(date, termId, substituteTrainerId, true, '');
+              } else {
+                // Če ni dodeljen, ga doda kot nadomestnega
+                await updateTrainerAttendance(date, termId, substituteTrainerId, true, 'nadomestni');
+              }
+            }
+          } else {
+            // Če je vneseno ime novega trenerja
+            noteToSave = substituteTrainerName;
+          }
+          
+          // Shrani opombo o nadomestnem trenerju
+          await updateTrainerAttendance(date, termId, trainerId, false, noteToSave);
+          
           await refreshModalData(new Date(date), termId);
           hideTrainerNotesSection();
         } else {
-          alert('Prosim vnesite ime nadomestnega trenerja');
+          alert('Prosim izberite nadomestnega trenerja iz sistema ali vnesite ime novega trenerja');
         }
       });
     }
