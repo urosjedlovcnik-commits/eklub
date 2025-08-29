@@ -70,7 +70,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===== Pomožne funkcije =====
     function mkSwimmer(first,last,terms=[]){ return { first_name:first, last_name:last, terms:[...new Set(terms)] }; }
-    function iso(d){ return d.toISOString().slice(0,10); }
+    function iso(d){ 
+      // Prilagodi na CET časovni pas (UTC+1 ali UTC+2)
+      const cetDate = new Date(d.getTime() + (60 * 60 * 1000)); // Dodaj 1 uro za CET
+      return cetDate.toISOString().slice(0,10); 
+    }
     function daysInMonth(y,m){ return new Date(y,m+1,0).getDate(); }
     function isToday(d){ const t=new Date(); return d.getFullYear()==t.getFullYear() && d.getMonth()==t.getMonth() && d.getDate()==t.getDate(); }
     function isPast(d){ const t=new Date(); t.setHours(0,0,0,0); return d.getTime() < t.getTime(); }
@@ -1303,20 +1307,23 @@ document.addEventListener('DOMContentLoaded', () => {
         if (substituteTrainerId || substituteTrainerName) {
           console.log('🔍 DEBUG: Shranjevanje nadomestnega trenerja');
           console.log('🔍 DEBUG: Datum:', date, 'Termin ID:', termId, 'Originalni trener ID:', trainerId);
+          console.log('🔍 DEBUG: Substitute trener ID:', substituteTrainerId, 'Substitute ime:', substituteTrainerName);
           
           if (substituteTrainerId) {
             // Če je izbran trener iz dropdown-a - doda prisotnost nadomestnega trenerja
             const substituteTrainer = trainers.find(t => t.id === substituteTrainerId);
-            console.log('🔍 DEBUG: Nadomestni trener:', substituteTrainer);
+            console.log('🔍 DEBUG: Nadomestni trener najden:', substituteTrainer);
             
             if (substituteTrainer) {
-              // Doda prisotnost nadomestnega trenerja
-              console.log('🔍 DEBUG: Dodajam prisotnost nadomestnega trenerja:', substituteTrainerId);
+              // NAJPREJ doda prisotnost nadomestnega trenerja kot PRISOTEN
+              console.log('🔍 DEBUG: Dodajam prisotnost nadomestnega trenerja kot PRISOTEN:', substituteTrainerId);
               await updateTrainerAttendance(date, termId, substituteTrainerId, true, '');
               
-              // Doda opombo o odsotnosti originalnega trenerja z ID-jem nadomestnega trenerja
-              console.log('🔍 DEBUG: Dodajam opombo o odsotnosti originalnega trenerja z nadomestnim ID-jem');
-              await updateTrainerAttendance(date, termId, trainerId, false, substituteTrainerId);
+              // POTEM doda opombo o odsotnosti originalnega trenerja
+              console.log('🔍 DEBUG: Dodajam opombo o odsotnosti originalnega trenerja');
+              await updateTrainerAttendance(date, termId, trainerId, false, `Nadomešča: ${substituteTrainer.first_name} ${substituteTrainer.last_name} (${substituteTrainerId})`);
+            } else {
+              console.log('🔍 DEBUG: Nadomestni trener ni bil najden v bazi!');
             }
           } else {
             // Če je vneseno ime novega trenerja - shrani kot opombo
@@ -1325,6 +1332,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Shrani opombo o nadomestnem trenerju
             await updateTrainerAttendance(date, termId, trainerId, false, noteToSave);
           }
+          
+          console.log('🔍 DEBUG: Končno stanje trainerAttendance za datum', date, ':', trainerAttendance[date]);
           
           await refreshModalData(new Date(date), termId);
           hideTrainerNotesSection();
