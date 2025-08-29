@@ -1553,11 +1553,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     trainersForTerm.forEach(trainer => {
                         const trainerAtt = trainerAttendance[isoDate]?.[term.id]?.[trainer.id];
                         if (trainerAtt && trainerAtt.present === false && trainerAtt.note) {
+                            // Preveri, ali je opomba ID trenerja ali besedilo
+                            let substituteTrainerName = trainerAtt.note;
+                            
+                            // Če je opomba ID trenerja, poišči ime in priimek
+                            if (trainerAtt.note && !isNaN(trainerAtt.note) && trainerAtt.note !== '') {
+                                const substituteTrainer = trainers.find(t => t.id === trainerAtt.note);
+                                if (substituteTrainer) {
+                                    substituteTrainerName = `${substituteTrainer.first_name} ${substituteTrainer.last_name}`;
+                                }
+                            }
+                            
                             trainerNotes.push({
                                 date: isoDate,
                                 term: term,
                                 trainer: trainer,
-                                note: trainerAtt.note
+                                note: substituteTrainerName
                             });
                         }
                     });
