@@ -490,6 +490,10 @@ document.addEventListener('DOMContentLoaded', () => {
           btnPresent.addEventListener("click", async () => {
             const newStatus = isPresent === true ? false : true;
             await updateTrainerAttendance(ymd, termId, trainer.id, newStatus);
+            // Posodobi lokalne podatke
+            if (!trainerAttendance[ymd]) trainerAttendance[ymd] = {};
+            if (!trainerAttendance[ymd][termId]) trainerAttendance[ymd][termId] = {};
+            trainerAttendance[ymd][termId][trainer.id] = { present: newStatus, note: trainerAttendance[ymd]?.[termId]?.[trainer.id]?.note || '' };
             await refreshDayData(date);
             openEvent(date, termId);
           });
@@ -501,6 +505,10 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
               // Če je trener prisoten, ga označi kot odsotnega
               await updateTrainerAttendance(ymd, termId, trainer.id, false);
+              // Posodobi lokalne podatke
+              if (!trainerAttendance[ymd]) trainerAttendance[ymd] = {};
+              if (!trainerAttendance[ymd][termId]) trainerAttendance[ymd][termId] = {};
+              trainerAttendance[ymd][termId][trainer.id] = { present: false, note: trainerAttendance[ymd]?.[termId]?.[trainer.id]?.note || '' };
               await refreshDayData(date);
               openEvent(date, termId);
             }
@@ -641,6 +649,9 @@ document.addEventListener('DOMContentLoaded', () => {
               .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: newStatus }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
             if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
               // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
+              if (!attendance[ymd]) attendance[ymd] = {};
+              if (!attendance[ymd][termId]) attendance[ymd][termId] = {};
+              attendance[ymd][termId][s.id] = newStatus;
               await refreshDayData(date);
               openEvent(date, termId);
               renderMonth();
@@ -663,6 +674,9 @@ document.addEventListener('DOMContentLoaded', () => {
               .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: newStatus }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
           if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
               // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
+              if (!attendance[ymd]) attendance[ymd] = {};
+              if (!attendance[ymd][termId]) attendance[ymd][termId] = {};
+              attendance[ymd][termId][s.id] = newStatus;
               await refreshDayData(date);
               openEvent(date, termId);
               renderMonth();
