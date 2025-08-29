@@ -183,7 +183,25 @@ document.addEventListener('DOMContentLoaded', () => {
      
      // Funkcija za osvežitev podatkov v trenutnem modalu
      async function refreshModalData(date, termId) {
+       // Shrani trenutne lokalne podatke
+       const currentTrainerAttendance = { ...trainerAttendance };
+       const currentAttendance = { ...attendance };
+       
        await refreshDayData(date);
+       
+       // Obnovi lokalne podatke, ki so bili posodobljeni v trenutnem modalu
+       if (currentTrainerAttendance[iso(date)] && currentTrainerAttendance[iso(date)][termId]) {
+         if (!trainerAttendance[iso(date)]) trainerAttendance[iso(date)] = {};
+         if (!trainerAttendance[iso(date)][termId]) trainerAttendance[iso(date)][termId] = {};
+         Object.assign(trainerAttendance[iso(date)][termId], currentTrainerAttendance[iso(date)][termId]);
+       }
+       
+       if (currentAttendance[iso(date)] && currentAttendance[iso(date)][termId]) {
+         if (!attendance[iso(date)]) attendance[iso(date)] = {};
+         if (!attendance[iso(date)][termId]) attendance[iso(date)][termId] = {};
+         Object.assign(attendance[iso(date)][termId], currentAttendance[iso(date)][termId]);
+       }
+       
        // Ponovno prikaži trenutni modal z osveženimi podatki
        await openEvent(date, termId);
      }
@@ -480,17 +498,21 @@ document.addEventListener('DOMContentLoaded', () => {
           
           const btnPresent = document.createElement("button");
           btnPresent.textContent = "Prisoten";
-          btnPresent.className = "btn present";
+          btnPresent.className = "btn";
           if (isInactive(date, termId)) { btnPresent.disabled = true; }
           
           const btnAbsent = document.createElement("button");
           btnAbsent.textContent = "Odsoten";
-          btnAbsent.className = "btn absent";
+          btnAbsent.className = "btn";
           if (isInactive(date, termId)) { btnAbsent.disabled = true; }
           
                      // Pravilno barvno kodiranje za trenerje
            console.log('🔍 DEBUG: Barvno kodiranje trenerja:', trainer.id);
            console.log('🔍 DEBUG: Trenutno stanje isPresent:', isPresent);
+           
+           // Najprej počisti vse barvne razrede
+           btnPresent.classList.remove("ok", "warn", "neutral");
+           btnAbsent.classList.remove("ok", "warn", "neutral");
            
            if (isPresent === true) { 
              btnPresent.classList.add("ok"); 
@@ -586,6 +608,9 @@ document.addEventListener('DOMContentLoaded', () => {
            console.log('🔍 DEBUG: Barvno kodiranje plavalca:', s.id);
            console.log('🔍 DEBUG: Trenutno stanje status:', status);
            
+           // Najprej počisti vse barvne razrede
+           btnPresent.classList.remove("ok", "warn", "neutral");
+           
            if (status === true) { 
              btnPresent.classList.add("ok"); 
              console.log('🔍 DEBUG: Plavalec prisoten - Prisoten: ok (zelen)');
@@ -619,6 +644,9 @@ document.addEventListener('DOMContentLoaded', () => {
           if (isInactive(date, termId)) { btnAbsent.disabled = true; }
           
                      // Pravilno barvno kodiranje za plavalce
+           // Najprej počisti vse barvne razrede
+           btnAbsent.classList.remove("ok", "warn", "neutral");
+           
            if (status === false) { 
              btnAbsent.classList.add("warn"); 
              console.log('🔍 DEBUG: Plavalec odsoten - Odsoten: warn (rdeč)');
@@ -659,8 +687,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .eq('swimmer_id', s.id);
             if (error) { console.error('Napaka pri brisanju prisotnosti:', error); } else {
                 // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
-                await refreshDayData(date);
-                openEvent(date, termId);
+                await refreshModalData(date, termId);
                 renderMonth();
             }
           });
@@ -693,8 +720,11 @@ document.addEventListener('DOMContentLoaded', () => {
           const status = termAtt[s.id];
           const btnPresent = document.createElement("button");
           btnPresent.textContent = "Prisoten";
-          btnPresent.className = "btn present";
+          btnPresent.className = "btn";
           if (isInactive(date, termId)) { btnPresent.disabled = true; }
+          // Najprej počisti vse barvne razrede
+          btnPresent.classList.remove("ok", "warn", "neutral");
+          
           if (status === true) { 
             btnPresent.classList.add("ok"); 
           } else { 
@@ -720,16 +750,18 @@ document.addEventListener('DOMContentLoaded', () => {
               
               console.log('🔍 DEBUG: Lokalni podatki posodobljeni:', attendance[ymd][termId][s.id]);
               
-              await refreshDayData(date);
-              openEvent(date, termId);
+              await refreshModalData(date, termId);
               renderMonth();
             }
           });
           
           const btnAbsent = document.createElement("button");
           btnAbsent.textContent = "Odsoten";
-          btnAbsent.className = "btn absent";
+          btnAbsent.className = "btn";
           if (isInactive(date, termId)) { btnAbsent.disabled = true; }
+          // Najprej počisti vse barvne razrede
+          btnAbsent.classList.remove("ok", "warn", "neutral");
+          
           if (status === false) { 
             btnAbsent.classList.add("warn"); 
           } else { 
@@ -755,8 +787,7 @@ document.addEventListener('DOMContentLoaded', () => {
               
               console.log('🔍 DEBUG: Lokalni podatki posodobljeni:', attendance[ymd][termId][s.id]);
               
-              await refreshDayData(date);
-              openEvent(date, termId);
+              await refreshModalData(date, termId);
               renderMonth();
             }
           });
@@ -774,8 +805,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .eq('swimmer_id', s.id);
             if (error) { console.error('Napaka pri brisanju prisotnosti:', error); } else {
                 // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
-                await refreshDayData(date);
-                openEvent(date, termId);
+                await refreshModalData(date, termId);
                 renderMonth();
             }
           });
@@ -859,8 +889,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('Napaka pri aktivaciji. Preverite konzolo.');
                 return;
             }
-            await refreshDayData(date);
-            await openEvent(date, termId);
+            await refreshModalData(date, termId);
             renderMonth();
         }
       };
@@ -1206,8 +1235,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (note) {
           await updateTrainerAttendance(date, termId, trainerId, false, note);
-          await refreshDayData(new Date(date));
-          openEvent(new Date(date), termId);
+          await refreshModalData(new Date(date), termId);
           hideTrainerNotesSection();
         } else {
           alert('Prosim vnesite ime nadomestnega trenerja');
