@@ -157,21 +157,28 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // Funkcija za odpiranje modalnega okna za opombe trenerjev
-    function openTrainerNoteModal(date, termId, trainerId, trainerName) {
-      const modal = document.getElementById('trainerNoteModal');
-      const trainerNameSpan = document.getElementById('trainerNoteModalTrainerName');
-      const noteInput = document.getElementById('trainerNoteInput');
-      
-      trainerNameSpan.textContent = trainerName;
-      noteInput.value = '';
+    // Funkcija za prikaz prostora za opombe trenerjev
+    function showTrainerNotesSection(date, termId, trainerId, trainerName) {
+      const trainerNotesSection = document.getElementById('trainerNotesSection');
+      const trainerNotesInput = document.getElementById('trainerNotesInput');
       
       // Shrani podatke za kasnejšo uporabo
-      modal.setAttribute('data-date', date);
-      modal.setAttribute('data-term-id', termId);
-      modal.setAttribute('data-trainer-id', trainerId);
+      trainerNotesSection.setAttribute('data-date', date);
+      trainerNotesSection.setAttribute('data-term-id', termId);
+      trainerNotesSection.setAttribute('data-trainer-id', trainerId);
       
-      modal.style.display = 'flex';
+      // Prikaži sekcijo
+      trainerNotesSection.style.display = 'block';
+      trainerNotesInput.focus();
+    }
+    
+    // Funkcija za skrivanje prostora za opombe trenerjev
+    function hideTrainerNotesSection() {
+      const trainerNotesSection = document.getElementById('trainerNotesSection');
+      const trainerNotesInput = document.getElementById('trainerNotesInput');
+      
+      trainerNotesSection.style.display = 'none';
+      trainerNotesInput.value = '';
     }
 
     // POPRAVEK: Prenovljena in poenostavljena logika barvnega kodiranja
@@ -452,7 +459,8 @@ document.addEventListener('DOMContentLoaded', () => {
             btnPresent.classList.add("neutral"); 
           }
           btnPresent.addEventListener("click", async () => {
-            await updateTrainerAttendance(ymd, termId, trainer.id, true);
+            const newStatus = isPresent === true ? false : true;
+            await updateTrainerAttendance(ymd, termId, trainer.id, newStatus);
             await refreshDayData(date);
             openEvent(date, termId);
           });
@@ -468,8 +476,15 @@ document.addEventListener('DOMContentLoaded', () => {
             btnAbsent.classList.add("neutral"); 
           }
           btnAbsent.addEventListener("click", async () => {
-            // Odpri modalno okno za opombe
-            openTrainerNoteModal(ymd, termId, trainer.id, trainer.first_name + ' ' + trainer.last_name);
+            if (isPresent === false) {
+              // Če je trener že odsoten, prikaži prostor za opombe
+              showTrainerNotesSection(ymd, termId, trainer.id, trainer.first_name + ' ' + trainer.last_name);
+            } else {
+              // Če je trener prisoten, ga označi kot odsotnega
+              await updateTrainerAttendance(ymd, termId, trainer.id, false);
+              await refreshDayData(date);
+              openEvent(date, termId);
+            }
           });
           
           td2.appendChild(btnPresent);
@@ -1048,50 +1063,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderMonth();
     }
 
-    // ===== Event listenerji za modalno okno trenerjev =====
-    document.addEventListener('DOMContentLoaded', () => {
-      const closeTrainerNoteModalBtn = document.getElementById('closeTrainerNoteModalBtn');
-      const cancelTrainerNoteBtn = document.getElementById('cancelTrainerNoteBtn');
-      const confirmTrainerNoteBtn = document.getElementById('confirmTrainerNoteBtn');
-      const trainerNoteModal = document.getElementById('trainerNoteModal');
 
-      if (closeTrainerNoteModalBtn) {
-        closeTrainerNoteModalBtn.addEventListener('click', () => {
-          trainerNoteModal.style.display = 'none';
-        });
-      }
-
-      if (cancelTrainerNoteBtn) {
-        cancelTrainerNoteBtn.addEventListener('click', () => {
-          trainerNoteModal.style.display = 'none';
-        });
-      }
-
-      if (confirmTrainerNoteBtn) {
-        confirmTrainerNoteBtn.addEventListener('click', async () => {
-          const date = trainerNoteModal.getAttribute('data-date');
-          const termId = trainerNoteModal.getAttribute('data-term-id');
-          const trainerId = trainerNoteModal.getAttribute('data-trainer-id');
-          const note = document.getElementById('trainerNoteInput').value.trim();
-
-          if (note) {
-            await updateTrainerAttendance(date, termId, trainerId, false, note);
-            await refreshDayData(new Date(date));
-            openEvent(new Date(date), termId);
-            trainerNoteModal.style.display = 'none';
-          } else {
-            alert('Prosim vnesite ime nadomestnega trenerja');
-          }
-        });
-      }
-
-      // Zapri modal ob kliku zunaj
-      window.addEventListener('click', (e) => {
-        if (e.target === trainerNoteModal) {
-          trainerNoteModal.style.display = 'none';
-        }
-      });
-    });
 
     // ===== Event listenerji za prostor opomb trenerjev =====
     const saveTrainerNotesBtn = document.getElementById('saveTrainerNotesBtn');
