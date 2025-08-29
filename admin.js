@@ -342,6 +342,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        // Počisti select za termine
+        elTermSelect.innerHTML = '<option value="">Izberi termin</option>';
+
         // Posodobi select v modalnem oknu
         const modalSwimmerSelect = document.getElementById('modalSwimmerSelect');
         if (modalSwimmerSelect) {
@@ -367,6 +370,26 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Funkcija za posodabljanje select elementa za termine pri dodeljevanju plavalcem
+    function updateTermSelectForSwimmer(swimmerId) {
+        elTermSelect.innerHTML = '<option value="">Izberi termin</option>';
+        
+        if (!swimmerId) return;
+        
+        const swimmer = swimmers.find(s => s.id === swimmerId);
+        if (!swimmer) return;
+        
+        // Filtriraj termine, ki jih plavalec še nima
+        const availableTerms = TERMS.filter(term => !swimmer.terms.includes(term.id));
+        
+        availableTerms.forEach(t => {
+            const option = document.createElement('option');
+            option.value = t.id;
+            option.textContent = `${DAY_SHORT_NAME[t.day]} ${t.start_time}-${t.end_time}`;
+            elTermSelect.appendChild(option);
+        });
+    }
+
     function updateTrainerSelects() {
         console.log('updateTrainerSelects - trenerji:', trainers);
         
@@ -381,9 +404,25 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Posodobi select za termine pri trenerjih
+        // Počisti select za termine pri trenerjih
         elTrainerTermSelect.innerHTML = '<option value="">Izberi termin</option>';
-        TERMS.forEach(t => {
+    }
+
+    // Funkcija za posodabljanje select elementa za termine pri dodeljevanju trenerjem
+    function updateTermSelectForTrainer(trainerId) {
+        elTrainerTermSelect.innerHTML = '<option value="">Izberi termin</option>';
+        
+        if (!trainerId) return;
+        
+        if (!trainerId) return;
+        
+        const trainer = trainers.find(t => t.id === trainerId);
+        if (!trainer) return;
+        
+        // Filtriraj termine, ki jih trener še nima
+        const availableTerms = TERMS.filter(term => !trainer.terms.includes(term.id));
+        
+        availableTerms.forEach(t => {
             const option = document.createElement('option');
             option.value = t.id;
             option.textContent = `${DAY_SHORT_NAME[t.day]} ${t.start_time}-${t.end_time}`;
@@ -1321,6 +1360,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (elRefreshSwimmerSummaryBtn) {
         elRefreshSwimmerSummaryBtn.addEventListener('click', () => {
             refreshSwimmerSummary();
+        });
+    }
+
+    // ===== Event listener za izbiro plavalca pri dodeljevanju terminov =====
+    if (elSwimmerSelect) {
+        elSwimmerSelect.addEventListener('change', () => {
+            const selectedSwimmerId = elSwimmerSelect.value;
+            updateTermSelectForSwimmer(selectedSwimmerId);
+        });
+    }
+
+    // ===== Event listener za izbiro trenerja pri dodeljevanju terminov =====
+    if (elTrainerSelect) {
+        elTrainerSelect.addEventListener('change', () => {
+            const selectedTrainerId = elTrainerSelect.value;
+            updateTermSelectForTrainer(selectedTrainerId);
         });
     }
 
