@@ -1522,6 +1522,32 @@ document.addEventListener('DOMContentLoaded', () => {
                                 trainerStats[key].present++;
                             } else if (trainerAtt.present === false) {
                                 trainerStats[key].absent++;
+                                
+                                // Preveri, če je v opombi omenjen nadomestni trener (ID v oklepajih)
+                                if (trainerAtt.note) {
+                                    const substituteIdMatch = trainerAtt.note.match(/\(([a-f0-9-]{36})\)/);
+                                    if (substituteIdMatch) {
+                                        const substituteTrainerId = substituteIdMatch[1];
+                                        const substituteTrainer = trainers.find(t => t.id === substituteTrainerId && !t.is_deleted);
+                                        
+                                        if (substituteTrainer) {
+                                            const substituteKey = `${substituteTrainer.id}`;
+                                            console.log('🔍 DEBUG: Najden nadomestni trener v opombi:', substituteTrainer.first_name, substituteTrainer.last_name);
+                                            
+                                            if (!trainerStats[substituteKey]) {
+                                                trainerStats[substituteKey] = {
+                                                    trainer: substituteTrainer,
+                                                    total: 0,
+                                                    present: 0,
+                                                    absent: 0
+                                                };
+                                            }
+                                            
+                                            trainerStats[substituteKey].total++;
+                                            trainerStats[substituteKey].present++; // Šteje kot prisoten
+                                        }
+                                    }
+                                }
                             }
                         }
                     });

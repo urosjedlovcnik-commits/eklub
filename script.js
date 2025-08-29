@@ -1315,13 +1315,11 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('🔍 DEBUG: Nadomestni trener najden:', substituteTrainer);
             
             if (substituteTrainer) {
-              // NAJPREJ doda prisotnost nadomestnega trenerja kot PRISOTEN
-              console.log('🔍 DEBUG: Dodajam prisotnost nadomestnega trenerja kot PRISOTEN:', substituteTrainerId);
-              await updateTrainerAttendance(date, termId, substituteTrainerId, true, '');
-              
-              // POTEM doda opombo o odsotnosti originalnega trenerja
-              console.log('🔍 DEBUG: Dodajam opombo o odsotnosti originalnega trenerja');
+              // Shrani opombo o nadomestnem trenerju pri originalnem trenerju
+              console.log('🔍 DEBUG: Dodajam opombo o nadomestnem trenerju pri originalnem trenerju');
               await updateTrainerAttendance(date, termId, trainerId, false, `Nadomešča: ${substituteTrainer.first_name} ${substituteTrainer.last_name} (${substituteTrainerId})`);
+              
+              console.log('🔍 DEBUG: Nadomestni trener bo upoštevan v evidenci preko opombe');
             } else {
               console.log('🔍 DEBUG: Nadomestni trener ni bil najden v bazi!');
             }
