@@ -550,9 +550,14 @@ document.addEventListener('DOMContentLoaded', () => {
           const status = termAtt[s.id];
           const btnPresent = document.createElement("button");
           btnPresent.textContent = "Prisoten";
-          btnPresent.className = "btn";
+          btnPresent.className = "btn present";
           if (isInactive(date, termId)) { btnPresent.disabled = true; }
-          if (status === true) { btnPresent.classList.add("ok"); } else { btnPresent.classList.add("neutral"); }
+          if (status === true) { 
+            btnPresent.classList.add("ok"); 
+            btnPresent.classList.add("present");
+          } else { 
+            btnPresent.classList.add("neutral"); 
+          }
           btnPresent.addEventListener("click", async ()=>{
             const { error } = await supabase
               .from('attendance')
@@ -567,9 +572,14 @@ document.addEventListener('DOMContentLoaded', () => {
           
           const btnAbsent = document.createElement("button");
           btnAbsent.textContent = "Odsoten";
-          btnAbsent.className = "btn";
+          btnAbsent.className = "btn absent";
           if (isInactive(date, termId)) { btnAbsent.disabled = true; }
-          if (status === false) { btnAbsent.classList.add("warn"); } else { btnAbsent.classList.add("neutral"); }
+          if (status === false) { 
+            btnAbsent.classList.add("warn"); 
+            btnAbsent.classList.add("absent");
+          } else { 
+            btnAbsent.classList.add("neutral"); 
+          }
           btnAbsent.addEventListener("click", async ()=>{
             const { error } = await supabase
               .from('attendance')

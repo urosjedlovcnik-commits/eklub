@@ -199,26 +199,51 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   resize: vertical;
 }
 
-/* Stili za tabelo nadomeščanja */
-#substitutionTable {
+/* Stili za vse tabele prisotnosti */
+.attendance-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 12px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  margin-bottom: 12px;
 }
 
-#substitutionTable th {
+.attendance-table th {
   background: #64748b;
   color: #ffffff;
   font-weight: 600;
+  padding: 8px;
+  text-align: left;
 }
 
-#substitutionTable td {
+.attendance-table td {
   background: #f8fafc;
+  padding: 8px;
+  border-top: 1px solid #e2e8f0;
 }
 
-#substitutionTable tr:hover td {
+.attendance-table tr:hover td {
   background: #e2e8f0;
+}
+
+/* Stili za gumbe prisotnosti */
+.attendance-table .btn {
+  padding: 4px 8px;
+  font-size: 12px;
+  margin: 2px;
+}
+
+.attendance-table .btn.present {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: white;
+}
+
+.attendance-table .btn.absent {
+  background: var(--warn);
+  border-color: var(--warn);
+  color: white;
 }
 
 .notes-section label {

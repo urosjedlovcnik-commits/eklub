@@ -43,7 +43,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // Konfiguracija Supabase
     const supabaseUrl = 'https://tizjimlwfkoniixbetgr.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpemppbWx3ZmtvbmlpeGJldGdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzNDgyNzgsImV4cCI6MjA3MDkyNDI3OH0.Oess7TCevLH3mO0aWxfL5M0Kb_XHEKUBYRYRXKQkdgk';
+    
+    // Preveri, ali je Supabase na voljo
+    if (typeof window.supabase === 'undefined') {
+        console.error('Supabase ni na voljo!');
+        alert('Napaka: Supabase ni na voljo. Preverite internetno povezavo.');
+        return;
+    }
+    
     const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    
+    // Test Supabase povezave
+    console.log('Supabase client ustvarjen:', supabase);
+    console.log('Supabase URL:', supabaseUrl);
 
     // Stanja bodo naložena asinhrono
     let TERMS = [];
@@ -142,6 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadData() {
         try {
             // Naloži termine iz Supabase
+            console.log('Nalaganje terminov...');
             const { data: termsData, error: termsError } = await supabase
                 .from('terms')
                 .select('*');
@@ -150,9 +163,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Napaka pri nalaganju terminov:', termsError);
             } else {
                 TERMS = termsData || [];
+                console.log('Termini naloženi:', TERMS.length);
             }
 
             // Naloži plavalce iz Supabase
+            console.log('Nalaganje plavalcev...');
             const { data: swimmersData, error: swimmersError } = await supabase
                 .from('swimmers')
                 .select('*');
@@ -161,6 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Napaka pri nalaganju plavalcev:', swimmersError);
             } else {
                 swimmers = swimmersData || [];
+                console.log('Plavalci naloženi:', swimmers.length);
             }
 
             // Naloži prisotnost iz Supabase
@@ -204,7 +220,66 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+            // Naloži trenerje iz Supabase
+            console.log('Nalaganje trenerjev...');
+            const { data: trainersData, error: trainersError } = await supabase
+                .from('trainers')
+                .select('*');
+            
+            if (trainersError) {
+                console.error('Napaka pri nalaganju trenerjev:', trainersError);
+            } else {
+                trainers = trainersData || [];
+                console.log('Trenerji naloženi:', trainers.length);
+            }
+
+            // Naloži prisotnost trenerjev iz Supabase
+            const { data: trainerAttendanceData, error: trainerAttendanceError } = await supabase
+                .from('trainer_attendance')
+                .select('*');
+            
+            if (trainerAttendanceError) {
+                console.error('Napaka pri nalaganju prisotnosti trenerjev:', trainerAttendanceError);
+            } else {
+                // Pretvori podatke v format, ki ga pričakuje aplikacija
+                trainerAttendance = {};
+                if (trainerAttendanceData) {
+                    trainerAttendanceData.forEach(row => {
+                        if (!trainerAttendance[row.date]) trainerAttendance[row.date] = {};
+                        if (!trainerAttendance[row.date][row.term_id]) trainerAttendance[row.date][row.term_id] = {};
+                        trainerAttendance[row.date][row.term_id][row.trainer_id] = {
+                            present: row.present,
+                            note: row.note
+                        };
+                    });
+                }
+            }
+
+            // Naloži termine trenerjev iz Supabase
+            console.log('Nalaganje terminov trenerjev...');
+            const { data: trainerTermsData, error: trainerTermsError } = await supabase
+                .from('trainer_terms')
+                .select('*');
+            
+            if (trainerTermsError) {
+                console.error('Napaka pri nalaganju terminov trenerjev:', trainerTermsError);
+            } else {
+                // Dodaj termine k trenerjem
+                if (trainerTermsData) {
+                    console.log('Termini trenerjev naloženi:', trainerTermsData.length);
+                    trainerTermsData.forEach(row => {
+                        const trainer = trainers.find(t => t.id === row.trainer_id);
+                        if (trainer) {
+                            if (!trainer.terms) trainer.terms = [];
+                            trainer.terms.push(row.term_id);
+                        }
+                    });
+                    console.log('Trenerji z termini:', trainers.filter(t => t.terms && t.terms.length > 0).length);
+                }
+            }
+
             // Posodobi UI
+            console.log('Posodabljanje UI...');
             updateSwimmerSelects();
             updateTermSelects();
             updateTrainerSelects();
@@ -213,6 +288,16 @@ document.addEventListener('DOMContentLoaded', () => {
             updateTrainersList();
             updateExportSelects();
             updateTrainerSummaryControls();
+            console.log('UI posodobljen');
+            
+            // Debug informacije
+            console.log('Naloženi podatki:', {
+                terms: TERMS.length,
+                swimmers: swimmers.length,
+                trainers: trainers.length,
+                attendance: Object.keys(attendance).length,
+                trainerAttendance: Object.keys(trainerAttendance).length
+            });
 
         } catch (error) {
             console.error('Napaka pri nalaganju podatkov:', error);
@@ -258,6 +343,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateTrainerSelects() {
+        console.log('updateTrainerSelects - trenerji:', trainers);
+        
         // Posodobi select za trenerje
         elTrainerSelect.innerHTML = '<option value="">Izberi trenerja</option>';
         trainers.forEach(t => {
@@ -338,6 +425,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateTrainersList() {
         elTrainersList.innerHTML = '';
+        
+        console.log('updateTrainersList - trenerji:', trainers);
         
         if (trainers.length === 0) {
             elTrainersList.innerHTML = '<p class="muted">Ni trenerjev</p>';
@@ -1295,7 +1384,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const option = document.createElement('option');
             option.value = i;
             option.textContent = i;
-            elTrainerSummaryMonthSelect.appendChild(option);
+            elTrainerSummaryYearSelect.appendChild(option);
         }
         elTrainerSummaryYearSelect.value = currentYear;
     }
