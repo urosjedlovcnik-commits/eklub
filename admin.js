@@ -1476,7 +1476,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const startDate = new Date(year, month, 1);
         const endDate = new Date(year, month + 1, 0);
         
-        let summary = '<table><thead><tr><th>Trener</th><th>Termin</th><th>Skupaj</th><th>Prisoten</th><th>Odsoten</th><th>Nadomestni trener</th></tr></thead><tbody>';
+        let summary = '<table><thead><tr><th>Trener</th><th>Skupaj</th><th>Prisoten</th><th>Odsoten</th></tr></thead><tbody>';
         
         const trainerStats = {};
         
@@ -1493,15 +1493,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     );
                     
                     trainersForTerm.forEach(trainer => {
-                        const key = `${trainer.id}-${term.id}`;
+                        const key = `${trainer.id}`; // Samo trener ID, ne po terminih
                         if (!trainerStats[key]) {
                             trainerStats[key] = {
                                 trainer: trainer,
-                                term: term,
                                 total: 0,
                                 present: 0,
-                                absent: 0,
-                                substituteTrainers: new Set() // Uporabimo Set za unikatne nadomestne trenerje
+                                absent: 0
                             };
                         }
                         
@@ -1513,21 +1511,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 trainerStats[key].present++;
                             } else if (trainerAtt.present === false) {
                                 trainerStats[key].absent++;
-                                
-                                // Dodaj nadomestnega trenerja, če je opomba
-                                if (trainerAtt.note) {
-                                    let substituteTrainerName = trainerAtt.note;
-                                    
-                                    // Če je opomba ID trenerja, poišči ime in priimek
-                                    if (trainerAtt.note && !isNaN(trainerAtt.note) && trainerAtt.note !== '') {
-                                        const substituteTrainer = trainers.find(t => t.id === trainerAtt.note);
-                                        if (substituteTrainer) {
-                                            substituteTrainerName = `${substituteTrainer.first_name} ${substituteTrainer.last_name}`;
-                                        }
-                                    }
-                                    
-                                    trainerStats[key].substituteTrainers.add(substituteTrainerName);
-                                }
                             }
                         }
                     });
@@ -1537,17 +1520,12 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Prikaži rezultate
         Object.values(trainerStats).forEach(stat => {
-            // Pretvori Set nadomestnih trenerjev v berljiv seznam
-            const substituteTrainersList = Array.from(stat.substituteTrainers).join(', ') || '-';
-            
             summary += `
                 <tr>
                     <td>${stat.trainer.first_name} ${stat.trainer.last_name}</td>
-                    <td>${DAY_SHORT_NAME[stat.term.day]} ${stat.term.start_time}-${stat.term.end_time}</td>
                     <td>${stat.total}</td>
                     <td class="ok">${stat.present}</td>
                     <td class="warn">${stat.absent}</td>
-                    <td>${substituteTrainersList}</td>
                 </tr>
             `;
         });

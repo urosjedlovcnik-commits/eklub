@@ -1297,31 +1297,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const substituteTrainerName = document.getElementById('trainerNotesTextarea').value.trim();
 
         if (substituteTrainerId || substituteTrainerName) {
-          let noteToSave = '';
-          
           if (substituteTrainerId) {
-            // Če je izbran trener iz dropdown-a
-            noteToSave = substituteTrainerId;
-            
-            // Doda prisotnost nadomestnega trenerja
+            // Če je izbran trener iz dropdown-a - doda prisotnost nadomestnega trenerja
             const substituteTrainer = trainers.find(t => t.id === substituteTrainerId);
             if (substituteTrainer) {
-              // Preveri, ali je nadomestni trener že dodeljen temu terminu
-              if (substituteTrainer.terms && substituteTrainer.terms.includes(termId)) {
-                // Če je dodeljen, doda prisotnost
-                await updateTrainerAttendance(date, termId, substituteTrainerId, true, '');
-              } else {
-                // Če ni dodeljen, ga doda kot nadomestnega
-                await updateTrainerAttendance(date, termId, substituteTrainerId, true, 'nadomestni');
-              }
+              // Doda prisotnost nadomestnega trenerja (ne kot opombo)
+              await updateTrainerAttendance(date, termId, substituteTrainerId, true, '');
             }
+            // Ni potrebno shraniti opombe, ker se nadomestni trener šteje kot prisotnega
           } else {
-            // Če je vneseno ime novega trenerja
-            noteToSave = substituteTrainerName;
+            // Če je vneseno ime novega trenerja - shrani kot opombo
+            const noteToSave = substituteTrainerName;
+            // Shrani opombo o nadomestnem trenerju
+            await updateTrainerAttendance(date, termId, trainerId, false, noteToSave);
           }
-          
-          // Shrani opombo o nadomestnem trenerju
-          await updateTrainerAttendance(date, termId, trainerId, false, noteToSave);
           
           await refreshModalData(new Date(date), termId);
           hideTrainerNotesSection();
