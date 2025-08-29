@@ -454,7 +454,6 @@ document.addEventListener('DOMContentLoaded', () => {
           if (isInactive(date, termId)) { btnPresent.disabled = true; }
           if (isPresent === true) { 
             btnPresent.classList.add("ok"); 
-            btnPresent.classList.add("present");
           } else { 
             btnPresent.classList.add("neutral"); 
           }
@@ -471,7 +470,6 @@ document.addEventListener('DOMContentLoaded', () => {
           if (isInactive(date, termId)) { btnAbsent.disabled = true; }
           if (isPresent === false) { 
             btnAbsent.classList.add("warn"); 
-            btnAbsent.classList.add("absent");
           } else { 
             btnAbsent.classList.add("neutral"); 
           }
