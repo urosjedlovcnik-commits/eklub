@@ -207,6 +207,7 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
+  table-layout: fixed;
 }
 
 .attendance-table th {
@@ -215,6 +216,14 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   font-weight: 600;
   padding: 8px;
   text-align: left;
+}
+
+.attendance-table th:first-child {
+  width: 40%;
+}
+
+.attendance-table th:last-child {
+  width: 60%;
 }
 
 .attendance-table td {
