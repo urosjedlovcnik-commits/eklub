@@ -468,11 +468,24 @@ document.addEventListener('DOMContentLoaded', () => {
           btnPresent.textContent = "Prisoten";
           btnPresent.className = "btn present";
           if (isInactive(date, termId)) { btnPresent.disabled = true; }
+          
+          const btnAbsent = document.createElement("button");
+          btnAbsent.textContent = "Odsoten";
+          btnAbsent.className = "btn absent";
+          if (isInactive(date, termId)) { btnAbsent.disabled = true; }
+          
+          // Pravilno barvno kodiranje za trenerje
           if (isPresent === true) { 
             btnPresent.classList.add("ok"); 
-          } else { 
+            btnAbsent.classList.add("neutral");
+          } else if (isPresent === false) { 
             btnPresent.classList.add("neutral"); 
+            btnAbsent.classList.add("warn");
+          } else {
+            btnPresent.classList.add("neutral"); 
+            btnAbsent.classList.add("neutral");
           }
+          
           btnPresent.addEventListener("click", async () => {
             const newStatus = isPresent === true ? false : true;
             await updateTrainerAttendance(ymd, termId, trainer.id, newStatus);
@@ -480,15 +493,6 @@ document.addEventListener('DOMContentLoaded', () => {
             openEvent(date, termId);
           });
           
-          const btnAbsent = document.createElement("button");
-          btnAbsent.textContent = "Odsoten";
-          btnAbsent.className = "btn absent";
-          if (isInactive(date, termId)) { btnAbsent.disabled = true; }
-          if (isPresent === false) { 
-            btnAbsent.classList.add("warn"); 
-          } else { 
-            btnAbsent.classList.add("neutral"); 
-          }
           btnAbsent.addEventListener("click", async () => {
             if (isPresent === false) {
               // Če je trener že odsoten, prikaži prostor za opombe
