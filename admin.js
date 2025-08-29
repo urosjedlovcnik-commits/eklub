@@ -84,6 +84,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const elExportYearSelect = document.getElementById("exportYearSelect");
     const elExportCsvBtn = document.getElementById("exportCsvBtn");
 
+    // UI elementi za povzetek udeležbe plavalcev
+    const elSwimmerSummaryMonthSelect = document.getElementById("swimmerSummaryMonthSelect");
+    const elSwimmerSummaryYearSelect = document.getElementById("swimmerSummaryYearSelect");
+    const elRefreshSwimmerSummaryBtn = document.getElementById("refreshSwimmerSummaryBtn");
+    const elSwimmerSummaryBox = document.getElementById("swimmerSummaryBox");
+
     const elNewTermDay = document.getElementById("newTermDay");
     const elNewTermStart = document.getElementById("newTermStart");
     const elNewTermEnd = document.getElementById("newTermEnd");
@@ -132,6 +138,20 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!isoStr) return "";
       const [y, m, d] = isoStr.split('-').map(Number);
       return `${String(d).padStart(2, '0')} / ${String(m).padStart(2, '0')} / ${y}`;
+    }
+    
+    function getTermsForDate(date) {
+        const w = date.getDay() === 0 ? 7 : date.getDay();
+        const isoDate = iso(date);
+        return TERMS.filter(t => isoDate >= t.date_from && isoDate <= t.date_to && t.day == w);
+    }
+    
+    function getTermStatus(date, termId) {
+        const ymd = iso(date);
+        const status = termStatus[ymd]?.[termId]?.status || "active";
+        const note = termStatus[ymd]?.[termId]?.note || "";
+        const notes = termStatus[ymd]?.[termId]?.notes || "";
+        return { status, note, notes };
     }
 
     // ===== Navigacija med sekcijami =====
@@ -289,6 +309,10 @@ document.addEventListener('DOMContentLoaded', () => {
             updateExportSelects();
             updateTrainerSummaryControls();
             calculateTrainerNotesData(); // Prikaži opombe trenerjev
+            
+            // Osveži povzetek udeležbe plavalcev
+            await refreshSwimmerSummary();
+            
             console.log('UI posodobljen');
             
             // Debug informacije
@@ -1293,6 +1317,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ===== Event listener za osvežitev povzetka udeležbe plavalcev =====
+    if (elRefreshSwimmerSummaryBtn) {
+        elRefreshSwimmerSummaryBtn.addEventListener('click', () => {
+            refreshSwimmerSummary();
+        });
+    }
+
     // ===== Funkcije za povzetek trenerjev =====
     function calculateTrainerSummaryData() {
         const month = parseInt(elTrainerSummaryMonthSelect.value);
@@ -1491,6 +1522,149 @@ document.addEventListener('DOMContentLoaded', () => {
                 elTrainerNotesYearSelect.appendChild(option);
             }
             elTrainerNotesYearSelect.value = currentYear;
+        }
+
+        // Kontrole za povzetek udeležbe plavalcev
+        if (elSwimmerSummaryMonthSelect) {
+            elSwimmerSummaryMonthSelect.innerHTML = '';
+            for (let i = 1; i <= 12; i++) {
+                const option = document.createElement('option');
+                option.value = i - 1;
+                option.textContent = new Date(2024, i - 1, 1).toLocaleDateString('sl-SI', { month: 'long' });
+                elSwimmerSummaryMonthSelect.appendChild(option);
+            }
+            elSwimmerSummaryMonthSelect.value = new Date().getMonth();
+        }
+
+        if (elSwimmerSummaryYearSelect) {
+            elSwimmerSummaryYearSelect.innerHTML = '';
+            for (let i = currentYear - 2; i <= currentYear + 1; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = i;
+                elSwimmerSummaryYearSelect.appendChild(option);
+            }
+            elSwimmerSummaryYearSelect.value = currentYear;
+        }
+    }
+
+    // ===== FUNKCIJE ZA POVZETEK UDELEŽBE PLAVALCEV =====
+    
+    // Funkcija za izračun povzetka udeležbe plavalcev
+    function calculateSwimmerSummaryData(year, month) {
+        const res = {};
+        const monthStart = new Date(year, month, 1);
+        const monthEnd = new Date(year, month + 1, 0);
+        const today = new Date();
+        today.setHours(0,0,0,0);
+
+        // Inicializacija podatkov za vse plavalce (aktivne in izbrisane)
+        swimmers.forEach(s => {
+            res[s.id] = { first: s.first_name, last: s.last_name, att: 0, pos: 0 };
+        });
+
+        // Zanka za izračun prisotnosti (att)
+        const allAttendance = Object.entries(attendance);
+        for (const [date, termData] of allAttendance) {
+            const d = new Date(date);
+            d.setHours(0,0,0,0);
+            if (d >= monthStart && d <= monthEnd) {
+                for (const termId in termData) {
+                    for (const swimmerId in termData[termId]) {
+                        // Preverimo, ali je bil ta termin aktiven, ko je bila prisotnost vnesena
+                        if (termData[termId][swimmerId] === true && res[swimmerId]) {
+                            res[swimmerId].att += 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Zanka za izračun možnih obiskov (pos)
+        const currentDate = new Date(monthStart);
+        while (currentDate <= monthEnd) {
+            const ymd = iso(currentDate);
+            const todaysTerms = getTermsForDate(currentDate);
+
+            todaysTerms.forEach(term => {
+                const termIsActive = getTermStatus(currentDate, term.id).status === "active";
+                
+                if (termIsActive) {
+                    swimmers.forEach(s => {
+                        if (res[s.id] && s.terms.includes(term.id)) {
+                            
+                            if (s.is_deleted) {
+                                // Plavalec je izbrisan, štejemo samo, če je datum v preteklosti
+                                if (currentDate <= today) {
+                                    res[s.id].pos += 1;
+                                }
+                            } else {
+                                // Plavalec je aktiven, štejemo vse možne obiske
+                                res[s.id].pos += 1;
+                            }
+                        }
+                    });
+                }
+            });
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+        return res;
+    }
+
+    // Funkcija za prikaz povzetka udeležbe plavalcev
+    function renderSwimmerSummary(summaryData) {
+        let html = `<table><thead><tr><th>Plavalec</th><th>Obiskani</th><th>Možni</th><th>Delež (%)</th></tr></thead><tbody>`;
+        // Filtriramo plavalce, ki nimajo nobenega možnega obiska
+        const rows = Object.values(summaryData).filter(r => r.pos > 0).sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first));
+        if(rows.length===0) html += `<tr><td colspan="4" class="muted">Ni plavalcev.</td></tr>`;
+        rows.forEach(r=>{
+            const pct = r.pos > 0 ? (r.att / r.pos * 100).toFixed(1) : "0.0";
+            html += `<tr><td>${r.first} ${r.last}</td><td>${r.att}</td><td>${r.pos}</td><td>${pct}</td></tr>`;
+        });
+        html += `</tbody></table>`;
+        elSwimmerSummaryBox.innerHTML = html;
+    }
+
+    // Funkcija za osvežitev povzetka udeležbe plavalcev
+    async function refreshSwimmerSummary() {
+        const month = parseInt(elSwimmerSummaryMonthSelect.value);
+        const year = parseInt(elSwimmerSummaryYearSelect.value);
+        
+        // Osveži podatke o prisotnosti za izbrani mesec
+        await loadAttendanceForMonth(year, month);
+        
+        // Izračunaj in prikaži povzetek
+        const summaryData = calculateSwimmerSummaryData(year, month);
+        renderSwimmerSummary(summaryData);
+    }
+
+    // Funkcija za nalaganje podatkov o prisotnosti za določen mesec
+    async function loadAttendanceForMonth(year, month) {
+        const monthStart = new Date(year, month, 1);
+        const monthEnd = new Date(year, month + 1, 0);
+        
+        try {
+            const { data, error } = await supabase
+                .from('attendance')
+                .select('*')
+                .gte('date', iso(monthStart))
+                .lte('date', iso(monthEnd));
+            
+            if (error) {
+                console.error('Napaka pri nalaganju prisotnosti za mesec:', error);
+                return;
+            }
+            
+            // Osveži lokalne podatke o prisotnosti za ta mesec
+            data.forEach(row => {
+                if (!attendance[row.date]) attendance[row.date] = {};
+                if (!attendance[row.date][row.term_id]) attendance[row.date][row.term_id] = {};
+                attendance[row.date][row.term_id][row.swimmer_id] = row.status;
+            });
+            
+            console.log('Podatki o prisotnosti za mesec osveženi:', data);
+        } catch (error) {
+            console.error('Napaka pri nalaganju prisotnosti za mesec:', error);
         }
     }
 
