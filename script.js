@@ -481,17 +481,23 @@ document.addEventListener('DOMContentLoaded', () => {
           btnAbsent.className = "btn absent";
           if (isInactive(date, termId)) { btnAbsent.disabled = true; }
           
-          // Pravilno barvno kodiranje za trenerje
-          if (isPresent === true) { 
-            btnPresent.classList.add("ok"); 
-            btnAbsent.classList.add("neutral");
-          } else if (isPresent === false) { 
-            btnPresent.classList.add("neutral"); 
-            btnAbsent.classList.add("warn");
-          } else {
-            btnPresent.classList.add("neutral"); 
-            btnAbsent.classList.add("neutral");
-          }
+                     // Pravilno barvno kodiranje za trenerje
+           console.log('🔍 DEBUG: Barvno kodiranje trenerja:', trainer.id);
+           console.log('🔍 DEBUG: Trenutno stanje isPresent:', isPresent);
+           
+           if (isPresent === true) { 
+             btnPresent.classList.add("ok"); 
+             btnAbsent.classList.add("neutral");
+             console.log('🔍 DEBUG: Trener prisoten - Prisoten: ok (zelen), Odsoten: neutral (siv)');
+           } else if (isPresent === false) { 
+             btnPresent.classList.add("neutral"); 
+             btnAbsent.classList.add("warn");
+             console.log('🔍 DEBUG: Trener odsoten - Prisoten: neutral (siv), Odsoten: warn (rdeč)');
+           } else {
+             btnPresent.classList.add("neutral"); 
+             btnAbsent.classList.add("neutral");
+             console.log('🔍 DEBUG: Trener brez statusa - Oba gumba: neutral (siva)');
+           }
           
           btnPresent.addEventListener("click", async () => {
             console.log('🔍 DEBUG: Trener gumb Prisoten kliknjen');
@@ -569,12 +575,17 @@ document.addEventListener('DOMContentLoaded', () => {
           btnPresent.className = "btn";
           if (isInactive(date, termId)) { btnPresent.disabled = true; }
           
-          // Pravilno barvno kodiranje za plavalce
-          if (status === true) { 
-            btnPresent.classList.add("ok"); 
-          } else { 
-            btnPresent.classList.add("neutral"); 
-          }
+                     // Pravilno barvno kodiranje za plavalce
+           console.log('🔍 DEBUG: Barvno kodiranje plavalca:', s.id);
+           console.log('🔍 DEBUG: Trenutno stanje status:', status);
+           
+           if (status === true) { 
+             btnPresent.classList.add("ok"); 
+             console.log('🔍 DEBUG: Plavalec prisoten - Prisoten: ok (zelen)');
+           } else { 
+             btnPresent.classList.add("neutral"); 
+             console.log('🔍 DEBUG: Plavalec brez statusa - Prisoten: neutral (siv)');
+           }
           
           btnPresent.addEventListener("click", async ()=>{
             console.log('🔍 DEBUG: Plavalec gumb Prisoten kliknjen');
@@ -601,12 +612,14 @@ document.addEventListener('DOMContentLoaded', () => {
           btnAbsent.className = "btn";
           if (isInactive(date, termId)) { btnAbsent.disabled = true; }
           
-          // Pravilno barvno kodiranje za plavalce
-          if (status === false) { 
-            btnAbsent.classList.add("warn"); 
-          } else { 
-            btnAbsent.classList.add("neutral"); 
-          }
+                     // Pravilno barvno kodiranje za plavalce
+           if (status === false) { 
+             btnAbsent.classList.add("warn"); 
+             console.log('🔍 DEBUG: Plavalec odsoten - Odsoten: warn (rdeč)');
+           } else { 
+             btnAbsent.classList.add("neutral"); 
+             console.log('🔍 DEBUG: Plavalec brez statusa - Odsoten: neutral (siv)');
+           }
           
           btnAbsent.addEventListener("click", async ()=>{
             console.log('🔍 DEBUG: Plavalec gumb Odsoten kliknjen');
