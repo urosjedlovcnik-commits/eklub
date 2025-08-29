@@ -115,6 +115,7 @@
     <div class="admin-nav">
       <button class="btn active" data-section="swimmers">Plavalci</button>
       <button class="btn" data-section="terms">Termini</button>
+      <button class="btn" data-section="trainers">Trenerji</button>
       <button class="btn" data-section="csv">CSV uvoz/izvoz</button>
     </div>
   </div>
@@ -200,7 +201,52 @@
     </div>
   </div>
 
+  <!-- Sekcija za upravljanje trenerjev -->
+  <div class="admin-section" id="trainers-section">
+    <div class="grid">
+      <div class="card">
+        <h3>Dodaj novega trenerja</h3>
+        <div class="inner">
+          <div class="flex-col">
+            <div class="row" style="width:100%;align-items:stretch;gap:4px">
+              <input type="text" id="newTrainerFirst" placeholder="Ime">
+              <input type="text" id="newTrainerLast" placeholder="Priimek">
+              <input type="email" id="newTrainerEmail" placeholder="Email">
+              <button class="btn ok" id="addTrainerBtn" style="width:auto">Dodaj</button>
+            </div>
+            <div class="row" style="width:100%;align-items:stretch;gap:4px">
+              <select id="trainerSelect"></select>
+              <select id="trainerTermSelect"></select>
+              <button class="btn pri" id="assignTrainerTermBtn" style="width:auto">Dodeli termin</button>
+            </div>
+            <div class="row" style="width:100%;align-items:stretch;gap:4px">
+              <button id="deleteTrainerBtn" class="btn warn">Zbriši trenerja</button>
+            </div>
+          </div>
+          <div id="trainerInfo" class="muted"></div>
+        </div>
+      </div>
 
+      <div class="card">
+        <h3>Seznam trenerjev</h3>
+        <div class="inner">
+          <div id="trainersList"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Povzetek prisotnosti trenerjev (za prikazani mesec)</h3>
+        <div class="inner">
+          <div class="summary-controls">
+            <select id="trainerSummaryMonthSelect"></select>
+            <select id="trainerSummaryYearSelect"></select>
+            <button class="btn" id="refreshTrainerSummaryBtn">Osveži</button>
+          </div>
+          <div id="trainerSummaryBox">Nalaganje podatkov...</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Sekcija za CSV uvoz/izvoz -->
   <div class="admin-section" id="csv-section">

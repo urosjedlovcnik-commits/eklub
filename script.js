@@ -12,8 +12,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Stanja bodo naložena asinhrono
     let TERMS = [];
     let swimmers = [];
+    let trainers = [];
     let attendance = {};
     let termStatus = {};
+    let trainerAttendance = {};
 
     const DAYNAME = ["","Ponedeljek","Torek","Sreda","Četrtek","Petek","Sobota","Nedelja"];
     const DAY_SHORT_NAME = ["", "Pon.", "Tor.", "Sre.", "Čet.", "Pet.", "Sob.", "Ned."];
@@ -39,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const elModalTitle = document.getElementById("modalTitle");
     const elModalMeta = document.getElementById("modalMeta");
     const elAttendanceTable = document.getElementById("attendanceTable").querySelector("tbody");
+    const elTrainerAttendanceTable = document.getElementById("trainerAttendanceTable").querySelector("tbody");
     const elSubstitutionTable = document.getElementById("substitutionTable").querySelector("tbody");
     const elToggleEventBtn = document.getElementById("toggleEventBtn");
     const elCloseModalBtn = document.getElementById("closeModalBtn");
@@ -96,6 +99,62 @@ document.addEventListener('DOMContentLoaded', () => {
       return TERMS.filter(t => isoDate >= t.date_from && isoDate <= t.date_to && t.day == w);
     }
     function termById(id){ return TERMS.find(t=>t.id===id); }
+
+    async function getTrainersForTerm(termId) {
+      if (useLocalStorage) {
+        // Za localStorage bi potrebovali ločeno tabelo trainer_terms
+        return [];
+      } else {
+        try {
+          const { data, error } = await supabase
+            .from('trainer_terms')
+            .select('trainer_id')
+            .eq('term_id', termId);
+          
+          if (error) {
+            console.error('Napaka pri nalaganju trenerjev za termin:', error);
+            return [];
+          }
+          
+          const trainerIds = data.map(row => row.trainer_id);
+          return trainers.filter(trainer => trainerIds.includes(trainer.id));
+        } catch (error) {
+          console.error('Napaka pri nalaganju trenerjev za termin:', error);
+          return [];
+        }
+      }
+    }
+
+    async function updateTrainerAttendance(date, termId, trainerId, present) {
+      if (useLocalStorage) {
+        // Za localStorage bi potrebovali ločeno tabelo trainer_attendance
+        return;
+      } else {
+        try {
+          const { error } = await supabase
+            .from('trainer_attendance')
+            .upsert({ 
+              date, 
+              term_id: termId, 
+              trainer_id: trainerId, 
+              present 
+            }, { 
+              onConflict: ['date', 'term_id', 'trainer_id'] 
+            });
+          
+          if (error) {
+            console.error('Napaka pri posodabljanju prisotnosti trenerja:', error);
+          } else {
+            // Posodobi lokalno stanje
+            if (!trainerAttendance[date]) trainerAttendance[date] = {};
+            if (!trainerAttendance[date][termId]) trainerAttendance[date][termId] = {};
+            trainerAttendance[date][termId][trainerId] = { present, note: '' };
+          }
+        } catch (error) {
+          console.error('Napaka pri posodabljanju prisotnosti trenerja:', error);
+        }
+      }
+    }
 
     // POPRAVEK: Prenovljena in poenostavljena logika barvnega kodiranja
     function getAttendanceStatus(date, termId) {
@@ -339,6 +398,61 @@ document.addEventListener('DOMContentLoaded', () => {
       // Redno dodeljeni plavalci z vneseno prisotnostjo ali brez
       const regularSwimmers = assignedSwimmers.filter(s => termAtt[s.id] !== undefined || !s.is_deleted);
       
+      // Prikaži prisotnost trenerjev
+      elTrainerAttendanceTable.innerHTML = "";
+      const trainersForTerm = await getTrainersForTerm(termId);
+      if (trainersForTerm.length === 0) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td"); 
+        td.colSpan = 2; 
+        td.className = "muted"; 
+        td.textContent = "Ni dodeljenih trenerjev za ta termin.";
+        tr.appendChild(td); 
+        elTrainerAttendanceTable.appendChild(tr);
+      } else {
+        trainersForTerm.forEach(trainer => {
+          const tr = document.createElement("tr");
+          const td1 = document.createElement("td"); 
+          td1.textContent = `${trainer.first_name} ${trainer.last_name}`;
+          
+          const td2 = document.createElement("td");
+          td2.style.display = "flex"; 
+          td2.style.gap = "4px";
+          td2.style.alignItems = "center";
+
+          const trainerStatus = trainerAttendance[ymd]?.[termId]?.[trainer.id];
+          const isPresent = trainerStatus?.present;
+          
+          const btnPresent = document.createElement("button");
+          btnPresent.textContent = "Prisoten";
+          btnPresent.className = "btn";
+          if (isInactive(date, termId)) { btnPresent.disabled = true; }
+          if (isPresent === true) { btnPresent.classList.add("ok"); } else { btnPresent.classList.add("neutral"); }
+          btnPresent.addEventListener("click", async () => {
+            await updateTrainerAttendance(ymd, termId, trainer.id, true);
+            await refreshDayData(date);
+            openEvent(date, termId);
+          });
+          
+          const btnAbsent = document.createElement("button");
+          btnAbsent.textContent = "Odsoten";
+          btnAbsent.className = "btn";
+          if (isInactive(date, termId)) { btnAbsent.disabled = true; }
+          if (isPresent === false) { btnAbsent.classList.add("warn"); } else { btnPresent.classList.add("neutral"); }
+          btnAbsent.addEventListener("click", async () => {
+            await updateTrainerAttendance(ymd, termId, trainer.id, false);
+            await refreshDayData(date);
+            openEvent(date, termId);
+          });
+          
+          td2.appendChild(btnPresent);
+          td2.appendChild(btnAbsent);
+          tr.appendChild(td1);
+          tr.appendChild(td2);
+          elTrainerAttendanceTable.appendChild(tr);
+        });
+      }
+
       // Prikaži redno dodeljene plavalce
       elAttendanceTable.innerHTML = "";
       if(regularSwimmers.length===0){
@@ -807,7 +921,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    async function loadTermStatus() {
+        async function loadTermStatus() {
       if (useLocalStorage) {
         // Uporaba localStorage
         const termStatusData = localStorage.getItem('termStatus');
@@ -830,7 +944,7 @@ document.addEventListener('DOMContentLoaded', () => {
               const date = row.date;
               if (!acc[date]) acc[date] = {};
               acc[date][row.term_id] = { status: row.status, note: row.note, notes: row.notes };
-              return acc;
+            return acc;
           }, {});
           }
         } catch (error) {
@@ -839,8 +953,61 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
+    async function loadTrainers() {
+      if (useLocalStorage) {
+        // Uporaba localStorage
+        const trainersData = localStorage.getItem('trainers');
+        if (trainersData) {
+          trainers = JSON.parse(trainersData);
+        }
+      } else {
+        // Uporaba Supabase
+        try {
+          const { data, error } = await supabase.from('trainers').select('*');
+          if (error) console.error('Napaka pri nalaganju trenerjev:', error);
+          else trainers = data;
+        } catch (error) {
+          console.error('Napaka pri nalaganju trenerjev:', error);
+        }
+      }
+    }
+
+    async function loadTrainerAttendance() {
+      if (useLocalStorage) {
+        // Uporaba localStorage
+        const trainerAttendanceData = localStorage.getItem('trainerAttendance');
+        if (trainerAttendanceData) {
+          const data = JSON.parse(trainerAttendanceData);
+          trainerAttendance = data.reduce((acc, row) => {
+            const date = row.date;
+            if (!acc[date]) acc[date] = {};
+            if (!acc[date][row.term_id]) acc[date][row.term_id] = {};
+            acc[date][row.term_id][row.trainer_id] = { present: row.present, note: row.note };
+            return acc;
+          }, {});
+        }
+      } else {
+        // Uporaba Supabase
+        try {
+          const { data, error } = await supabase.from('trainer_attendance').select('*');
+          if (error) console.error('Napaka pri nalaganju prisotnosti trenerjev:', error);
+          else {
+            trainerAttendance = data.reduce((acc, row) => {
+              const date = row.date;
+              if (!acc[date]) acc[date] = {};
+              if (!acc[date][row.term_id]) acc[date][row.term_id] = {};
+              acc[date][row.term_id][row.trainer_id] = { present: row.present, note: row.note };
+              return acc;
+            }, {});
+          }
+        } catch (error) {
+          console.error('Napaka pri nalaganju prisotnosti trenerjev:', error);
+        }
+      }
+    }
+
     async function loadAllData() {
-      await Promise.all([loadTerms(), loadSwimmers(), loadAttendance(), loadTermStatus()]);
+      await Promise.all([loadTerms(), loadSwimmers(), loadTrainers(), loadAttendance(), loadTrainerAttendance(), loadTermStatus()]);
       renderMonth();
     }
 

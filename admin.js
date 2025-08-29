@@ -48,8 +48,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Stanja bodo naložena asinhrono
     let TERMS = [];
     let swimmers = [];
+    let trainers = [];
     let attendance = {};
     let termStatus = {};
+    let trainerAttendance = {};
 
     const DAYNAME = ["","Ponedeljek","Torek","Sreda","Četrtek","Petek","Sobota","Nedelja"];
     const DAY_SHORT_NAME = ["", "Pon.", "Tor.", "Sre.", "Čet.", "Pet.", "Sob.", "Ned."];
@@ -77,6 +79,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const elNewTermDateTo = document.getElementById("newTermDateTo");
     const elAddTermBtn = document.getElementById("addTermBtn");
     const elTermList = document.getElementById("termList");
+
+    // UI elementi za trenerje
+    const elNewTrainerFirst = document.getElementById("newTrainerFirst");
+    const elNewTrainerLast = document.getElementById("newTrainerLast");
+    const elNewTrainerEmail = document.getElementById("newTrainerEmail");
+    const elAddTrainerBtn = document.getElementById("addTrainerBtn");
+    const elTrainerSelect = document.getElementById("trainerSelect");
+    const elTrainerTermSelect = document.getElementById("trainerTermSelect");
+    const elAssignTrainerTermBtn = document.getElementById("assignTrainerTermBtn");
+    const elDeleteTrainerBtn = document.getElementById("deleteTrainerBtn");
+    const elTrainerInfo = document.getElementById("trainerInfo");
+    const elTrainersList = document.getElementById("trainersList");
+    const elTrainerSummaryMonthSelect = document.getElementById("trainerSummaryMonthSelect");
+    const elTrainerSummaryYearSelect = document.getElementById("trainerSummaryYearSelect");
+    const elRefreshTrainerSummaryBtn = document.getElementById("refreshTrainerSummaryBtn");
+    const elTrainerSummaryBox = document.getElementById("trainerSummaryBox");
     const elEditTermModal = document.getElementById("editTermModal");
     const elEditTermDateFrom = document.getElementById("editTermDateFrom");
     const elEditTermDateTo = document.getElementById("editTermDateTo");
@@ -189,9 +207,12 @@ document.addEventListener('DOMContentLoaded', () => {
             // Posodobi UI
             updateSwimmerSelects();
             updateTermSelects();
+            updateTrainerSelects();
             updateSwimmersList();
             updateTermList();
+            updateTrainersList();
             updateExportSelects();
+            updateTrainerSummaryControls();
 
         } catch (error) {
             console.error('Napaka pri nalaganju podatkov:', error);
@@ -233,6 +254,28 @@ document.addEventListener('DOMContentLoaded', () => {
             option.value = t.id;
             option.textContent = `${DAY_SHORT_NAME[t.day]} ${t.start_time}-${t.end_time}`;
             elTermSelect.appendChild(option);
+        });
+    }
+
+    function updateTrainerSelects() {
+        // Posodobi select za trenerje
+        elTrainerSelect.innerHTML = '<option value="">Izberi trenerja</option>';
+        trainers.forEach(t => {
+            if (!t.is_deleted) {
+                const option = document.createElement('option');
+                option.value = t.id;
+                option.textContent = `${t.first_name} ${t.last_name}`;
+                elTrainerSelect.appendChild(option);
+            }
+        });
+
+        // Posodobi select za termine pri trenerjih
+        elTrainerTermSelect.innerHTML = '<option value="">Izberi termin</option>';
+        TERMS.forEach(t => {
+            const option = document.createElement('option');
+            option.value = t.id;
+            option.textContent = `${DAY_SHORT_NAME[t.day]} ${t.start_time}-${t.end_time}`;
+            elTrainerTermSelect.appendChild(option);
         });
     }
 
@@ -293,6 +336,65 @@ document.addEventListener('DOMContentLoaded', () => {
         elSwimmersList.appendChild(table);
     }
 
+    function updateTrainersList() {
+        elTrainersList.innerHTML = '';
+        
+        if (trainers.length === 0) {
+            elTrainersList.innerHTML = '<p class="muted">Ni trenerjev</p>';
+            return;
+        }
+
+        const table = document.createElement('table');
+        table.innerHTML = `
+            <thead>
+                <tr>
+                    <th>Ime</th>
+                    <th>Priimek</th>
+                    <th>Email</th>
+                    <th>Termini</th>
+                    <th>Akcije</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        `;
+
+        const tbody = table.querySelector('tbody');
+        trainers.forEach(trainer => {
+            if (!trainer.is_deleted) {
+                const row = document.createElement('tr');
+                
+                // Ustvari termine kot "chips" z možnostjo brisanja
+                const termsChips = trainer.terms ? trainer.terms.map(termId => {
+                    const term = TERMS.find(t => t.id === termId);
+                    if (term) {
+                        return `
+                            <span class="chip" data-term-id="${termId}" data-trainer-id="${trainer.id}">
+                                ${DAY_SHORT_NAME[term.day]} ${term.start_time}-${term.end_time}
+                                <button class="remove-term-btn" onclick="removeTermFromTrainer('${trainer.id}', '${termId}')" title="Odstrani termin">✖</button>
+                            </span>
+                        `;
+                    }
+                    return `<span class="chip" data-term-id="${termId}">${termId}</span>`;
+                }).join(' ') : '';
+
+                row.innerHTML = `
+                    <td>${trainer.first_name}</td>
+                    <td>${trainer.last_name}</td>
+                    <td>${trainer.email || ''}</td>
+                    <td class="terms-cell">${termsChips || '<span class="muted">Brez terminov</span>'}</td>
+                    <td>
+                        <button class="btn warn" onclick="deleteTrainer('${trainer.id}')" style="font-size: 12px; padding: 4px 8px;">
+                            Zbriši trenerja
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            }
+        });
+
+        elTrainersList.appendChild(table);
+    }
+
     // ===== Dodajanje plavalcev =====
     elAddSwimmerBtn.addEventListener('click', async () => {
         const first = elNewFirst.value.trim();
@@ -338,6 +440,57 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Napaka pri dodajanju plavalca:', error);
             alert('Napaka pri dodajanju plavalca.');
+        }
+    });
+
+    // ===== Dodajanje trenerjev =====
+    elAddTrainerBtn.addEventListener('click', async () => {
+        const first = elNewTrainerFirst.value.trim();
+        const last = elNewTrainerLast.value.trim();
+        const email = elNewTrainerEmail.value.trim();
+        
+        if (!first || !last) {
+            alert('Prosim vnesite ime in priimek');
+            return;
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('trainers')
+                .insert([{
+                    first_name: first,
+                    last_name: last,
+                    email: email,
+                    terms: [],
+                    is_deleted: false
+                }])
+                .select();
+
+            if (error) {
+                console.error('Napaka pri dodajanju trenerja:', error);
+                alert('Napaka pri dodajanju trenerja. Preverite konzolo.');
+                return;
+            }
+
+            // Dodaj v lokalno stanje
+            if (data && data.length > 0) {
+                trainers.push(data[0]);
+            }
+            
+            elNewTrainerFirst.value = '';
+            elNewTrainerLast.value = '';
+            elNewTrainerEmail.value = '';
+            
+            updateTrainerSelects();
+            updateTrainersList();
+            elTrainerInfo.textContent = `Dodan trener: ${first} ${last}`;
+            
+            setTimeout(() => {
+                elTrainerInfo.textContent = '';
+            }, 3000);
+        } catch (error) {
+            console.error('Napaka pri dodajanju trenerja:', error);
+            alert('Napaka pri dodajanju trenerja.');
         }
     });
 
@@ -417,6 +570,56 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // ===== Dodeljevanje terminov trenerjem =====
+    elAssignTrainerTermBtn.addEventListener('click', async () => {
+        const trainerId = elTrainerSelect.value;
+        const termId = elTrainerTermSelect.value;
+        
+        if (!trainerId || !termId) {
+            alert('Prosim izberite trenerja in termin');
+            return;
+        }
+
+        const trainer = trainers.find(t => t.id === trainerId);
+        if (trainer) {
+            if (!trainer.terms) trainer.terms = [];
+            if (!trainer.terms.includes(termId)) {
+                try {
+                    // Dodaj v tabelo trainer_terms
+                    const { error } = await supabase
+                        .from('trainer_terms')
+                        .insert([{
+                            trainer_id: trainerId,
+                            term_id: termId
+                        }]);
+
+                    if (error) {
+                        console.error('Napaka pri dodeljevanju termina trenerju:', error);
+                        alert('Napaka pri dodeljevanju termina trenerju. Preverite konzolo.');
+                        return;
+                    }
+
+                    // Posodobi lokalno stanje
+                    trainer.terms.push(termId);
+                    updateTrainersList();
+                    elTrainerInfo.textContent = `Termin dodeljen trenerju ${trainer.first_name} ${trainer.last_name}`;
+                    
+                    setTimeout(() => {
+                        elTrainerInfo.textContent = '';
+                    }, 3000);
+                } catch (error) {
+                    console.error('Napaka pri dodeljevanju termina trenerju:', error);
+                    alert('Napaka pri dodeljevanju termina trenerju.');
+                }
+            } else {
+                elTrainerInfo.textContent = 'Trener že ima ta termin';
+                setTimeout(() => {
+                    elTrainerInfo.textContent = '';
+                }, 3000);
+            }
+        }
+    });
+
     // ===== Brisanje plavalcev =====
     window.deleteSwimmer = async function(swimmerId) {
         const swimmer = swimmers.find(s => s.id === swimmerId);
@@ -441,6 +644,66 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 console.error('Napaka pri brisanju plavalca:', error);
                 alert('Napaka pri brisanju plavalca.');
+            }
+        }
+    };
+
+    // ===== Odstranjevanje terminov iz trenerjev =====
+    window.removeTermFromTrainer = async function(trainerId, termId) {
+        const trainer = trainers.find(t => t.id === trainerId);
+        if (trainer) {
+            try {
+                // Odstrani termin iz trenerja
+                const updatedTerms = trainer.terms.filter(t => t !== termId);
+                
+                // Izbriši iz tabele trainer_terms
+                const { error } = await supabase
+                    .from('trainer_terms')
+                    .delete()
+                    .eq('trainer_id', trainerId)
+                    .eq('term_id', termId);
+
+                if (error) {
+                    console.error('Napaka pri odstranjevanju termina:', error);
+                    alert('Napaka pri odstranjevanju termina. Preverite konzolo.');
+                    return;
+                }
+
+                // Posodobi lokalno stanje
+                trainer.terms = updatedTerms;
+                updateTrainersList();
+                alert('Termin uspešno odstranjen iz trenerja.');
+            } catch (error) {
+                console.error('Napaka pri odstranjevanju termina:', error);
+                alert('Napaka pri odstranjevanju termina.');
+            }
+        }
+    };
+
+    // ===== Brisanje trenerjev =====
+    window.deleteTrainer = async function(trainerId) {
+        const trainer = trainers.find(t => t.id === trainerId);
+        if (trainer) {
+            try {
+                const { error } = await supabase
+                    .from('trainers')
+                    .update({ is_deleted: true })
+                    .eq('id', trainerId);
+
+                if (error) {
+                    console.error('Napaka pri brisanju trenerja:', error);
+                    alert('Napaka pri brisanju trenerja. Preverite konzolo.');
+                    return;
+                }
+
+                // Posodobi lokalno stanje
+                trainer.is_deleted = true;
+                updateTrainerSelects();
+                updateTrainersList();
+                alert('Trener uspešno izbrisan.');
+            } catch (error) {
+                console.error('Napaka pri brisanju trenerja:', error);
+                alert('Napaka pri brisanju trenerja.');
             }
         }
     };
@@ -925,6 +1188,116 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.location.href = 'admin-login.html';
             }
         });
+    }
+
+    // ===== Event listener za osvežitev povzetka trenerjev =====
+    elRefreshTrainerSummaryBtn.addEventListener('click', () => {
+        calculateTrainerSummaryData();
+    });
+
+    // ===== Funkcije za povzetek trenerjev =====
+    function calculateTrainerSummaryData() {
+        const month = parseInt(elTrainerSummaryMonthSelect.value);
+        const year = parseInt(elTrainerSummaryYearSelect.value);
+        
+        if (month === undefined || year === undefined) {
+            elTrainerSummaryBox.innerHTML = '<p class="muted">Prosim izberite mesec in leto</p>';
+            return;
+        }
+
+        const startDate = new Date(year, month, 1);
+        const endDate = new Date(year, month + 1, 0);
+        
+        let summary = '<table><thead><tr><th>Trener</th><th>Termin</th><th>Skupaj</th><th>Prisoten</th><th>Odsoten</th><th>% prisotnosti</th></tr></thead><tbody>';
+        
+        const trainerStats = {};
+        
+        // Iteriraj po vseh dnevih v mesecu
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+            const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
+            const isoDate = iso(d);
+            
+            TERMS.forEach(term => {
+                if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
+                    // Poišči trenerje za ta termin
+                    const trainersForTerm = trainers.filter(t => 
+                        t.terms && t.terms.includes(term.id) && !t.is_deleted
+                    );
+                    
+                    trainersForTerm.forEach(trainer => {
+                        const key = `${trainer.id}-${term.id}`;
+                        if (!trainerStats[key]) {
+                            trainerStats[key] = {
+                                trainer: trainer,
+                                term: term,
+                                total: 0,
+                                present: 0,
+                                absent: 0
+                            };
+                        }
+                        
+                        trainerStats[key].total++;
+                        
+                        const trainerAtt = trainerAttendance[isoDate]?.[term.id]?.[trainer.id];
+                        if (trainerAtt) {
+                            if (trainerAtt.present === true) {
+                                trainerStats[key].present++;
+                            } else if (trainerAtt.present === false) {
+                                trainerStats[key].absent++;
+                            }
+                        }
+                    });
+                }
+            });
+        }
+        
+        // Prikaži rezultate
+        Object.values(trainerStats).forEach(stat => {
+            const percentage = stat.total > 0 ? Math.round((stat.present / stat.total) * 100) : 0;
+            const percentageClass = percentage >= 80 ? 'ok' : percentage >= 60 ? 'neutral' : 'warn';
+            
+            summary += `
+                <tr>
+                    <td>${stat.trainer.first_name} ${stat.trainer.last_name}</td>
+                    <td>${DAY_SHORT_NAME[stat.term.day]} ${stat.term.start_time}-${stat.term.end_time}</td>
+                    <td>${stat.total}</td>
+                    <td class="ok">${stat.present}</td>
+                    <td class="warn">${stat.absent}</td>
+                    <td class="${percentageClass}">${percentage}%</td>
+                </tr>
+            `;
+        });
+        
+        summary += '</tbody></table>';
+        
+        if (Object.keys(trainerStats).length === 0) {
+            summary = '<p class="muted">Ni podatkov o prisotnosti trenerjev za izbrani mesec</p>';
+        }
+        
+        elTrainerSummaryBox.innerHTML = summary;
+    }
+
+    function updateTrainerSummaryControls() {
+        // Mesec
+        elTrainerSummaryMonthSelect.innerHTML = '';
+        for (let i = 1; i <= 12; i++) {
+            const option = document.createElement('option');
+            option.value = i - 1;
+            option.textContent = new Date(2024, i - 1, 1).toLocaleDateString('sl-SI', { month: 'long' });
+            elTrainerSummaryMonthSelect.appendChild(option);
+        }
+        elTrainerSummaryMonthSelect.value = new Date().getMonth();
+
+        // Leto
+        elTrainerSummaryYearSelect.innerHTML = '';
+        const currentYear = new Date().getFullYear();
+        for (let i = currentYear - 2; i <= currentYear + 1; i++) {
+            const option = document.createElement('option');
+            option.value = i;
+            option.textContent = i;
+            elTrainerSummaryMonthSelect.appendChild(option);
+        }
+        elTrainerSummaryYearSelect.value = currentYear;
     }
 
     // ===== Inicializacija =====
