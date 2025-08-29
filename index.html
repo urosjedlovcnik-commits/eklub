@@ -32,7 +32,7 @@
       <h3>Administracija</h3>
       <div class="inner">
         <p>Ta stran je namenjena samo za vodenje prisotnosti plavalcev. Za vse administrativne funkcije (dodajanje plavalcev, upravljanje terminov, CSV uvoz/izvoz) obiščite admin stran.</p>
-        <a href="admin.html" class="btn pri">Odpri admin stran</a>
+        <p class="muted"><strong>Opomba:</strong> Admin dostop je dostopen samo preko ločene login strani.</p>
       </div>
     </div>
   </div>
@@ -56,6 +56,7 @@
           <strong style="display:block; margin-bottom:4px;">Opomba:</strong>
           <span id="inactiveNoteText"></span>
         </div>
+
         <table id="attendanceTable">
           <thead><tr><th>Plavalec</th><th>Prisotnost</th></tr></thead>
           <tbody></tbody>
@@ -79,6 +80,7 @@
           <textarea id="notesInput" placeholder="Dodaj opombo za ta trening (npr. vsebina treninga, opazke trenerja)."></textarea>
           <button id="saveNotesBtn" class="btn primary-btn">Shrani trening</button>
         </div>
+
       </div>
     </div>
   </div>
@@ -117,10 +119,7 @@
         </div>
     </div>
 </div>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-
-	
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 	<script src="./script.js"></script>
 </body>
 </html>
