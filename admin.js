@@ -1,61 +1,27 @@
 // Admin stran za upravljanje plavalne šole
 document.addEventListener('DOMContentLoaded', () => {
     // Preveri, če je uporabnik prijavljen
-    const isLoggedIn = localStorage.getItem('adminLoggedIn');
-    const loginTime = localStorage.getItem('adminLoginTime');
-    
-    if (isLoggedIn !== 'true' || !loginTime) {
+    const session = authManager.isAdminLoggedIn();
+    if (!session) {
         window.location.href = 'admin-login.html';
         return;
     }
     
-    // Preveri, če je login še veljaven (7 dni)
-    const loginDate = new Date(parseInt(loginTime));
-    const now = new Date();
-    const daysDiff = (now - loginDate) / (1000 * 60 * 60 * 24);
-    
-    if (daysDiff >= 7) {
-        // Login je potekel, počisti podatke
-        localStorage.removeItem('adminLoggedIn');
-        localStorage.removeItem('adminEmail');
-        localStorage.removeItem('adminLoginTime');
-        window.location.href = 'admin-login.html';
-        return;
-    }
-    
-    // Preveri, če je email administrator
-    const adminEmail = localStorage.getItem('adminEmail');
-    if (adminEmail !== 'uros.jedlovcnik@gmail.com') {
-        localStorage.removeItem('adminLoggedIn');
-        localStorage.removeItem('adminEmail');
-        localStorage.removeItem('adminLoginTime');
-        window.location.href = 'admin-login.html';
-        return;
-    }
-    
-    // Prikaži email administratorja in preostale dni
+    // Prikaži informacije o sessiona
     const adminInfo = document.getElementById('adminInfo');
     if (adminInfo) {
-        const remainingDays = Math.ceil(7 - daysDiff);
-        adminInfo.textContent = `Pozdravljeni, ${adminEmail} (login velja še ${remainingDays} dni)`;
+        const remainingDays = authManager.getSessionDaysRemaining();
+        adminInfo.textContent = `Pozdravljeni, ${session.email} (login velja še ${remainingDays} dni)`;
     }
 
-    // Konfiguracija Supabase
-    const supabaseUrl = 'https://tizjimlwfkoniixbetgr.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpemppbWx3ZmtvbmlpeGJldGdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzNDgyNzgsImV4cCI6MjA3MDkyNDI3OH0.Oess7TCevLH3mO0aWxfL5M0Kb_XHEKUBYRYRXKQkdgk';
-    
-    // Preveri, ali je Supabase na voljo
-    if (typeof window.supabase === 'undefined') {
-        console.error('Supabase ni na voljo!');
-        alert('Napaka: Supabase ni na voljo. Preverite internetno povezavo.');
+    // Uporabi centralizirano konfiguracijo
+    const supabase = createSupabaseClient();
+    if (!supabase) {
+        alert('Napaka: Ne morem vzpostaviti povezave z bazo podatkov.');
         return;
     }
     
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-    
-    // Test Supabase povezave
-    console.log('Supabase client ustvarjen:', supabase);
-    console.log('Supabase URL:', supabaseUrl);
+    debugLog('Supabase client uspešno ustvarjen');
 
     // Stanja bodo naložena asinhrono
     let TERMS = [];
@@ -1431,9 +1397,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
             if (confirm('Ali se res želite odjaviti?')) {
-                localStorage.removeItem('adminLoggedIn');
-                localStorage.removeItem('adminEmail');
-                localStorage.removeItem('adminLoginTime');
+                authManager.logoutAdmin();
                 window.location.href = 'admin-login.html';
             }
         });

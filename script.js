@@ -1,10 +1,12 @@
 // Počakamo, da se celotna stran naloži
 document.addEventListener('DOMContentLoaded', () => {
 
-    // Konfiguracija Supabase
-    const supabaseUrl = 'https://tizjimlwfkoniixbetgr.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpemppbWx3ZmtvbmlpeGJldGdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzNDgyNzgsImV4cCI6MjA3MDkyNDI3OH0.Oess7TCevLH3mO0aWxfL5M0Kb_XHEKUBYRYRXKQkdgk';
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    // Uporabi centralizirano konfiguracijo
+    const supabase = createSupabaseClient();
+    if (!supabase) {
+        alert('Napaka: Ne morem vzpostaviti povezave z bazo podatkov.');
+        return;
+    }
     
     // Uporaba Supabase namesto localStorage
     const useLocalStorage = false;

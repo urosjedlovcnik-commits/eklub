@@ -166,6 +166,8 @@
     </div>
   </div>
 
+  <script src="./config.js"></script>
+  <script src="./auth.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const loginForm = document.getElementById('loginForm');
@@ -174,26 +176,12 @@
       const loginBtn = document.getElementById('loginBtn');
       const errorMessage = document.getElementById('errorMessage');
       
-              // Preveri, če je uporabnik že prijavljen
-        const isLoggedIn = localStorage.getItem('adminLoggedIn');
-        const loginTime = localStorage.getItem('adminLoginTime');
-        
-        if (isLoggedIn === 'true' && loginTime) {
-            // Preveri, če je login še veljaven (7 dni)
-            const loginDate = new Date(parseInt(loginTime));
-            const now = new Date();
-            const daysDiff = (now - loginDate) / (1000 * 60 * 60 * 24);
-            
-            if (daysDiff < 7) {
-                window.location.href = 'admin.html';
-                return;
-            } else {
-                // Login je potekel, počisti podatke
-                localStorage.removeItem('adminLoggedIn');
-                localStorage.removeItem('adminEmail');
-                localStorage.removeItem('adminLoginTime');
-            }
-        }
+      // Preveri, če je uporabnik že prijavljen
+      const session = authManager.isAdminLoggedIn();
+      if (session) {
+        window.location.href = 'admin.html';
+        return;
+      }
       
       function showError(message) {
         errorMessage.textContent = message;
@@ -222,23 +210,11 @@
         setLoading(true);
         
         try {
-          // Preveri, če je email administrator
-          if (email === 'uros.jedlovcnik@gmail.com') {
-            // Preveri geslo (za demo uporabo preprosto geslo)
-            if (password === 'admin123') {
-              // Uspešna prijava - shrani v localStorage za 7 dni
-              localStorage.setItem('adminLoggedIn', 'true');
-              localStorage.setItem('adminEmail', email);
-              localStorage.setItem('adminLoginTime', Date.now().toString());
-              window.location.href = 'admin.html';
-            } else {
-              showError('Napačno geslo');
-            }
-          } else {
-            showError('Nimate dostopa do admin strani');
-          }
+          // Uporabi novi auth sistem
+          authManager.loginAdmin(email, password);
+          window.location.href = 'admin.html';
         } catch (error) {
-          showError('Napaka pri prijavi: ' + error.message);
+          showError(error.message);
         } finally {
           setLoading(false);
         }
