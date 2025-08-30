@@ -28,17 +28,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // Funkcija za prikaz sporočil
     function showMessage(message, type = 'info') {
         // Ustvari element za sporočilo
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message message-${type}`;
-        messageDiv.textContent = message;
+        const messageEl = document.createElement('div');
+        messageEl.className = `message message-${type}`;
+        messageEl.textContent = message;
         
         // Dodaj na vrh strani
-        document.body.insertBefore(messageDiv, document.body.firstChild);
+        document.body.insertBefore(messageEl, document.body.firstChild);
         
         // Avtomatsko odstrani po 5 sekundah
         setTimeout(() => {
-            if (messageDiv.parentNode) {
-                messageDiv.parentNode.removeChild(messageDiv);
+            if (messageEl.parentNode) {
+                messageEl.parentNode.removeChild(messageEl);
             }
         }, 5000);
     }
@@ -2247,200 +2247,253 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Funkcija za izračun finančnih podatkov
     async function calculateFinanceData() {
-        const month = parseInt(elFinanceMonthSelect.value);
-        const year = parseInt(elFinanceYearSelect.value);
-        
-        if (month === undefined || year === undefined) {
-            elFinanceSummaryBox.innerHTML = '<p class="muted">Prosim izberite mesec in leto</p>';
-            elDetailedCostsBox.innerHTML = '<p class="muted">Prosim izberite mesec in leto</p>';
-            return;
-        }
-
-        // Ustvari datume za mesec
-        const startDate = new Date(year, month, 1);
-        const endDate = new Date(year, month + 1, 0);
-        
-        // Pridobi nastavitve cen
-        const managementCostPerMonth = parseFloat(elManagementCostPerMonth.value) || 500;
-        
-        // Izračunaj prihodke - uporabi individualne pristojbine plavalcev
-        const activeSwimmers = swimmers.filter(s => !s.is_deleted);
-        const swimmerFees = await getSwimmerFees(month, year);
-        let totalRevenue = 0;
-        
-        activeSwimmers.forEach(swimmer => {
-            const feeData = swimmerFees[swimmer.id] || { fee: 80, discount: 0 };
-            totalRevenue += Math.max(0, feeData.fee - feeData.discount);
-        });
-        
-        // Izračunaj stroške trenerjev
-        let totalTrainerHours = 0;
-        let trainerCosts = {};
-        
-        // Iteriraj po vseh dnevih v mesecu
-        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-            const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
-            const isoDate = iso(d);
+        try {
+            console.log('=== FINANCE DEBUG START ===');
             
-            TERMS.forEach(term => {
-                if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
-                    // Poišči trenerje za ta termin
-                    const trainersForTerm = trainers.filter(t => 
-                        t.terms && t.terms.includes(term.id) && !t.is_deleted
-                    );
-                    
-                    // Izračunaj trajanje termina v urah
-                    const startTime = new Date(`2000-01-01T${term.start_time}:00`);
-                    const endTime = new Date(`2000-01-01T${term.end_time}:00`);
-                    const durationHours = (endTime - startTime) / (1000 * 60 * 60);
-                    
-                    trainersForTerm.forEach(trainer => {
-                        if (!trainerCosts[trainer.id]) {
-                            trainerCosts[trainer.id] = {
-                                trainer: trainer,
-                                hours: 0,
-                                cost: 0
-                            };
-                        }
-                        
-                        trainerCosts[trainer.id].hours += durationHours;
-                        totalTrainerHours += durationHours;
-                    });
-                }
+            const month = parseInt(elFinanceMonthSelect.value);
+            const year = parseInt(elFinanceYearSelect.value);
+            
+            console.log('Selected month/year:', month, year);
+            
+            if (month === undefined || year === undefined) {
+                elFinanceSummaryBox.innerHTML = '<p class="muted">Prosim izberite mesec in leto</p>';
+                elDetailedCostsBox.innerHTML = '<p class="muted">Prosim izberite mesec in leto</p>';
+                return;
+            }
+
+            // Ustvari datume za mesec
+            const startDate = new Date(year, month, 1);
+            const endDate = new Date(year, month + 1, 0);
+            
+            console.log('Date range:', startDate.toISOString(), 'to', endDate.toISOString());
+            
+            // Pridobi nastavitve cen
+            const managementCostPerMonth = parseFloat(elManagementCostPerMonth.value) || 500;
+            
+            // Izračunaj prihodke - uporabi individualne pristojbine plavalcev
+            const activeSwimmers = swimmers.filter(s => !s.is_deleted);
+            console.log('Active swimmers:', activeSwimmers.length);
+            
+            // Pridobi pristojbine plavalcev iz baze
+            const swimmerFees = await getSwimmerFeesFromDB(month, year);
+            console.log('Swimmer fees from DB:', swimmerFees);
+            
+            let totalRevenue = 0;
+            
+            activeSwimmers.forEach(swimmer => {
+                const feeData = swimmerFees[swimmer.id] || { fee: 80, discount: 0 };
+                const finalFee = Math.max(0, feeData.fee - feeData.discount);
+                totalRevenue += finalFee;
+                console.log(`Swimmer ${swimmer.first_name} ${swimmer.last_name}: fee=${feeData.fee}, discount=${feeData.discount}, final=${finalFee}`);
             });
-        }
-        
-        // Izračunaj stroške trenerjev z individualnimi urnimi postavkami
-        for (const trainerCost of Object.values(trainerCosts)) {
-            const trainerRate = await getTrainerRate(trainerCost.trainer.id);
-            trainerCost.cost = trainerCost.hours * trainerRate;
-        }
-        
-        const totalTrainerCost = Object.values(trainerCosts).reduce((sum, tc) => sum + tc.cost, 0);
-        
-        // Izračunaj stroške prog po terminih
-        let totalFacilityCost = 0;
-        for (const term of TERMS) {
-            const termHourlyCost = await getTermCost(term.id);
-            if (termHourlyCost > 0) {
-                // Preveri, ali je termin aktiven v izbranem mesecu
-                const termStartDate = new Date(term.date_from);
-                const termEndDate = new Date(term.date_to);
-                if (startDate <= termEndDate && endDate >= termStartDate) {
-                    // Preštej, kolikokrat je bil termin izveden v tem mesecu
-                    let trainingSessionsCount = 0;
-                    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-                        const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
-                        const isoDate = iso(d);
+            
+            console.log('Total revenue:', totalRevenue);
+            
+            // Izračunaj stroške trenerjev
+            let totalTrainerHours = 0;
+            let trainerCosts = {};
+            
+            // Pridobi urne postavke trenerjev iz baze
+            const trainerRates = await getTrainerRatesFromDB();
+            console.log('Trainer rates from DB:', trainerRates);
+            
+            // Iteriraj po vseh dnevih v mesecu
+            for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
+                const isoDate = iso(d);
+                
+                TERMS.forEach(term => {
+                    if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
+                        // Poišči trenerje za ta termin
+                        const trainersForTerm = trainers.filter(t => 
+                            t.terms && t.terms.includes(term.id) && !t.is_deleted
+                        );
                         
-                        // Preveri, ali je termin na ta dan in ali je aktiven
-                        if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
-                            // Preveri, ali je termin deaktiviran (ni trenerjev ali ni plavalcev)
-                            const trainersForTerm = trainers.filter(t => 
-                                t.terms && t.terms.includes(term.id) && !t.is_deleted
-                            );
-                            const swimmersForTerm = activeSwimmers.filter(s => 
-                                s.terms && s.terms.includes(term.id)
-                            );
+                        // Izračunaj trajanje termina v urah
+                        const startTime = new Date(`2000-01-01T${term.start_time}:00`);
+                        const endTime = new Date(`2000-01-01T${term.end_time}:00`);
+                        const durationHours = (endTime - startTime) / (1000 * 60 * 60);
+                        
+                        trainersForTerm.forEach(trainer => {
+                            if (!trainerCosts[trainer.id]) {
+                                trainerCosts[trainer.id] = {
+                                    trainer: trainer,
+                                    hours: 0,
+                                    cost: 0
+                                };
+                            }
                             
-                            // Termin se šteje kot izveden, če ima trenerje in plavalce
-                            if (trainersForTerm.length > 0 && swimmersForTerm.length > 0) {
-                                trainingSessionsCount++;
+                            trainerCosts[trainer.id].hours += durationHours;
+                            totalTrainerHours += durationHours;
+                        });
+                    }
+                });
+            }
+            
+            console.log('Trainer costs before rate calculation:', trainerCosts);
+            
+            // Izračunaj stroške trenerjev z individualnimi urnimi postavkami
+            for (const trainerCost of Object.values(trainerCosts)) {
+                const trainerRate = trainerRates[trainerCost.trainer.id] || 25; // Default 25€/hour
+                trainerCost.cost = trainerCost.hours * trainerRate;
+                console.log(`Trainer ${trainerCost.trainer.first_name} ${trainerCost.trainer.last_name}: ${trainerCost.hours}h × ${trainerRate}€ = ${trainerCost.cost}€`);
+            }
+            
+            const totalTrainerCost = Object.values(trainerCosts).reduce((sum, tc) => sum + tc.cost, 0);
+            console.log('Total trainer cost:', totalTrainerCost);
+            
+            // Izračunaj stroške prog po terminih
+            let totalFacilityCost = 0;
+            
+            // Pridobi stroške prog iz baze
+            const termCosts = await getTermCostsFromDB();
+            console.log('Term costs from DB:', termCosts);
+            
+            for (const term of TERMS) {
+                const termHourlyCost = termCosts[term.id] || 50; // Default 50€/hour
+                console.log(`Term ${term.label}: hourly cost = ${termHourlyCost}€`);
+                
+                if (termHourlyCost > 0) {
+                    // Preveri, ali je termin aktiven v izbranem mesecu
+                    const termStartDate = new Date(term.date_from);
+                    const termEndDate = new Date(term.date_to);
+                    if (startDate <= termEndDate && endDate >= termStartDate) {
+                        // Preštej, kolikokrat je bil termin izveden v tem mesecu
+                        let trainingSessionsCount = 0;
+                        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                            const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
+                            const isoDate = iso(d);
+                            
+                            // Preveri, ali je termin na ta dan in ali je aktiven
+                            if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
+                                // Preveri, ali je termin deaktiviran (ni trenerjev ali ni plavalcev)
+                                const trainersForTerm = trainers.filter(t => 
+                                    t.terms && t.terms.includes(term.id) && !t.is_deleted
+                                );
+                                const swimmersForTerm = activeSwimmers.filter(s => 
+                                    s.terms && s.terms.includes(term.id)
+                                );
+                                
+                                // Termin se šteje kot izveden, če ima trenerje in plavalce
+                                if (trainersForTerm.length > 0 && swimmersForTerm.length > 0) {
+                                    trainingSessionsCount++;
+                                }
                             }
                         }
+                        
+                        // Izračunaj trajanje termina v urah
+                        const startTime = new Date(`2000-01-01T${term.start_time}:00`);
+                        const endTime = new Date(`2000-01-01T${term.end_time}:00`);
+                        const durationHours = (endTime - startTime) / (1000 * 60 * 60);
+                        
+                        // Strošek prog = število izvedenih treningov × trajanje v urah × urni strošek
+                        const termMonthlyCost = trainingSessionsCount * durationHours * termHourlyCost;
+                        totalFacilityCost += termMonthlyCost;
+                        
+                        console.log(`Term ${term.label}: ${trainingSessionsCount} sessions × ${durationHours}h × ${termHourlyCost}€ = ${termMonthlyCost}€`);
                     }
-                    
-                    // Izračunaj trajanje termina v urah
-                    const startTime = new Date(`2000-01-01T${term.start_time}:00`);
-                    const endTime = new Date(`2000-01-01T${term.end_time}:00`);
-                    const durationHours = (endTime - startTime) / (1000 * 60 * 60);
-                    
-                    // Strošek prog = število izvedenih treningov × trajanje v urah × urni strošek
-                    const termMonthlyCost = trainingSessionsCount * durationHours * termHourlyCost;
-                    totalFacilityCost += termMonthlyCost;
                 }
             }
-        }
-        
-        // Skupni stroški
-        const totalCosts = totalTrainerCost + managementCostPerMonth + totalFacilityCost;
-        
-        // Dobiček/izguba
-        const profit = totalRevenue - totalCosts;
-        
-        // Prikaži povzetek
-        let summary = `
-            <div class="finance-summary">
-                <div class="finance-card revenue">
-                    <h4>Prihodki</h4>
-                    <div class="amount">${totalRevenue.toFixed(2)} €</div>
-                    <div class="details">${activeSwimmers.length} plavalcev (individualne pristojbine)</div>
-                </div>
-                <div class="finance-card costs">
-                    <h4>Stroški</h4>
-                    <div class="amount">${totalCosts.toFixed(2)} €</div>
-                    <div class="details">
-                        Trenerji: ${totalTrainerCost.toFixed(2)} €<br>
-                        Vodenje: ${managementCostPerMonth.toFixed(2)} €<br>
-                        Objekti: ${totalFacilityCost.toFixed(2)} €
+            
+            console.log('Total facility cost:', totalFacilityCost);
+            
+            // Skupni stroški
+            const totalCosts = totalTrainerCost + managementCostPerMonth + totalFacilityCost;
+            
+            // Dobiček/izguba
+            const profit = totalRevenue - totalCosts;
+            
+            console.log('Final calculation:', {
+                revenue: totalRevenue,
+                trainerCost: totalTrainerCost,
+                managementCost: managementCostPerMonth,
+                facilityCost: totalFacilityCost,
+                totalCosts: totalCosts,
+                profit: profit
+            });
+            
+            console.log('=== FINANCE DEBUG END ===');
+            
+            // Prikaži povzetek
+            let summary = `
+                <div class="finance-summary">
+                    <div class="finance-card revenue">
+                        <h4>Prihodki</h4>
+                        <div class="amount">${totalRevenue.toFixed(2)} €</div>
+                        <div class="details">${activeSwimmers.length} plavalcev (individualne pristojbine)</div>
+                    </div>
+                    <div class="finance-card costs">
+                        <h4>Stroški</h4>
+                        <div class="amount">${totalCosts.toFixed(2)} €</div>
+                        <div class="details">
+                            Trenerji: ${totalTrainerCost.toFixed(2)} €<br>
+                            Vodenje: ${managementCostPerMonth.toFixed(2)} €<br>
+                            Objekti: ${totalFacilityCost.toFixed(2)} €
+                        </div>
+                    </div>
+                    <div class="finance-card ${profit >= 0 ? 'profit' : 'loss'}">
+                        <h4>${profit >= 0 ? 'Dobiček' : 'Izguba'}</h4>
+                        <div class="amount">${profit.toFixed(2)} €</div>
+                        <div class="details">${profit >= 0 ? 'Pozitivno' : 'Negativno'} stanje</div>
                     </div>
                 </div>
-                <div class="finance-card ${profit >= 0 ? 'profit' : 'loss'}">
-                    <h4>${profit >= 0 ? 'Dobiček' : 'Izguba'}</h4>
-                    <div class="amount">${profit.toFixed(2)} €</div>
-                    <div class="details">${profit >= 0 ? 'Pozitivno' : 'Negativno'} stanje</div>
-                </div>
-            </div>
-        `;
-        
-        elFinanceSummaryBox.innerHTML = summary;
-        
-        // Prikaži podrobnosti stroškov
-        let detailedCosts = `
-            <table>
-                <thead>
-                    <tr>
-                        <th>Kategorija</th>
-                        <th>Znesek</th>
-                        <th>Opis</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Mesečna vadnina</td>
-                        <td>${totalRevenue.toFixed(2)} €</td>
-                        <td>${activeSwimmers.length} aktivnih plavalcev (individualne pristojbine)</td>
-                    </tr>
-                    <tr>
-                        <td>Stroški trenerjev</td>
-                        <td>${totalTrainerCost.toFixed(2)} €</td>
-                        <td>${totalTrainerHours.toFixed(1)} ur (individualne urne postavke)</td>
-                    </tr>
-                    <tr>
-                        <td>Stroški vodenja</td>
-                        <td>${managementCostPerMonth.toFixed(2)} €</td>
-                        <td>Fiksni mesečni strošek</td>
-                    </tr>
-                    <tr>
-                        <td>Stroški objektov</td>
-                        <td>${totalFacilityCost.toFixed(2)} €</td>
-                        <td>Stroški prog po terminih</td>
-                    </tr>
-                    <tr class="total-row">
-                        <td><strong>Skupaj stroški</strong></td>
-                        <td><strong>${totalCosts.toFixed(2)} €</strong></td>
-                        <td></td>
-                    </tr>
-                    <tr class="profit-row ${profit >= 0 ? 'positive' : 'negative'}">
-                        <td><strong>${profit >= 0 ? 'Dobiček' : 'Izguba'}</strong></td>
-                        <td><strong>${profit.toFixed(2)} €</strong></td>
-                        <td>${profit >= 0 ? 'Pozitivno stanje' : 'Negativno stanje'}</td>
+            `;
+            
+            elFinanceSummaryBox.innerHTML = summary;
+            
+            // Prikaži podrobnosti stroškov
+            let detailedCosts = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Kategorija</th>
+                            <th>Znesek</th>
+                            <th>Opis</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Mesečna vadnina</td>
+                            <td>${totalRevenue.toFixed(2)} €</td>
+                            <td>${activeSwimmers.length} aktivnih plavalcev (individualne pristojbine)</td>
+                        </tr>
+                        <tr>
+                            <td>Stroški trenerjev</td>
+                            <td>${totalTrainerCost.toFixed(2)} €</td>
+                            <td>${totalTrainerHours.toFixed(1)} ur (individualne urne postavke)</td>
+                        </tr>
+                        <tr>
+                            <td>Stroški vodenja</td>
+                            <td>${managementCostPerMonth.toFixed(2)} €</td>
+                            <td>Fiksni mesečni strošek</td>
+                        </tr>
+                        <tr>
+                            <td>Stroški objektov</td>
+                            <td>${totalFacilityCost.toFixed(2)} €</td>
+                            <td>Stroški prog po terminih</td>
+                        </tr>
+                        <tr class="total-row">
+                            <td><strong>Skupaj stroški</strong></td>
+                            <td><strong>${totalCosts.toFixed(2)} €</strong></td>
+                            <td></td>
+                        </tr>
+                        <tr class="profit-row ${profit >= 0 ? 'positive' : 'negative'}">
+                            <td><strong>${profit >= 0 ? 'Dobiček' : 'Izguba'}</strong></td>
+                            <td><strong>${profit.toFixed(2)} €</strong></td>
+                            <td>${profit >= 0 ? 'Pozitivno stanje' : 'Negativno stanje'}</td>
+                        </td>
                     </tr>
                 </tbody>
             </table>
         `;
         
         elDetailedCostsBox.innerHTML = detailedCosts;
+        
+        } catch (error) {
+            console.error('Error in calculateFinanceData:', error);
+            elFinanceSummaryBox.innerHTML = '<p class="error">Napaka pri izračunu finančnih podatkov</p>';
+            elDetailedCostsBox.innerHTML = '<p class="error">Napaka pri izračunu finančnih podatkov</p>';
+        }
     }
     
     // Funkcija za shranjevanje nastavitev cen
