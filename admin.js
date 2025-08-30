@@ -2582,7 +2582,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Pretvori v obliko, ki jo pričakuje aplikacija
             const termCosts = {};
             data.forEach(item => {
-                termCosts[item.term_id] = item.cost_per_month;
+                termCosts[item.term_id] = item.cost_per_hour;
             });
             
             return termCosts;
@@ -2597,7 +2597,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const updates = Object.entries(termCosts).map(([termId, cost]) => ({
                 term_id: termId,
-                cost_per_month: parseFloat(cost)
+                cost_per_hour: parseFloat(cost)
             }));
 
             const { error } = await supabase
@@ -2631,7 +2631,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return trainerRates;
         } catch (error) {
             console.error('Napaka pri pridobivanju urnih postavk:', error);
-            return false;
+            return {};
         }
     }
 
@@ -2753,12 +2753,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Posodobljena funkcija za renderiranje nastavitev stroškov prog
     async function renderTermCostsSettings() {
+        if (!elTermCostsSettings) return;
+        
         const termCosts = await getTermCostsFromDB();
         
         let html = '<div class="term-costs-grid">';
         
-        TERMS.forEach(term => {
-            const cost = termCosts[term.id] || 800;
+        for (const term of TERMS) {
+            const cost = termCosts[term.id] || 50; // Default to 50€/hour
             html += `
                 <div class="term-cost-row">
                     <label for="term-cost-${term.id}">${term.label}:</label>
@@ -2769,10 +2771,10 @@ document.addEventListener('DOMContentLoaded', () => {
                            step="0.01" 
                            style="width: 120px;"
                            onchange="updateTermCost('${term.id}', this.value)">
-                    <span>€/mesec</span>
+                    <span class="hourly-rate-label">€/uro</span>
                 </div>
             `;
-        });
+        }
         
         html += '</div>';
         elTermCostsSettings.innerHTML = html;
@@ -2780,12 +2782,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Posodobljena funkcija za renderiranje nastavitev urnih postavk
     async function renderTrainerRatesSettings() {
+        if (!elTrainerRatesSettings) return;
+        
         const trainerRates = await getTrainerRatesFromDB();
         
         let html = '<div class="trainer-rates-grid">';
         
-        TRAINERS.forEach(trainer => {
-            const rate = trainerRates[trainer.id] || 25;
+        for (const trainer of trainers) {
+            if (trainer.is_deleted) continue;
+            
+            const rate = trainerRates[trainer.id] || 25; // Default to 25€/hour
             html += `
                 <div class="trainer-rate-row">
                     <label for="trainer-rate-${trainer.id}">${trainer.first_name} ${trainer.last_name}:</label>
@@ -2799,22 +2805,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span>€/uro</span>
                 </div>
             `;
-        });
+        }
         
         html += '</div>';
-        elTermCostsSettings.innerHTML = html;
+        elTrainerRatesSettings.innerHTML = html;
     }
 
     // Posodobljena funkcija za shranjevanje stroškov prog
     async function saveTermCosts() {
         const termCosts = {};
         
-        TERMS.forEach(term => {
+        for (const term of TERMS) {
             const input = document.getElementById(`term-cost-${term.id}`);
             if (input) {
                 termCosts[term.id] = input.value;
             }
-        });
+        }
         
         const success = await saveTermCostsToDB(termCosts);
         
@@ -2832,12 +2838,14 @@ document.addEventListener('DOMContentLoaded', () => {
     async function saveTrainerRates() {
         const trainerRates = {};
         
-        TRAINERS.forEach(trainer => {
+        for (const trainer of trainers) {
+            if (trainer.is_deleted) continue;
+            
             const input = document.getElementById(`trainer-rate-${trainer.id}`);
             if (input) {
                 trainerRates[trainer.id] = input.value;
             }
-        });
+        }
         
         const success = await saveTrainerRatesToDB(trainerRates);
         
@@ -2853,11 +2861,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Posodobljena funkcija za osvežitev pristojbin plavalcev
     async function refreshSwimmerFees() {
+        if (!elSwimmerFeesBox) return;
+        
         const month = parseInt(elSwimmerFeesMonthSelect.value);
         const year = parseInt(elSwimmerFeesYearSelect.value);
         
         if (!month || !year) {
-            elSwimmerFeesBox.innerHTML = 'Izberite mesec in leto za upravljanje pristojbin...';
+            elSwimmerFeesBox.innerHTML = '<p class="muted">Izberite mesec in leto za upravljanje pristojbin...</p>';
             return;
         }
         
@@ -2877,7 +2887,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <tbody>
         `;
         
-        SWIMMERS.filter(swimmer => !swimmer.is_deleted).forEach(swimmer => {
+        for (const swimmer of swimmers) {
+            if (swimmer.is_deleted) continue;
+            
             const feeData = swimmerFees[swimmer.id] || { fee: 80, discount: 0 };
             const finalFee = Math.max(0, feeData.fee - feeData.discount);
             const termLabels = (swimmer.terms || []).map(termId => {
@@ -2908,7 +2920,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td><strong>${finalFee.toFixed(2)}€</strong></td>
                 </tr>
             `;
-        });
+        }
         
         html += '</tbody></table>';
         elSwimmerFeesBox.innerHTML = html;
@@ -2957,7 +2969,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Funkcija za posodobitev urni postavki posameznega trenerja
     async function updateTrainerRate(trainerId, rate) {
-        const trainerRates = await getTrainerRatesToDB();
+        const trainerRates = await getTrainerRatesFromDB();
         trainerRates[trainerId] = parseFloat(rate);
         
         const success = await saveTrainerRatesToDB(trainerRates);
