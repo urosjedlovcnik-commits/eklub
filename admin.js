@@ -134,6 +134,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return { status, note, notes };
     }
 
+    // Funkcija za pridobitev aktivnih terminov (ki še niso potekli)
+    function getActiveTerms() {
+        const today = new Date();
+        const todayISO = iso(today);
+        return TERMS.filter(term => term.date_to >= todayISO);
+    }
+
     // ===== Navigacija med sekcijami =====
     document.querySelectorAll('.admin-nav .btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -344,7 +351,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateTermSelects() {
         elTermSelect.innerHTML = '<option value="">Izberi termin</option>';
-        TERMS.forEach(t => {
+        
+        // Prikaži samo aktivne termine
+        const activeTerms = getActiveTerms();
+        
+        activeTerms.forEach(t => {
             const option = document.createElement('option');
             option.value = t.id;
             option.textContent = `${DAY_SHORT_NAME[t.day]} ${t.start_time}-${t.end_time}`;
@@ -361,8 +372,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const swimmer = swimmers.find(s => s.id === swimmerId);
         if (!swimmer) return;
         
-        // Filtriraj termine, ki jih plavalec še nima
-        const availableTerms = TERMS.filter(term => !swimmer.terms.includes(term.id));
+        // Filtriraj samo aktivne termine, ki jih plavalec še nima
+        const activeTerms = getActiveTerms();
+        const availableTerms = activeTerms.filter(term => !swimmer.terms.includes(term.id));
         
         availableTerms.forEach(t => {
             const option = document.createElement('option');
@@ -378,6 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Posodobi select za trenerje
         elTrainerSelect.innerHTML = '<option value="">Izberi trenerja</option>';
         trainers.forEach(t => {
+            // Prikaži samo trenerje, ki niso označeni kot izbrisani (lokalno)
             if (!t.is_deleted) {
                 const option = document.createElement('option');
                 option.value = t.id;
@@ -396,13 +409,14 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (!trainerId) return;
         
-        if (!trainerId) return;
-        
         const trainer = trainers.find(t => t.id === trainerId);
         if (!trainer) return;
         
-        // Filtriraj termine, ki jih trener še nima
-        const availableTerms = TERMS.filter(term => !trainer.terms.includes(term.id));
+        // Filtriraj samo aktivne termine, ki jih trener še nima
+        const activeTerms = getActiveTerms();
+        const availableTerms = activeTerms.filter(term => 
+            !trainer.terms || !trainer.terms.includes(term.id)
+        );
         
         availableTerms.forEach(t => {
             const option = document.createElement('option');
@@ -495,6 +509,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const tbody = table.querySelector('tbody');
         trainers.forEach(trainer => {
+            // Prikaži samo trenerje, ki niso označeni kot izbrisani (lokalno)
             if (!trainer.is_deleted) {
                 const row = document.createElement('tr');
                 
@@ -595,9 +610,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .insert([{
                     first_name: first,
                     last_name: last,
-                    email: email,
-                    terms: [],
-                    is_deleted: false
+                    email: email
                 }])
                 .select();
 
@@ -609,7 +622,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Dodaj v lokalno stanje
             if (data && data.length > 0) {
-                trainers.push(data[0]);
+                // Dodaj manjkajoče lastnosti za lokalno stanje
+                const newTrainer = { ...data[0], terms: [], is_deleted: false };
+                trainers.push(newTrainer);
             }
             
             elNewTrainerFirst.value = '';
@@ -862,23 +877,47 @@ document.addEventListener('DOMContentLoaded', () => {
     window.deleteTrainer = async function(trainerId) {
         const trainer = trainers.find(t => t.id === trainerId);
         if (trainer) {
+            if (!confirm(`Ali ste prepričani, da želite izbrisati trenerja ${trainer.first_name} ${trainer.last_name}?`)) {
+                return;
+            }
+            
             try {
-                const { error } = await supabase
-                    .from('trainers')
-                    .update({ is_deleted: true })
-                    .eq('id', trainerId);
+                // Ker tabela trainers nima is_deleted stolpca, rešimo to drugače
+                // Opcija 1: Fizično brisanje (če ni povezav)
+                // Opcija 2: Skrivanje v lokalnem stanju
+                
+                // Preverimo, če ima trener dodeljene termine
+                const hasTerms = trainer.terms && trainer.terms.length > 0;
+                
+                if (hasTerms) {
+                    // Če ima termine, samo skrij lokalno (da se ohrani zgodovina)
+                    trainer.is_deleted = true;
+                    updateTrainerSelects();
+                    updateTrainersList();
+                    alert('Trener je skrit iz seznama (ohranjena zgodovina terminov).');
+                } else {
+                    // Če nima terminov, lahko fizično brišemo
+                    const { error } = await supabase
+                        .from('trainers')
+                        .delete()
+                        .eq('id', trainerId);
 
-                if (error) {
-                    console.error('Napaka pri brisanju trenerja:', error);
-                    alert('Napaka pri brisanju trenerja. Preverite konzolo.');
-                    return;
+                    if (error) {
+                        console.error('Napaka pri brisanju trenerja:', error);
+                        alert('Napaka pri brisanju trenerja. Preverite konzolo.');
+                        return;
+                    }
+
+                    // Odstrani iz lokalnega stanja
+                    const index = trainers.findIndex(t => t.id === trainerId);
+                    if (index > -1) {
+                        trainers.splice(index, 1);
+                    }
+                    
+                    updateTrainerSelects();
+                    updateTrainersList();
+                    alert('Trener uspešno izbrisan.');
                 }
-
-                // Posodobi lokalno stanje
-                trainer.is_deleted = true;
-                updateTrainerSelects();
-                updateTrainersList();
-                alert('Trener uspešno izbrisan.');
             } catch (error) {
                 console.error('Napaka pri brisanju trenerja:', error);
                 alert('Napaka pri brisanju trenerja.');
@@ -895,9 +934,26 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Grupiraj termine po dnevih
+        // Prikaži samo aktivne termine
+        const activeTerms = getActiveTerms();
+        const expiredCount = TERMS.length - activeTerms.length;
+        
+        if (activeTerms.length === 0) {
+            elTermList.innerHTML = '<p class="muted">Ni aktivnih terminov</p>';
+            return;
+        }
+        
+        // Dodaj informacijo o skritih terminih
+        if (expiredCount > 0) {
+            const infoDiv = document.createElement('div');
+            infoDiv.style.cssText = 'background: #fef3c7; border: 1px solid #fcd34d; padding: 8px 12px; border-radius: 6px; margin-bottom: 16px; font-size: 14px;';
+            infoDiv.innerHTML = `<strong>ℹ️ Informacija:</strong> Skritih je ${expiredCount} poteklih terminov. Prikazani so samo aktivni termini.`;
+            elTermList.appendChild(infoDiv);
+        }
+
+        // Grupiraj aktivne termine po dnevih
         const termsByDay = {};
-        TERMS.forEach(term => {
+        activeTerms.forEach(term => {
             if (!termsByDay[term.day]) {
                 termsByDay[term.day] = [];
             }
