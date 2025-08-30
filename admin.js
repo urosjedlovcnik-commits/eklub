@@ -2310,8 +2310,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         );
                         
                         // Izračunaj trajanje termina v urah
-                        const startTime = new Date(`2000-01-01T${term.start_time}:00`);
-                        const endTime = new Date(`2000-01-01T${term.end_time}:00`);
+                        const startTime = new Date(`2000-01-01T${term.start_time}`);
+                        const endTime = new Date(`2000-01-01T${term.end_time}`);
                         const durationHours = (endTime - startTime) / (1000 * 60 * 60);
                         
                         trainersForTerm.forEach(trainer => {
@@ -2382,8 +2382,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         
                         // Izračunaj trajanje termina v urah
-                        const startTime = new Date(`2000-01-01T${term.start_time}:00`);
-                        const endTime = new Date(`2000-01-01T${term.end_time}:00`);
+                        const startTime = new Date(`2000-01-01T${term.start_time}`);
+                        const endTime = new Date(`2000-01-01T${term.end_time}`);
                         const durationHours = (endTime - startTime) / (1000 * 60 * 60);
                         
                         // Strošek prog = število izvedenih treningov × trajanje v urah × urni strošek
