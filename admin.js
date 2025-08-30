@@ -80,7 +80,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const elRefreshTrainerSummaryBtn = document.getElementById("refreshTrainerSummaryBtn");
     const elTrainerSummaryBox = document.getElementById("trainerSummaryBox");
     
-
+    // UI elementi za Finance sekcijo
+    const elFinanceMonthSelect = document.getElementById("financeMonthSelect");
+    const elFinanceYearSelect = document.getElementById("financeYearSelect");
+    const elRefreshFinanceBtn = document.getElementById("refreshFinanceBtn");
+    const elFinanceSummaryBox = document.getElementById("financeSummaryBox");
+    const elDetailedCostsBox = document.getElementById("detailedCostsBox");
+    const elMonthlyFee = document.getElementById("monthlyFee");
+    const elTrainerCostPerHour = document.getElementById("trainerCostPerHour");
+    const elManagementCostPerMonth = document.getElementById("managementCostPerMonth");
+    const elFacilityCostPerMonth = document.getElementById("facilityCostPerMonth");
+    const elSaveCostsBtn = document.getElementById("saveCostsBtn");
     
     const elEditTermModal = document.getElementById("editTermModal");
     const elEditTermDateFrom = document.getElementById("editTermDateFrom");
@@ -1508,6 +1518,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ===== Event listener za Finance sekcijo =====
+    if (elRefreshFinanceBtn) {
+        elRefreshFinanceBtn.addEventListener('click', () => {
+            calculateFinanceData();
+        });
+    }
+
+    if (elSaveCostsBtn) {
+        elSaveCostsBtn.addEventListener('click', () => {
+            saveCostSettings();
+        });
+    }
+
 
 
     // ===== Event listener za izbiro plavalca pri dodeljevanju terminov =====
@@ -1876,6 +1899,29 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             elSwimmerSummaryYearSelect.value = currentYear;
         }
+
+        // Kontrole za Finance sekcijo
+        if (elFinanceMonthSelect) {
+            elFinanceMonthSelect.innerHTML = '';
+            for (let i = 1; i <= 12; i++) {
+                const option = document.createElement('option');
+                option.value = i - 1;
+                option.textContent = new Date(2024, i - 1, 1).toLocaleDateString('sl-SI', { month: 'long' });
+                elFinanceMonthSelect.appendChild(option);
+            }
+            elFinanceMonthSelect.value = new Date().getMonth();
+        }
+
+        if (elFinanceYearSelect) {
+            elFinanceYearSelect.innerHTML = '';
+            for (let i = currentYear - 2; i <= currentYear + 1; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = i;
+                elFinanceYearSelect.appendChild(option);
+            }
+            elFinanceYearSelect.value = currentYear;
+        }
     }
 
     // ===== FUNKCIJE ZA POVZETEK UDELEŽBE PLAVALCEV =====
@@ -2009,6 +2055,188 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // ===== FUNKCIJE ZA FINANCE SEKCIJO =====
+    
+    // Funkcija za izračun finančnih podatkov
+    function calculateFinanceData() {
+        const month = parseInt(elFinanceMonthSelect.value);
+        const year = parseInt(elFinanceYearSelect.value);
+        
+        if (month === undefined || year === undefined) {
+            elFinanceSummaryBox.innerHTML = '<p class="muted">Prosim izberite mesec in leto</p>';
+            elDetailedCostsBox.innerHTML = '<p class="muted">Prosim izberite mesec in leto</p>';
+            return;
+        }
+
+        // Ustvari datume za mesec
+        const startDate = new Date(year, month, 1);
+        const endDate = new Date(year, month + 1, 0);
+        
+        // Pridobi nastavitve cen
+        const monthlyFee = parseFloat(elMonthlyFee.value) || 80;
+        const trainerCostPerHour = parseFloat(elTrainerCostPerHour.value) || 25;
+        const managementCostPerMonth = parseFloat(elManagementCostPerMonth.value) || 500;
+        const facilityCostPerMonth = parseFloat(elFacilityCostPerMonth.value) || 800;
+        
+        // Izračunaj prihodke
+        const activeSwimmers = swimmers.filter(s => !s.is_deleted);
+        const totalRevenue = activeSwimmers.length * monthlyFee;
+        
+        // Izračunaj stroške trenerjev
+        let totalTrainerHours = 0;
+        let trainerCosts = {};
+        
+        // Iteriraj po vseh dnevih v mesecu
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+            const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
+            const isoDate = iso(d);
+            
+            TERMS.forEach(term => {
+                if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
+                    // Poišči trenerje za ta termin
+                    const trainersForTerm = trainers.filter(t => 
+                        t.terms && t.terms.includes(term.id) && !t.is_deleted
+                    );
+                    
+                    // Izračunaj trajanje termina v urah
+                    const startTime = new Date(`2000-01-01T${term.start_time}:00`);
+                    const endTime = new Date(`2000-01-01T${term.end_time}:00`);
+                    const durationHours = (endTime - startTime) / (1000 * 60 * 60);
+                    
+                    trainersForTerm.forEach(trainer => {
+                        if (!trainerCosts[trainer.id]) {
+                            trainerCosts[trainer.id] = {
+                                trainer: trainer,
+                                hours: 0,
+                                cost: 0
+                            };
+                        }
+                        
+                        trainerCosts[trainer.id].hours += durationHours;
+                        totalTrainerHours += durationHours;
+                    });
+                }
+            });
+        }
+        
+        // Izračunaj stroške trenerjev
+        Object.values(trainerCosts).forEach(trainerCost => {
+            trainerCost.cost = trainerCost.hours * trainerCostPerHour;
+        });
+        
+        const totalTrainerCost = Object.values(trainerCosts).reduce((sum, tc) => sum + tc.cost, 0);
+        
+        // Skupni stroški
+        const totalCosts = totalTrainerCost + managementCostPerMonth + facilityCostPerMonth;
+        
+        // Dobiček/izguba
+        const profit = totalRevenue - totalCosts;
+        
+        // Prikaži povzetek
+        let summary = `
+            <div class="finance-summary">
+                <div class="finance-card revenue">
+                    <h4>Prihodki</h4>
+                    <div class="amount">${totalRevenue.toFixed(2)} €</div>
+                    <div class="details">${activeSwimmers.length} plavalcev × ${monthlyFee} €</div>
+                </div>
+                <div class="finance-card costs">
+                    <h4>Stroški</h4>
+                    <div class="amount">${totalCosts.toFixed(2)} €</div>
+                    <div class="details">
+                        Trenerji: ${totalTrainerCost.toFixed(2)} €<br>
+                        Vodenje: ${managementCostPerMonth.toFixed(2)} €<br>
+                        Objekti: ${facilityCostPerMonth.toFixed(2)} €
+                    </div>
+                </div>
+                <div class="finance-card ${profit >= 0 ? 'profit' : 'loss'}">
+                    <h4>${profit >= 0 ? 'Dobiček' : 'Izguba'}</h4>
+                    <div class="amount">${profit.toFixed(2)} €</div>
+                    <div class="details">${profit >= 0 ? 'Pozitivno' : 'Negativno'} stanje</div>
+                </div>
+            </div>
+        `;
+        
+        elFinanceSummaryBox.innerHTML = summary;
+        
+        // Prikaži podrobnosti stroškov
+        let detailedCosts = `
+            <table>
+                <thead>
+                    <tr>
+                        <th>Kategorija</th>
+                        <th>Znesek</th>
+                        <th>Opis</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Mesečna vadnina</td>
+                        <td>${totalRevenue.toFixed(2)} €</td>
+                        <td>${activeSwimmers.length} aktivnih plavalcev</td>
+                    </tr>
+                    <tr>
+                        <td>Stroški trenerjev</td>
+                        <td>${totalTrainerCost.toFixed(2)} €</td>
+                        <td>${totalTrainerHours.toFixed(1)} ur × ${trainerCostPerHour} €/h</td>
+                    </tr>
+                    <tr>
+                        <td>Stroški vodenja</td>
+                        <td>${managementCostPerMonth.toFixed(2)} €</td>
+                        <td>Fiksni mesečni strošek</td>
+                    </tr>
+                    <tr>
+                        <td>Stroški objektov</td>
+                        <td>${facilityCostPerMonth.toFixed(2)} €</td>
+                        <td>Fiksni mesečni strošek</td>
+                    </tr>
+                    <tr class="total-row">
+                        <td><strong>Skupaj stroški</strong></td>
+                        <td><strong>${totalCosts.toFixed(2)} €</strong></td>
+                        <td></td>
+                    </tr>
+                    <tr class="profit-row ${profit >= 0 ? 'positive' : 'negative'}">
+                        <td><strong>${profit >= 0 ? 'Dobiček' : 'Izguba'}</strong></td>
+                        <td><strong>${profit.toFixed(2)} €</strong></td>
+                        <td>${profit >= 0 ? 'Pozitivno stanje' : 'Negativno stanje'}</td>
+                    </tr>
+                </tbody>
+            </table>
+        `;
+        
+        elDetailedCostsBox.innerHTML = detailedCosts;
+    }
+    
+    // Funkcija za shranjevanje nastavitev cen
+    function saveCostSettings() {
+        const monthlyFee = parseFloat(elMonthlyFee.value);
+        const trainerCostPerHour = parseFloat(elTrainerCostPerHour.value);
+        const managementCostPerMonth = parseFloat(elManagementCostPerMonth.value);
+        const facilityCostPerMonth = parseFloat(elFacilityCostPerMonth.value);
+        
+        // Shrani v localStorage (lahko bi tudi v bazo)
+        localStorage.setItem('monthlyFee', monthlyFee);
+        localStorage.setItem('trainerCostPerHour', trainerCostPerHour);
+        localStorage.setItem('managementCostPerMonth', managementCostPerMonth);
+        localStorage.setItem('facilityCostPerMonth', facilityCostPerMonth);
+        
+        alert('Nastavitve cen so bile shranjene!');
+    }
+    
+    // Funkcija za nalaganje nastavitev cen
+    function loadCostSettings() {
+        const monthlyFee = localStorage.getItem('monthlyFee') || 80;
+        const trainerCostPerHour = localStorage.getItem('trainerCostPerHour') || 25;
+        const managementCostPerMonth = localStorage.getItem('managementCostPerMonth') || 500;
+        const facilityCostPerMonth = localStorage.getItem('facilityCostPerMonth') || 800;
+        
+        if (elMonthlyFee) elMonthlyFee.value = monthlyFee;
+        if (elTrainerCostPerHour) elTrainerCostPerHour.value = trainerCostPerHour;
+        if (elManagementCostPerMonth) elManagementCostPerMonth.value = managementCostPerMonth;
+        if (elFacilityCostPerMonth) elFacilityCostPerMonth.value = facilityCostPerMonth;
+    }
+
     // ===== Inicializacija =====
     loadData();
+    loadCostSettings(); // Naloži nastavitve cen
 });

@@ -264,6 +264,7 @@
       <button class="btn active" data-section="swimmers">Plavalci</button>
       <button class="btn" data-section="terms">Termini</button>
       <button class="btn" data-section="trainers">Trenerji</button>
+      <button class="btn" data-section="finance">Finance</button>
       <button class="btn" data-section="csv">CSV uvoz/izvoz</button>
     </div>
   </div>
@@ -431,6 +432,57 @@
             <button class="btn" id="refreshTrainerNotesBtn">Osveži</button>
           </div>
           <div id="trainerNotesBox">Nalaganje podatkov...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sekcija za Finance -->
+  <div class="admin-section" id="finance-section">
+    <div class="grid">
+      <div class="card">
+        <h3>Mesečna vadnina - Pregled stroškov</h3>
+        <div class="inner">
+          <div class="summary-controls">
+            <select id="financeMonthSelect"></select>
+            <select id="financeYearSelect"></select>
+            <button class="btn" id="refreshFinanceBtn">Izračunaj</button>
+          </div>
+          <div id="financeSummaryBox">Izberite mesec in leto za izračun stroškov...</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Nastavitve cen</h3>
+        <div class="inner">
+          <div class="row">
+            <label for="monthlyFee">Mesečna vadnina na plavalca:</label>
+            <input type="number" id="monthlyFee" value="80" min="0" step="0.01" style="width: 120px;">
+            <span>€</span>
+          </div>
+          <div class="row">
+            <label for="trainerCostPerHour">Strošek trenerja na uro:</label>
+            <input type="number" id="trainerCostPerHour" value="25" min="0" step="0.01" style="width: 120px;">
+            <span>€</span>
+          </div>
+          <div class="row">
+            <label for="managementCostPerMonth">Stroški vodenja na mesec:</label>
+            <input type="number" id="managementCostPerMonth" value="500" min="0" step="0.01" style="width: 120px;">
+            <span>€</span>
+          </div>
+          <div class="row">
+            <label for="facilityCostPerMonth">Stroški objektov na mesec:</label>
+            <input type="number" id="facilityCostPerMonth" value="800" min="0" step="0.01" style="width: 120px;">
+            <span>€</span>
+          </div>
+          <button class="btn pri" id="saveCostsBtn">Shrani nastavitve</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Podrobni pregled stroškov</h3>
+        <div class="inner">
+          <div id="detailedCostsBox">Izberite mesec in leto za prikaz podrobnosti...</div>
         </div>
       </div>
     </div>
