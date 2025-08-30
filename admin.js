@@ -2394,7 +2394,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const termStartDate = new Date(term.date_from);
                     const termEndDate = new Date(term.date_to);
                     if (startDate <= termEndDate && endDate >= termStartDate) {
-                        // Preštej, kolikokrat je bil termin izveden v tem mesecu
+                        // Preštej, kolikokrat je bil termin načrtovan in aktiven v tem mesecu
                         let trainingSessionsCount = 0;
                         for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
                             const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
@@ -2402,17 +2402,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             
                             // Preveri, ali je termin na ta dan in ali je aktiven
                             if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
-                                // Preveri, ali je termin deaktiviran (ni trenerjev ali ni plavalcev)
-                                const trainersForTerm = trainers.filter(t => 
-                                    t.terms && t.terms.includes(term.id) && !t.is_deleted
-                                );
-                                const swimmersForTerm = activeSwimmers.filter(s => 
-                                    s.terms && s.terms.includes(term.id)
-                                );
-                                
-                                // Termin se šteje kot izveden, če ima trenerje in plavalce
-                                if (trainersForTerm.length > 0 && swimmersForTerm.length > 0) {
+                                // Preveri, ali je termin deaktiviran za ta dan
+                                const termStatus = getTermStatus(d, term.id);
+                                if (termStatus.status !== "inactive") {
                                     trainingSessionsCount++;
+                                    console.log(`Term ${term.label} is active on ${isoDate} (status: ${termStatus.status})`);
+                                } else {
+                                    console.log(`Term ${term.label} is inactive on ${isoDate} (status: ${termStatus.status})`);
                                 }
                             }
                         }
@@ -2422,11 +2418,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         const endTime = new Date(`2000-01-01T${term.end_time}`);
                         const durationHours = (endTime - startTime) / (1000 * 60 * 60);
                         
-                        // Strošek prog = število izvedenih treningov × trajanje v urah × urni strošek
+                        // Strošek prog = število načrtovanih in aktivnih treningov × trajanje v urah × urni strošek
                         const termMonthlyCost = trainingSessionsCount * durationHours * termHourlyCost;
                         totalFacilityCost += termMonthlyCost;
                         
-                        console.log(`Term ${term.label}: ${trainingSessionsCount} sessions × ${durationHours}h × ${termHourlyCost}€ = ${termMonthlyCost}€`);
+                        console.log(`Term ${term.label}: ${trainingSessionsCount} scheduled active sessions × ${durationHours}h × ${termHourlyCost}€ = ${termMonthlyCost}€`);
                     }
                 }
             }
