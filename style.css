@@ -499,3 +499,93 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
     width: 100%;
   }
 }
+
+/* Stili za nastavitve stroškov prog po terminih */
+.term-costs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.term-cost-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+}
+
+.term-cost-row label {
+  flex: 1;
+  font-weight: 500;
+}
+
+.term-cost-row input {
+  width: 100px;
+  text-align: center;
+}
+
+/* Stili za nastavitve urnih postavk trenerjev */
+.trainer-rates-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.trainer-rate-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+}
+
+.trainer-rate-row label {
+  flex: 1;
+  font-weight: 500;
+}
+
+.trainer-rate-row input {
+  width: 100px;
+  text-align: center;
+}
+
+/* Stili za upravljanje pristojbin plavalcev */
+.swimmer-fees-table {
+  margin-top: 20px;
+}
+
+.swimmer-fees-table table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+
+.swimmer-fees-table th,
+.swimmer-fees-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.swimmer-fees-table th {
+  background: var(--bg-secondary);
+  font-weight: 600;
+}
+
+.swimmer-fees-table input {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 14px;
+}
+
+.swimmer-fees-table input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
