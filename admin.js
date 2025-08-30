@@ -1545,6 +1545,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let summary = '<table><thead><tr><th>Trener</th><th>Skupaj</th><th>Prisoten</th><th>Odsoten</th></tr></thead><tbody>';
         
         const trainerStats = {};
+        const processedTrainers = new Set(); // Set za sledenje trenerjem, ki so že bili obravnavani
         
         // Iteriraj po vseh dnevih v mesecu
         for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
@@ -1571,6 +1572,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         
                         trainerStats[key].total++;
+                        processedTrainers.add(trainer.id); // Dodaj trenerja v processedTrainers
                         
                         const trainerAtt = trainerAttendance[isoDate]?.[term.id]?.[trainer.id];
                         if (trainerAtt) {
@@ -1601,6 +1603,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                             
                                             trainerStats[substituteKey].total++;
                                             trainerStats[substituteKey].present++; // Šteje kot prisoten
+                                            
+                                            // Dodaj nadomestnega trenerja v processedTrainers, da se ne šteje dvakrat
+                                            processedTrainers.add(substituteTrainer.id);
                                         }
                                     }
                                 }
@@ -1627,6 +1632,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     }
                                     
                                     trainerStats[key].total++;
+                                    processedTrainers.add(trainer.id); // Dodaj nadomestnega trenerja v processedTrainers
                                     
                                     const trainerAtt = trainerAttendance[isoDate][term.id][trainerId];
                                     if (trainerAtt) {
@@ -1650,37 +1656,41 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Dodatno: preveri vse trenerje iz trainer_attendance za ta mesec
         // in dodaj tiste, ki morda niso bili vključeni v zgornji logiki
+        
         Object.keys(trainerAttendance).forEach(date => {
             const currentDate = new Date(date);
             if (currentDate >= startDate && currentDate <= endDate) {
                 Object.keys(trainerAttendance[date]).forEach(termId => {
                     Object.keys(trainerAttendance[date][termId]).forEach(trainerId => {
-                        const trainer = trainers.find(t => t.id === trainerId && !t.is_deleted);
-                        if (trainer) {
-                            const key = `${trainer.id}`;
-                            if (!trainerStats[key]) {
-                                trainerStats[key] = {
-                                    trainer: trainer,
-                                    total: 0,
-                                    present: 0,
-                                    absent: 0
-                                };
-                            }
-                            
-                            // Preveri, ali je ta termin že bil štejen
-                            const term = TERMS.find(t => t.id === termId);
-                            if (term) {
-                                const dayOfWeek = currentDate.getDay() === 0 ? 7 : currentDate.getDay();
-                                if (term.day === dayOfWeek && date >= term.date_from && date <= term.date_to) {
-                                    // Termin je veljaven, dodaj prisotnost
-                                    trainerStats[key].total++;
-                                    
-                                    const trainerAtt = trainerAttendance[date][termId][trainerId];
-                                    if (trainerAtt) {
-                                        if (trainerAtt.present === true) {
-                                            trainerStats[key].present++;
-                                        } else if (trainerAtt.present === false) {
-                                            trainerStats[key].absent++;
+                        // Preveri, ali trener ni že bil obravnavan v prvi zanki
+                        if (!processedTrainers.has(trainerId)) {
+                            const trainer = trainers.find(t => t.id === trainerId && !t.is_deleted);
+                            if (trainer) {
+                                const key = `${trainer.id}`;
+                                if (!trainerStats[key]) {
+                                    trainerStats[key] = {
+                                        trainer: trainer,
+                                        total: 0,
+                                        present: 0,
+                                        absent: 0
+                                    };
+                                }
+                                
+                                // Preveri, ali je ta termin veljaven
+                                const term = TERMS.find(t => t.id === termId);
+                                if (term) {
+                                    const dayOfWeek = currentDate.getDay() === 0 ? 7 : currentDate.getDay();
+                                    if (term.day === dayOfWeek && date >= term.date_from && date <= term.date_to) {
+                                        // Termin je veljaven, dodaj prisotnost
+                                        trainerStats[key].total++;
+                                        
+                                        const trainerAtt = trainerAttendance[date][termId][trainerId];
+                                        if (trainerAtt) {
+                                            if (trainerAtt.present === true) {
+                                                trainerStats[key].present++;
+                                            } else if (trainerAtt.present === false) {
+                                                trainerStats[key].absent++;
+                                            }
                                         }
                                     }
                                 }
