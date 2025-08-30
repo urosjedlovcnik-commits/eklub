@@ -440,66 +440,72 @@
   <!-- Sekcija za Finance -->
   <div class="admin-section" id="finance-section">
     <div class="grid">
-      <div class="card">
-        <h3>Mesečna vadnina - Pregled stroškov</h3>
-        <div class="inner">
-          <div class="summary-controls">
-            <select id="financeMonthSelect"></select>
-            <select id="financeYearSelect"></select>
-            <button class="btn" id="refreshFinanceBtn">Izračunaj</button>
+      <!-- Glavni del strani (leva stran) -->
+      <div class="main-content">
+        <div class="card">
+          <h3>Mesečna vadnina - Pregled stroškov</h3>
+          <div class="inner">
+            <div class="summary-controls">
+              <select id="financeMonthSelect"></select>
+              <select id="financeYearSelect"></select>
+              <button class="btn" id="refreshFinanceBtn">Izračunaj</button>
+            </div>
+            <div id="financeSummaryBox">Izberite mesec in leto za izračun stroškov...</div>
           </div>
-          <div id="financeSummaryBox">Izberite mesec in leto za izračun stroškov...</div>
+        </div>
+
+        <div class="card">
+          <h3>Nastavitve cen</h3>
+          <div class="inner">
+            <div class="row">
+              <label for="managementCostPerMonth">Stroški vodenja na mesec:</label>
+              <input type="number" id="managementCostPerMonth" value="500" min="0" step="0.01" style="width: 120px;">
+              <span>€</span>
+            </div>
+            <button class="btn pri" id="saveCostsBtn">Shrani nastavitve</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Nastavitve urnih postavk trenerjev</h3>
+          <div class="inner">
+            <div id="trainerRatesSettings">
+              <p class="muted">Nalaganje trenerjev...</p>
+            </div>
+            <button class="btn pri" id="saveTrainerRatesBtn">Shrani urni postavki</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Podrobni pregled stroškov</h3>
+          <div class="inner">
+            <div id="detailedCostsBox">Izberite mesec in leto za prikaz podrobnosti...</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Upravljanje mesečnih pristojbin plavalcev</h3>
+          <div class="inner">
+            <div class="summary-controls">
+              <select id="swimmerFeesMonthSelect"></select>
+              <select id="swimmerFeesYearSelect"></select>
+              <button class="btn" id="refreshSwimmerFeesBtn">Osveži</button>
+            </div>
+            <div id="swimmerFeesBox">Izberite mesec in leto za upravljanje pristojbin...</div>
+          </div>
         </div>
       </div>
 
-      <div class="card">
-        <h3>Nastavitve cen</h3>
-        <div class="inner">
-          <div class="row">
-            <label for="managementCostPerMonth">Stroški vodenja na mesec:</label>
-            <input type="number" id="managementCostPerMonth" value="500" min="0" step="0.01" style="width: 120px;">
-            <span>€</span>
+      <!-- Desni sidebar -->
+      <div class="sidebar">
+        <div class="card">
+          <h3>Nastavitve stroškov prog po terminih (na uro)</h3>
+          <div class="inner">
+            <div id="termCostsSettings">
+              <p class="muted">Nalaganje terminov...</p>
+            </div>
+            <button class="btn pri" id="saveTermCostsBtn">Shrani stroške prog</button>
           </div>
-          <button class="btn pri" id="saveCostsBtn">Shrani nastavitve</button>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3>Nastavitve stroškov prog po terminih</h3>
-        <div class="inner">
-          <div id="termCostsSettings">
-            <p class="muted">Nalaganje terminov...</p>
-          </div>
-          <button class="btn pri" id="saveTermCostsBtn">Shrani stroške prog</button>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3>Nastavitve urnih postavk trenerjev</h3>
-        <div class="inner">
-          <div id="trainerRatesSettings">
-            <p class="muted">Nalaganje trenerjev...</p>
-          </div>
-          <button class="btn pri" id="saveTrainerRatesBtn">Shrani urni postavki</button>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3>Podrobni pregled stroškov</h3>
-        <div class="inner">
-          <div id="detailedCostsBox">Izberite mesec in leto za prikaz podrobnosti...</div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3>Upravljanje mesečnih pristojbin plavalcev</h3>
-        <div class="inner">
-          <div class="summary-controls">
-            <select id="swimmerFeesMonthSelect"></select>
-            <select id="swimmerFeesYearSelect"></select>
-            <button class="btn" id="refreshSwimmerFeesBtn">Osveži</button>
-          </div>
-          <div id="swimmerFeesBox">Izberite mesec in leto za upravljanje pristojbin...</div>
         </div>
       </div>
     </div>

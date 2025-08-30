@@ -50,6 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let attendance = {};
     let termStatus = {};
     let trainerAttendance = {};
+    let currentSection = 'swimmers'; // Dodano: sledi trenutni sekciji
 
     const DAYNAME = ["","Ponedeljek","Torek","Sreda","Četrtek","Petek","Sobota","Nedelja"];
     const DAY_SHORT_NAME = ["", "Pon.", "Tor.", "Sre.", "Čet.", "Pet.", "Sob.", "Ned."];
@@ -193,6 +194,27 @@ document.addEventListener('DOMContentLoaded', () => {
             // Prikaže ustrezno sekcijo
             const sectionId = btn.getAttribute('data-section') + '-section';
             document.getElementById(sectionId).classList.add('active');
+            
+            // Posodobi trenutno sekcijo
+            currentSection = btn.getAttribute('data-section');
+            
+            // Če je finance sekcija aktivna, avtomatsko osveži pristojbine plavalcev
+            if (currentSection === 'finance') {
+                // Nastavi trenutni mesec in leto za pristojbine
+                const currentDate = new Date();
+                const currentMonth = currentDate.getMonth();
+                const currentYear = currentDate.getFullYear();
+                
+                if (elSwimmerFeesMonthSelect && elSwimmerFeesYearSelect) {
+                    elSwimmerFeesMonthSelect.value = currentMonth;
+                    elSwimmerFeesYearSelect.value = currentYear;
+                }
+                
+                // Osveži pristojbine plavalcev
+                setTimeout(() => {
+                    refreshSwimmerFees();
+                }, 100);
+            }
         });
     });
 
@@ -2299,13 +2321,43 @@ document.addEventListener('DOMContentLoaded', () => {
         // Izračunaj stroške prog po terminih
         let totalFacilityCost = 0;
         for (const term of TERMS) {
-            const termCost = await getTermCost(term.id);
-            if (termCost > 0) {
+            const termHourlyCost = await getTermCost(term.id);
+            if (termHourlyCost > 0) {
                 // Preveri, ali je termin aktiven v izbranem mesecu
                 const termStartDate = new Date(term.date_from);
                 const termEndDate = new Date(term.date_to);
                 if (startDate <= termEndDate && endDate >= termStartDate) {
-                    totalFacilityCost += termCost;
+                    // Preštej, kolikokrat je bil termin izveden v tem mesecu
+                    let trainingSessionsCount = 0;
+                    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                        const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
+                        const isoDate = iso(d);
+                        
+                        // Preveri, ali je termin na ta dan in ali je aktiven
+                        if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
+                            // Preveri, ali je termin deaktiviran (ni trenerjev ali ni plavalcev)
+                            const trainersForTerm = trainers.filter(t => 
+                                t.terms && t.terms.includes(term.id) && !t.is_deleted
+                            );
+                            const swimmersForTerm = activeSwimmers.filter(s => 
+                                s.terms && s.terms.includes(term.id)
+                            );
+                            
+                            // Termin se šteje kot izveden, če ima trenerje in plavalce
+                            if (trainersForTerm.length > 0 && swimmersForTerm.length > 0) {
+                                trainingSessionsCount++;
+                            }
+                        }
+                    }
+                    
+                    // Izračunaj trajanje termina v urah
+                    const startTime = new Date(`2000-01-01T${term.start_time}:00`);
+                    const endTime = new Date(`2000-01-01T${term.end_time}:00`);
+                    const durationHours = (endTime - startTime) / (1000 * 60 * 60);
+                    
+                    // Strošek prog = število izvedenih treningov × trajanje v urah × urni strošek
+                    const termMonthlyCost = trainingSessionsCount * durationHours * termHourlyCost;
+                    totalFacilityCost += termMonthlyCost;
                 }
             }
         }

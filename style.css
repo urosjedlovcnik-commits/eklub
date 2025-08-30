@@ -469,64 +469,6 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   color: var(--text);
 }
 
-/* Responsive design za Finance sekcijo */
-@media (max-width: 768px) {
-  .finance-summary {
-    grid-template-columns: 1fr;
-    gap: 15px;
-  }
-  
-  .finance-card {
-    padding: 15px;
-  }
-  
-  .finance-card .amount {
-    font-size: 24px;
-    font-size: 24px;
-  }
-  
-  #finance-section .row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 5px;
-  }
-  
-  #finance-section .row label {
-    min-width: auto;
-  }
-  
-  #finance-section .row input {
-    width: 100%;
-  }
-}
-
-/* Stili za nastavitve stroškov prog po terminih */
-.term-costs-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 15px;
-  margin-bottom: 20px;
-}
-
-.term-cost-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px;
-  background: var(--bg-secondary);
-  border-radius: 6px;
-}
-
-.term-cost-row label {
-  flex: 1;
-  font-weight: 500;
-}
-
-.term-cost-row input {
-  width: 100px;
-  text-align: center;
-}
-
 /* Stili za nastavitve urnih postavk trenerjev */
 .trainer-rates-grid {
   display: grid;
@@ -630,5 +572,77 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   to {
     transform: translateX(0);
     opacity: 1;
+  }
+}
+
+/* Stili za nastavitve stroškov prog po terminih */
+.term-costs-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.term-cost-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.term-cost-row label {
+  flex: 1;
+  font-weight: 500;
+  color: #374151;
+}
+
+.term-cost-row input {
+  width: 120px;
+  text-align: center;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.term-cost-row .hourly-rate-label {
+  color: #6b7280;
+  font-size: 14px;
+  min-width: 80px;
+}
+
+/* Stili za Finance sekcijo z glavnim delom in sidebar-om */
+#finance-section .grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+#finance-section .main-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+#finance-section .sidebar {
+  position: sticky;
+  top: 20px;
+}
+
+#finance-section .sidebar .card {
+  margin-bottom: 20px;
+}
+
+/* Responsive design za Finance sekcijo */
+@media (max-width: 1024px) {
+  #finance-section .grid {
+    grid-template-columns: 1fr;
+  }
+  
+  #finance-section .sidebar {
+    position: static;
   }
 }
