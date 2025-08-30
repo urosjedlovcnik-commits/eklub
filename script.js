@@ -160,6 +160,21 @@ document.addEventListener('DOMContentLoaded', () => {
           
           if (error) {
             console.error('Napaka pri posodabljanju prisotnosti trenerja:', error);
+            
+            // Če je RLS napaka, prikaži uporabniku razumljivo sporočilo
+            if (error.code === '42501') {
+              alert('⚠️ Varnostna napaka: RLS policy za trainer_attendance ni pravilno nastavljen.\n\nProblem bo rešen s strani administratorja.');
+              console.error('RLS Policy napaka - potrebno nastaviti policy za trainer_attendance tabelo');
+            } else {
+              alert('Napaka pri shranjevanju prisotnosti trenerja: ' + error.message);
+            }
+            
+            // Kljub napaki posodobi lokalno stanje, da se UI pravilno prikaže
+            if (!trainerAttendance[date]) trainerAttendance[date] = {};
+            if (!trainerAttendance[date][termId]) trainerAttendance[date][termId] = {};
+            trainerAttendance[date][termId][trainerId] = { present, note };
+            console.log('🔍 DEBUG: Lokalno stanje posodobljeno kljub napaki:', trainerAttendance[date][termId][trainerId]);
+            
           } else {
             console.log('🔍 DEBUG: Uspešno shranjeno v Supabase');
             // Posodobi lokalno stanje
@@ -170,6 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         } catch (error) {
           console.error('Napaka pri posodabljanju prisotnosti trenerja:', error);
+          alert('Nepričakovana napaka pri shranjevanju. Preverite internetno povezavo.');
         }
       }
     }
