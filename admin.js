@@ -2302,7 +2302,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
                 const isoDate = iso(d);
                 
-                TERMS.forEach(term => {
+                // Filtriraj samo aktivne termine za izračun stroškov trenerjev
+                const activeTermsForTrainers = TERMS.filter(term => {
+                    const termEndDate = new Date(term.date_to);
+                    const today = new Date();
+                    const isActive = termEndDate >= today;
+                    if (!isActive) {
+                        console.log(`Skipping inactive term ${term.label} (${term.date_to}) for trainer costs`);
+                    }
+                    return termEndDate >= today;
+                });
+                
+                if (activeTermsForTrainers.length !== TERMS.length) {
+                    console.log(`Using ${activeTermsForTrainers.length} active terms out of ${TERMS.length} total terms for trainer cost calculation`);
+                }
+                
+                activeTermsForTrainers.forEach(term => {
                     if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
                         // Poišči trenerje za ta termin
                         const trainersForTerm = trainers.filter(t => 
@@ -2349,7 +2364,28 @@ document.addEventListener('DOMContentLoaded', () => {
             const termCosts = await getTermCostsFromDB();
             console.log('Term costs from DB:', termCosts);
             
-            for (const term of TERMS) {
+            // Filtriraj samo aktivne termine (ki še niso potekli)
+            const activeTerms = TERMS.filter(term => {
+                const termEndDate = new Date(term.date_to);
+                const today = new Date();
+                const isActive = termEndDate >= today;
+                console.log(`Term ${term.label} (${term.date_to}): ${isActive ? 'ACTIVE' : 'INACTIVE'}`);
+                return isActive;
+            });
+            
+            console.log('Active terms for finance calculation:', activeTerms.length, 'out of', TERMS.length);
+            
+            // Prikaži seznam neaktivnih terminov za debug
+            const inactiveTerms = TERMS.filter(term => {
+                const termEndDate = new Date(term.date_to);
+                const today = new Date();
+                return termEndDate < today;
+            });
+            if (inactiveTerms.length > 0) {
+                console.log('Inactive terms (excluded from calculations):', inactiveTerms.map(t => `${t.label} (${t.date_to})`));
+            }
+            
+            for (const term of activeTerms) {
                 const termHourlyCost = termCosts[term.id] || 50; // Default 50€/hour
                 console.log(`Term ${term.label}: hourly cost = ${termHourlyCost}€`);
                 
@@ -2812,7 +2848,16 @@ document.addEventListener('DOMContentLoaded', () => {
         
         let html = '<div class="term-costs-grid">';
         
-        for (const term of TERMS) {
+        // Filtriraj samo aktivne termine za prikaz v nastavitvah
+        const activeTermsForSettings = TERMS.filter(term => {
+            const termEndDate = new Date(term.date_to);
+            const today = new Date();
+            return termEndDate >= today;
+        });
+        
+        console.log(`Term costs settings: showing ${activeTermsForSettings.length} active terms out of ${TERMS.length} total terms`);
+        
+        for (const term of activeTermsForSettings) {
             const cost = termCosts[term.id] || 50; // Default to 50€/hour
             html += `
                 <div class="term-cost-row">
@@ -2868,7 +2913,16 @@ document.addEventListener('DOMContentLoaded', () => {
     async function saveTermCosts() {
         const termCosts = {};
         
-        for (const term of TERMS) {
+        // Filtriraj samo aktivne termine za shranjevanje
+        const activeTermsForSaving = TERMS.filter(term => {
+            const termEndDate = new Date(term.date_to);
+            const today = new Date();
+            return termEndDate >= today;
+        });
+        
+        console.log(`Saving term costs: processing ${activeTermsForSaving.length} active terms out of ${TERMS.length} total terms`);
+        
+        for (const term of activeTermsForSaving) {
             const input = document.getElementById(`term-cost-${term.id}`);
             if (input) {
                 termCosts[term.id] = input.value;
