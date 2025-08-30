@@ -399,31 +399,58 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Počisti select za termine pri trenerjih
+        // Počisti select za termine pri trenerjih in prikaži nedodeljene termine
         elTrainerTermSelect.innerHTML = '<option value="">Izberi termin</option>';
+        populateUnassignedTerms();
     }
 
     // Funkcija za posodabljanje select elementa za termine pri dodeljevanju trenerjem
     function updateTermSelectForTrainer(trainerId) {
         elTrainerTermSelect.innerHTML = '<option value="">Izberi termin</option>';
         
-        if (!trainerId) return;
+        if (!trainerId) {
+            // Če ni izbran trener, prikaži samo nedodeljene termine
+            populateUnassignedTerms();
+            return;
+        }
         
-        const trainer = trainers.find(t => t.id === trainerId);
-        if (!trainer) return;
-        
-        // Filtriraj samo aktivne termine, ki jih trener še nima
+        // Ko je trener izbran, vseeno prikaži samo nedodeljene termine
+        populateUnassignedTerms();
+    }
+    
+    // Funkcija za prikazovanje samo terminov, ki niso dodeljeni nobenemu trenerju
+    function populateUnassignedTerms() {
         const activeTerms = getActiveTerms();
-        const availableTerms = activeTerms.filter(term => 
-            !trainer.terms || !trainer.terms.includes(term.id)
+        
+        // Zberi vse termine, ki so že dodeljeni kateremukoli trenerju
+        const assignedTermIds = new Set();
+        trainers.forEach(trainer => {
+            if (trainer.terms && trainer.terms.length > 0) {
+                trainer.terms.forEach(termId => {
+                    assignedTermIds.add(termId);
+                });
+            }
+        });
+        
+        // Filtriraj samo termine, ki niso dodeljeni nobenemu trenerju
+        const unassignedTerms = activeTerms.filter(term => 
+            !assignedTermIds.has(term.id)
         );
         
-        availableTerms.forEach(t => {
+        unassignedTerms.forEach(t => {
             const option = document.createElement('option');
             option.value = t.id;
             option.textContent = `${DAY_SHORT_NAME[t.day]} ${t.start_time}-${t.end_time}`;
             elTrainerTermSelect.appendChild(option);
         });
+        
+        // Dodaj informativno sporočilo, če ni nedodeljenih terminov
+        if (unassignedTerms.length === 0) {
+            const option = document.createElement('option');
+            option.disabled = true;
+            option.textContent = 'Vsi aktivni termini so že dodeljeni';
+            elTrainerTermSelect.appendChild(option);
+        }
     }
 
     function updateSwimmersList() {
@@ -752,6 +779,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Posodobi lokalno stanje
                     trainer.terms.push(termId);
                     updateTrainersList();
+                    updateTrainerSelects(); // Osveži dropdown z nedodeljenimi termini
                     elTrainerInfo.textContent = `Termin dodeljen trenerju ${trainer.first_name} ${trainer.last_name}`;
                     
                     setTimeout(() => {
@@ -865,6 +893,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Posodobi lokalno stanje
                 trainer.terms = updatedTerms;
                 updateTrainersList();
+                updateTrainerSelects(); // Osveži dropdown z nedodeljenimi termini
                 alert('Termin uspešno odstranjen iz trenerja.');
             } catch (error) {
                 console.error('Napaka pri odstranjevanju termina:', error);
