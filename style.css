@@ -589,3 +589,46 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   border-color: var(--primary);
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
 }
+
+/* Stili za sporočila */
+.message {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 15px 20px;
+  border-radius: 6px;
+  color: white;
+  font-weight: 500;
+  z-index: 1000;
+  max-width: 400px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.3s ease-out;
+}
+
+.message-info {
+  background-color: #17a2b8;
+}
+
+.message-success {
+  background-color: #28a745;
+}
+
+.message-error {
+  background-color: #dc3545;
+}
+
+.message-warning {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}

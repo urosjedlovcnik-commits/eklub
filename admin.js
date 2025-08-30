@@ -23,6 +23,26 @@ document.addEventListener('DOMContentLoaded', () => {
     
     debugLog('Supabase client uspešno ustvarjen');
 
+    // ===== POMOŽNE FUNKCIJE =====
+    
+    // Funkcija za prikaz sporočil
+    function showMessage(message, type = 'info') {
+        // Ustvari element za sporočilo
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message message-${type}`;
+        messageDiv.textContent = message;
+        
+        // Dodaj na vrh strani
+        document.body.insertBefore(messageDiv, document.body.firstChild);
+        
+        // Avtomatsko odstrani po 5 sekundah
+        setTimeout(() => {
+            if (messageDiv.parentNode) {
+                messageDiv.parentNode.removeChild(messageDiv);
+            }
+        }, 5000);
+    }
+
     // Stanja bodo naložena asinhrono
     let TERMS = [];
     let swimmers = [];
@@ -2127,7 +2147,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         });
         html += '</div>';
-        elTermCostsSettings.innerHTML = html;
+        elTrainerRatesSettings.innerHTML = html;
     }
     
     // Funkcija za prikaz nastavitev urnih postavk trenerjev
@@ -2192,19 +2212,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Funkcija za pridobivanje stroška prog za termin
-    function getTermCost(termId) {
-        const termCosts = JSON.parse(localStorage.getItem('termCosts') || '{}');
-        return termCosts[termId] || 0;
+    async function getTermCost(termId) {
+        const termCosts = await getTermCostsFromDB();
+        return termCosts[termId] || 800;
     }
     
     // Funkcija za pridobivanje urne postavke trenerja
-    function getTrainerRate(trainerId) {
-        const trainerRates = JSON.parse(localStorage.getItem('trainerRates') || '{}');
+    async function getTrainerRate(trainerId) {
+        const trainerRates = await getTrainerRatesFromDB();
         return trainerRates[trainerId] || 25;
     }
     
     // Funkcija za izračun finančnih podatkov
-    function calculateFinanceData() {
+    async function calculateFinanceData() {
         const month = parseInt(elFinanceMonthSelect.value);
         const year = parseInt(elFinanceYearSelect.value);
         
@@ -2223,13 +2243,12 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Izračunaj prihodke - uporabi individualne pristojbine plavalcev
         const activeSwimmers = swimmers.filter(s => !s.is_deleted);
-        const swimmerFees = getSwimmerFees(month, year);
+        const swimmerFees = await getSwimmerFees(month, year);
         let totalRevenue = 0;
         
         activeSwimmers.forEach(swimmer => {
-            const fee = swimmerFees[swimmer.id] || 80; // Privzeta pristojbina 80€
-            const discount = swimmerFees[`${swimmer.id}_discount`] || 0;
-            totalRevenue += Math.max(0, fee - discount);
+            const feeData = swimmerFees[swimmer.id] || { fee: 80, discount: 0 };
+            totalRevenue += Math.max(0, feeData.fee - feeData.discount);
         });
         
         // Izračunaj stroške trenerjev
@@ -2270,17 +2289,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Izračunaj stroške trenerjev z individualnimi urnimi postavkami
-        Object.values(trainerCosts).forEach(trainerCost => {
-            const trainerRate = getTrainerRate(trainerCost.trainer.id);
+        for (const trainerCost of Object.values(trainerCosts)) {
+            const trainerRate = await getTrainerRate(trainerCost.trainer.id);
             trainerCost.cost = trainerCost.hours * trainerRate;
-        });
+        }
         
         const totalTrainerCost = Object.values(trainerCosts).reduce((sum, tc) => sum + tc.cost, 0);
         
         // Izračunaj stroške prog po terminih
         let totalFacilityCost = 0;
-        TERMS.forEach(term => {
-            const termCost = getTermCost(term.id);
+        for (const term of TERMS) {
+            const termCost = await getTermCost(term.id);
             if (termCost > 0) {
                 // Preveri, ali je termin aktiven v izbranem mesecu
                 const termStartDate = new Date(term.date_from);
@@ -2289,7 +2308,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     totalFacilityCost += termCost;
                 }
             }
-        });
+        }
         
         // Skupni stroški
         const totalCosts = totalTrainerCost + managementCostPerMonth + totalFacilityCost;
@@ -2390,22 +2409,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Funkcija za pridobivanje pristojbin plavalcev za določen mesec
-    function getSwimmerFees(month, year) {
-        const key = `${year}-${month}`;
-        const swimmerFees = JSON.parse(localStorage.getItem('swimmerFees') || '{}');
-        return swimmerFees[key] || {};
+    async function getSwimmerFees(month, year) {
+        return await getSwimmerFeesFromDB(month, year);
     }
     
     // Funkcija za shranjevanje pristojbin plavalcev za določen mesec
-    function saveSwimmerFees(month, year, fees) {
-        const key = `${year}-${month}`;
-        const swimmerFees = JSON.parse(localStorage.getItem('swimmerFees') || '{}');
-        swimmerFees[key] = fees;
-        localStorage.setItem('swimmerFees', JSON.stringify(swimmerFees));
+    async function saveSwimmerFees(month, year, fees) {
+        return await saveSwimmerFeesToDB(month, year, fees);
     }
     
     // Funkcija za osvežitev prikaza pristojbin plavalcev
-    function refreshSwimmerFees() {
+    async function refreshSwimmerFees() {
         const month = parseInt(elSwimmerFeesMonthSelect.value);
         const year = parseInt(elSwimmerFeesYearSelect.value);
         
@@ -2414,7 +2428,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        const swimmerFees = getSwimmerFees(month, year);
+        const swimmerFees = await getSwimmerFees(month, year);
         const activeSwimmers = swimmers.filter(s => !s.is_deleted);
         
         let html = `
@@ -2432,8 +2446,9 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         
         activeSwimmers.forEach(swimmer => {
-            const currentFee = swimmerFees[swimmer.id] || 80;
-            const discount = swimmerFees[`${swimmer.id}_discount`] || 0;
+            const feeData = swimmerFees[swimmer.id] || { fee: 80, discount: 0 };
+            const currentFee = feeData.fee;
+            const discount = feeData.discount;
             
             // Poišči dodeljene termine iz swimmer_terms
             const assignedTerms = [];
@@ -2470,42 +2485,440 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Funkcija za posodobitev pristojbine plavalca
-    function updateSwimmerFee(swimmerId, fee, month, year) {
-        const swimmerFees = getSwimmerFees(month, year);
-        swimmerFees[swimmerId] = parseFloat(fee) || 0;
-        saveSwimmerFees(month, year, swimmerFees);
+    async function updateSwimmerFee(swimmerId, fee, month, year) {
+        const success = await updateSwimmerFeeInDB(swimmerId, fee, month, year);
         
-        // Osveži Finance sekcijo, če je prikazana
-        if (document.getElementById('finance-section').classList.contains('active')) {
-            calculateFinanceData();
-        }
-        
-        // Osveži prikaz pristojbin plavalcev, če je prikazan
-        if (document.getElementById('swimmerFeesBox').innerHTML.includes('table')) {
+        if (success) {
+            if (currentSection === 'finance') {
+                calculateFinanceData();
+            }
             refreshSwimmerFees();
+        } else {
+            showMessage('Napaka pri posodobitvi pristojbine!', 'error');
         }
     }
     
     // Funkcija za posodobitev popusta plavalca
-    function updateSwimmerDiscount(swimmerId, discount, month, year) {
-        const swimmerFees = getSwimmerFees(month, year);
-        swimmerFees[`${swimmerId}_discount`] = parseFloat(discount) || 0;
-        saveSwimmerFees(month, year, swimmerFees);
+    async function updateSwimmerDiscount(swimmerId, discount, month, year) {
+        const success = await updateSwimmerDiscountInDB(swimmerId, discount, month, year);
         
-        // Osveži Finance sekcijo, če je prikazana
-        if (document.getElementById('finance-section').classList.contains('active')) {
-            calculateFinanceData();
-        }
-        
-        // Osveži prikaz pristojbin plavalcev, če je prikazan
-        if (document.getElementById('swimmerFeesBox').innerHTML.includes('table')) {
+        if (success) {
+            if (currentSection === 'finance') {
+                calculateFinanceData();
+            }
             refreshSwimmerFees();
+        } else {
+            showMessage('Napaka pri posodobitvi popusta!', 'error');
         }
     }
     
     // Globalne funkcije za onchange evente
     window.updateSwimmerFee = updateSwimmerFee;
     window.updateSwimmerDiscount = updateSwimmerDiscount;
+
+    // ===== SUPABASE FUNKCIJE ZA FINANCE =====
+
+    // Funkcija za pridobivanje stroškov prog po terminih iz baze
+    async function getTermCostsFromDB() {
+        try {
+            const { data, error } = await supabase
+                .from('term_costs')
+                .select('*');
+            
+            if (error) throw error;
+            
+            // Pretvori v obliko, ki jo pričakuje aplikacija
+            const termCosts = {};
+            data.forEach(item => {
+                termCosts[item.term_id] = item.cost_per_month;
+            });
+            
+            return termCosts;
+        } catch (error) {
+            console.error('Napaka pri pridobivanju stroškov prog:', error);
+            return {};
+        }
+    }
+
+    // Funkcija za shranjevanje stroškov prog v bazo
+    async function saveTermCostsToDB(termCosts) {
+        try {
+            const updates = Object.entries(termCosts).map(([termId, cost]) => ({
+                term_id: termId,
+                cost_per_month: parseFloat(cost)
+            }));
+
+            const { error } = await supabase
+                .from('term_costs')
+                .upsert(updates, { onConflict: 'term_id' });
+
+            if (error) throw error;
+            
+            return true;
+        } catch (error) {
+            console.error('Napaka pri shranjevanju stroškov prog:', error);
+            return false;
+        }
+    }
+
+    // Funkcija za pridobivanje urnih postavk trenerjev iz baze
+    async function getTrainerRatesFromDB() {
+        try {
+            const { data, error } = await supabase
+                .from('trainer_rates')
+                .select('*');
+            
+            if (error) throw error;
+            
+            // Pretvori v obliko, ki jo pričakuje aplikacija
+            const trainerRates = {};
+            data.forEach(item => {
+                trainerRates[item.trainer_id] = item.hourly_rate;
+            });
+            
+            return trainerRates;
+        } catch (error) {
+            console.error('Napaka pri pridobivanju urnih postavk:', error);
+            return false;
+        }
+    }
+
+    // Funkcija za shranjevanje urnih postavk v bazo
+    async function saveTrainerRatesToDB(trainerRates) {
+        try {
+            const updates = Object.entries(trainerRates).map(([trainerId, rate]) => ({
+                trainer_id: trainerId,
+                hourly_rate: parseFloat(rate)
+            }));
+
+            const { error } = await supabase
+                .from('trainer_rates')
+                .upsert(updates, { onConflict: 'trainer_id' });
+
+            if (error) throw error;
+            
+            return true;
+        } catch (error) {
+            console.error('Napaka pri shranjevanju urnih postavk:', error);
+            return false;
+        }
+    }
+
+    // Funkcija za pridobivanje mesečnih pristojbin plavalcev iz baze
+    async function getSwimmerFeesFromDB(month, year) {
+        try {
+            const { data, error } = await supabase
+                .from('swimmer_monthly_fees')
+                .select('*')
+                .eq('month', month)
+                .eq('year', year);
+            
+            if (error) throw error;
+            
+            // Pretvori v obliko, ki jo pričakuje aplikacija
+            const swimmerFees = {};
+            data.forEach(item => {
+                swimmerFees[item.swimmer_id] = {
+                    fee: item.monthly_fee,
+                    discount: item.discount
+                };
+            });
+            
+            return swimmerFees;
+        } catch (error) {
+            console.error('Napaka pri pridobivanju pristojbin:', error);
+            return {};
+        }
+    }
+
+    // Funkcija za shranjevanje mesečnih pristojbin v bazo
+    async function saveSwimmerFeesToDB(month, year, fees) {
+        try {
+            const updates = Object.entries(fees).map(([swimmerId, feeData]) => ({
+                swimmer_id: swimmerId,
+                month: month,
+                year: year,
+                monthly_fee: parseFloat(feeData.fee),
+                discount: parseFloat(feeData.discount)
+            }));
+
+            const { error } = await supabase
+                .from('swimmer_monthly_fees')
+                .upsert(updates, { onConflict: 'swimmer_id,month,year' });
+
+            if (error) throw error;
+            
+            return true;
+        } catch (error) {
+            console.error('Napaka pri shranjevanju pristojbin:', error);
+            return false;
+        }
+    }
+
+    // Funkcija za posodobitev posamezne pristojbine plavalca
+    async function updateSwimmerFeeInDB(swimmerId, fee, month, year) {
+        try {
+            const { error } = await supabase
+                .from('swimmer_monthly_fees')
+                .upsert({
+                    swimmer_id: swimmerId,
+                    month: month,
+                    year: year,
+                    monthly_fee: parseFloat(fee)
+                }, { onConflict: 'swimmer_id,month,year' });
+
+            if (error) throw error;
+            
+            return true;
+        } catch (error) {
+            console.error('Napaka pri posodobitvi pristojbine:', error);
+            return false;
+        }
+    }
+
+    // Funkcija za posodobitev popusta plavalca
+    async function updateSwimmerDiscountInDB(swimmerId, discount, month, year) {
+        try {
+            const { error } = await supabase
+                .from('swimmer_monthly_fees')
+                .upsert({
+                    swimmer_id: swimmerId,
+                    month: month,
+                    year: year,
+                    discount: parseFloat(discount)
+                }, { onConflict: 'swimmer_id,month,year' });
+
+            if (error) throw error;
+            
+            return true;
+        } catch (error) {
+            console.error('Napaka pri posodobitvi popusta:', error);
+            return false;
+        }
+    }
+
+    // ===== POSODOBLJENE FINANCE FUNKCIJE =====
+
+    // Posodobljena funkcija za renderiranje nastavitev stroškov prog
+    async function renderTermCostsSettings() {
+        const termCosts = await getTermCostsFromDB();
+        
+        let html = '<div class="term-costs-grid">';
+        
+        TERMS.forEach(term => {
+            const cost = termCosts[term.id] || 800;
+            html += `
+                <div class="term-cost-row">
+                    <label for="term-cost-${term.id}">${term.label}:</label>
+                    <input type="number" 
+                           id="term-cost-${term.id}" 
+                           value="${cost}" 
+                           min="0" 
+                           step="0.01" 
+                           style="width: 120px;"
+                           onchange="updateTermCost('${term.id}', this.value)">
+                    <span>€/mesec</span>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        elTermCostsSettings.innerHTML = html;
+    }
+
+    // Posodobljena funkcija za renderiranje nastavitev urnih postavk
+    async function renderTrainerRatesSettings() {
+        const trainerRates = await getTrainerRatesFromDB();
+        
+        let html = '<div class="trainer-rates-grid">';
+        
+        TRAINERS.forEach(trainer => {
+            const rate = trainerRates[trainer.id] || 25;
+            html += `
+                <div class="trainer-rate-row">
+                    <label for="trainer-rate-${trainer.id}">${trainer.first_name} ${trainer.last_name}:</label>
+                    <input type="number" 
+                           id="trainer-rate-${trainer.id}" 
+                           value="${rate}" 
+                           min="0" 
+                           step="0.01" 
+                           style="width: 120px;"
+                           onchange="updateTrainerRate('${trainer.id}', this.value)">
+                    <span>€/uro</span>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        elTermCostsSettings.innerHTML = html;
+    }
+
+    // Posodobljena funkcija za shranjevanje stroškov prog
+    async function saveTermCosts() {
+        const termCosts = {};
+        
+        TERMS.forEach(term => {
+            const input = document.getElementById(`term-cost-${term.id}`);
+            if (input) {
+                termCosts[term.id] = input.value;
+            }
+        });
+        
+        const success = await saveTermCostsToDB(termCosts);
+        
+        if (success) {
+            showMessage('Stroški prog so bili uspešno shranjeni!', 'success');
+            if (currentSection === 'finance') {
+                calculateFinanceData();
+            }
+        } else {
+            showMessage('Napaka pri shranjevanju stroškov prog!', 'error');
+        }
+    }
+
+    // Posodobljena funkcija za shranjevanje urnih postavk
+    async function saveTrainerRates() {
+        const trainerRates = {};
+        
+        TRAINERS.forEach(trainer => {
+            const input = document.getElementById(`trainer-rate-${trainer.id}`);
+            if (input) {
+                trainerRates[trainer.id] = input.value;
+            }
+        });
+        
+        const success = await saveTrainerRatesToDB(trainerRates);
+        
+        if (success) {
+            showMessage('Urne postavke so bile uspešno shranjene!', 'success');
+            if (currentSection === 'finance') {
+                calculateFinanceData();
+            }
+        } else {
+            showMessage('Napaka pri shranjevanju urnih postavk!', 'error');
+        }
+    }
+
+    // Posodobljena funkcija za osvežitev pristojbin plavalcev
+    async function refreshSwimmerFees() {
+        const month = parseInt(elSwimmerFeesMonthSelect.value);
+        const year = parseInt(elSwimmerFeesYearSelect.value);
+        
+        if (!month || !year) {
+            elSwimmerFeesBox.innerHTML = 'Izberite mesec in leto za upravljanje pristojbin...';
+            return;
+        }
+        
+        const swimmerFees = await getSwimmerFeesFromDB(month, year);
+        
+        let html = `
+            <table class="swimmer-fees-table">
+                <thead>
+                    <tr>
+                        <th>Plavalec</th>
+                        <th>Termini</th>
+                        <th>Mesečna vadnina (€)</th>
+                        <th>Popust (€)</th>
+                        <th>Končna vadnina (€)</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        SWIMMERS.filter(swimmer => !swimmer.is_deleted).forEach(swimmer => {
+            const feeData = swimmerFees[swimmer.id] || { fee: 80, discount: 0 };
+            const finalFee = Math.max(0, feeData.fee - feeData.discount);
+            const termLabels = (swimmer.terms || []).map(termId => {
+                const term = TERMS.find(t => t.id === termId);
+                return term ? term.label : termId;
+            }).join(', ');
+            
+            html += `
+                <tr>
+                    <td>${swimmer.first_name} ${swimmer.last_name}</td>
+                    <td>${termLabels || 'Brez terminov'}</td>
+                    <td>
+                        <input type="number" 
+                               value="${feeData.fee}" 
+                               min="0" 
+                               step="0.01" 
+                               style="width: 80px;"
+                               onchange="updateSwimmerFee('${swimmer.id}', this.value, ${month}, ${year})">
+                    </td>
+                    <td>
+                        <input type="number" 
+                               value="${feeData.discount}" 
+                               min="0" 
+                               step="0.01" 
+                               style="width: 80px;"
+                               onchange="updateSwimmerDiscount('${swimmer.id}', this.value, ${month}, ${year})">
+                    </td>
+                    <td><strong>${finalFee.toFixed(2)}€</strong></td>
+                </tr>
+            `;
+        });
+        
+        html += '</tbody></table>';
+        elSwimmerFeesBox.innerHTML = html;
+    }
+
+    // Posodobljena funkcija za posodobitev pristojbine plavalca
+    async function updateSwimmerFee(swimmerId, fee, month, year) {
+        const success = await updateSwimmerFeeInDB(swimmerId, fee, month, year);
+        
+        if (success) {
+            if (currentSection === 'finance') {
+                calculateFinanceData();
+            }
+            refreshSwimmerFees();
+        } else {
+            showMessage('Napaka pri posodobitvi pristojbine!', 'error');
+        }
+    }
+
+    // Posodobljena funkcija za posodobitev popusta plavalca
+    async function updateSwimmerDiscount(swimmerId, discount, month, year) {
+        const success = await updateSwimmerDiscountInDB(swimmerId, discount, month, year);
+        
+        if (success) {
+            if (currentSection === 'finance') {
+                calculateFinanceData();
+            }
+            refreshSwimmerFees();
+        } else {
+            showMessage('Napaka pri posodobitvi popusta!', 'error');
+        }
+    }
+
+    // ===== POMOŽNE FUNKCIJE =====
+
+    // Funkcija za posodobitev stroška posameznega termina
+    async function updateTermCost(termId, cost) {
+        const termCosts = await getTermCostsFromDB();
+        termCosts[termId] = parseFloat(cost);
+        
+        const success = await saveTermCostsToDB(termCosts);
+        if (success && currentSection === 'finance') {
+            calculateFinanceData();
+        }
+    }
+
+    // Funkcija za posodobitev urni postavki posameznega trenerja
+    async function updateTrainerRate(trainerId, rate) {
+        const trainerRates = await getTrainerRatesToDB();
+        trainerRates[trainerId] = parseFloat(rate);
+        
+        const success = await saveTrainerRatesToDB(trainerRates);
+        if (success && currentSection === 'finance') {
+            calculateFinanceData();
+        }
+    }
+
+    // ===== GLOBALNE FUNKCIJE =====
+    window.updateSwimmerFee = updateSwimmerFee;
+    window.updateSwimmerDiscount = updateSwimmerDiscount;
+    window.updateTermCost = updateTermCost;
+    window.updateTrainerRate = updateTrainerRate;
 
     // ===== Inicializacija =====
     loadData();
