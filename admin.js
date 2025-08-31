@@ -1649,6 +1649,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         alert('CSV mora vsebovati stolpce: first_name, last_name, monthly_fee');
                         return;
                     }
+                    
+                    // Preveri, ali CSV vsebuje opcijski stolpec za popust
+                    const hasDiscountColumn = headers.includes('discount');
 
                     const month = parseInt(elFinanceMonthSelect.value);
                     const year = parseInt(elFinanceYearSelect.value);
@@ -1666,6 +1669,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             const lastName = values[headers.indexOf('last_name')];
                             const amount = parseFloat(values[headers.indexOf('monthly_fee')]);
                             
+                            // Preberi popust, če obstaja stolpec
+                            let discount = 0;
+                            if (hasDiscountColumn) {
+                                const discountValue = values[headers.indexOf('discount')];
+                                discount = discountValue ? parseFloat(discountValue) || 0 : 0;
+                            }
+                            
                             if (firstName && lastName && !isNaN(amount)) {
                                 // Poišči plavalca po imenu in priimku
                                 const swimmer = swimmers.find(s => 
@@ -1680,7 +1690,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         month: month,
                                         year: year,
                                         monthly_fee: amount,
-                                        discount: 0
+                                        discount: discount
                                     });
                                 } else {
                                     console.warn(`Plavalec ni bil najden: ${firstName} ${lastName}`);
@@ -1717,7 +1727,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     month: m,
                                     year: startYear,
                                     monthly_fee: fee.monthly_fee,
-                                    discount: fee.discount
+                                    discount: m === startMonth ? fee.discount : 0 // Popust samo za začetni mesec
                                 });
                             }
                         }
@@ -1731,7 +1741,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         month: m,
                                         year: startYear + 1,
                                         monthly_fee: fee.monthly_fee,
-                                        discount: fee.discount
+                                        discount: 0 // Brez popusta za prihodnje mesece
                                     });
                                 }
                             }
