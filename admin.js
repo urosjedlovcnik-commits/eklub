@@ -1316,7 +1316,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Leto
         elExportYearSelect.innerHTML = '';
         const currentYear = new Date().getFullYear();
-        for (let i = currentYear - 2; i <= currentYear + 1; i++) {
+        for (let i = 2025; i <= 2028; i++) {
             const option = document.createElement('option');
             option.value = i;
             option.textContent = i;
@@ -2299,7 +2299,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (elFinanceYearSelect) {
             elFinanceYearSelect.innerHTML = '';
-            for (let i = currentYear - 2; i <= currentYear + 1; i++) {
+            for (let i = 2025; i <= 2028; i++) {
                 const option = document.createElement('option');
                 option.value = i;
                 option.textContent = i;
@@ -2322,7 +2322,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (elSwimmerFeesYearSelect) {
             elSwimmerFeesYearSelect.innerHTML = '';
-            for (let i = currentYear - 2; i <= currentYear + 1; i++) {
+            for (let i = 2025; i <= 2028; i++) {
                 const option = document.createElement('option');
                 option.value = i;
                 option.textContent = i;
