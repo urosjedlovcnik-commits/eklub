@@ -2538,7 +2538,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             console.log('Total revenue:', totalRevenue);
             
-            // Izračunaj stroške trenerjev - enkrat na termin, ne glede na število dni v mesecu
+            // Izračunaj stroške trenerjev - za vsak izveden termin v mesecu
             let totalTrainerSessions = 0;
             let trainerCosts = {};
             
@@ -2561,7 +2561,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log(`Using ${activeTermsForTrainers.length} active terms out of ${TERMS.length} total terms for trainer cost calculation`);
             }
             
-            // Za vsak aktivni termin štejemo samo enkrat, ne glede na število dni v mesecu
+            // Za vsak aktivni termin preštejemo vse dni v mesecu, ko se izvaja
             activeTermsForTrainers.forEach(term => {
                 // Preveri, ali je termin aktiven v izbranem mesecu
                 const termStartDate = new Date(term.date_from);
@@ -2573,25 +2573,48 @@ document.addEventListener('DOMContentLoaded', () => {
                         t.terms && t.terms.includes(term.id) && !t.is_deleted
                     );
                     
-                    trainersForTerm.forEach(trainer => {
-                        if (!trainerCosts[trainer.id]) {
-                            trainerCosts[trainer.id] = {
-                                trainer: trainer,
-                                sessions: 0,
-                                cost: 0
-                            };
-                        }
+                    // Preštej vse dni v mesecu, ko se termin izvaja
+                    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                        const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
+                        const isoDate = iso(d);
                         
-                        // Štejemo število aktivnih terminov, ne število dni
-                        trainerCosts[trainer.id].sessions += 1;
-                        totalTrainerSessions += 1;
-                    });
+                        // Preveri, ali je termin na ta dan in ali je aktiven
+                        if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
+                            // Preveri, ali je termin deaktiviran za ta dan
+                            const termStatus = getTermStatus(d, term.id);
+                            if (termStatus.status !== "inactive") {
+                                // Termin je aktiven, preveri prisotnost trenerjev
+                                trainersForTerm.forEach(trainer => {
+                                    if (!trainerCosts[trainer.id]) {
+                                        trainerCosts[trainer.id] = {
+                                            trainer: trainer,
+                                            sessions: 0,
+                                            cost: 0
+                                        };
+                                    }
+                                    
+                                    // Preveri, ali je trener prisoten na ta dan
+                                    const trainerAtt = trainerAttendance[isoDate]?.[term.id]?.[trainer.id];
+                                    if (!trainerAtt || trainerAtt.present !== false) {
+                                        // Trener je prisoten (ali ni označen kot odsoten)
+                                        trainerCosts[trainer.id].sessions += 1;
+                                        totalTrainerSessions += 1;
+                                        console.log(`Trainer ${trainer.first_name} ${trainer.last_name} present for term ${term.label} on ${isoDate}`);
+                                    } else {
+                                        console.log(`Trainer ${trainer.first_name} ${trainer.last_name} absent for term ${term.label} on ${isoDate}`);
+                                    }
+                                });
+                            } else {
+                                console.log(`Term ${term.label} is inactive on ${isoDate}`);
+                            }
+                        }
+                    }
                 }
             });
             
             console.log('Trainer costs before rate calculation:', trainerCosts);
             
-            // Izračunaj stroške trenerjev - enkrat na termin, ne glede na trajanje
+            // Izračunaj stroške trenerjev - za vsak izveden termin v mesecu
             for (const trainerCost of Object.values(trainerCosts)) {
                 const trainerRate = trainerRates[trainerCost.trainer.id] || 25; // Default 25€/termin
                 trainerCost.cost = trainerCost.sessions * trainerRate;
@@ -2736,7 +2759,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <tr>
                             <td>Stroški trenerjev</td>
                             <td>${totalTrainerCost.toFixed(2)} €</td>
-                            <td>${totalTrainerSessions} terminov (individualne postavke na termin)</td>
+                            <td>${totalTrainerSessions} izvedenih terminov (individualne postavke na termin)</td>
                         </tr>
                         <tr>
                             <td>Stroški vodenja</td>
