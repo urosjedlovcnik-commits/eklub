@@ -2334,7 +2334,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="trainer-rate-row">
                         <label for="trainer-rate-${trainer.id}">${trainer.first_name} ${trainer.last_name}:</label>
                         <input type="number" id="trainer-rate-${trainer.id}" value="${trainerRate}" min="0" step="0.01" style="width: 100px;">
-                        <span>€/h</span>
+                        <span>€/termin</span>
                     </div>
                 `;
             }
@@ -2439,64 +2439,56 @@ document.addEventListener('DOMContentLoaded', () => {
             
             console.log('Total revenue:', totalRevenue);
             
-            // Izračunaj stroške trenerjev
+            // Izračunaj stroške trenerjev - enkrat na termin, ne glede na število dni v mesecu
             let totalTrainerSessions = 0;
             let trainerCosts = {};
             
-            // Pridobi urne postavke trenerjev iz baze
+            // Pridobi postavke trenerjev iz baze
             const trainerRates = await getTrainerRatesFromDB();
             console.log('Trainer rates from DB:', trainerRates);
             
-            // Iteriraj po vseh dnevih v mesecu
-            for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-                const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
-                const isoDate = iso(d);
-                
-                // Filtriraj samo aktivne termine za izračun stroškov trenerjev
-                const activeTermsForTrainers = TERMS.filter(term => {
-                    const termEndDate = new Date(term.date_to);
-                    const today = new Date();
-                    const isActive = termEndDate >= today;
-                    if (!isActive) {
-                        console.log(`Skipping inactive term ${term.label} (${term.date_to}) for trainer costs`);
-                    }
-                    return termEndDate >= today;
-                });
-                
-                if (activeTermsForTrainers.length !== TERMS.length) {
-                    console.log(`Using ${activeTermsForTrainers.length} active terms out of ${TERMS.length} total terms for trainer cost calculation`);
+            // Filtriraj samo aktivne termine za izračun stroškov trenerjev
+            const activeTermsForTrainers = TERMS.filter(term => {
+                const termEndDate = new Date(term.date_to);
+                const today = new Date();
+                const isActive = termEndDate >= today;
+                if (!isActive) {
+                    console.log(`Skipping inactive term ${term.label} (${term.date_to}) for trainer costs`);
                 }
+                return termEndDate >= today;
+            });
+            
+            if (activeTermsForTrainers.length !== TERMS.length) {
+                console.log(`Using ${activeTermsForTrainers.length} active terms out of ${TERMS.length} total terms for trainer cost calculation`);
+            }
+            
+            // Za vsak aktivni termin štejemo samo enkrat, ne glede na število dni v mesecu
+            activeTermsForTrainers.forEach(term => {
+                // Preveri, ali je termin aktiven v izbranem mesecu
+                const termStartDate = new Date(term.date_from);
+                const termEndDate = new Date(term.date_to);
                 
-                activeTermsForTrainers.forEach(term => {
-                    if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
-                        // Preveri, ali je termin deaktiviran za ta dan
-                        const termStatus = getTermStatus(d, term.id);
-                        if (termStatus.status === "inactive") {
-                            console.log(`Skipping inactive term ${term.label} on ${isoDate}`);
-                            return;
+                if (startDate <= termEndDate && endDate >= termStartDate) {
+                    // Poišči trenerje za ta termin
+                    const trainersForTerm = trainers.filter(t => 
+                        t.terms && t.terms.includes(term.id) && !t.is_deleted
+                    );
+                    
+                    trainersForTerm.forEach(trainer => {
+                        if (!trainerCosts[trainer.id]) {
+                            trainerCosts[trainer.id] = {
+                                trainer: trainer,
+                                sessions: 0,
+                                cost: 0
+                            };
                         }
                         
-                        // Poišči trenerje za ta termin
-                        const trainersForTerm = trainers.filter(t => 
-                            t.terms && t.terms.includes(term.id) && !t.is_deleted
-                        );
-                        
-                        trainersForTerm.forEach(trainer => {
-                            if (!trainerCosts[trainer.id]) {
-                                trainerCosts[trainer.id] = {
-                                    trainer: trainer,
-                                    sessions: 0,
-                                    cost: 0
-                                };
-                            }
-                            
-                            // Štejemo število terminov, ne ur
-                            trainerCosts[trainer.id].sessions += 1;
-                            totalTrainerSessions += 1;
-                        });
-                    }
-                });
-            }
+                        // Štejemo število aktivnih terminov, ne število dni
+                        trainerCosts[trainer.id].sessions += 1;
+                        totalTrainerSessions += 1;
+                    });
+                }
+            });
             
             console.log('Trainer costs before rate calculation:', trainerCosts);
             
@@ -2539,7 +2531,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             for (const term of activeTerms) {
-                const termHourlyCost = termCosts[term.id] || 50; // Default 50€/hour
+                const termHourlyCost = termCosts[term.id] || 50; // Default 50€/uro
                 console.log(`Term ${term.label}: hourly cost = ${termHourlyCost}€`);
                 
                 if (termHourlyCost > 0) {
@@ -3007,7 +2999,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log(`Term costs settings: showing ${activeTermsForSettings.length} active terms out of ${TERMS.length} total terms`);
         
         for (const term of activeTermsForSettings) {
-            const cost = termCosts[term.id] || 50; // Default to 50€/hour
+            const cost = termCosts[term.id] || 50; // Default to 50€/uro
             html += `
                 <div class="term-cost-row">
                     <label for="term-cost-${term.id}">${term.label}:</label>
@@ -3038,7 +3030,7 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const trainer of trainers) {
             if (trainer.is_deleted) continue;
             
-                            const rate = trainerRates[trainer.id] || 25; // Default to 25€/session
+            const rate = trainerRates[trainer.id] || 25; // Default to 25€/termin
             html += `
                 <div class="trainer-rate-row">
                     <label for="trainer-rate-${trainer.id}">${trainer.first_name} ${trainer.last_name}:</label>
@@ -3049,7 +3041,7 @@ document.addEventListener('DOMContentLoaded', () => {
                            step="0.01" 
                            style="width: 120px;"
                            onchange="updateTrainerRate('${trainer.id}', this.value)">
-                    <span>€/uro</span>
+                    <span>€/termin</span>
                 </div>
             `;
         }
