@@ -1690,10 +1690,57 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     if (importedFees.length > 0) {
-                        // Uvozi vadnine v bazo
+                        // Ustvari vadnine za vse prihodnje mesece v letu
+                        // To zagotavlja, da enkrat uvožene vadnine veljajo za vse prihodnje mesece
+                        const futureFees = [];
+                        const currentDate = new Date();
+                        const currentMonth = currentDate.getMonth();
+                        const currentYear = currentDate.getFullYear();
+                        
+                        // Določi, od katerega meseca naprej naj veljajo nove vadnine
+                        let startMonth, startYear;
+                        if (year > currentYear || (year === currentYear && month >= currentMonth)) {
+                            // Če je izbran mesec v prihodnosti ali sedanjosti, začni od tam
+                            startMonth = month;
+                            startYear = year;
+                        } else {
+                            // Če je izbran mesec v preteklosti, začni od trenutnega meseca
+                            startMonth = currentMonth;
+                            startYear = currentYear;
+                        }
+                        
+                        // Ustvari vadnine za vse mesece od startMonth do konca leta
+                        for (let m = startMonth; m < 12; m++) {
+                            for (const fee of importedFees) {
+                                futureFees.push({
+                                    swimmer_id: fee.swimmer_id,
+                                    month: m,
+                                    year: startYear,
+                                    monthly_fee: fee.monthly_fee,
+                                    discount: fee.discount
+                                });
+                            }
+                        }
+                        
+                        // Če je startYear trenutno leto, dodaj tudi za naslednje leto
+                        if (startYear === currentYear) {
+                            for (let m = 0; m < 12; m++) {
+                                for (const fee of importedFees) {
+                                    futureFees.push({
+                                        swimmer_id: fee.swimmer_id,
+                                        month: m,
+                                        year: startYear + 1,
+                                        monthly_fee: fee.monthly_fee,
+                                        discount: fee.discount
+                                    });
+                                }
+                            }
+                        }
+                        
+                        // Uvozi vadnine v bazo za vse prihodnje mesece
                         const { data, error } = await supabase
                             .from('swimmer_monthly_fees')
-                            .upsert(importedFees, { 
+                            .upsert(futureFees, { 
                                 onConflict: 'swimmer_id,month,year' 
                             })
                             .select();
@@ -1704,7 +1751,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             return;
                         }
 
-                        alert(`Uvoženih ${importedFees.length} vadnin za ${month + 1}/${year}`);
+                        const totalMonths = futureFees.length / importedFees.length;
+                        alert(`Uvoženih ${importedFees.length} vadnin za ${totalMonths} prihodnjih mesecev (od ${startMonth + 1}/${startYear} naprej)`);
                         
                         // Osveži finance sekcijo, če je prikazana
                         if (currentSection === 'finance') {
