@@ -1363,25 +1363,81 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 if (newSwimmers.length > 0) {
-                    const { data, error } = await supabase
-                        .from('swimmers')
-                        .insert(newSwimmers)
-                        .select();
-
-                    if (error) {
-                        console.error('Napaka pri uvažanju plavalcev:', error);
-                        alert('Napaka pri uvažanju plavalcev. Preverite konzolo.');
-                        return;
+                    // Ločimo nove plavalce od obstoječih
+                    const newSwimmersToInsert = [];
+                    const existingSwimmersToUpdate = [];
+                    
+                    for (const swimmer of newSwimmers) {
+                        // Poišči obstoječega plavalca po imenu in priimku
+                        const existingSwimmer = swimmers.find(s => 
+                            s.first_name.toLowerCase() === swimmer.first_name.toLowerCase() && 
+                            s.last_name.toLowerCase() === swimmer.last_name.toLowerCase()
+                        );
+                        
+                        if (existingSwimmer) {
+                            // Posodobi obstoječega plavalca z novimi termini
+                            existingSwimmersToUpdate.push({
+                                id: existingSwimmer.id,
+                                terms: swimmer.terms
+                            });
+                        } else {
+                            // Dodaj novega plavalca
+                            newSwimmersToInsert.push(swimmer);
+                        }
                     }
+                    
+                    let insertedCount = 0;
+                    let updatedCount = 0;
+                    
+                    // Vstavi nove plavalce
+                    if (newSwimmersToInsert.length > 0) {
+                        const { data: insertData, error: insertError } = await supabase
+                            .from('swimmers')
+                            .insert(newSwimmersToInsert)
+                            .select();
 
-                    // Dodaj v lokalno stanje
-                    if (data) {
-                        swimmers.push(...data);
+                        if (insertError) {
+                            console.error('Napaka pri uvažanju novih plavalcev:', insertError);
+                            alert('Napaka pri uvažanju novih plavalcev. Preverite konzolo.');
+                            return;
+                        }
+
+                        if (insertData) {
+                            swimmers.push(...insertData);
+                            insertedCount = insertData.length;
+                        }
+                    }
+                    
+                    // Posodobi obstoječe plavalce
+                    if (existingSwimmersToUpdate.length > 0) {
+                        for (const updateData of existingSwimmersToUpdate) {
+                            const { error: updateError } = await supabase
+                                .from('swimmers')
+                                .update({ terms: updateData.terms })
+                                .eq('id', updateData.id);
+
+                            if (updateError) {
+                                console.error('Napaka pri posodobitvi plavalca:', updateError);
+                                continue;
+                            }
+                            
+                            // Posodobi lokalno stanje
+                            const localSwimmer = swimmers.find(s => s.id === updateData.id);
+                            if (localSwimmer) {
+                                localSwimmer.terms = updateData.terms;
+                            }
+                            
+                            updatedCount++;
+                        }
                     }
                     
                     updateSwimmerSelects();
                     updateSwimmersList();
-                    alert(`Uvoženih ${newSwimmers.length} plavalcev`);
+                    
+                    let message = '';
+                    if (insertedCount > 0) message += `Uvoženih ${insertedCount} novih plavalcev. `;
+                    if (updatedCount > 0) message += `Posodobljenih ${updatedCount} obstoječih plavalcev.`;
+                    alert(message || 'Ni bilo nič za uvoz.');
                 }
                 
             } catch (error) {
@@ -3183,6 +3239,31 @@ document.addEventListener('DOMContentLoaded', () => {
     window.updateSwimmerDiscount = updateSwimmerDiscount;
     window.updateTermCost = updateTermCost;
     window.updateTrainerRate = updateTrainerRate;
+    
+    // Funkcija za prenos primera CSV datoteke za termine plavalcev
+    window.downloadSwimmerTermsExample = function() {
+        const csvContent = `first_name,last_name,terms
+Janez,Novak,"pon-17:00-18:00,sre-18:00-19:00,pet-19:00-20:00"
+Maja,Kovač,"pon-17:00-18:00,čet-18:00-19:00"
+Peter,Horvat,"sre-18:00-19:00,pet-19:00-20:00"
+Ana,Žnidar,"pon-17:00-18:00"
+Marko,Potočnik,"sre-18:00-19:00,čet-18:00-19:00,pet-19:00-20:00"
+Sara,Medvešek,"pon-17:00-18:00,sre-18:00-19:00"
+Luka,Žagar,"čet-18:00-19:00,pet-19:00-20:00"
+Nina,Košir,"pon-17:00-18:00,pet-19:00-20:00"
+Tomaž,Petek,"sre-18:00-19:00"
+Eva,Horvat,"pon-17:00-18:00,sre-18:00-19:00,čet-18:00-19:00"`;
+        
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'primer_terminov_plavalcev.csv');
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
     // ===== Inicializacija =====
     loadData();
