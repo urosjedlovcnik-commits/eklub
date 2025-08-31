@@ -1644,9 +1644,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     const lines = csv.split('\n');
                     const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
                     
-                    const requiredHeaders = ['ime', 'priimek', 'znesek'];
+                    const requiredHeaders = ['first_name', 'last_name', 'monthly_fee'];
                     if (!requiredHeaders.every(h => headers.includes(h))) {
-                        alert('CSV mora vsebovati stolpce: ime, priimek, znesek');
+                        alert('CSV mora vsebovati stolpce: first_name, last_name, monthly_fee');
                         return;
                     }
 
@@ -1662,9 +1662,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     for (let i = 1; i < lines.length; i++) {
                         if (lines[i].trim()) {
                             const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
-                            const firstName = values[headers.indexOf('ime')];
-                            const lastName = values[headers.indexOf('priimek')];
-                            const amount = parseFloat(values[headers.indexOf('znesek')]);
+                            const firstName = values[headers.indexOf('first_name')];
+                            const lastName = values[headers.indexOf('last_name')];
+                            const amount = parseFloat(values[headers.indexOf('monthly_fee')]);
                             
                             if (firstName && lastName && !isNaN(amount)) {
                                 // Poišči plavalca po imenu in priimku
