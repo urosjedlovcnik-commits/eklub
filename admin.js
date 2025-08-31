@@ -1334,8 +1334,32 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.onload = async (e) => {
             try {
                 const csv = e.target.result;
+                
+                // Funkcija za pravilno razčlenjevanje CSV vrstic z upoštevanjem narekovajev
+                function parseCSVLine(line) {
+                    const result = [];
+                    let current = '';
+                    let inQuotes = false;
+                    
+                    for (let i = 0; i < line.length; i++) {
+                        const char = line[i];
+                        
+                        if (char === '"') {
+                            inQuotes = !inQuotes;
+                        } else if (char === ',' && !inQuotes) {
+                            result.push(current.trim());
+                            current = '';
+                        } else {
+                            current += char;
+                        }
+                    }
+                    
+                    result.push(current.trim());
+                    return result.map(field => field.replace(/^"|"$/g, ''));
+                }
+                
                 const lines = csv.split('\n');
-                const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+                const headers = parseCSVLine(lines[0]);
                 
                 if (!headers.includes('first_name') || !headers.includes('last_name') || !headers.includes('terms')) {
                     alert('CSV mora vsebovati stolpce: first_name, last_name, terms');
@@ -1345,17 +1369,37 @@ document.addEventListener('DOMContentLoaded', () => {
                 const newSwimmers = [];
                 for (let i = 1; i < lines.length; i++) {
                     if (lines[i].trim()) {
-                        const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+                        const values = parseCSVLine(lines[i]);
                         const first = values[headers.indexOf('first_name')];
                         const last = values[headers.indexOf('last_name')];
                         const termsStr = values[headers.indexOf('terms')];
                         
                         if (first && last) {
+                            // Razčleni termine, ločene z vejico, vendar znotraj istega polja
                             const terms = termsStr ? termsStr.split(',').map(t => t.trim()) : [];
+                            
+                            // Preveri, ali vsi termini obstajajo v bazi
+                            const validTerms = [];
+                            const invalidTerms = [];
+                            
+                            for (const term of terms) {
+                                if (TERMS.find(t => t.id === term)) {
+                                    validTerms.push(term);
+                                } else {
+                                    invalidTerms.push(term);
+                                }
+                            }
+                            
+                            if (invalidTerms.length > 0) {
+                                console.warn(`Invalid terms for ${first} ${last}: [${invalidTerms.join(', ')}]`);
+                            }
+                            
+                            console.log(`Parsed swimmer: ${first} ${last}, valid terms: [${validTerms.join(', ')}]`);
+                            
                             newSwimmers.push({
                                 first_name: first,
                                 last_name: last,
-                                terms: terms,
+                                terms: validTerms,
                                 is_deleted: false
                             });
                         }
@@ -1408,35 +1452,90 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                     
-                    // Posodobi obstoječe plavalce
+                                        // Posodobi obstoječe plavalce
                     if (existingSwimmersToUpdate.length > 0) {
                         for (const updateData of existingSwimmersToUpdate) {
-                            const { error: updateError } = await supabase
+                            console.log(`Updating swimmer ${updateData.id} with terms: [${updateData.terms.join(', ')}]`);
+                            console.log('Terms array type:', typeof updateData.terms, 'Length:', updateData.terms.length);
+                            console.log('Terms array content:', JSON.stringify(updateData.terms));
+                            console.log('Terms array isArray:', Array.isArray(updateData.terms));
+                            console.log('Terms array constructor:', updateData.terms.constructor.name);
+                            
+                            const { data: updateResult, error: updateError } = await supabase
                                 .from('swimmers')
                                 .update({ terms: updateData.terms })
-                                .eq('id', updateData.id);
+                                .eq('id', updateData.id)
+                                .select();
 
                             if (updateError) {
                                 console.error('Napaka pri posodobitvi plavalca:', updateError);
                                 continue;
                             }
                             
+                            if (updateResult && updateResult.length > 0) {
+                                console.log(`Database update successful for swimmer ${updateData.id}:`, updateResult[0]);
+                                console.log(`Database returned terms:`, updateResult[0].terms);
+                                console.log(`Database terms type:`, typeof updateResult[0].terms);
+                                console.log(`Database terms isArray:`, Array.isArray(updateResult[0].terms));
+                            }
+                            
                             // Posodobi lokalno stanje
                             const localSwimmer = swimmers.find(s => s.id === updateData.id);
                             if (localSwimmer) {
                                 localSwimmer.terms = updateData.terms;
+                                console.log(`Updated local swimmer ${localSwimmer.first_name} ${localSwimmer.last_name} with terms: [${localSwimmer.terms.join(', ')}]`);
                             }
-                            
+
                             updatedCount++;
+                        }
+                    }
+                    
+                    // Osveži podatke iz baze za posodobljene plavalce
+                    if (existingSwimmersToUpdate.length > 0) {
+                        console.log('Refreshing swimmers data from database...');
+                        const { data: refreshedSwimmers, error: refreshError } = await supabase
+                            .from('swimmers')
+                            .select('*')
+                            .in('id', existingSwimmersToUpdate.map(s => s.id));
+                        
+                        if (refreshError) {
+                            console.error('Error refreshing swimmers:', refreshError);
+                        } else if (refreshedSwimmers) {
+                            // Posodobi lokalno stanje z osveženimi podatki
+                            refreshedSwimmers.forEach(refreshedSwimmer => {
+                                const localIndex = swimmers.findIndex(s => s.id === refreshedSwimmer.id);
+                                if (localIndex !== -1) {
+                                    swimmers[localIndex] = refreshedSwimmer;
+                                    console.log(`Refreshed swimmer ${refreshedSwimmer.first_name} ${refreshedSwimmer.last_name} with terms: [${refreshedSwimmer.terms.join(', ')}]`);
+                                    console.log(`Refreshed terms type:`, typeof refreshedSwimmer.terms);
+                                    console.log(`Refreshed terms isArray:`, Array.isArray(refreshedSwimmer.terms));
+                                    console.log(`Refreshed terms content:`, JSON.stringify(refreshedSwimmer.terms));
+                                }
+                            });
                         }
                     }
                     
                     updateSwimmerSelects();
                     updateSwimmersList();
                     
+                    // Dodaj dodatno debugiranje
+                    console.log('After update - checking local swimmers:');
+                    for (const updateData of existingSwimmersToUpdate) {
+                        const localSwimmer = swimmers.find(s => s.id === updateData.id);
+                        if (localSwimmer) {
+                            console.log(`Local swimmer ${localSwimmer.first_name} ${localSwimmer.last_name} has terms: [${localSwimmer.terms.join(', ')}]`);
+                        }
+                    }
+                    
                     let message = '';
                     if (insertedCount > 0) message += `Uvoženih ${insertedCount} novih plavalcev. `;
                     if (updatedCount > 0) message += `Posodobljenih ${updatedCount} obstoječih plavalcev.`;
+                    
+                    // Dodaj informacijo o validaciji terminov
+                    const totalSwimmers = newSwimmers.length;
+                    const totalTerms = newSwimmers.reduce((sum, swimmer) => sum + swimmer.terms.length, 0);
+                    message += `\n\nSkupaj uvoženih ${totalTerms} terminov za ${totalSwimmers} plavalcev.`;
+                    
                     alert(message || 'Ni bilo nič za uvoz.');
                 }
                 
@@ -3232,30 +3331,29 @@ document.addEventListener('DOMContentLoaded', () => {
     window.updateTermCost = updateTermCost;
     window.updateTrainerRate = updateTrainerRate;
     
-    // Funkcija za prenos primera CSV datoteke za termine plavalcev
-    window.downloadSwimmerTermsExample = function() {
-        const csvContent = `first_name,last_name,terms
-Janez,Novak,"pon-17:00-18:00,sre-18:00-19:00,pet-19:00-20:00"
-Maja,Kovač,"pon-17:00-18:00,čet-18:00-19:00"
-Peter,Horvat,"sre-18:00-19:00,pet-19:00-20:00"
-Ana,Žnidar,"pon-17:00-18:00"
-Marko,Potočnik,"sre-18:00-19:00,čet-18:00-19:00,pet-19:00-20:00"
-Sara,Medvešek,"pon-17:00-18:00,sre-18:00-19:00"
-Luka,Žagar,"čet-18:00-19:00,pet-19:00-20:00"
-Nina,Košir,"pon-17:00-18:00,pet-19:00-20:00"
-Tomaž,Petek,"sre-18:00-19:00"
-Eva,Horvat,"pon-17:00-18:00,sre-18:00-19:00,čet-18:00-19:00"`;
-        
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', 'primer_terminov_plavalcev.csv');
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
+                // Funkcija za prenos primera CSV datoteke za termine plavalcev
+            window.downloadSwimmerTermsExample = function() {
+                const csvContent = `first_name,last_name,terms
+            Janez,Novak,"pon-20:00-21:00,sre-20:00-21:00,čet-20:00-21:00"
+            Maja,Kovač,"pon-06:15-07:15,čet-06:15-07:15"
+            Peter,Horvat,"sre-07:15-08:15,čet-20:00-21:00"
+            Ana,Žnidar,"pon-06:15-07:15"
+            Marko,Potočnik,"sre-07:15-08:15,čet-06:15-07:15,čet-20:00-21:00"
+            Sara,Medvešek,"pon-20:00-21:00,sre-20:00-21:00"
+            Luka,Žagar,"čet-06:15-07:15,čet-20:00-21:00"
+            Nina,Košir,"pon-06:15-07:15,pon-20:00-21:00"
+            Tomaž,Petek,"sre-07:15-08:15"
+            Eva,Horvat,"pon-06:15-07:15,sre-07:15-08:15,čet-06:15-07:15"`;
+
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('download', 'primer_terminov_plavalcev.csv');
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            };
 
     // ===== Inicializacija =====
     loadData();
