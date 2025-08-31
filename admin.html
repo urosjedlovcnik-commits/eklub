@@ -467,12 +467,12 @@
         </div>
 
         <div class="card">
-          <h3>Nastavitve urnih postavk trenerjev</h3>
+          <h3>Nastavitve postavk trenerjev (na termin)</h3>
           <div class="inner">
             <div id="trainerRatesSettings">
               <p class="muted">Nalaganje trenerjev...</p>
             </div>
-            <button class="btn pri" id="saveTrainerRatesBtn">Shrani urni postavki</button>
+            <button class="btn pri" id="saveTrainerRatesBtn">Shrani postavke trenerjev</button>
           </div>
         </div>
 
@@ -492,6 +492,30 @@
               <button class="btn" id="refreshSwimmerFeesBtn">Osveži</button>
             </div>
             <div id="swimmerFeesBox">Izberite mesec in leto za upravljanje pristojbin...</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Uvoz vadnin iz CSV</h3>
+          <div class="inner">
+            <p class="muted">
+              Uvožena CSV datoteka mora v glavi vsebovati stolpce <code>ime</code>, <code>priimek</code> in <code>znesek</code>.
+              <br><br>
+              <strong>Opomba:</strong> Uvožena datoteka mora uporabljati vejico (`,`) kot ločilo med stolpci.
+              <br>
+              <strong>Primer:</strong>
+              <pre style="background:#f1f5f9; padding:8px; border-radius:6px; overflow-x:auto;">
+ime,priimek,znesek
+Janez,Novak,80.00
+Maja,Kovač,75.00
+          </pre>
+            </p>
+            <div class="row" style="margin-top:12px">
+              <label class="btn">
+                Uvozi vadnine
+                <input type="file" id="csvFeesInput" accept=".csv" style="display:none">
+              </label>
+            </div>
           </div>
         </div>
       </div>

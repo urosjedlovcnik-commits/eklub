@@ -67,6 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const elSwimmersList = document.getElementById("swimmersList");
     const elCsvInput = document.getElementById("csvInput");
     const elCsvTermsInput = document.getElementById("csvTermsInput");
+    const elCsvFeesInput = document.getElementById("csvFeesInput");
     const elExportMonthSelect = document.getElementById("exportMonthSelect");
     const elExportYearSelect = document.getElementById("exportYearSelect");
     const elExportCsvBtn = document.getElementById("exportCsvBtn");
@@ -1475,6 +1476,99 @@ document.addEventListener('DOMContentLoaded', () => {
         e.target.value = '';
     });
 
+    // CSV uvoz vadnin
+    if (elCsvFeesInput) {
+        elCsvFeesInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const csv = e.target.result;
+                    const lines = csv.split('\n');
+                    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+                    
+                    const requiredHeaders = ['ime', 'priimek', 'znesek'];
+                    if (!requiredHeaders.every(h => headers.includes(h))) {
+                        alert('CSV mora vsebovati stolpce: ime, priimek, znesek');
+                        return;
+                    }
+
+                    const month = parseInt(elFinanceMonthSelect.value);
+                    const year = parseInt(elFinanceYearSelect.value);
+                    
+                    if (month === undefined || year === undefined) {
+                        alert('Prosim izberite mesec in leto za uvoz vadnin');
+                        return;
+                    }
+
+                    const importedFees = [];
+                    for (let i = 1; i < lines.length; i++) {
+                        if (lines[i].trim()) {
+                            const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+                            const firstName = values[headers.indexOf('ime')];
+                            const lastName = values[headers.indexOf('priimek')];
+                            const amount = parseFloat(values[headers.indexOf('znesek')]);
+                            
+                            if (firstName && lastName && !isNaN(amount)) {
+                                // Poišči plavalca po imenu in priimku
+                                const swimmer = swimmers.find(s => 
+                                    !s.is_deleted && 
+                                    s.first_name.toLowerCase() === firstName.toLowerCase() && 
+                                    s.last_name.toLowerCase() === lastName.toLowerCase()
+                                );
+                                
+                                if (swimmer) {
+                                    importedFees.push({
+                                        swimmer_id: swimmer.id,
+                                        month: month,
+                                        year: year,
+                                        monthly_fee: amount,
+                                        discount: 0
+                                    });
+                                } else {
+                                    console.warn(`Plavalec ni bil najden: ${firstName} ${lastName}`);
+                                }
+                            }
+                        }
+                    }
+
+                    if (importedFees.length > 0) {
+                        // Uvozi vadnine v bazo
+                        const { data, error } = await supabase
+                            .from('swimmer_monthly_fees')
+                            .upsert(importedFees, { 
+                                onConflict: 'swimmer_id,month,year' 
+                            })
+                            .select();
+
+                        if (error) {
+                            console.error('Napaka pri uvažanju vadnin:', error);
+                            alert('Napaka pri uvažanju vadnin. Preverite konzolo.');
+                            return;
+                        }
+
+                        alert(`Uvoženih ${importedFees.length} vadnin za ${month + 1}/${year}`);
+                        
+                        // Osveži finance sekcijo, če je prikazana
+                        if (currentSection === 'finance') {
+                            calculateFinanceData();
+                        }
+                    } else {
+                        alert('Ni bilo mogoče uvožiti nobene vadnine. Preverite, ali so imena plavalcev pravilna.');
+                    }
+                    
+                } catch (error) {
+                    console.error('Napaka pri branju CSV datoteke:', error);
+                    alert('Napaka pri branju CSV datoteke: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+            e.target.value = '';
+        });
+    }
+
     // CSV izvoz
     elExportCsvBtn.addEventListener('click', () => {
         const month = parseInt(elExportMonthSelect.value);
@@ -2172,7 +2266,7 @@ document.addEventListener('DOMContentLoaded', () => {
         elTrainerRatesSettings.innerHTML = html;
     }
     
-    // Funkcija za prikaz nastavitev urnih postavk trenerjev
+    // Funkcija za prikaz nastavitev postavk trenerjev
     function renderTrainerRatesSettings() {
         if (!elTrainerRatesSettings) return;
         
@@ -2290,7 +2384,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Total revenue:', totalRevenue);
             
             // Izračunaj stroške trenerjev
-            let totalTrainerHours = 0;
+            let totalTrainerSessions = 0;
             let trainerCosts = {};
             
             // Pridobi urne postavke trenerjev iz baze
@@ -2319,27 +2413,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 activeTermsForTrainers.forEach(term => {
                     if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
+                        // Preveri, ali je termin deaktiviran za ta dan
+                        const termStatus = getTermStatus(d, term.id);
+                        if (termStatus.status === "inactive") {
+                            console.log(`Skipping inactive term ${term.label} on ${isoDate}`);
+                            return;
+                        }
+                        
                         // Poišči trenerje za ta termin
                         const trainersForTerm = trainers.filter(t => 
                             t.terms && t.terms.includes(term.id) && !t.is_deleted
                         );
                         
-                        // Izračunaj trajanje termina v urah
-                        const startTime = new Date(`2000-01-01T${term.start_time}`);
-                        const endTime = new Date(`2000-01-01T${term.end_time}`);
-                        const durationHours = (endTime - startTime) / (1000 * 60 * 60);
-                        
                         trainersForTerm.forEach(trainer => {
                             if (!trainerCosts[trainer.id]) {
                                 trainerCosts[trainer.id] = {
                                     trainer: trainer,
-                                    hours: 0,
+                                    sessions: 0,
                                     cost: 0
                                 };
                             }
                             
-                            trainerCosts[trainer.id].hours += durationHours;
-                            totalTrainerHours += durationHours;
+                            // Štejemo število terminov, ne ur
+                            trainerCosts[trainer.id].sessions += 1;
+                            totalTrainerSessions += 1;
                         });
                     }
                 });
@@ -2347,11 +2444,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
             console.log('Trainer costs before rate calculation:', trainerCosts);
             
-            // Izračunaj stroške trenerjev z individualnimi urnimi postavkami
+            // Izračunaj stroške trenerjev - enkrat na termin, ne glede na trajanje
             for (const trainerCost of Object.values(trainerCosts)) {
-                const trainerRate = trainerRates[trainerCost.trainer.id] || 25; // Default 25€/hour
-                trainerCost.cost = trainerCost.hours * trainerRate;
-                console.log(`Trainer ${trainerCost.trainer.first_name} ${trainerCost.trainer.last_name}: ${trainerCost.hours}h × ${trainerRate}€ = ${trainerCost.cost}€`);
+                const trainerRate = trainerRates[trainerCost.trainer.id] || 25; // Default 25€/termin
+                trainerCost.cost = trainerCost.sessions * trainerRate;
+                console.log(`Trainer ${trainerCost.trainer.first_name} ${trainerCost.trainer.last_name}: ${trainerCost.sessions} sessions × ${trainerRate}€ = ${trainerCost.cost}€`);
             }
             
             const totalTrainerCost = Object.values(trainerCosts).reduce((sum, tc) => sum + tc.cost, 0);
@@ -2492,7 +2589,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <tr>
                             <td>Stroški trenerjev</td>
                             <td>${totalTrainerCost.toFixed(2)} €</td>
-                            <td>${totalTrainerHours.toFixed(1)} ur (individualne urne postavke)</td>
+                            <td>${totalTrainerSessions} terminov (individualne postavke na termin)</td>
                         </tr>
                         <tr>
                             <td>Stroški vodenja</td>
@@ -2698,7 +2795,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Funkcija za pridobivanje urnih postavk trenerjev iz baze
+    // Funkcija za pridobivanje postavk trenerjev iz baze
     async function getTrainerRatesFromDB() {
         try {
             const { data, error } = await supabase
@@ -2710,22 +2807,22 @@ document.addEventListener('DOMContentLoaded', () => {
             // Pretvori v obliko, ki jo pričakuje aplikacija
             const trainerRates = {};
             data.forEach(item => {
-                trainerRates[item.trainer_id] = item.hourly_rate;
+                trainerRates[item.trainer_id] = item.rate_per_session;
             });
             
             return trainerRates;
         } catch (error) {
-            console.error('Napaka pri pridobivanju urnih postavk:', error);
+            console.error('Napaka pri pridobivanju postavk trenerjev:', error);
             return {};
         }
     }
 
-    // Funkcija za shranjevanje urnih postavk v bazo
+    // Funkcija za shranjevanje postavk trenerjev v bazo
     async function saveTrainerRatesToDB(trainerRates) {
         try {
             const updates = Object.entries(trainerRates).map(([trainerId, rate]) => ({
                 trainer_id: trainerId,
-                hourly_rate: parseFloat(rate)
+                rate_per_session: parseFloat(rate)
             }));
 
             const { error } = await supabase
@@ -2736,7 +2833,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             return true;
         } catch (error) {
-            console.error('Napaka pri shranjevanju urnih postavk:', error);
+            console.error('Napaka pri shranjevanju postavk trenerjev:', error);
             return false;
         }
     }
@@ -2885,7 +2982,7 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const trainer of trainers) {
             if (trainer.is_deleted) continue;
             
-            const rate = trainerRates[trainer.id] || 25; // Default to 25€/hour
+                            const rate = trainerRates[trainer.id] || 25; // Default to 25€/session
             html += `
                 <div class="trainer-rate-row">
                     <label for="trainer-rate-${trainer.id}">${trainer.first_name} ${trainer.last_name}:</label>
