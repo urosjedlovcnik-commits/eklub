@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const elCalendarGrid = document.getElementById("calendarGrid");
     const elPrev = document.getElementById("prevBtn");
     const elNext = document.getElementById("nextBtn");
-    const elSummaryBox = document.getElementById("summaryBox");
+
     
     // Modal
     const elModal = document.getElementById("eventModal");
@@ -396,8 +396,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         elCalendarGrid.appendChild(day);
       }
-      const summaryData = calculateSummaryData(y, m);
-      renderSummary(summaryData);
     }
 
     // ===== NOV MODAL: izbira termina na določen dan (za mobilno verzijo) =====
@@ -1061,82 +1059,6 @@ document.addEventListener('DOMContentLoaded', () => {
         renderMonth();
       }
     });
-
-    // ===== POPRAVLJENA FUNKCIJA ZA POVZETEK =====
-    function calculateSummaryData(year, month) {
-      const res = {};
-      const monthStart = new Date(year, month, 1);
-      const monthEnd = new Date(year, month + 1, 0);
-      const today = new Date();
-      today.setHours(0,0,0,0);
-
-      // Inicializacija podatkov za vse plavalce (aktivne in izbrisane)
-      swimmers.forEach(s => {
-        res[s.id] = { first: s.first_name, last: s.last_name, att: 0, pos: 0 };
-      });
-
-      // Zanka za izračun prisotnosti (att)
-      const allAttendance = Object.entries(attendance);
-      for (const [date, termData] of allAttendance) {
-        const d = new Date(date);
-        d.setHours(0,0,0,0);
-        if (d >= monthStart && d <= monthEnd) {
-          for (const termId in termData) {
-            for (const swimmerId in termData[termId]) {
-              // Preverimo, ali je bil ta termin aktiven, ko je bila prisotnost vnesena
-              // Opomba: Ker imamo shranjen 'term_status', to ni več potrebno. Lahko zaupamo, da je prisotnost vnešena samo za aktivne termine.
-              if (termData[termId][swimmerId] === true && res[swimmerId]) {
-                res[swimmerId].att += 1;
-              }
-            }
-          }
-        }
-      }
-
-      // Zanka za izračun možnih obiskov (pos)
-      const currentDate = new Date(monthStart);
-      while (currentDate <= monthEnd) {
-        const ymd = iso(currentDate);
-        const todaysTerms = getTermsForDate(currentDate);
-
-        todaysTerms.forEach(term => {
-          const termIsActive = getTermStatus(currentDate, term.id).status === "active";
-          
-          if (termIsActive) {
-            swimmers.forEach(s => {
-              if (res[s.id] && s.terms.includes(term.id)) {
-                
-                if (s.is_deleted) {
-                  // Plavalec je izbrisan, štejemo samo, če je datum v preteklosti
-                  if (currentDate <= today) {
-                    res[s.id].pos += 1;
-                  }
-                } else {
-                  // Plavalec je aktiven, štejemo vse možne obiske
-                  res[s.id].pos += 1;
-                }
-              }
-            });
-          }
-        });
-        currentDate.setDate(currentDate.getDate() + 1);
-      }
-      return res;
-    }
-
-
-    function renderSummary(summaryData) {
-        let html = `<table><thead><tr><th>Plavalec</th><th>Obiskani</th><th>Možni</th><th>Delež (%)</th></tr></thead><tbody>`;
-        // KLJUČNA SPREMEMBA: filtriramo plavalce, ki nimajo nobenega možnega obiska
-        const rows = Object.values(summaryData).filter(r => r.pos > 0).sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first));
-        if(rows.length===0) html += `<tr><td colspan="4" class="muted">Ni plavalcev.</td></tr>`;
-        rows.forEach(r=>{
-            const pct = r.pos > 0 ? (r.att / r.pos * 100).toFixed(1) : "0.0";
-            html += `<tr><td>${r.first} ${r.last}</td><td>${r.att}</td><td>${r.pos}</td><td>${pct}</td></tr>`;
-        });
-        html += `</tbody></table>`;
-        elSummaryBox.innerHTML = html;
-    }
 
     // ===== Navigacija =====
     elPrev.addEventListener("click", ()=>{ viewDate.setMonth(viewDate.getMonth()-1); renderMonth(); });
