@@ -1720,6 +1720,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         
                         // Ustvari vadnine za vse mesece od startMonth do konca leta
+                        console.log(`Creating fees for months ${startMonth + 1} to 12 in year ${startYear}`);
                         for (let m = startMonth; m < 12; m++) {
                             for (const fee of importedFees) {
                                 futureFees.push({
@@ -1734,6 +1735,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         // Če je startYear trenutno leto, dodaj tudi za naslednje leto
                         if (startYear === currentYear) {
+                            console.log(`Creating fees for all 12 months in year ${startYear + 1}`);
                             for (let m = 0; m < 12; m++) {
                                 for (const fee of importedFees) {
                                     futureFees.push({
@@ -1748,6 +1750,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         
                         // Uvozi vadnine v bazo za vse prihodnje mesece
+                        console.log('Importing future fees:', futureFees);
+                        
                         const { data, error } = await supabase
                             .from('swimmer_monthly_fees')
                             .upsert(futureFees, { 
@@ -1761,6 +1765,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             return;
                         }
 
+                        console.log('Successfully imported fees:', data);
                         const totalMonths = futureFees.length / importedFees.length;
                         alert(`Uvoženih ${importedFees.length} vadnin za ${totalMonths} prihodnjih mesecev (od ${startMonth + 1}/${startYear} naprej)`);
                         
@@ -2591,7 +2596,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const feeData = swimmerFees[swimmer.id] || { fee: 80, discount: 0 };
                 const finalFee = Math.max(0, feeData.fee - feeData.discount);
                 totalRevenue += finalFee;
-                console.log(`Swimmer ${swimmer.first_name} ${swimmer.last_name}: fee=${feeData.fee}, discount=${feeData.discount}, final=${finalFee}`);
+                
+                if (swimmerFees[swimmer.id]) {
+                    console.log(`Swimmer ${swimmer.first_name} ${swimmer.last_name}: using imported fee=${feeData.fee}, discount=${feeData.discount}, final=${finalFee}`);
+                } else {
+                    console.log(`Swimmer ${swimmer.first_name} ${swimmer.last_name}: using fallback fee=${feeData.fee}, discount=${feeData.discount}, final=${finalFee}`);
+                }
             });
             
             console.log('Total revenue:', totalRevenue);
@@ -3069,7 +3079,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Funkcija za pridobivanje mesečnih pristojbin plavalcev iz baze
     async function getSwimmerFeesFromDB(month, year) {
         try {
-            const { data, error } = await supabase
+            // Najprej poskusi najti pristojbine za točen mesec in leto
+            let { data, error } = await supabase
                 .from('swimmer_monthly_fees')
                 .select('*')
                 .eq('month', month)
@@ -3085,6 +3096,45 @@ document.addEventListener('DOMContentLoaded', () => {
                     discount: item.discount
                 };
             });
+            
+            // Če nismo našli pristojbin za točen mesec/leto, poišči najnovejše pristojbine za vsakega plavalca
+            if (data.length === 0) {
+                console.log(`No fees found for ${month + 1}/${year}, looking for most recent fees...`);
+                
+                // Pridobi vse plavalce, ki nimajo pristojbin za ta mesec
+                const activeSwimmers = swimmers.filter(s => !s.is_deleted);
+                const swimmersWithoutFees = activeSwimmers.filter(s => !swimmerFees[s.id]);
+                
+                if (swimmersWithoutFees.length > 0) {
+                    console.log(`Looking for recent fees for ${swimmersWithoutFees.length} swimmers...`);
+                    
+                    // Za vsakega plavalca poišči najnovejšo pristojbino
+                    for (const swimmer of swimmersWithoutFees) {
+                        const { data: recentData, error: recentError } = await supabase
+                            .from('swimmer_monthly_fees')
+                            .select('*')
+                            .eq('swimmer_id', swimmer.id)
+                            .order('year', { ascending: false })
+                            .order('month', { ascending: false })
+                            .limit(1);
+                        
+                        if (!recentError && recentData.length > 0) {
+                            const recentFee = recentData[0];
+                            // Uporabi najnovejšo pristojbino samo če je iz preteklosti ali sedanjosti
+                            const feeDate = new Date(recentFee.year, recentFee.month, 1);
+                            const currentDate = new Date(year, month, 1);
+                            
+                            if (feeDate <= currentDate) {
+                                swimmerFees[swimmer.id] = {
+                                    fee: recentFee.monthly_fee,
+                                    discount: 0 // Popusti se ne prenašajo na prihodnje mesece
+                                };
+                                console.log(`Using recent fee for ${swimmer.first_name} ${swimmer.last_name}: ${recentFee.monthly_fee}€ (from ${recentFee.month + 1}/${recentFee.year})`);
+                            }
+                        }
+                    }
+                }
+            }
             
             return swimmerFees;
         } catch (error) {
@@ -3158,6 +3208,35 @@ document.addEventListener('DOMContentLoaded', () => {
             return false;
         }
     }
+
+    // Funkcija za debugiranje pristojbin v bazi
+    async function debugSwimmerFees() {
+        try {
+            console.log('=== DEBUG: All swimmer fees in database ===');
+            const { data, error } = await supabase
+                .from('swimmer_monthly_fees')
+                .select('*')
+                .order('year', { ascending: true })
+                .order('month', { ascending: true });
+            
+            if (error) throw error;
+            
+            console.log('Total fees in database:', data.length);
+            data.forEach(fee => {
+                const swimmer = swimmers.find(s => s.id === fee.swimmer_id);
+                const swimmerName = swimmer ? `${swimmer.first_name} ${swimmer.last_name}` : `Unknown (${fee.swimmer_id})`;
+                console.log(`${swimmerName}: ${fee.monthly_fee}€ for ${fee.month + 1}/${fee.year} (discount: ${fee.discount}€)`);
+            });
+            
+            return data;
+        } catch (error) {
+            console.error('Error debugging swimmer fees:', error);
+            return [];
+        }
+    }
+
+    // Dodaj funkcijo v global scope za debugiranje
+    window.debugSwimmerFees = debugSwimmerFees;
 
     // ===== POSODOBLJENE FINANCE FUNKCIJE =====
 
