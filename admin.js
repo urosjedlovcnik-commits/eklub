@@ -4111,55 +4111,86 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Test funkcija za preverjanje constraint-a
     async function testSingleFeeInsert() {
-        console.log('🧪 Testiram vnos ene vadnine...');
+    console.log('🧪 Testiram vnos ene vadnine...');
+    
+    const testFee = {
+        swimmer_id: "b281d2f0-a1a1-4cb0-81f8-06853a893a46", // Uporabi obstoječi swimmer_id
+        month: 8, // September (0-indexed)
+        year: 2025,
+        monthly_fee: 75,
+        discount: 0
+    };
+    
+    console.log('📊 Test podatki:', testFee);
+    console.log('🔍 Tip month:', typeof testFee.month, 'Vrednost:', testFee.month);
+    
+    try {
+        // Najprej preveri, ali vadnina že obstaja in jo izbriši
+        console.log('🧹 Preverjam, ali vadnina že obstaja...');
+        const existingFee = await supabase
+            .from('swimmer_monthly_fees')
+            .select('*')
+            .eq('swimmer_id', testFee.swimmer_id)
+            .eq('month', testFee.month)
+            .eq('year', testFee.year)
+            .single();
         
-        const testFee = {
-            swimmer_id: "b281d2f0-a1a1-4cb0-81f8-06853a893a46", // Uporabi obstoječi swimmer_id
-            month: 8, // September (0-indexed)
-            year: 2025,
-            monthly_fee: 75,
-            discount: 0
-        };
-        
-        console.log('📊 Test podatki:', testFee);
-        console.log('🔍 Tip month:', typeof testFee.month, 'Vrednost:', testFee.month);
-        
-        try {
-            // Poskusi prvo z SQL funkcijo
-            console.log('🔍 Testiram z SQL funkcijo...');
-            const sqlResult = await supabase.rpc('insert_single_fee', {
-                p_swimmer_id: testFee.swimmer_id,
-                p_month: testFee.month,
-                p_year: testFee.year,
-                p_monthly_fee: testFee.monthly_fee,
-                p_discount: testFee.discount
-            });
-            
-            if (sqlResult.error) {
-                console.error('❌ SQL funkcija ni uspela:', sqlResult.error);
-            } else {
-                console.log('✅ SQL funkcija rezultat:', sqlResult.data);
-            }
-            
-            // Poskusi nato z običajnim insert
-            console.log('🔍 Testiram z običajnim insert...');
-            const result = await supabase
+        if (existingFee.data) {
+            console.log('🗑️ Vadnina že obstaja, jo brišem...');
+            await supabase
                 .from('swimmer_monthly_fees')
-                .insert(testFee)
-                .select();
-            
-            if (result.error) {
-                console.error('❌ Test vnos ni uspel:', result.error);
-                return false;
-            } else {
-                console.log('✅ Test vnos uspešen:', result.data);
-                return true;
-            }
-        } catch (error) {
-            console.error('❌ Test vnos izjema:', error);
-            return false;
+                .delete()
+                .eq('swimmer_id', testFee.swimmer_id)
+                .eq('month', testFee.month)
+                .eq('year', testFee.year);
+            console.log('✅ Vadnina izbrisana');
+        } else {
+            console.log('✅ Vadnina ne obstaja, lahko nadaljujem s testom');
         }
+        
+        // Poskusi prvo z SQL funkcijo
+        console.log('🔍 Testiram z SQL funkcijo...');
+        const sqlResult = await supabase.rpc('insert_single_fee', {
+            p_swimmer_id: testFee.swimmer_id,
+            p_month: testFee.month,
+            p_year: testFee.year,
+            p_monthly_fee: testFee.monthly_fee,
+            p_discount: testFee.discount
+        });
+        
+        if (sqlResult.error) {
+            console.error('❌ SQL funkcija ni uspela:', sqlResult.error);
+        } else {
+            console.log('✅ SQL funkcija rezultat:', sqlResult.data);
+        }
+        
+        // Poskusi nato z običajnim insert (vendar najprej izbriši vadnino iz SQL funkcije)
+        console.log('🧹 Brišem vadnino iz SQL funkcije za test običajnega insert...');
+        await supabase
+            .from('swimmer_monthly_fees')
+            .delete()
+            .eq('swimmer_id', testFee.swimmer_id)
+            .eq('month', testFee.month)
+            .eq('year', testFee.year);
+        
+        console.log('🔍 Testiram z običajnim insert...');
+        const result = await supabase
+            .from('swimmer_monthly_fees')
+            .insert(testFee)
+            .select();
+        
+        if (result.error) {
+            console.error('❌ Test vnos ni uspel:', result.error);
+            return false;
+        } else {
+            console.log('✅ Test vnos uspešen:', result.data);
+            return true;
+        }
+    } catch (error) {
+        console.error('❌ Test vnos izjema:', error);
+        return false;
     }
+}
 
     // Dodaj test gumb v HTML
     function addTestButton() {
