@@ -1932,30 +1932,133 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Poskusi z raw SQL insert, če Supabase ne sprejme tipov
                 console.log('🔄 Poskušam z raw SQL insert...');
+                console.log('📊 Podatki za raw SQL:', {
+                    totalFees: feesWithExplicitTypes.length,
+                    firstFee: feesWithExplicitTypes[0],
+                    lastFee: feesWithExplicitTypes[feesWithExplicitTypes.length - 1],
+                    sampleMonths: feesWithExplicitTypes.slice(0, 5).map(f => f.month)
+                });
+                
                 try {
+                    // Najprej poskusi z manjšim vzorcem za test
+                    const testSample = feesWithExplicitTypes.slice(0, 5);
+                    console.log('🧪 Testiram z vzorcem 5 vadnin...');
+                    
+                    const testResult = await supabase.rpc('insert_monthly_fees', {
+                        fees_data: testSample
+                    });
+                    
+                    if (testResult.error) {
+                        console.log('❌ Test vzorec ni uspel:', testResult.error);
+                    } else {
+                        console.log('✅ Test vzorec uspešen:', testResult.data);
+                    }
+                    
+                    // Sedaj poskusi z vsemi vadninami
+                    console.log('🚀 Pošiljam vse vadnine v SQL funkcijo...');
                     const rawInsertResult = await supabase.rpc('insert_monthly_fees', {
                         fees_data: feesWithExplicitTypes
                     });
                     
                     if (rawInsertResult.error) {
                         console.log('🔄 Raw SQL insert ni uspel, poskušam z običajnim insert...');
+                        console.error('❌ SQL napaka:', rawInsertResult.error);
                     } else {
                         console.log('✅ Raw SQL insert uspešen!');
                         data = rawInsertResult.data;
                         error = null;
+                        console.log('📊 Raw SQL rezultat:', data);
+                        
+                        // Preveri, ali je bilo vstavljenih vseh vadnin
+                        if (data && data.success !== undefined) {
+                            console.log(`✅ Raw SQL: ${data.success}/${data.total} vadnin uspešno vstavljenih`);
+                            if (data.errors > 0) {
+                                console.warn(`⚠️ Raw SQL: ${data.errors} napak pri vstavljanju`);
+                            }
+                        }
+                        
+                        // Osveži finance sekcijo, če je prikazana
+                        if (currentSection === 'finance') {
+                            calculateFinanceData();
+                        }
+                        
+                        // Prikaži rezultat uporabniku
+                        if (data && data.success !== undefined) {
+                            alert(`Uvoženih ${data.success} vadnin za prihodnje mesece (${data.errors} napak)`);
+                        } else {
+                            alert('Vadnine so bile uvožene preko SQL funkcije.');
+                        }
                         return;
                     }
                 } catch (rawError) {
                     console.log('🔄 Raw SQL insert ni na voljo, poskušam z običajnim insert...');
+                    console.error('❌ Raw SQL izjema:', rawError);
                 }
                 
-                const insertResult = await supabase
-                    .from('swimmer_monthly_fees')
-                    .insert(feesWithExplicitTypes)
-                    .select();
+                console.log('🔄 Poskušam z običajnim Supabase insert...');
                 
-                data = insertResult.data;
-                error = insertResult.error;
+                // Poskusi z batch processing, če je preveč vadnin
+                if (feesWithExplicitTypes.length > 100) {
+                    console.log('📦 Preveč vadnin za enkrat, poskušam z batch processing...');
+                    
+                    const batchSize = 50;
+                    const batches = [];
+                    for (let i = 0; i < feesWithExplicitTypes.length; i += batchSize) {
+                        batches.push(feesWithExplicitTypes.slice(i, i + batchSize));
+                    }
+                    
+                    console.log(`📦 Delim v ${batches.length} batch-ev po ${batchSize} vadnin`);
+                    
+                    let allData = [];
+                    let hasErrors = false;
+                    
+                    for (let i = 0; i < batches.length; i++) {
+                        console.log(`📦 Batch ${i + 1}/${batches.length} (${batches[i].length} vadnin)...`);
+                        
+                        try {
+                            const batchResult = await supabase
+                                .from('swimmer_monthly_fees')
+                                .insert(batches[i])
+                                .select();
+                            
+                            if (batchResult.error) {
+                                console.error(`❌ Batch ${i + 1} ni uspel:`, batchResult.error);
+                                hasErrors = true;
+                                break;
+                            } else {
+                                console.log(`✅ Batch ${i + 1} uspešen: ${batchResult.data.length} vadnin`);
+                                allData = allData.concat(batchResult.data);
+                            }
+                        } catch (batchError) {
+                            console.error(`❌ Batch ${i + 1} izjema:`, batchError);
+                            hasErrors = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!hasErrors) {
+                        data = allData;
+                        error = null;
+                        console.log(`✅ Vsi batch-i uspešni: ${data.length} vadnin`);
+                    } else {
+                        console.log('🔄 Batch processing ni uspel, poskušam z običajnim insert...');
+                        const insertResult = await supabase
+                            .from('swimmer_monthly_fees')
+                            .insert(feesWithExplicitTypes)
+                            .select();
+                        
+                        data = insertResult.data;
+                        error = insertResult.error;
+                    }
+                } else {
+                    const insertResult = await supabase
+                        .from('swimmer_monthly_fees')
+                        .insert(feesWithExplicitTypes)
+                        .select();
+                    
+                    data = insertResult.data;
+                    error = insertResult.error;
+                }
                 
                 if (error && error.code === '23505') { // Unique constraint violation
                     console.log('🔄 Insert ni uspel zaradi duplikatov, poskušam z upsert...');
@@ -1998,9 +2101,20 @@ document.addEventListener('DOMContentLoaded', () => {
                             return;
                         }
 
-                        console.log('Successfully imported fees:', data);
-                        const totalMonths = validFees.length / importedFees.length;
-                        alert(`Uvoženih ${importedFees.length} vadnin za ${totalMonths} prihodnjih mesecev (od ${startMonth + 1}/${startYear} naprej)`);
+                        console.log('✅ Uspešno uvoženih vadnin:', data);
+                        
+                        // Izračunaj število mesecev na podlagi podatkov
+                        let totalMonths = 0;
+                        if (data && data.length > 0) {
+                            // Poišči različne mesece/leta
+                            const uniqueMonths = new Set();
+                            data.forEach(fee => {
+                                uniqueMonths.add(`${fee.month}/${fee.year}`);
+                            });
+                            totalMonths = uniqueMonths.size;
+                        }
+                        
+                        alert(`Uvoženih ${data ? data.length : 0} vadnin za ${totalMonths} prihodnjih mesecev (od ${startMonth + 1}/${startYear} naprej)`);
                         
                         // Osveži finance sekcijo, če je prikazana
                         if (currentSection === 'finance') {
@@ -4192,6 +4306,67 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 }
 
+    // Test funkcija za CSV import
+    async function testCsvImport() {
+        console.log('🧪 Testiram CSV import z manjšim vzorcem...');
+        
+        // Ustvari test podatke (5 vadnin)
+        const testFees = [];
+        for (let i = 0; i < 5; i++) {
+            testFees.push({
+                swimmer_id: "b281d2f0-a1a1-4cb0-81f8-06853a893a46", // Uporabi obstoječi swimmer_id
+                month: (8 + i) % 12, // September naprej (0-indexed)
+                year: 2025,
+                monthly_fee: 75 + i,
+                discount: 0
+            });
+        }
+        
+        console.log('📊 Test CSV podatki:', testFees);
+        
+        try {
+            // Najprej izbriši obstoječe test vadnine
+            console.log('🧹 Brišem obstoječe test vadnine...');
+            for (const fee of testFees) {
+                await supabase
+                    .from('swimmer_monthly_fees')
+                    .delete()
+                    .eq('swimmer_id', fee.swimmer_id)
+                    .eq('month', fee.month)
+                    .eq('year', fee.year);
+            }
+            console.log('✅ Test vadnine izbrisane');
+            
+            // Testiraj z SQL funkcijo
+            console.log('🔍 Testiram z SQL funkcijo...');
+            const sqlResult = await supabase.rpc('insert_monthly_fees', {
+                fees_data: testFees
+            });
+            
+            if (sqlResult.error) {
+                console.error('❌ SQL funkcija ni uspela:', sqlResult.error);
+            } else {
+                console.log('✅ SQL funkcija rezultat:', sqlResult.data);
+            }
+            
+            // Testiraj z običajnim insert
+            console.log('🔍 Testiram z običajnim insert...');
+            const insertResult = await supabase
+                .from('swimmer_monthly_fees')
+                .insert(testFees)
+                .select();
+            
+            if (insertResult.error) {
+                console.error('❌ Insert ni uspel:', insertResult.error);
+            } else {
+                console.log('✅ Insert uspešen:', insertResult.data);
+            }
+            
+        } catch (error) {
+            console.error('❌ Test CSV import izjema:', error);
+        }
+    }
+    
     // Dodaj test gumb v HTML
     function addTestButton() {
         const financeSection = document.getElementById('finance-section');
@@ -4202,9 +4377,20 @@ document.addEventListener('DOMContentLoaded', () => {
             testButton.onclick = testSingleFeeInsert;
             testButton.style.marginTop = '10px';
             financeSection.appendChild(testButton);
+            
+            const testCsvButton = document.createElement('button');
+            testCsvButton.className = 'btn';
+            testCsvButton.textContent = '🧪 Test CSV Import (5 vadnin)';
+            testCsvButton.onclick = testCsvImport;
+            testCsvButton.style.marginTop = '10px';
+            testCsvButton.style.marginLeft = '10px';
+            financeSection.appendChild(testCsvButton);
         }
     }
     
     // Dodaj test gumb
     addTestButton();
+    
+    // Naredi funkcije globalno dostopne
+    window.testCsvImport = testCsvImport;
 });
