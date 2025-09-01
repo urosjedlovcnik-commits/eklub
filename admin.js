@@ -2948,7 +2948,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const totalTrainerCost = Object.values(trainerCosts).reduce((sum, tc) => sum + tc.cost, 0);
 
             
-            // Izračunaj stroške prog po terminih
+            // Izračunaj stroške prog po terminih - za vsak izveden termin v mesecu
             let totalFacilityCost = 0;
             
             // Pridobi stroške prog iz baze
@@ -2988,8 +2988,25 @@ document.addEventListener('DOMContentLoaded', () => {
                         const endTime = new Date(`2000-01-01T${term.end_time}`);
                         const durationHours = (endTime - startTime) / (1000 * 60 * 60);
                         
-                        // Strošek prog = 1 × trajanje v urah × urni strošek (le enkrat na termin)
-                        const termMonthlyCost = durationHours * termHourlyCost;
+                        // Preštej vse dni v mesecu, ko se termin izvaja
+                        let termExecutionsInMonth = 0;
+                        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                            const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
+                            const isoDate = iso(d);
+                            
+                            // Preveri, ali je termin na ta dan in ali je aktiven
+                            if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
+                                // Preveri, ali je termin deaktiviran za ta dan
+                                const termStatus = getTermStatus(d, term.id);
+                                if (termStatus.status !== "inactive") {
+                                    // Termin je aktiven na ta dan
+                                    termExecutionsInMonth += 1;
+                                }
+                            }
+                        }
+                        
+                        // Strošek prog = število izvedenih terminov × trajanje v urah × urni strošek
+                        const termMonthlyCost = termExecutionsInMonth * durationHours * termHourlyCost;
                         totalFacilityCost += termMonthlyCost;
                     }
                 }
