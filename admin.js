@@ -1666,16 +1666,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     const month = parseInt(elFinanceMonthSelect.value);
                     const year = parseInt(elFinanceYearSelect.value);
                     
-                    if (month === undefined || year === undefined) {
+                    console.log('🔍 Debugging month parsing:');
+                    console.log('- elFinanceMonthSelect.value:', elFinanceMonthSelect.value);
+                    console.log('- Parsed month:', month);
+                    console.log('- Month type:', typeof month);
+                    console.log('- Is NaN:', isNaN(month));
+                    
+                    if (month === undefined || year === undefined || isNaN(month) || isNaN(year)) {
                         alert('Prosim izberite mesec in leto za uvoz vadnin');
                         return;
                     }
                     
                     // Validacija meseca
                     if (month < 0 || month > 11) {
+                        console.error(`❌ Neveljaven mesec: ${month} (tip: ${typeof month})`);
                         alert(`Napaka: Neveljaven mesec: ${month}. Mesec mora biti med 0 in 11.`);
                         return;
                     }
+                    
+                    console.log(`✅ Mesec ${month} (${month + 1} v človeškem formatu) je veljaven`);
 
                     const importedFees = [];
                     for (let i = 1; i < lines.length; i++) {
@@ -1701,13 +1710,17 @@ document.addEventListener('DOMContentLoaded', () => {
                                 );
                                 
                                 if (swimmer) {
-                                    importedFees.push({
+                                    const newFee = {
                                         swimmer_id: swimmer.id,
                                         month: month,
                                         year: year,
                                         monthly_fee: amount,
                                         discount: discount
-                                    });
+                                    };
+                                    
+                                    console.log(`📝 Ustvarjam vadnino za ${firstName} ${lastName}:`, newFee);
+                                    
+                                    importedFees.push(newFee);
                                 } else {
                                     console.warn(`Plavalec ni bil najden: ${firstName} ${lastName}`);
                                 }
@@ -1774,6 +1787,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                     discount: m === startMonth ? fee.discount : 0 // Popust samo za začetni mesec
                                 };
                                 
+                                console.log(`🔍 Loop validation - m: ${m}, newFee.month: ${newFee.month}, type: ${typeof newFee.month}`);
+                                
                                 // Dvojna validacija pred dodajanjem
                                 if (newFee.month < 0 || newFee.month > 11) {
                                     console.error(`❌ KRITIČNA NAPAKA: Poskus dodajanja vadnine z neveljavnim mesecem ${newFee.month}`);
@@ -1805,6 +1820,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                         discount: 0 // Brez popusta za prihodnje mesece
                                     };
                                     
+                                    console.log(`🔍 Loop validation (next year) - m: ${m}, newFee.month: ${newFee.month}, type: ${typeof newFee.month}`);
+                                    
                                     // Dvojna validacija pred dodajanjem
                                     if (newFee.month < 0 || newFee.month > 11) {
                                         console.error(`❌ KRITIČNA NAPAKA: Poskus dodajanja vadnine z neveljavnim mesecom ${newFee.month} za naslednje leto`);
@@ -1831,6 +1848,53 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         // Uvozi vadnine v bazo za vse prihodnje mesece
                         console.log('Importing future fees:', validFees);
+                        
+                        // Dodatna validacija pred upsert - preveri vsako vadnino posebej
+                        console.log('🔍 Končna validacija pred upsert:');
+                        let hasInvalidFees = false;
+                        validFees.forEach((fee, index) => {
+                            if (fee.month < 0 || fee.month > 11) {
+                                console.error(`❌ KRITIČNA NAPAKA: Vadnina ${index} ima neveljaven mesec ${fee.month}:`, fee);
+                                hasInvalidFees = true;
+                            } else {
+                                console.log(`✅ Vadnina ${index}: mesec ${fee.month} (${fee.month + 1} v človeškem formatu) za plavalca ${fee.swimmer_id}`);
+                            }
+                        });
+                        
+                        if (hasInvalidFees) {
+                            console.error('❌ KRITIČNA NAPAKA: Najdenih neveljavnih vadnin pred upsert!');
+                            alert('Napaka: Najdenih neveljavnih vadnin pred uvozom. Preverite konzolo.');
+                            return;
+                        }
+                        
+                        console.log('🚀 Pošiljam vadnine v bazo...');
+                        console.log('📊 Struktura podatkov za upsert:');
+                        console.log('- Število vadnin:', validFees.length);
+                        console.log('- Prva vadnina:', validFees[0]);
+                        console.log('- Zadnja vadnina:', validFees[validFees.length - 1]);
+                        console.log('- Vsi meseci:', [...new Set(validFees.map(f => f.month))].sort((a, b) => a - b));
+                        
+                        // Dodatna validacija - preveri JSON serializacijo
+                        console.log('🔍 JSON serializacija test:');
+                        const jsonString = JSON.stringify(validFees);
+                        const parsedBack = JSON.parse(jsonString);
+                        console.log('- Original validFees[0].month:', validFees[0]?.month, 'type:', typeof validFees[0]?.month);
+                        console.log('- Parsed back validFees[0].month:', parsedBack[0]?.month, 'type:', typeof parsedBack[0]?.month);
+                        
+                        // Preveri, ali so vsi meseci številke
+                        const allMonthsAreNumbers = validFees.every(fee => typeof fee.month === 'number' && !isNaN(fee.month));
+                        console.log('- Vsi meseci so številke:', allMonthsAreNumbers);
+                        
+                        if (!allMonthsAreNumbers) {
+                            console.error('❌ KRITIČNA NAPAKA: Nekateri meseci niso številke!');
+                            validFees.forEach((fee, index) => {
+                                if (typeof fee.month !== 'number' || isNaN(fee.month)) {
+                                    console.error(`❌ Vadnina ${index}: month = ${fee.month} (tip: ${typeof fee.month})`);
+                                }
+                            });
+                            alert('Napaka: Nekateri meseci niso številke. Preverite konzolo.');
+                            return;
+                        }
                         
                         const { data, error } = await supabase
                             .from('swimmer_monthly_fees')
