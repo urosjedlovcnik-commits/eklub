@@ -542,6 +542,8 @@ Maja,Kovač,75.00,5.00
                 <input type="file" id="csvFeesInput" accept=".csv" style="display:none">
               </label>
               <button class="btn" onclick="debugSwimmerFees()" style="margin-left: 8px;">Debug pristojbine</button>
+              <button class="btn" onclick="clearInvalidFees()" style="margin-left: 8px; background-color: #dc3545;">Počisti neveljavne vadnine</button>
+              <button class="btn" onclick="checkDatabaseIntegrity().then(result => console.log('Integriteta baze:', result))" style="margin-left: 8px; background-color: #17a2b8;">Preveri integriteto baze</button>
             </div>
           </div>
         </div>

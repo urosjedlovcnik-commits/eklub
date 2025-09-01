@@ -1670,6 +1670,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         alert('Prosim izberite mesec in leto za uvoz vadnin');
                         return;
                     }
+                    
+                    // Validacija meseca
+                    if (month < 0 || month > 11) {
+                        alert(`Napaka: Neveljaven mesec: ${month}. Mesec mora biti med 0 in 11.`);
+                        return;
+                    }
 
                     const importedFees = [];
                     for (let i = 1; i < lines.length; i++) {
@@ -1731,7 +1737,22 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         // Ustvari vadnine za vse mesece od startMonth do konca leta
                         console.log(`Creating fees for months ${startMonth + 1} to 12 in year ${startYear}`);
+                        
+                        // Validacija startMonth
+                        if (startMonth < 0 || startMonth > 11) {
+                            console.error(`❌ Neveljaven startMonth: ${startMonth}`);
+                            alert(`Napaka: Neveljaven začetni mesec: ${startMonth}`);
+                            return;
+                        }
+                        
                         for (let m = startMonth; m < 12; m++) {
+                            // Dodatna validacija v zanki
+                            if (m < 0 || m > 11) {
+                                console.error(`❌ Neveljaven mesec v zanki: ${m}`);
+                                alert(`Napaka: Neveljaven mesec v zanki: ${m}`);
+                                return;
+                            }
+                            
                             for (const fee of importedFees) {
                                 futureFees.push({
                                     swimmer_id: fee.swimmer_id,
@@ -1747,6 +1768,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (startYear === currentYear) {
                             console.log(`Creating fees for all 12 months in year ${startYear + 1}`);
                             for (let m = 0; m < 12; m++) {
+                                // Validacija meseca v zanki za naslednje leto
+                                if (m < 0 || m > 11) {
+                                    console.error(`❌ Neveljaven mesec za naslednje leto: ${m}`);
+                                    alert(`Napaka: Neveljaven mesec za naslednje leto: ${m}`);
+                                    return;
+                                }
+                                
                                 for (const fee of importedFees) {
                                     futureFees.push({
                                         swimmer_id: fee.swimmer_id,
@@ -1771,7 +1799,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         if (error) {
                             console.error('Napaka pri uvažanju vadnin:', error);
-                            alert('Napaka pri uvažanju vadnin. Preverite konzolo.');
+                            
+                            // Preveri, ali gre za constraint violation
+                            if (error.code === '23514' && error.message.includes('swimmer_monthly_fees_month_check')) {
+                                console.error('❌ Napaka: Neveljaven mesec v podatkih');
+                                
+                                // Preveri integriteto baze
+                                const integrityCheck = await checkDatabaseIntegrity();
+                                if (integrityCheck.status === 'corrupted') {
+                                    const shouldClean = confirm(`Najdenih ${integrityCheck.invalid} neveljavnih vadnin v bazi.\n\nTo lahko povzroča napake pri uvozu.\n\nAli želite, da počistim neveljavne vadnine?`);
+                                    if (shouldClean) {
+                                        await clearInvalidFees();
+                                        alert('Neveljavne vadnine so bile počiščene. Poskusite ponovno uvožiti CSV datoteko.');
+                                    }
+                                } else {
+                                    alert('Napaka pri uvažanju vadnin: Neveljaven mesec v podatkih.\n\nPreverite, ali so meseci v CSV datoteki pravilni (1-12).\n\nPreverite konzolo za več podrobnosti.');
+                                }
+                            } else {
+                                alert('Napaka pri uvažanju vadnin. Preverite konzolo.');
+                            }
                             return;
                         }
 
@@ -3534,12 +3580,26 @@ document.addEventListener('DOMContentLoaded', () => {
             const currentMonth = currentDate.getMonth();
             const currentYear = currentDate.getFullYear();
             
+            // Dodatna validacija meseca
+            if (currentMonth < 0 || currentMonth > 11) {
+                console.error(`❌ Neveljaven trenutni mesec: ${currentMonth}`);
+                showMessage('Napaka: Neveljaven trenutni mesec!', 'error');
+                return false;
+            }
+            
             // Izračunaj prejšnji mesec
             let previousMonth = currentMonth - 1;
             let previousYear = currentYear;
             if (previousMonth < 0) {
                 previousMonth = 11; // December
                 previousYear = currentYear - 1;
+            }
+            
+            // Dodatna validacija prejšnjega meseca
+            if (previousMonth < 0 || previousMonth > 11) {
+                console.error(`❌ Neveljaven prejšnji mesec: ${previousMonth}`);
+                showMessage('Napaka: Neveljaven prejšnji mesec!', 'error');
+                return false;
             }
             
             console.log(`🔄 Začenjam kopiranje vadnin iz ${previousMonth + 1}/${previousYear} v ${currentMonth + 1}/${currentYear}...`);
@@ -3642,6 +3702,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const currentMonth = currentDate.getMonth();
             const currentYear = currentDate.getFullYear();
             
+            // Dodatna validacija meseca
+            if (currentMonth < 0 || currentMonth > 11) {
+                console.error(`❌ Neveljaven trenutni mesec v autoCopyFeesIfNeeded: ${currentMonth}`);
+                showMessage('Napaka: Neveljaven trenutni mesec!', 'error');
+                return;
+            }
+            
             console.log(`🔍 Preverjam vadnine za trenutni mesec: ${currentMonth + 1}/${currentYear}`);
             
             // Preveri, ali obstajajo vadnine za trenutni mesec
@@ -3705,6 +3772,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const currentMonth = currentDate.getMonth();
             const currentYear = currentDate.getFullYear();
             
+            // Dodatna validacija meseca
+            if (currentMonth < 0 || currentMonth > 11) {
+                console.error(`❌ Neveljaven trenutni mesec v checkFeesStatus: ${currentMonth}`);
+                return { status: 'error', error: `Neveljaven trenutni mesec: ${currentMonth}` };
+            }
+            
             console.log(`🔍 Preverjam stanje vadnin za trenutni mesec: ${currentMonth + 1}/${currentYear}...`);
             
             // Preveri vadnine za trenutni mesec
@@ -3733,13 +3806,125 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // ===== Inicializacija =====
-    loadData();
-    loadCostSettings(); // Naloži nastavitve cen
+    // Funkcija za čiščenje neveljavnih vadnin iz baze
+    async function clearInvalidFees() {
+        try {
+            console.log('🧹 Začenjam čiščenje neveljavnih vadnin...');
+            
+            // Poišči vse vadnine z neveljavnimi meseci
+            const { data: allFees, error: fetchError } = await supabase
+                .from('swimmer_monthly_fees')
+                .select('*');
+            
+            if (fetchError) {
+                console.error('Napaka pri pridobivanju vadnin:', fetchError);
+                showMessage('Napaka pri pridobivanju vadnin!', 'error');
+                return false;
+            }
+            
+            const invalidFees = allFees.filter(fee => fee.month < 0 || fee.month > 11);
+            
+            if (invalidFees.length === 0) {
+                console.log('✅ Ni neveljavnih vadnin za čiščenje');
+                showMessage('Ni neveljavnih vadnin za čiščenje!', 'info');
+                return true;
+            }
+            
+            console.log(`🧹 Najdenih ${invalidFees.length} neveljavnih vadnin za brisanje`);
+            
+            // Izbriši neveljavne vadnine
+            const { error: deleteError } = await supabase
+                .from('swimmer_monthly_fees')
+                .delete()
+                .in('id', invalidFees.map(fee => fee.id));
+            
+            if (deleteError) {
+                console.error('Napaka pri brisanju neveljavnih vadnin:', deleteError);
+                showMessage('Napaka pri brisanju neveljavnih vadnin!', 'error');
+                return false;
+            }
+            
+            console.log(`✅ Uspešno izbrisanih ${invalidFees.length} neveljavnih vadnin`);
+            showMessage(`Uspešno izbrisanih ${invalidFees.length} neveljavnih vadnin!`, 'success');
+            
+            return true;
+            
+        } catch (error) {
+            console.error('Napaka pri čiščenju neveljavnih vadnin:', error);
+            showMessage('Napaka pri čiščenju neveljavnih vadnin!', 'error');
+            return false;
+        }
+    }
     
-    // Po nalaganju podatkov nastavi gumb za kopiranje vadnin in preveri avtomatsko kopiranje
-    setTimeout(() => {
-        setupCopyFeesButton();
-        autoCopyFeesIfNeeded();
-    }, 2000); // Počakaj 2 sekundi, da se podatki naložijo
+    // Funkcija za preverjanje baze podatkov za neveljavne podatke
+    async function checkDatabaseIntegrity() {
+        try {
+            console.log('🔍 Preverjam integriteto baze podatkov...');
+            
+            // Poišči vse vadnine
+            const { data: allFees, error: fetchError } = await supabase
+                .from('swimmer_monthly_fees')
+                .select('*');
+            
+            if (fetchError) {
+                console.error('Napaka pri pridobivanju vadnin:', fetchError);
+                return { status: 'error', error: fetchError.message };
+            }
+            
+            const invalidFees = allFees.filter(fee => fee.month < 0 || fee.month > 11);
+            const validFees = allFees.filter(fee => fee.month >= 0 && fee.month <= 11);
+            
+            console.log(`📊 Skupaj vadnin: ${allFees.length}`);
+            console.log(`✅ Veljavne vadnine: ${validFees.length}`);
+            console.log(`❌ Neveljavne vadnine: ${invalidFees.length}`);
+            
+            if (invalidFees.length > 0) {
+                console.log('Neveljavne vadnine:', invalidFees);
+                return { 
+                    status: 'corrupted', 
+                    total: allFees.length, 
+                    valid: validFees.length, 
+                    invalid: invalidFees.length,
+                    invalidData: invalidFees
+                };
+            } else {
+                return { 
+                    status: 'clean', 
+                    total: allFees.length, 
+                    valid: validFees.length, 
+                    invalid: 0 
+                };
+            }
+            
+        } catch (error) {
+            console.error('Napaka pri preverjanju integritete baze:', error);
+            return { status: 'error', error: error.message };
+        }
+    }
+    
+    // ===== Inicializacija =====
+    try {
+        loadData();
+        loadCostSettings(); // Naloži nastavitve cen
+        
+        // Po nalaganju podatkov nastavi gumb za kopiranje vadnin in preveri avtomatsko kopiranje
+        setTimeout(() => {
+            try {
+                setupCopyFeesButton();
+                // Dodaj dodatno zakasnitev za avtomatsko kopiranje, da se izognemo konfliktom
+                setTimeout(() => {
+                    try {
+                        console.log('🚀 Začenjam avtomatsko kopiranje vadnin...');
+                        autoCopyFeesIfNeeded();
+                    } catch (error) {
+                        console.error('❌ Napaka pri avtomatskem kopiranju vadnin:', error);
+                    }
+                }, 3000); // Počakaj dodatne 3 sekunde (skupaj 5 sekund)
+            } catch (error) {
+                console.error('❌ Napaka pri nastavljanju gumbov za kopiranje vadnin:', error);
+            }
+        }, 2000); // Počakaj 2 sekundi, da se podatki naložijo
+    } catch (error) {
+        console.error('❌ Napaka pri inicializaciji:', error);
+    }
 });
