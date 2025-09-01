@@ -1867,41 +1867,83 @@ document.addEventListener('DOMContentLoaded', () => {
                             return;
                         }
                         
-                        console.log('🚀 Pošiljam vadnine v bazo...');
-                        console.log('📊 Struktura podatkov za upsert:');
-                        console.log('- Število vadnin:', validFees.length);
-                        console.log('- Prva vadnina:', validFees[0]);
-                        console.log('- Zadnja vadnina:', validFees[validFees.length - 1]);
-                        console.log('- Vsi meseci:', [...new Set(validFees.map(f => f.month))].sort((a, b) => a - b));
-                        
-                        // Dodatna validacija - preveri JSON serializacijo
-                        console.log('🔍 JSON serializacija test:');
-                        const jsonString = JSON.stringify(validFees);
-                        const parsedBack = JSON.parse(jsonString);
-                        console.log('- Original validFees[0].month:', validFees[0]?.month, 'type:', typeof validFees[0]?.month);
-                        console.log('- Parsed back validFees[0].month:', parsedBack[0]?.month, 'type:', typeof parsedBack[0]?.month);
-                        
-                        // Preveri, ali so vsi meseci številke
-                        const allMonthsAreNumbers = validFees.every(fee => typeof fee.month === 'number' && !isNaN(fee.month));
-                        console.log('- Vsi meseci so številke:', allMonthsAreNumbers);
-                        
-                        if (!allMonthsAreNumbers) {
-                            console.error('❌ KRITIČNA NAPAKA: Nekateri meseci niso številke!');
-                            validFees.forEach((fee, index) => {
-                                if (typeof fee.month !== 'number' || isNaN(fee.month)) {
-                                    console.error(`❌ Vadnina ${index}: month = ${fee.month} (tip: ${typeof fee.month})`);
-                                }
-                            });
-                            alert('Napaka: Nekateri meseci niso številke. Preverite konzolo.');
-                            return;
+                                            console.log('🚀 Pošiljam vadnine v bazo...');
+                    console.log('📊 Struktura podatkov za upsert:');
+                    console.log('- Število vadnin:', validFees.length);
+                    console.log('- Prva vadnina:', validFees[0]);
+                    console.log('- Zadnja vadnina:', validFees[validFees.length - 1]);
+                    console.log('- Vsi meseci:', [...new Set(validFees.map(f => f.month))].sort((a, b) => a - b));
+                    
+                    // Dodatna validacija - preveri vsako vadnino posebej pred pošiljanjem
+                    console.log('🔍 Končna preverjanje pred pošiljanjem v Supabase:');
+                    const finalValidation = validFees.every((fee, index) => {
+                        const isValid = fee.month >= 0 && fee.month <= 11 && typeof fee.month === 'number';
+                        if (!isValid) {
+                            console.error(`❌ Vadnina ${index} ni veljavna:`, fee);
                         }
-                        
-                        const { data, error } = await supabase
+                        return isValid;
+                    });
+                    
+                    if (!finalValidation) {
+                        console.error('❌ KRITIČNA NAPAKA: Nekatere vadnine niso veljavne pred pošiljanjem!');
+                        alert('Napaka: Nekatere vadnine niso veljavne. Preverite konzolo.');
+                        return;
+                    }
+                    
+                    console.log('✅ Vse vadnine so veljavne pred pošiljanjem v Supabase');
+                    
+                    // Dodatna validacija - preveri JSON serializacijo
+                    console.log('🔍 JSON serializacija test:');
+                    const jsonString = JSON.stringify(validFees);
+                    const parsedBack = JSON.parse(jsonString);
+                    console.log('- Original validFees[0].month:', validFees[0]?.month, 'type:', typeof validFees[0]?.month);
+                    console.log('- Parsed back validFees[0].month:', parsedBack[0]?.month, 'type:', typeof parsedBack[0]?.month);
+                    
+                    // Preveri, ali so vsi meseci številke
+                    const allMonthsAreNumbers = validFees.every(fee => typeof fee.month === 'number' && !isNaN(fee.month));
+                    console.log('- Vsi meseci so številke:', allMonthsAreNumbers);
+                    
+                    if (!allMonthsAreNumbers) {
+                        console.error('❌ KRITIČNA NAPAKA: Nekateri meseci niso številke!');
+                        validFees.forEach((fee, index) => {
+                            if (typeof fee.month !== 'number' || isNaN(fee.month)) {
+                                console.error(`❌ Vadnina ${index}: month = ${fee.month} (tip: ${typeof fee.month})`);
+                            }
+                        });
+                        alert('Napaka: Nekateri meseci niso številke. Preverite konzolo.');
+                        return;
+                    }
+                    
+                    console.log('🚀 Pošiljam vadnine v bazo...');
+                    
+                    // Poskusi najprej z insert, če ne gre, pa z upsert
+                    let data, error;
+                    try {
+                        console.log('🔄 Poskušam z insert...');
+                        const insertResult = await supabase
                             .from('swimmer_monthly_fees')
-                            .upsert(validFees, { 
-                                onConflict: 'swimmer_id,month,year' 
-                            })
+                            .insert(validFees)
                             .select();
+                        
+                        data = insertResult.data;
+                        error = insertResult.error;
+                        
+                        if (error && error.code === '23505') { // Unique constraint violation
+                            console.log('🔄 Insert ni uspel zaradi duplikatov, poskušam z upsert...');
+                            const upsertResult = await supabase
+                                .from('swimmer_monthly_fees')
+                                .upsert(validFees, { 
+                                    onConflict: 'swimmer_id,month,year' 
+                                })
+                                .select();
+                            
+                            data = upsertResult.data;
+                            error = upsertResult.error;
+                        }
+                    } catch (insertError) {
+                        console.error('❌ Napaka pri insert/upsert:', insertError);
+                        error = insertError;
+                    }
 
                         if (error) {
                             console.error('Napaka pri uvažanju vadnin:', error);
