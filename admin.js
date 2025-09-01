@@ -2825,8 +2825,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Funkcija za izračun finančnih podatkov
     async function calculateFinanceData() {
         try {
-    
-            
             const month = parseInt(elFinanceMonthSelect.value);
             const year = parseInt(elFinanceYearSelect.value);
             
@@ -2995,24 +2993,21 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
                                 // Preveri, ali je termin deaktiviran za ta dan
                                 const termStatus = getTermStatus(d, term.id);
-                                if (termStatus.status !== "inactive") {
-                                    trainingSessionsCount++;
-
-                            }
+                                                        if (termStatus.status !== "inactive") {
+                            trainingSessionsCount++;
                         }
-                        
-                        // Izračunaj trajanje termina v urah
-                        const startTime = new Date(`2000-01-01T${term.start_time}`);
-                        const endTime = new Date(`2000-01-01T${term.end_time}`);
-                        const durationHours = (endTime - startTime) / (1000 * 60 * 60);
-                        
-                        // Strošek prog = število načrtovanih in aktivnih treningov × trajanje v urah × urni strošek
-                        const termMonthlyCost = trainingSessionsCount * durationHours * termHourlyCost;
-                        totalFacilityCost += termMonthlyCost;
-                        
-
                     }
+                    
+                    // Izračunaj trajanje termina v urah
+                    const startTime = new Date(`2000-01-01T${term.start_time}`);
+                    const endTime = new Date(`2000-01-01T${term.end_time}`);
+                    const durationHours = (endTime - startTime) / (1000 * 60 * 60);
+                    
+                    // Strošek prog = število načrtovanih in aktivnih treningov × trajanje v urah × urni strošek
+                    const termMonthlyCost = trainingSessionsCount * durationHours * termHourlyCost;
+                    totalFacilityCost += termMonthlyCost;
                 }
+            }
             }
             
 
@@ -3101,6 +3096,7 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         
         elDetailedCostsBox.innerHTML = detailedCosts;
+        }
         
         } catch (error) {
             console.error('Error in calculateFinanceData:', error);
