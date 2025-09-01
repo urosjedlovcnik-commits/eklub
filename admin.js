@@ -3074,15 +3074,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             <td><strong>${profit >= 0 ? 'Dobiček' : 'Izguba'}</strong></td>
                             <td><strong>${profit.toFixed(2)} €</strong></td>
                             <td>${profit >= 0 ? 'Pozitivno stanje' : 'Negativno stanje'}</td>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        `;
-        
-        elDetailedCostsBox.innerHTML = detailedCosts;
-        }
-        
+                        </tr>
+                    </tbody>
+                </table>
+            `;
+            
+            elDetailedCostsBox.innerHTML = detailedCosts;
         } catch (error) {
             console.error('Error in calculateFinanceData:', error);
             elFinanceSummaryBox.innerHTML = '<p class="error">Napaka pri izračunu finančnih podatkov</p>';
