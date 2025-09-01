@@ -4313,16 +4313,46 @@ document.addEventListener('DOMContentLoaded', () => {
         // Ustvari test podatke (5 vadnin)
         const testFees = [];
         for (let i = 0; i < 5; i++) {
+            const month = (8 + i) % 12; // September naprej (0-indexed)
             testFees.push({
                 swimmer_id: "b281d2f0-a1a1-4cb0-81f8-06853a893a46", // Uporabi obstoječi swimmer_id
-                month: (8 + i) % 12, // September naprej (0-indexed)
+                month: month,
                 year: 2025,
                 monthly_fee: 75 + i,
                 discount: 0
             });
         }
         
+        // Dodaj tudi ročno definirane podatke za test
+        const manualTestFees = [
+            {
+                swimmer_id: "b281d2f0-a1a1-4cb0-81f8-06853a893a46",
+                month: 8, // September
+                year: 2025,
+                monthly_fee: 80,
+                discount: 0
+            },
+            {
+                swimmer_id: "b281d2f0-a1a1-4cb0-81f8-06853a893a46",
+                month: 9, // Oktober
+                year: 2025,
+                monthly_fee: 80,
+                discount: 0
+            }
+        ];
+        
+        console.log('📊 Test CSV podatki (generirani):', testFees);
+        console.log('📊 Test CSV podatki (ročni):', manualTestFees);
+        
         console.log('📊 Test CSV podatki:', testFees);
+        console.log('🔍 Preverjam mesece:', testFees.map(f => ({ month: f.month, type: typeof f.month, valid: f.month >= 0 && f.month <= 11 })));
+        
+        // Validacija podatkov
+        const invalidFees = testFees.filter(fee => fee.month < 0 || fee.month > 11);
+        if (invalidFees.length > 0) {
+            console.error('❌ Neveljavni meseci v test podatkih:', invalidFees);
+            return;
+        }
         
         try {
             // Najprej izbriši obstoječe test vadnine
@@ -4351,13 +4381,109 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Testiraj z običajnim insert
             console.log('🔍 Testiram z običajnim insert...');
+            
+            // Eksplicitno pretvori tipove
+            const testFeesWithTypes = testFees.map(fee => ({
+                ...fee,
+                month: parseInt(fee.month, 10),
+                year: parseInt(fee.year, 10),
+                monthly_fee: parseFloat(fee.monthly_fee),
+                discount: parseFloat(fee.discount)
+            }));
+            
+            // Testiraj tudi z ročnimi podatki
+            console.log('🧪 Testiram z ročnimi podatki...');
+            const manualTestFeesWithTypes = manualTestFees.map(fee => ({
+                ...fee,
+                month: parseInt(fee.month, 10),
+                year: parseInt(fee.year, 10),
+                monthly_fee: parseFloat(fee.monthly_fee),
+                discount: parseFloat(fee.discount)
+            }));
+            
+            console.log('🔍 Ročni podatki z eksplicitnimi tipi:', manualTestFeesWithTypes[0]);
+            
+            try {
+                const manualInsertResult = await supabase
+                    .from('swimmer_monthly_fees')
+                    .insert(manualTestFeesWithTypes)
+                    .select();
+                
+                if (manualInsertResult.error) {
+                    console.error('❌ Ročni insert ni uspel:', manualInsertResult.error);
+                    
+                    // Poskusi z direktnim SQL vnosom za ročne podatke
+                    console.log('🧪 Testiram z direktnim SQL vnosom za ročne podatke...');
+                    try {
+                        const manualDirectSqlResult = await supabase.rpc('insert_single_fee', {
+                            p_swimmer_id: manualTestFeesWithTypes[0].swimmer_id,
+                            p_month: manualTestFeesWithTypes[0].month,
+                            p_year: manualTestFeesWithTypes[0].year,
+                            p_monthly_fee: manualTestFeesWithTypes[0].monthly_fee,
+                            p_discount: manualTestFeesWithTypes[0].discount
+                        });
+                        
+                        if (manualDirectSqlResult.error) {
+                            console.error('❌ Direktni SQL za ročne podatke ni uspel:', manualDirectSqlResult.error);
+                        } else {
+                            console.log('✅ Direktni SQL za ročne podatke uspešen:', manualDirectSqlResult.data);
+                        }
+                    } catch (manualSqlError) {
+                        console.error('❌ Direktni SQL za ročne podatke izjema:', manualSqlError);
+                    }
+                } else {
+                    console.log('✅ Ročni insert uspešen:', manualInsertResult.data);
+                }
+            } catch (manualError) {
+                console.error('❌ Ročni insert izjema:', manualError);
+            }
+            
+            console.log('🔍 Podatki z eksplicitnimi tipi:', testFeesWithTypes[0]);
+            console.log('🔍 Tip month:', typeof testFeesWithTypes[0].month, 'Vrednost:', testFeesWithTypes[0].month);
+            
             const insertResult = await supabase
                 .from('swimmer_monthly_fees')
-                .insert(testFees)
+                .insert(testFeesWithTypes)
                 .select();
             
             if (insertResult.error) {
                 console.error('❌ Insert ni uspel:', insertResult.error);
+                
+                // Poskusi z eno vadnino
+                console.log('🧪 Testiram z eno vadnino...');
+                const singleFee = testFeesWithTypes[0];
+                console.log('🔍 Poskušam vstaviti:', singleFee);
+                
+                const singleResult = await supabase
+                    .from('swimmer_monthly_fees')
+                    .insert(singleFee)
+                    .select();
+                
+                if (singleResult.error) {
+                    console.error('❌ Tudi ena vadnina ni uspela:', singleResult.error);
+                    
+                    // Poskusi z direktnim SQL vnosom
+                    console.log('🧪 Testiram z direktnim SQL vnosom...');
+                    try {
+                        const directSqlResult = await supabase.rpc('insert_single_fee', {
+                            p_swimmer_id: singleFee.swimmer_id,
+                            p_month: singleFee.month,
+                            p_year: singleFee.year,
+                            p_monthly_fee: singleFee.monthly_fee,
+                            p_discount: singleFee.discount
+                        });
+                        
+                        if (directSqlResult.error) {
+                            console.error('❌ Direktni SQL ni uspel:', directSqlResult.error);
+                        } else {
+                            console.log('✅ Direktni SQL uspešen:', directSqlResult.data);
+                        }
+                    } catch (sqlError) {
+                        console.error('❌ Direktni SQL izjema:', sqlError);
+                    }
+                } else {
+                    console.log('✅ Ena vadnina uspešna:', singleResult.data);
+                }
             } else {
                 console.log('✅ Insert uspešen:', insertResult.data);
             }
