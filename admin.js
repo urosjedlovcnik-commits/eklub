@@ -3901,6 +3901,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return { status: 'error', error: error.message };
         }
     }
+
+    // Naredimo funkcije globalno dostopne za uporabo v HTML onclick atributih
+    window.clearInvalidFees = clearInvalidFees;
+    window.checkDatabaseIntegrity = checkDatabaseIntegrity;
     
     // ===== Inicializacija =====
     try {
