@@ -221,8 +221,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.log('🔍 Preverjam stanje vadnin ob prehodu v finance sekcijo...');
                     const status = await checkFeesStatus();
                     if (status.status === 'incomplete' && status.missingMonths.length > 0) {
-                        console.log('🔄 Manjkajo vadnine - avtomatsko kopiram iz avgusta...');
-                        await copyAugustFeesToFutureMonths();
+                        console.log('🔄 Manjkajo vadnine - avtomatsko kopiram iz prejšnega meseca...');
+                        await copyPreviousMonthFees();
                     }
                 }, 500);
             }
@@ -3525,83 +3525,89 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.body.removeChild(link);
             };
 
-    // ===== FUNKCIJA ZA KOPIRANJE VADNIN IZ AVGUSTA =====
+    // ===== FUNKCIJA ZA KOPIRANJE VADNIN IZ PREJŠNEGA MESECA =====
     
-    // Funkcija za kopiranje vadnin iz avgusta v prihodnje mesece
-    async function copyAugustFeesToFutureMonths() {
+    // Funkcija za kopiranje vadnin iz prejšnega meseca v trenutni mesec
+    async function copyPreviousMonthFees() {
         try {
-            console.log('🔄 Začenjam kopiranje vadnin iz avgusta...');
+            const currentDate = new Date();
+            const currentMonth = currentDate.getMonth();
+            const currentYear = currentDate.getFullYear();
             
-            // Pridobi vse avgustovske vadnine iz baze
-            const { data: augustFees, error: fetchError } = await supabase
+            // Izračunaj prejšnji mesec
+            let previousMonth = currentMonth - 1;
+            let previousYear = currentYear;
+            if (previousMonth < 0) {
+                previousMonth = 11; // December
+                previousYear = currentYear - 1;
+            }
+            
+            console.log(`🔄 Začenjam kopiranje vadnin iz ${previousMonth + 1}/${previousYear} v ${currentMonth + 1}/${currentYear}...`);
+            
+            // Pridobi vse vadnine iz prejšnega meseca
+            const { data: previousMonthFees, error: fetchError } = await supabase
                 .from('swimmer_monthly_fees')
                 .select('*')
-                .eq('month', 7) // Avgust je mesec 7 (0-indexed)
-                .eq('year', 2024); // Avgust 2024
+                .eq('month', previousMonth)
+                .eq('year', previousYear);
             
             if (fetchError) {
-                console.error('Napaka pri pridobivanju avgustovskih vadnin:', fetchError);
-                showMessage('Napaka pri pridobivanju avgustovskih vadnin!', 'error');
+                console.error('Napaka pri pridobivanju vadnin iz prejšnega meseca:', fetchError);
+                showMessage('Napaka pri pridobivanju vadnin iz prejšnega meseca!', 'error');
                 return false;
             }
             
-            if (!augustFees || augustFees.length === 0) {
-                console.log('Ni avgustovskih vadnin za kopiranje');
-                showMessage('Ni avgustovskih vadnin za kopiranje!', 'info');
+            if (!previousMonthFees || previousMonthFees.length === 0) {
+                console.log(`Ni vadnin za prejšnji mesec ${previousMonth + 1}/${previousYear}`);
+                showMessage(`Ni vadnin za prejšnji mesec ${previousMonth + 1}/${previousYear}!`, 'info');
                 return false;
             }
             
-            console.log(`Najdenih ${augustFees.length} avgustovskih vadnin za kopiranje`);
+            console.log(`Najdenih ${previousMonthFees.length} vadnin iz prejšnega meseca za kopiranje`);
             
-            // Ustvari vadnine za vse mesece od septembra 2024 do junija 2025
-            const futureFees = [];
-            const targetMonths = [
-                { month: 8, year: 2024 },   // September 2024
-                { month: 9, year: 2024 },   // Oktober 2024
-                { month: 10, year: 2024 },  // November 2024
-                { month: 11, year: 2024 },  // December 2024
-                { month: 0, year: 2025 },   // Januar 2025
-                { month: 1, year: 2025 },   // Februar 2025
-                { month: 2, year: 2025 },   // Marec 2025
-                { month: 3, year: 2025 },   // April 2025
-                { month: 4, year: 2025 },   // Maj 2025
-                { month: 5, year: 2025 }    // Junij 2025
-            ];
+            // Preveri, ali vadnine za trenutni mesec že obstajajo
+            const { data: currentMonthFees, error: currentError } = await supabase
+                .from('swimmer_monthly_fees')
+                .select('*')
+                .eq('month', currentMonth)
+                .eq('year', currentYear);
             
-            // Za vsako avgustovsko vadnino ustvari kopije za vse ciljne mesece
-            augustFees.forEach(augustFee => {
-                targetMonths.forEach(target => {
-                    // Preveri, ali vadnina za ta mesec že obstaja
-                    const existingFee = augustFees.find(fee => 
-                        fee.swimmer_id === augustFee.swimmer_id && 
-                        fee.month === target.month && 
-                        fee.year === target.year
-                    );
-                    
-                    if (!existingFee) {
-                        futureFees.push({
-                            swimmer_id: augustFee.swimmer_id,
-                            month: target.month,
-                            year: target.year,
-                            monthly_fee: augustFee.monthly_fee,
-                            discount: 0 // Brez popusta za prihodnje mesece
-                        });
-                    }
-                });
+            if (currentError) {
+                console.error('Napaka pri preverjanju trenutnih vadnin:', currentError);
+                showMessage('Napaka pri preverjanju trenutnih vadnin!', 'error');
+                return false;
+            }
+            
+            // Ustvari seznam obstoječih vadnin za trenutni mesec
+            const existingFees = currentMonthFees || [];
+            const existingSwimmerIds = existingFees.map(fee => fee.swimmer_id);
+            
+            // Ustvari nove vadnine samo za plavalce, ki še nimajo vadnin za trenutni mesec
+            const newFees = [];
+            previousMonthFees.forEach(previousFee => {
+                if (!existingSwimmerIds.includes(previousFee.swimmer_id)) {
+                    newFees.push({
+                        swimmer_id: previousFee.swimmer_id,
+                        month: currentMonth,
+                        year: currentYear,
+                        monthly_fee: previousFee.monthly_fee,
+                        discount: 0 // Brez popusta za nov mesec
+                    });
+                }
             });
             
-            if (futureFees.length === 0) {
-                console.log('Vse vadnine za prihodnje mesece že obstajajo');
-                showMessage('Vse vadnine za prihodnje mesece že obstajajo!', 'info');
+            if (newFees.length === 0) {
+                console.log('Vse vadnine za trenutni mesec že obstajajo');
+                showMessage('Vse vadnine za trenutni mesec že obstajajo!', 'info');
                 return true;
             }
             
-            console.log(`Ustvarjam ${futureFees.length} novih vadnin za prihodnje mesece`);
+            console.log(`Ustvarjam ${newFees.length} novih vadnin za trenutni mesec`);
             
             // Uvozi nove vadnine v bazo
             const { data: insertedFees, error: insertError } = await supabase
                 .from('swimmer_monthly_fees')
-                .upsert(futureFees, { 
+                .upsert(newFees, { 
                     onConflict: 'swimmer_id,month,year' 
                 })
                 .select();
@@ -3613,7 +3619,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             console.log('✅ Uspešno kopirane vadnine:', insertedFees);
-            showMessage(`Uspešno kopiranih ${insertedFees.length} vadnin iz avgusta v prihodnje mesece!`, 'success');
+            showMessage(`Uspešno kopiranih ${insertedFees.length} vadnin iz ${previousMonth + 1}/${previousYear} v ${currentMonth + 1}/${currentYear}!`, 'success');
             
             // Osveži finance sekcijo, če je prikazana
             if (currentSection === 'finance') {
@@ -3629,7 +3635,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // Funkcija za avtomatsko kopiranje vadnin ob nalaganju strani
+    // Funkcija za avtomatsko kopiranje vadnin iz prejšnega meseca
     async function autoCopyFeesIfNeeded() {
         try {
             const currentDate = new Date();
@@ -3650,27 +3656,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
-            // Če ni vadnin za trenutni mesec, preveri ali obstajajo avgustovske vadnine
+            // Če ni vadnin za trenutni mesec, poskusi kopirati iz prejšnega meseca
             if (!currentMonthFees || currentMonthFees.length === 0) {
-                console.log(`🔄 Ni vadnin za trenutni mesec ${currentMonth + 1}/${currentYear} - preverjam avgustovske vadnine...`);
-                
-                const { data: augustFees, error: augustError } = await supabase
-                    .from('swimmer_monthly_fees')
-                    .select('*')
-                    .eq('month', 7) // Avgust je mesec 7 (0-indexed)
-                    .eq('year', 2024);
-                
-                if (augustError) {
-                    console.error('Napaka pri preverjanju avgustovskih vadnin:', augustError);
-                    return;
-                }
-                
-                if (augustFees && augustFees.length > 0) {
-                    console.log('🔄 Najdenih avgustovskih vadnin - kopiram v prihodnje mesece...');
-                    await copyAugustFeesToFutureMonths();
-                } else {
-                    console.log('⚠️ Ni avgustovskih vadnin za kopiranje');
-                }
+                console.log(`🔄 Ni vadnin za trenutni mesec ${currentMonth + 1}/${currentYear} - poskušam kopirati iz prejšnega meseca...`);
+                await copyPreviousMonthFees();
             } else {
                 console.log(`✅ Vadnine za trenutni mesec ${currentMonth + 1}/${currentYear} že obstajajo (${currentMonthFees.length} vadnin)`);
             }
@@ -3686,7 +3675,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const checkButton = document.getElementById('checkFeesStatusBtn');
         
         if (copyButton) {
-            copyButton.onclick = copyAugustFeesToFutureMonths;
+            copyButton.onclick = copyPreviousMonthFees;
             console.log('✅ Gumb za kopiranje vadnin je povezan');
         } else {
             console.warn('⚠️ Gumb za kopiranje vadnin ni bil najden');
@@ -3696,65 +3685,46 @@ document.addEventListener('DOMContentLoaded', () => {
             checkButton.onclick = async () => {
                 const status = await checkFeesStatus();
                 if (status.status === 'complete') {
-                    showMessage(`✅ Vse vadnine za prihodnje mesece obstajajo (skupaj ${status.totalFees} vadnin)`, 'success');
+                    showMessage(`✅ Vse vadnine za trenutni mesec obstajajo (skupaj ${status.totalFees} vadnin)`, 'success');
                 } else if (status.status === 'incomplete') {
-                    showMessage(`⚠️ Manjkajo vadnine za mesece: ${status.missingMonths.join(', ')}`, 'warning');
+                    showMessage(`⚠️ Manjkajo vadnine za meseec: ${status.missingMonths.join(', ')}`, 'warning');
                 } else {
                     showMessage(`❌ Napaka pri preverjanju: ${status.error}`, 'error');
                 }
             };
             console.log('✅ Gumb za preverjanje stanja vadnin je povezan');
         } else {
-            console.warn('⚠️ Gumb za preverjanje stanja vadnin ni bil najden');
+            console.warn('⚠️ Gumb za kopiranje vadnin ni bil najden');
         }
     }
     
-    // Funkcija za preverjanje stanja vadnin za prihodnje mesece
+    // Funkcija za preverjanje stanja vadnin za trenutni mesec
     async function checkFeesStatus() {
         try {
-            console.log('🔍 Preverjam stanje vadnin za prihodnje mesece...');
+            const currentDate = new Date();
+            const currentMonth = currentDate.getMonth();
+            const currentYear = currentDate.getFullYear();
             
-            const targetMonths = [
-                { month: 8, year: 2024 },   // September 2024
-                { month: 9, year: 2024 },   // Oktober 2024
-                { month: 10, year: 2024 },  // November 2024
-                { month: 11, year: 2024 },  // December 2024
-                { month: 0, year: 2025 },   // Januar 2025
-                { month: 1, year: 2025 },   // Februar 2025
-                { month: 2, year: 2025 },   // Marec 2025
-                { month: 3, year: 2025 },   // April 2025
-                { month: 4, year: 2025 },   // Maj 2025
-                { month: 5, year: 2025 }    // Junij 2025
-            ];
+            console.log(`🔍 Preverjam stanje vadnin za trenutni mesec: ${currentMonth + 1}/${currentYear}...`);
             
-            let missingMonths = [];
-            let totalFees = 0;
+            // Preveri vadnine za trenutni mesec
+            const { data: currentMonthFees, error } = await supabase
+                .from('swimmer_monthly_fees')
+                .select('*')
+                .eq('month', currentMonth)
+                .eq('year', currentYear);
             
-            for (const target of targetMonths) {
-                const { data: monthFees, error } = await supabase
-                    .from('swimmer_monthly_fees')
-                    .select('*')
-                    .eq('month', target.month)
-                    .eq('year', target.year);
-                
-                if (error) {
-                    console.error(`Napaka pri preverjanju vadnin za ${target.month + 1}/${target.year}:`, error);
-                    continue;
-                }
-                
-                if (!monthFees || monthFees.length === 0) {
-                    missingMonths.push(`${target.month + 1}/${target.year}`);
-                } else {
-                    totalFees += monthFees.length;
-                }
+            if (error) {
+                console.error(`Napaka pri preverjanju vadnin za ${currentMonth + 1}/${currentYear}:`, error);
+                return { status: 'error', error: error.message };
             }
             
-            if (missingMonths.length === 0) {
-                console.log(`✅ Vse vadnine za prihodnje mesece obstajajo (skupaj ${totalFees} vadnin)`);
-                return { status: 'complete', totalFees, missingMonths: [] };
+            if (!currentMonthFees || currentMonthFees.length === 0) {
+                console.log(`⚠️ Ni vadnin za trenutni mesec ${currentMonth + 1}/${currentYear}`);
+                return { status: 'incomplete', totalFees: 0, missingMonths: [`${currentMonth + 1}/${currentYear}`] };
             } else {
-                console.log(`⚠️ Manjkajo vadnine za mesece: ${missingMonths.join(', ')}`);
-                return { status: 'incomplete', totalFees, missingMonths };
+                console.log(`✅ Vadnine za trenutni mesec ${currentMonth + 1}/${currentYear} obstajajo (skupaj ${currentMonthFees.length} vadnin)`);
+                return { status: 'complete', totalFees: currentMonthFees.length, missingMonths: [] };
             }
             
         } catch (error) {
