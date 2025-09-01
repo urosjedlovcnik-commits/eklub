@@ -2977,37 +2977,22 @@ document.addEventListener('DOMContentLoaded', () => {
             for (const term of activeTerms) {
                 const termHourlyCost = termCosts[term.id] || 50; // Default 50€/uro
 
-                
                 if (termHourlyCost > 0) {
                     // Preveri, ali je termin aktiven v izbranem mesecu
                     const termStartDate = new Date(term.date_from);
                     const termEndDate = new Date(term.date_to);
+                    
                     if (startDate <= termEndDate && endDate >= termStartDate) {
-                        // Preštej, kolikokrat je bil termin načrtovan in aktiven v tem mesecu
-                        let trainingSessionsCount = 0;
-                        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-                            const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
-                            const isoDate = iso(d);
-                            
-                            // Preveri, ali je termin na ta dan in ali je aktiven
-                            if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
-                                // Preveri, ali je termin deaktiviran za ta dan
-                                const termStatus = getTermStatus(d, term.id);
-                                                        if (termStatus.status !== "inactive") {
-                            trainingSessionsCount++;
-                        }
+                        // Izračunaj trajanje termina v urah
+                        const startTime = new Date(`2000-01-01T${term.start_time}`);
+                        const endTime = new Date(`2000-01-01T${term.end_time}`);
+                        const durationHours = (endTime - startTime) / (1000 * 60 * 60);
+                        
+                        // Strošek prog = 1 × trajanje v urah × urni strošek (le enkrat na termin)
+                        const termMonthlyCost = durationHours * termHourlyCost;
+                        totalFacilityCost += termMonthlyCost;
                     }
-                    
-                    // Izračunaj trajanje termina v urah
-                    const startTime = new Date(`2000-01-01T${term.start_time}`);
-                    const endTime = new Date(`2000-01-01T${term.end_time}`);
-                    const durationHours = (endTime - startTime) / (1000 * 60 * 60);
-                    
-                    // Strošek prog = število načrtovanih in aktivnih treningov × trajanje v urah × urni strošek
-                    const termMonthlyCost = trainingSessionsCount * durationHours * termHourlyCost;
-                    totalFacilityCost += termMonthlyCost;
                 }
-            }
             }
             
 
