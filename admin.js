@@ -218,10 +218,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Preveri stanje vadnin in avtomatsko kopiraj, če je potrebno
                 setTimeout(async () => {
-                    console.log('🔍 Preverjam stanje vadnin ob prehodu v finance sekcijo...');
                     const status = await checkFeesStatus();
                     if (status.status === 'incomplete' && status.missingMonths.length > 0) {
-                        console.log('🔄 Manjkajo vadnine - avtomatsko kopiram iz prejšnega meseca...');
                         await copyPreviousMonthFees();
                     }
                 }, 500);
@@ -233,7 +231,6 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadData() {
         try {
             // Naloži termine iz Supabase
-            console.log('Nalaganje terminov...');
             const { data: termsData, error: termsError } = await supabase
                 .from('terms')
                 .select('*');
@@ -242,11 +239,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Napaka pri nalaganju terminov:', termsError);
             } else {
                 TERMS = termsData || [];
-                console.log('Termini naloženi:', TERMS.length);
             }
 
             // Naloži plavalce iz Supabase
-            console.log('Nalaganje plavalcev...');
             const { data: swimmersData, error: swimmersError } = await supabase
                 .from('swimmers')
                 .select('*');
@@ -255,7 +250,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Napaka pri nalaganju plavalcev:', swimmersError);
             } else {
                 swimmers = swimmersData || [];
-                console.log('Plavalci naloženi:', swimmers.length);
             }
 
             // Naloži prisotnost iz Supabase
@@ -300,7 +294,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Naloži trenerje iz Supabase
-            console.log('Nalaganje trenerjev...');
             const { data: trainersData, error: trainersError } = await supabase
                 .from('trainers')
                 .select('*');
@@ -309,7 +302,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Napaka pri nalaganju trenerjev:', trainersError);
             } else {
                 trainers = trainersData || [];
-                console.log('Trenerji naloženi:', trainers.length);
             }
 
             // Naloži prisotnost trenerjev iz Supabase
@@ -335,7 +327,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Naloži termine trenerjev iz Supabase
-            console.log('Nalaganje terminov trenerjev...');
             const { data: trainerTermsData, error: trainerTermsError } = await supabase
                 .from('trainer_terms')
                 .select('*');
@@ -345,7 +336,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 // Dodaj termine k trenerjem
                 if (trainerTermsData) {
-                    console.log('Termini trenerjev naloženi:', trainerTermsData.length);
                     trainerTermsData.forEach(row => {
                         const trainer = trainers.find(t => t.id === row.trainer_id);
                         if (trainer) {
@@ -353,12 +343,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             trainer.terms.push(row.term_id);
                         }
                     });
-                    console.log('Trenerji z termini:', trainers.filter(t => t.terms && t.terms.length > 0).length);
                 }
             }
 
             // Posodobi UI
-            console.log('Posodabljanje UI...');
             updateSwimmerSelects();
             updateTermSelects();
             updateTrainerSelects();
@@ -375,19 +363,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // Prikaži nastavitve stroškov prog in urnih postavk trenerjev
             renderTermCostsSettings();
             renderTrainerRatesSettings();
-            
-
-            
-            console.log('UI posodobljen');
-            
-            // Debug informacije
-            console.log('Naloženi podatki:', {
-                terms: TERMS.length,
-                swimmers: swimmers.length,
-                trainers: trainers.length,
-                attendance: Object.keys(attendance).length,
-                trainerAttendance: Object.keys(trainerAttendance).length
-            });
 
         } catch (error) {
             console.error('Napaka pri nalaganju podatkov:', error);
@@ -461,8 +436,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateTrainerSelects() {
-        console.log('updateTrainerSelects - trenerji:', trainers);
-        
         // Posodobi select za trenerje
         elTrainerSelect.innerHTML = '<option value="">Izberi trenerja</option>';
         trainers.forEach(t => {
@@ -588,8 +561,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateTrainersList() {
         elTrainersList.innerHTML = '';
-        
-        console.log('updateTrainersList - trenerji:', trainers);
         
         if (trainers.length === 0) {
             elTrainersList.innerHTML = '<p class="muted">Ni trenerjev</p>';

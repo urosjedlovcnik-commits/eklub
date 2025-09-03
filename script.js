@@ -139,8 +139,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function updateTrainerAttendance(date, termId, trainerId, present, note = '') {
-      console.log('🔍 DEBUG: updateTrainerAttendance klican z:', { date, termId, trainerId, present, note });
-      
       if (useLocalStorage) {
         // Za localStorage bi potrebovali ločeno tabelo trainer_attendance
         return;
@@ -173,15 +171,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!trainerAttendance[date]) trainerAttendance[date] = {};
             if (!trainerAttendance[date][termId]) trainerAttendance[date][termId] = {};
             trainerAttendance[date][termId][trainerId] = { present, note };
-            console.log('🔍 DEBUG: Lokalno stanje posodobljeno kljub napaki:', trainerAttendance[date][termId][trainerId]);
             
           } else {
-            console.log('🔍 DEBUG: Uspešno shranjeno v Supabase');
             // Posodobi lokalno stanje
             if (!trainerAttendance[date]) trainerAttendance[date] = {};
             if (!trainerAttendance[date][termId]) trainerAttendance[date][termId] = {};
             trainerAttendance[date][termId][trainerId] = { present, note };
-            console.log('🔍 DEBUG: Lokalno stanje posodobljeno:', trainerAttendance[date][termId][trainerId]);
           }
         } catch (error) {
           console.error('Napaka pri posodabljanju prisotnosti trenerja:', error);
@@ -449,7 +444,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Nova funkcija za osvežitev podatkov za določen dan
     async function refreshDayData(date) {
       const ymd = iso(date);
-      console.log('🔍 DEBUG: refreshDayData klican za datum:', ymd);
       
       const { data: attData, error: attError } = await supabase
         .from('attendance')
@@ -457,7 +451,6 @@ document.addEventListener('DOMContentLoaded', () => {
         .eq('date', ymd);
       
       if (attError) { console.error('Napaka pri osveževanju prisotnosti za dan:', attError); return; }
-      console.log('🔍 DEBUG: Prisotnost plavalcev osvežena:', attData);
       
       const { data: statusData, error: statusError } = await supabase
         .from('term_status')
@@ -465,7 +458,6 @@ document.addEventListener('DOMContentLoaded', () => {
         .eq('date', ymd);
 
       if (statusError) { console.error('Napaka pri osveževanju statusa termina za dan:', statusError); return; }
-      console.log('🔍 DEBUG: Status terminov osvežen:', statusData);
       
       // Osveži podatke o prisotnosti trenerjev
       const { data: trainerAttData, error: trainerAttError } = await supabase
@@ -481,7 +473,6 @@ document.addEventListener('DOMContentLoaded', () => {
           acc[row.term_id][row.trainer_id] = { present: row.present, note: row.note };
           return acc;
         }, {});
-        console.log('🔍 DEBUG: Prisotnost trenerjev osvežena:', trainerAttendance[ymd]);
       }
       
       attendance[ymd] = attData.reduce((acc, row) => {
@@ -489,13 +480,11 @@ document.addEventListener('DOMContentLoaded', () => {
         acc[row.term_id][row.swimmer_id] = row.status;
         return acc;
       }, {});
-      console.log('🔍 DEBUG: Lokalni podatki o prisotnosti posodobljeni:', attendance[ymd]);
 
       termStatus[ymd] = statusData.reduce((acc, row) => {
         acc[row.term_id] = { status: row.status, note: row.note, notes: row.notes };
         return acc;
       }, {});
-      console.log('🔍 DEBUG: Lokalni status terminov posodobljen:', termStatus[ymd]);
     }
 
 
@@ -588,8 +577,6 @@ document.addEventListener('DOMContentLoaded', () => {
           
                      // Pravilno barvno kodiranje za trenerje
            console.log('🔍 DEBUG: Barvno kodiranje trenerja:', trainer.id);
-           console.log('🔍 DEBUG: Trenutno stanje isPresent:', isPresent);
-           
            // Najprej počisti vse barvne razrede
            btnPresent.classList.remove("ok", "warn", "neutral");
            btnAbsent.classList.remove("ok", "warn", "neutral");
@@ -597,34 +584,22 @@ document.addEventListener('DOMContentLoaded', () => {
            if (isPresent === true) { 
              btnPresent.classList.add("ok"); 
              btnAbsent.classList.add("neutral");
-             console.log('🔍 DEBUG: Trener prisoten - Prisoten: ok (zelen), Odsoten: neutral (siv)');
            } else if (isPresent === false) { 
              btnPresent.classList.add("neutral"); 
              btnAbsent.classList.add("warn");
-             console.log('🔍 DEBUG: Trener odsoten - Prisoten: neutral (siv), Odsoten: warn (rdeč)');
            } else {
              btnPresent.classList.add("neutral"); 
              btnAbsent.classList.add("neutral");
-             console.log('🔍 DEBUG: Trener brez statusa - Oba gumba: neutral (siva)');
            }
           
           btnPresent.addEventListener("click", async () => {
-            console.log('🔍 DEBUG: Trener gumb Prisoten kliknjen');
-            console.log('🔍 DEBUG: Trenutno stanje isPresent:', isPresent);
-            console.log('🔍 DEBUG: Trener ID:', trainer.id);
-            console.log('🔍 DEBUG: Datum:', ymd);
-            console.log('🔍 DEBUG: Termin ID:', termId);
-            
             const newStatus = isPresent === true ? false : true;
-            console.log('🔍 DEBUG: Novo stanje:', newStatus);
             
                          await updateTrainerAttendance(ymd, termId, trainer.id, newStatus);
              // Posodobi lokalne podatke
              if (!trainerAttendance[ymd]) trainerAttendance[ymd] = {};
              if (!trainerAttendance[ymd][termId]) trainerAttendance[ymd][termId] = {};
              trainerAttendance[ymd][termId][trainer.id] = { present: newStatus, note: trainerAttendance[ymd]?.[termId]?.[trainer.id]?.note || '' };
-             
-             console.log('🔍 DEBUG: Lokalni podatki posodobljeni:', trainerAttendance[ymd][termId][trainer.id]);
              
              // Skrij prostor za opombe, če je trener sedaj prisoten
              if (newStatus === true) {
@@ -636,24 +611,16 @@ document.addEventListener('DOMContentLoaded', () => {
           });
           
                      btnAbsent.addEventListener("click", async () => {
-             console.log('🔍 DEBUG: Trener gumb Odsoten kliknjen');
-             console.log('🔍 DEBUG: Trenutno stanje isPresent:', isPresent);
-             console.log('🔍 DEBUG: Trener ID:', trainer.id);
-             
              if (isPresent === false) {
-               console.log('🔍 DEBUG: Trener je že odsoten, prikazujem prostor za opombe');
                // Če je trener že odsoten, prikaži prostor za opombe
                showTrainerNotesSection(ymd, termId, trainer.id, trainer.first_name + ' ' + trainer.last_name);
              } else {
-               console.log('🔍 DEBUG: Trener je prisoten, označujem kot odsotnega');
                // Če je trener prisoten, ga označi kot odsotnega
                await updateTrainerAttendance(ymd, termId, trainer.id, false);
                // Posodobi lokalne podatke
                if (!trainerAttendance[ymd]) trainerAttendance[ymd] = {};
                if (!trainerAttendance[ymd][termId]) trainerAttendance[ymd][termId] = {};
                trainerAttendance[ymd][termId][trainer.id] = { present: false, note: trainerAttendance[ymd]?.[termId]?.[trainer.id]?.note || '' };
-               
-               console.log('🔍 DEBUG: Lokalni podatki posodobljeni:', trainerAttendance[ymd][termId][trainer.id]);
                
                // Prikaži prostor za opombe po označitvi kot odsotnega
                showTrainerNotesSection(ymd, termId, trainer.id, trainer.first_name + ' ' + trainer.last_name);
@@ -724,7 +691,6 @@ document.addEventListener('DOMContentLoaded', () => {
               .from('attendance')
               .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: newStatus }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
             if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
-              console.log('🔍 DEBUG: Plavalec prisotnost posodobljena v Supabase');
               // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
               await refreshModalData(date, termId);
               renderMonth();
@@ -742,25 +708,17 @@ document.addEventListener('DOMContentLoaded', () => {
            
            if (status === false) { 
              btnAbsent.classList.add("warn"); 
-             console.log('🔍 DEBUG: Plavalec odsoten - Odsoten: warn (rdeč)');
            } else { 
              btnAbsent.classList.add("neutral"); 
-             console.log('🔍 DEBUG: Plavalec brez statusa - Odsoten: neutral (siv)');
            }
           
           btnAbsent.addEventListener("click", async ()=>{
-            console.log('🔍 DEBUG: Plavalec gumb Odsoten kliknjen');
-            console.log('🔍 DEBUG: Trenutno stanje status:', status);
-            console.log('🔍 DEBUG: Plavalec ID:', s.id);
-            
             const newStatus = status === false ? true : false;
-            console.log('🔍 DEBUG: Novo stanje:', newStatus);
             
             const { error } = await supabase
               .from('attendance')
               .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: newStatus }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
           if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
-              console.log('🔍 DEBUG: Plavalec prisotnost posodobljena v Supabase');
               // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
               await refreshModalData(date, termId);
               renderMonth();
@@ -861,24 +819,16 @@ document.addEventListener('DOMContentLoaded', () => {
             btnAbsent.classList.add("neutral"); 
           }
           btnAbsent.addEventListener("click", async ()=>{
-            console.log('🔍 DEBUG: Nadomeščanje gumb Odsoten kliknjen');
-            console.log('🔍 DEBUG: Trenutno stanje status:', status);
-            console.log('🔍 DEBUG: Plavalec ID:', s.id);
-            
             const newStatus = status === false ? true : false;
-            console.log('🔍 DEBUG: Novo stanje:', newStatus);
             
             const { error } = await supabase
               .from('attendance')
               .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: newStatus }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
           if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
-              console.log('🔍 DEBUG: Nadomeščanje prisotnost posodobljena v Supabase');
               // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
               if (!attendance[ymd]) attendance[ymd] = {};
               if (!attendance[ymd][termId]) attendance[ymd][termId] = {};
               attendance[ymd][termId][s.id] = newStatus;
-              
-              console.log('🔍 DEBUG: Lokalni podatki posodobljeni:', attendance[ymd][termId][s.id]);
               
               await refreshModalData(date, termId);
               renderMonth();
@@ -1252,33 +1202,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const substituteTrainerName = document.getElementById('trainerNotesTextarea').value.trim();
 
         if (substituteTrainerId || substituteTrainerName) {
-          console.log('🔍 DEBUG: Shranjevanje nadomestnega trenerja');
-          console.log('🔍 DEBUG: Datum:', date, 'Termin ID:', termId, 'Originalni trener ID:', trainerId);
-          console.log('🔍 DEBUG: Substitute trener ID:', substituteTrainerId, 'Substitute ime:', substituteTrainerName);
-          
           if (substituteTrainerId) {
             // Če je izbran trener iz dropdown-a - doda prisotnost nadomestnega trenerja
             const substituteTrainer = trainers.find(t => t.id === substituteTrainerId);
-            console.log('🔍 DEBUG: Nadomestni trener najden:', substituteTrainer);
             
             if (substituteTrainer) {
               // Shrani opombo o nadomestnem trenerju pri originalnem trenerju
-              console.log('🔍 DEBUG: Dodajam opombo o nadomestnem trenerju pri originalnem trenerju');
               await updateTrainerAttendance(date, termId, trainerId, false, `Nadomešča: ${substituteTrainer.first_name} ${substituteTrainer.last_name} (${substituteTrainerId})`);
-              
-              console.log('🔍 DEBUG: Nadomestni trener bo upoštevan v evidenci preko opombe');
-            } else {
-              console.log('🔍 DEBUG: Nadomestni trener ni bil najden v bazi!');
             }
           } else {
             // Če je vneseno ime novega trenerja - shrani kot opombo
             const noteToSave = substituteTrainerName;
-            console.log('🔍 DEBUG: Shranjevanje imena novega trenerja kot opombe:', noteToSave);
             // Shrani opombo o nadomestnem trenerju
             await updateTrainerAttendance(date, termId, trainerId, false, noteToSave);
           }
-          
-          console.log('🔍 DEBUG: Končno stanje trainerAttendance za datum', date, ':', trainerAttendance[date]);
           
           await refreshModalData(new Date(date), termId);
           hideTrainerNotesSection();

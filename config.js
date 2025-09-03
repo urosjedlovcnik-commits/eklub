@@ -36,14 +36,6 @@ function createSupabaseClient() {
     return window.supabase.createClient(CONFIG.SUPABASE.URL, CONFIG.SUPABASE.ANON_KEY);
 }
 
-// Funkcija za debug izpise (samo če je DEBUG omogočen)
-function debugLog(message, data = null) {
-    if (CONFIG.APP.DEBUG) {
-        console.log(`[DEBUG] ${message}`, data);
-    }
-}
-
 // Izvozi konfiguracijo
 window.CONFIG = CONFIG;
 window.createSupabaseClient = createSupabaseClient;
-window.debugLog = debugLog;
