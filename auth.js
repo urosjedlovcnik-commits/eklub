@@ -41,7 +41,6 @@ class AuthManager {
         };
 
         localStorage.setItem('adminSession', JSON.stringify(loginData));
-        debugLog('Admin uspešno prijavljen', { email });
         
         return loginData;
     }
@@ -75,7 +74,6 @@ class AuthManager {
 
             return session;
         } catch (error) {
-            debugLog('Napaka pri preverjanju session', error);
             this.logoutAdmin();
             return false;
         }
@@ -84,7 +82,6 @@ class AuthManager {
     // Odjavi administratorja
     logoutAdmin() {
         localStorage.removeItem('adminSession');
-        debugLog('Admin odjavljen');
     }
 
     // Pridobi trenutni admin email

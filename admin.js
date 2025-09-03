@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
     
-    debugLog('Supabase client uspešno ustvarjen');
+
 
     // ===== POMOŽNE FUNKCIJE =====
     
