@@ -55,9 +55,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const DAYNAME = ["","Ponedeljek","Torek","Sreda","Četrtek","Petek","Sobota","Nedelja"];
     const DAY_SHORT_NAME = ["", "Pon.", "Tor.", "Sre.", "Čet.", "Pet.", "Sob.", "Ned."];
 
+    // ===== Pomožne funkcije =====
+    function isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+
     // ===== UI elementi =====
     const elNewFirst = document.getElementById("newFirst");
     const elNewLast = document.getElementById("newLast");
+    const elNewEmail = document.getElementById("newEmail");
     const elAddSwimmerBtn = document.getElementById("addSwimmerBtn");
     const elSwimmerSelect = document.getElementById("swimmerSelect");
     const elTermSelect = document.getElementById("termSelect");
@@ -516,6 +523,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <tr>
                     <th>Ime</th>
                     <th>Priimek</th>
+                    <th>Email</th>
                     <th>Termini</th>
                     <th>Akcije</th>
                 </tr>
@@ -545,6 +553,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 row.innerHTML = `
                     <td>${swimmer.first_name}</td>
                     <td>${swimmer.last_name}</td>
+                    <td>${swimmer.email || '<span class="muted">Brez email naslova</span>'}</td>
                     <td class="terms-cell">${termsChips || '<span class="muted">Brez terminov</span>'}</td>
                     <td>
                         <button class="btn warn" onclick="deleteSwimmer('${swimmer.id}')" style="font-size: 12px; padding: 4px 8px;">
@@ -623,9 +632,16 @@ document.addEventListener('DOMContentLoaded', () => {
     elAddSwimmerBtn.addEventListener('click', async () => {
         const first = elNewFirst.value.trim();
         const last = elNewLast.value.trim();
+        const email = elNewEmail.value.trim();
         
         if (!first || !last) {
             alert('Prosim vnesite ime in priimek');
+            return;
+        }
+
+        // Validacija email naslova (če je vnesen)
+        if (email && !isValidEmail(email)) {
+            alert('Prosim vnesite veljaven email naslov');
             return;
         }
 
@@ -635,6 +651,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .insert([{
                     first_name: first,
                     last_name: last,
+                    email: email || null,
                     terms: [],
                     is_deleted: false
                 }])
@@ -653,10 +670,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
             elNewFirst.value = '';
             elNewLast.value = '';
+            elNewEmail.value = '';
             
             updateSwimmerSelects();
             updateSwimmersList();
-            elSwimmerInfo.textContent = `Dodan plavalec: ${first} ${last}`;
+            elSwimmerInfo.textContent = `Dodan plavalec: ${first} ${last}${email ? ` (${email})` : ''}`;
             
             setTimeout(() => {
                 elSwimmerInfo.textContent = '';
@@ -1343,7 +1361,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const headers = parseCSVLine(lines[0]);
                 
                 if (!headers.includes('first_name') || !headers.includes('last_name') || !headers.includes('terms')) {
-                    alert('CSV mora vsebovati stolpce: first_name, last_name, terms');
+                    alert('CSV mora vsebovati stolpce: first_name, last_name, terms (email je opcijski)');
                     return;
                 }
 
@@ -1354,6 +1372,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const first = values[headers.indexOf('first_name')];
                         const last = values[headers.indexOf('last_name')];
                         const termsStr = values[headers.indexOf('terms')];
+                        const email = headers.includes('email') ? values[headers.indexOf('email')] : '';
                         
                         if (first && last) {
                             // Razčleni termine, ločene z vejico, vendar znotraj istega polja
@@ -1375,11 +1394,17 @@ document.addEventListener('DOMContentLoaded', () => {
                                 console.warn(`Invalid terms for ${first} ${last}: [${invalidTerms.join(', ')}]`);
                             }
                             
-                            console.log(`Parsed swimmer: ${first} ${last}, valid terms: [${validTerms.join(', ')}]`);
+                            // Validacija email naslova (če je vnesen)
+                            if (email && !isValidEmail(email)) {
+                                console.warn(`Invalid email for ${first} ${last}: ${email}`);
+                            }
+                            
+                            console.log(`Parsed swimmer: ${first} ${last}, email: ${email || 'none'}, valid terms: [${validTerms.join(', ')}]`);
                             
                             newSwimmers.push({
                                 first_name: first,
                                 last_name: last,
+                                email: email && isValidEmail(email) ? email : null,
                                 terms: validTerms,
                                 is_deleted: false
                             });
@@ -1400,10 +1425,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         );
                         
                         if (existingSwimmer) {
-                            // Posodobi obstoječega plavalca z novimi termini
+                            // Posodobi obstoječega plavalca z novimi termini in email naslovom
                             existingSwimmersToUpdate.push({
                                 id: existingSwimmer.id,
-                                terms: swimmer.terms
+                                terms: swimmer.terms,
+                                email: swimmer.email
                             });
                         } else {
                             // Dodaj novega plavalca
@@ -1444,7 +1470,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             
                             const { data: updateResult, error: updateError } = await supabase
                                 .from('swimmers')
-                                .update({ terms: updateData.terms })
+                                .update({ 
+                                    terms: updateData.terms,
+                                    email: updateData.email
+                                })
                                 .eq('id', updateData.id)
                                 .select();
 
@@ -1464,7 +1493,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             const localSwimmer = swimmers.find(s => s.id === updateData.id);
                             if (localSwimmer) {
                                 localSwimmer.terms = updateData.terms;
-                                console.log(`Updated local swimmer ${localSwimmer.first_name} ${localSwimmer.last_name} with terms: [${localSwimmer.terms.join(', ')}]`);
+                                localSwimmer.email = updateData.email;
+                                console.log(`Updated local swimmer ${localSwimmer.first_name} ${localSwimmer.last_name} with terms: [${localSwimmer.terms.join(', ')}] and email: ${localSwimmer.email || 'none'}`);
                             }
 
                             updatedCount++;

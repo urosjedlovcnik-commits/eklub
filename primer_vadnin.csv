@@ -1,5 +1,5 @@
-first_name,last_name,monthly_fee,discount
-Janez,Novak,80.00,0.00
-Maja,Kovač,75.00,5.00
-Peter,Horvat,85.00,0.00
-Ana,Žnidar,70.00,10.00
+first_name,last_name,email,monthly_fee,discount
+Janez,Novak,janez.novak@email.com,80.00,0.00
+Maja,Kovač,maja.kovac@email.com,75.00,5.00
+Peter,Horvat,peter.horvat@email.com,85.00,0.00
+Ana,Žnidar,ana.znidar@email.com,70.00,10.00
