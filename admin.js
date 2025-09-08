@@ -61,10 +61,18 @@ document.addEventListener('DOMContentLoaded', () => {
         return emailRegex.test(email);
     }
 
+    function isValidPhone(phone) {
+        // Preveri, ali je telefonska številka v veljavnem formatu
+        // Dovoli različne formate: +386 40 123 456, 040 123 456, 040123456, itd.
+        const phoneRegex = /^[\+]?[0-9\s\-\(\)]{8,15}$/;
+        return phoneRegex.test(phone);
+    }
+
     // ===== UI elementi =====
     const elNewFirst = document.getElementById("newFirst");
     const elNewLast = document.getElementById("newLast");
     const elNewEmail = document.getElementById("newEmail");
+    const elNewPhone = document.getElementById("newPhone");
     const elAddSwimmerBtn = document.getElementById("addSwimmerBtn");
     const elSwimmerSelect = document.getElementById("swimmerSelect");
     const elTermSelect = document.getElementById("termSelect");
@@ -97,6 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const elNewTrainerFirst = document.getElementById("newTrainerFirst");
     const elNewTrainerLast = document.getElementById("newTrainerLast");
     const elNewTrainerEmail = document.getElementById("newTrainerEmail");
+    const elNewTrainerPhone = document.getElementById("newTrainerPhone");
     const elAddTrainerBtn = document.getElementById("addTrainerBtn");
     const elTrainerSelect = document.getElementById("trainerSelect");
     const elTrainerTermSelect = document.getElementById("trainerTermSelect");
@@ -524,6 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <th>Ime</th>
                     <th>Priimek</th>
                     <th>Email</th>
+                    <th>Telefon</th>
                     <th>Termini</th>
                     <th>Akcije</th>
                 </tr>
@@ -554,6 +564,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${swimmer.first_name}</td>
                     <td>${swimmer.last_name}</td>
                     <td>${swimmer.email || '<span class="muted">Brez email naslova</span>'}</td>
+                    <td>${swimmer.phone || '<span class="muted">Brez telefona</span>'}</td>
                     <td class="terms-cell">${termsChips || '<span class="muted">Brez terminov</span>'}</td>
                     <td>
                         <button class="btn warn" onclick="deleteSwimmer('${swimmer.id}')" style="font-size: 12px; padding: 4px 8px;">
@@ -583,6 +594,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <th>Ime</th>
                     <th>Priimek</th>
                     <th>Email</th>
+                    <th>Telefon</th>
                     <th>Termini</th>
                     <th>Akcije</th>
                 </tr>
@@ -614,6 +626,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${trainer.first_name}</td>
                     <td>${trainer.last_name}</td>
                     <td>${trainer.email || ''}</td>
+                    <td>${trainer.phone || '<span class="muted">Brez telefona</span>'}</td>
                     <td class="terms-cell">${termsChips || '<span class="muted">Brez terminov</span>'}</td>
                     <td>
                         <button class="btn warn" onclick="deleteTrainer('${trainer.id}')" style="font-size: 12px; padding: 4px 8px;">
@@ -633,6 +646,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const first = elNewFirst.value.trim();
         const last = elNewLast.value.trim();
         const email = elNewEmail.value.trim();
+        const phone = elNewPhone.value.trim();
         
         if (!first || !last) {
             alert('Prosim vnesite ime in priimek');
@@ -645,6 +659,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Validacija telefonske številke (če je vnesena)
+        if (phone && !isValidPhone(phone)) {
+            alert('Prosim vnesite veljavno telefonsko številko');
+            return;
+        }
+
         try {
             const { data, error } = await supabase
                 .from('swimmers')
@@ -652,6 +672,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     first_name: first,
                     last_name: last,
                     email: email || null,
+                    phone: phone || null,
                     terms: [],
                     is_deleted: false
                 }])
@@ -671,10 +692,11 @@ document.addEventListener('DOMContentLoaded', () => {
             elNewFirst.value = '';
             elNewLast.value = '';
             elNewEmail.value = '';
+            elNewPhone.value = '';
             
             updateSwimmerSelects();
             updateSwimmersList();
-            elSwimmerInfo.textContent = `Dodan plavalec: ${first} ${last}${email ? ` (${email})` : ''}`;
+            elSwimmerInfo.textContent = `Dodan plavalec: ${first} ${last}${email ? ` (${email})` : ''}${phone ? ` (${phone})` : ''}`;
             
             setTimeout(() => {
                 elSwimmerInfo.textContent = '';
@@ -690,9 +712,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const first = elNewTrainerFirst.value.trim();
         const last = elNewTrainerLast.value.trim();
         const email = elNewTrainerEmail.value.trim();
+        const phone = elNewTrainerPhone.value.trim();
         
         if (!first || !last) {
             alert('Prosim vnesite ime in priimek');
+            return;
+        }
+
+        // Validacija telefonske številke (če je vnesena)
+        if (phone && !isValidPhone(phone)) {
+            alert('Prosim vnesite veljavno telefonsko številko');
             return;
         }
 
@@ -702,7 +731,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 .insert([{
                     first_name: first,
                     last_name: last,
-                    email: email
+                    email: email,
+                    phone: phone || null
                 }])
                 .select();
 
@@ -722,6 +752,7 @@ document.addEventListener('DOMContentLoaded', () => {
             elNewTrainerFirst.value = '';
             elNewTrainerLast.value = '';
             elNewTrainerEmail.value = '';
+            elNewTrainerPhone.value = '';
             
             updateTrainerSelects();
             updateTrainersList();
@@ -1361,7 +1392,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const headers = parseCSVLine(lines[0]);
                 
                 if (!headers.includes('first_name') || !headers.includes('last_name') || !headers.includes('terms')) {
-                    alert('CSV mora vsebovati stolpce: first_name, last_name, terms (email je opcijski)');
+                    alert('CSV mora vsebovati stolpce: first_name, last_name, terms (email in phone sta opcijska)');
                     return;
                 }
 
@@ -1373,6 +1404,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const last = values[headers.indexOf('last_name')];
                         const termsStr = values[headers.indexOf('terms')];
                         const email = headers.includes('email') ? values[headers.indexOf('email')] : '';
+                        const phone = headers.includes('phone') ? values[headers.indexOf('phone')] : '';
                         
                         if (first && last) {
                             // Razčleni termine, ločene z vejico, vendar znotraj istega polja
@@ -1399,12 +1431,18 @@ document.addEventListener('DOMContentLoaded', () => {
                                 console.warn(`Invalid email for ${first} ${last}: ${email}`);
                             }
                             
-                            console.log(`Parsed swimmer: ${first} ${last}, email: ${email || 'none'}, valid terms: [${validTerms.join(', ')}]`);
+                            // Validacija telefonske številke (če je vnesena)
+                            if (phone && !isValidPhone(phone)) {
+                                console.warn(`Invalid phone for ${first} ${last}: ${phone}`);
+                            }
+                            
+                            console.log(`Parsed swimmer: ${first} ${last}, email: ${email || 'none'}, phone: ${phone || 'none'}, valid terms: [${validTerms.join(', ')}]`);
                             
                             newSwimmers.push({
                                 first_name: first,
                                 last_name: last,
                                 email: email && isValidEmail(email) ? email : null,
+                                phone: phone && isValidPhone(phone) ? phone : null,
                                 terms: validTerms,
                                 is_deleted: false
                             });
@@ -1425,11 +1463,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         );
                         
                         if (existingSwimmer) {
-                            // Posodobi obstoječega plavalca z novimi termini in email naslovom
+                            // Posodobi obstoječega plavalca z novimi termini, email naslovom in telefonsko številko
                             existingSwimmersToUpdate.push({
                                 id: existingSwimmer.id,
                                 terms: swimmer.terms,
-                                email: swimmer.email
+                                email: swimmer.email,
+                                phone: swimmer.phone
                             });
                         } else {
                             // Dodaj novega plavalca
@@ -1472,7 +1511,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 .from('swimmers')
                                 .update({ 
                                     terms: updateData.terms,
-                                    email: updateData.email
+                                    email: updateData.email,
+                                    phone: updateData.phone
                                 })
                                 .eq('id', updateData.id)
                                 .select();
@@ -1494,7 +1534,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (localSwimmer) {
                                 localSwimmer.terms = updateData.terms;
                                 localSwimmer.email = updateData.email;
-                                console.log(`Updated local swimmer ${localSwimmer.first_name} ${localSwimmer.last_name} with terms: [${localSwimmer.terms.join(', ')}] and email: ${localSwimmer.email || 'none'}`);
+                                localSwimmer.phone = updateData.phone;
+                                console.log(`Updated local swimmer ${localSwimmer.first_name} ${localSwimmer.last_name} with terms: [${localSwimmer.terms.join(', ')}], email: ${localSwimmer.email || 'none'}, phone: ${localSwimmer.phone || 'none'}`);
                             }
 
                             updatedCount++;
@@ -1657,7 +1698,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     const requiredHeaders = ['first_name', 'last_name', 'monthly_fee'];
                     if (!requiredHeaders.every(h => headers.includes(h))) {
-                        alert('CSV mora vsebovati stolpce: first_name, last_name, monthly_fee');
+                        alert('CSV mora vsebovati stolpce: first_name, last_name, monthly_fee (email in phone sta opcijska)');
                         return;
                     }
                     
@@ -1702,6 +1743,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                 discount = discountValue ? parseFloat(discountValue) || 0 : 0;
                             }
                             
+                            // Preberi email in telefon, če obstajata stolpca
+                            const email = headers.includes('email') ? values[headers.indexOf('email')] : '';
+                            const phone = headers.includes('phone') ? values[headers.indexOf('phone')] : '';
+                            
                             if (firstName && lastName && !isNaN(amount)) {
                                 // Poišči plavalca po imenu in priimku
                                 const swimmer = swimmers.find(s => 
@@ -1720,6 +1765,32 @@ document.addEventListener('DOMContentLoaded', () => {
                                     };
                                     
                                     console.log(`📝 Ustvarjam vadnino za ${firstName} ${lastName}:`, newFee);
+                                    
+                                    // Posodobi plavalca z novimi podatki, če so podani
+                                    if (email || phone) {
+                                        const updateData = {};
+                                        if (email && isValidEmail(email)) {
+                                            updateData.email = email;
+                                        }
+                                        if (phone && isValidPhone(phone)) {
+                                            updateData.phone = phone;
+                                        }
+                                        
+                                        if (Object.keys(updateData).length > 0) {
+                                            try {
+                                                await supabase
+                                                    .from('swimmers')
+                                                    .update(updateData)
+                                                    .eq('id', swimmer.id);
+                                                
+                                                // Posodobi lokalno stanje
+                                                Object.assign(swimmer, updateData);
+                                                console.log(`📝 Posodobljen plavalec ${firstName} ${lastName} z novimi podatki:`, updateData);
+                                            } catch (error) {
+                                                console.error(`Napaka pri posodabljanju plavalca ${firstName} ${lastName}:`, error);
+                                            }
+                                        }
+                                    }
                                     
                                     importedFees.push(newFee);
                                 } else {
