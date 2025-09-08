@@ -524,19 +524,21 @@
           <div class="inner">
                         <p class="muted">
                 Uvožena CSV datoteka mora v glavi vsebovati stolpce <code>first_name</code>, <code>last_name</code> in <code>monthly_fee</code>.
-                Opcijsko lahko dodate tudi stolpec <code>discount</code> za popuste.
+                Opcijsko lahko dodate tudi stolpce <code>discount</code> za popuste, <code>email</code> in <code>phone</code> za posodabljanje kontaktnih podatkov.
               <br><br>
                               <strong>Pomembno:</strong> Uvožene vadnine veljajo za vse prihodnje mesece (od izbranega meseca naprej).
                 <br><br>
                 <strong>Popusti:</strong> Popusti se upoštevajo samo za mesec, v katerem so uvoženi, ne pa tudi za prihodnje mesece.
+                <br><br>
+                <strong>Kontaktni podatki:</strong> Če so v CSV datoteki podani email ali telefon, se bodo obstoječi plavalci avtomatsko posodobili z novimi podatki.
               <br><br>
               <strong>Opomba:</strong> Uvožena datoteka mora uporabljati vejico (`,`) kot ločilo med stolpci.
               <br>
               <strong>Primer:</strong>
                           <pre style="background:#f1f5f9; padding:8px; border-radius:6px; overflow-x:auto;">
-first_name,last_name,monthly_fee,discount
-Janez,Novak,80.00,0.00
-Maja,Kovač,75.00,5.00
+first_name,last_name,email,phone,monthly_fee,discount
+Janez,Novak,janez.novak@email.com,+386 40 123 456,80.00,0.00
+Maja,Kovač,maja.kovac@email.com,+386 41 234 567,75.00,5.00
             </pre>
             </p>
             <div class="row" style="margin-top:12px">
@@ -578,12 +580,14 @@ Maja,Kovač,75.00,5.00
           Uvožena CSV datoteka mora v glavi vsebovati stolpce <code>first_name</code>, <code>last_name</code> in <code>terms</code>.
           V stolpec <code>terms</code> lahko vpišete več terminov, ločenih z vejico (npr. <code>pon-17:00-18:00,sre-18:00-19:00</code>).
           <br><br>
+          <strong>Opcijski stolpci:</strong> <code>email</code> in <code>phone</code> - za dodajanje email naslovov in telefonskih številk.
+          <br><br>
           <strong>Opomba:</strong> Uvožena datoteka mora uporabljati vejico (`,`) kot ločilo med stolpci.
           <br>
           <strong>Primer:</strong>
           <pre style="background:#f1f5f9; padding:8px; border-radius:6px; overflow-x:auto;">
-first_name,last_name,terms
-Janez,Novak,"pon-17:00-18:00,sre-18:00-19:00,pet-19:00-20:00"
+first_name,last_name,email,phone,terms
+Janez,Novak,janez.novak@email.com,+386 40 123 456,"pon-17:00-18:00,sre-18:00-19:00,pet-19:00-20:00"
           </pre>
         </p>
         <div class="row" style="margin-top:0">
