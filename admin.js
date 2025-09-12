@@ -3917,7 +3917,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const { data: december2025Fees, error: fetchError } = await supabase
                 .from('swimmer_monthly_fees')
                 .select('*')
-                .eq('month', 11) // December (0-based)
+                .eq('month', 12) // December (1-based)
                 .eq('year', 2025);
             
             if (fetchError) {
@@ -3936,7 +3936,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Ustvari vadnine za vse mesece 2026
             const newFees2026 = [];
-            for (let month = 0; month < 12; month++) {
+            for (let month = 1; month <= 12; month++) {
                 december2025Fees.forEach(fee => {
                     newFees2026.push({
                         swimmer_id: fee.swimmer_id,
