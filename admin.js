@@ -3275,8 +3275,8 @@ document.addEventListener('DOMContentLoaded', () => {
         yearSidebar.appendChild(yearHeader);
         
         // Generiraj leta (5 let nazaj do 5 let naprej)
-        const currentYear = new Date().getFullYear();
-        for (let year = currentYear - 5; year <= currentYear + 5; year++) {
+        const currentYearForPicker = new Date().getFullYear();
+        for (let year = currentYearForPicker - 5; year <= currentYearForPicker + 5; year++) {
             const yearItem = document.createElement('div');
             yearItem.style.cssText = `
                 padding: 12px 16px;
