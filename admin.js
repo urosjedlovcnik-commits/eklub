@@ -454,10 +454,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const currentMonth = currentDate.getMonth();
                 const currentYear = currentDate.getFullYear();
                 
-                if (elSwimmerFeesMonthSelect && elSwimmerFeesYearSelect) {
-                    elSwimmerFeesMonthSelect.value = currentMonth;
-                    elSwimmerFeesYearSelect.value = currentYear;
-                }
+                // Opomba: elSwimmerFeesMonthSelect in elSwimmerFeesYearSelect so bili zamenjani z navigacijskimi gumbi
+                // Vrednosti se sedaj upravljajo preko currentSwimmerFeesMonth in currentSwimmerFeesYear
                 
                 // Osveži pristojbine plavalcev
                 setTimeout(() => {
@@ -2000,11 +1998,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Preveri, ali CSV vsebuje opcijski stolpec za popust
                     const hasDiscountColumn = headers.includes('discount');
 
-                    const month = parseInt(elFinanceMonthSelect.value);
-                    const year = parseInt(elFinanceYearSelect.value);
+                    const month = currentFinanceMonth;
+                    const year = currentFinanceYear;
                     
                     console.log('🔍 Debugging month parsing:');
-                    console.log('- elFinanceMonthSelect.value:', elFinanceMonthSelect.value);
+                    console.log('- currentFinanceMonth:', currentFinanceMonth);
                     console.log('- Parsed month:', month);
                     console.log('- Month type:', typeof month);
                     console.log('- Is NaN:', isNaN(month));
@@ -2498,31 +2496,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ===== Event listener za osvežitev povzetka trenerjev =====
-    elRefreshTrainerSummaryBtn.addEventListener('click', () => {
-        calculateTrainerSummaryData();
-    });
+    // Opomba: elRefreshTrainerSummaryBtn je bil zamenjan z navigacijskimi gumbi
+    // Funkcionalnost je sedaj vključena v navigateTrainerSummaryMonth() funkciji
 
     // ===== Event listener za osvežitev opomb trenerjev =====
-    const elRefreshTrainerNotesBtn = document.getElementById('refreshTrainerNotesBtn');
-    if (elRefreshTrainerNotesBtn) {
-        elRefreshTrainerNotesBtn.addEventListener('click', () => {
-            calculateTrainerNotesData();
-        });
-    }
+    // Opomba: elRefreshTrainerNotesBtn je bil zamenjan z navigacijskimi gumbi
+    // Funkcionalnost je sedaj vključena v navigateTrainerNotesMonth() funkciji
 
     // ===== Event listener za osvežitev povzetka udeležbe plavalcev =====
-    if (elRefreshSwimmerSummaryBtn) {
-        elRefreshSwimmerSummaryBtn.addEventListener('click', () => {
-            refreshSwimmerSummary();
-        });
-    }
+    // Opomba: elRefreshSwimmerSummaryBtn je bil zamenjan z navigacijskimi gumbi
+    // Funkcionalnost je sedaj vključena v navigateSwimmerSummaryMonth() funkciji
 
     // ===== Event listener za Finance sekcijo =====
-    if (elRefreshFinanceBtn) {
-        elRefreshFinanceBtn.addEventListener('click', () => {
-            calculateFinanceData();
-        });
-    }
+    // Opomba: elRefreshFinanceBtn je bil zamenjan z navigacijskimi gumbi
+    // Funkcionalnost je sedaj vključena v navigateFinanceMonth() funkciji
 
     if (elSaveCostsBtn) {
         elSaveCostsBtn.addEventListener('click', () => {
@@ -2542,11 +2529,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (elRefreshSwimmerFeesBtn) {
-        elRefreshSwimmerFeesBtn.addEventListener('click', () => {
-            refreshSwimmerFees();
-        });
-    }
+    // Opomba: elRefreshSwimmerFeesBtn je bil zamenjan z navigacijskimi gumbi
+    // Funkcionalnost je sedaj vključena v navigateSwimmerFeesMonth() funkciji
     
     // Event listenerji za navigacijo mesecev
     if (elPrevMonthBtn) {
@@ -3004,121 +2988,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateTrainerSummaryControls() {
-        // Mesec
-        elTrainerSummaryMonthSelect.innerHTML = '';
-        for (let i = 1; i <= 12; i++) {
-            const option = document.createElement('option');
-            option.value = i - 1;
-            option.textContent = new Date(2024, i - 1, 1).toLocaleDateString('sl-SI', { month: 'long' });
-            elTrainerSummaryMonthSelect.appendChild(option);
-        }
-        elTrainerSummaryMonthSelect.value = new Date().getMonth();
+        // Opomba: elTrainerSummaryMonthSelect in elTrainerSummaryYearSelect so bili zamenjani z navigacijskimi gumbi
+        // Vrednosti se sedaj upravljajo preko currentTrainerSummaryMonth in currentTrainerSummaryYear
 
-        // Leto
-        elTrainerSummaryYearSelect.innerHTML = '';
-        const currentYear = new Date().getFullYear();
-        for (let i = currentYear - 2; i <= currentYear + 1; i++) {
-            const option = document.createElement('option');
-            option.value = i;
-            option.textContent = i;
-            elTrainerSummaryYearSelect.appendChild(option);
-        }
-        elTrainerSummaryYearSelect.value = currentYear;
+        // Opomba: elTrainerNotesMonthSelect in elTrainerNotesYearSelect so bili zamenjani z navigacijskimi gumbi
+        // Vrednosti se sedaj upravljajo preko currentTrainerNotesMonth in currentTrainerNotesYear
 
-        // Kontrole za opombe trenerjev
-        const elTrainerNotesMonthSelect = document.getElementById('trainerNotesMonthSelect');
-        const elTrainerNotesYearSelect = document.getElementById('trainerNotesYearSelect');
-        
-        if (elTrainerNotesMonthSelect) {
-            elTrainerNotesMonthSelect.innerHTML = '';
-            for (let i = 1; i <= 12; i++) {
-                const option = document.createElement('option');
-                option.value = i - 1;
-                option.textContent = new Date(2024, i - 1, 1).toLocaleDateString('sl-SI', { month: 'long' });
-                elTrainerNotesMonthSelect.appendChild(option);
-            }
-            elTrainerNotesMonthSelect.value = new Date().getMonth();
-        }
+        // Opomba: elSwimmerSummaryMonthSelect in elSwimmerSummaryYearSelect so bili zamenjani z navigacijskimi gumbi
+        // Vrednosti se sedaj upravljajo preko currentSwimmerSummaryMonth in currentSwimmerSummaryYear
 
-        if (elTrainerNotesYearSelect) {
-            elTrainerNotesYearSelect.innerHTML = '';
-            for (let i = currentYear - 2; i <= currentYear + 1; i++) {
-                const option = document.createElement('option');
-                option.value = i;
-                option.textContent = i;
-                elTrainerNotesYearSelect.appendChild(option);
-            }
-            elTrainerNotesYearSelect.value = currentYear;
-        }
+        // Opomba: elFinanceMonthSelect in elFinanceYearSelect so bili zamenjani z navigacijskimi gumbi
+        // Vrednosti se sedaj upravljajo preko currentFinanceMonth in currentFinanceYear
 
-        // Kontrole za povzetek udeležbe plavalcev
-        if (elSwimmerSummaryMonthSelect) {
-            elSwimmerSummaryMonthSelect.innerHTML = '';
-            for (let i = 1; i <= 12; i++) {
-                const option = document.createElement('option');
-                option.value = i - 1;
-                option.textContent = new Date(2024, i - 1, 1).toLocaleDateString('sl-SI', { month: 'long' });
-                elSwimmerSummaryMonthSelect.appendChild(option);
-            }
-            elSwimmerSummaryMonthSelect.value = new Date().getMonth();
-        }
-
-        if (elSwimmerSummaryYearSelect) {
-            elSwimmerSummaryYearSelect.innerHTML = '';
-            for (let i = currentYear - 2; i <= currentYear + 1; i++) {
-                const option = document.createElement('option');
-                option.value = i;
-                option.textContent = i;
-                elSwimmerSummaryYearSelect.appendChild(option);
-            }
-            elSwimmerSummaryYearSelect.value = currentYear;
-        }
-
-        // Kontrole za Finance sekcijo
-        if (elFinanceMonthSelect) {
-            elFinanceMonthSelect.innerHTML = '';
-            for (let i = 1; i <= 12; i++) {
-                const option = document.createElement('option');
-                option.value = i - 1;
-                option.textContent = new Date(2024, i - 1, 1).toLocaleDateString('sl-SI', { month: 'long' });
-                elFinanceMonthSelect.appendChild(option);
-            }
-            elFinanceMonthSelect.value = new Date().getMonth();
-        }
-
-        if (elFinanceYearSelect) {
-            elFinanceYearSelect.innerHTML = '';
-            for (let i = 2025; i <= 2028; i++) {
-                const option = document.createElement('option');
-                option.value = i;
-                option.textContent = i;
-                elFinanceYearSelect.appendChild(option);
-            }
-            elFinanceYearSelect.value = currentYear;
-        }
-
-        // Kontrole za upravljanje pristojbin plavalcev
-        if (elSwimmerFeesMonthSelect) {
-            elSwimmerFeesMonthSelect.innerHTML = '';
-            for (let i = 1; i <= 12; i++) {
-                const option = document.createElement('option');
-                option.value = i - 1;
-                option.textContent = new Date(2024, i - 1, 1).toLocaleDateString('sl-SI', { month: 'long' });
-                elSwimmerFeesMonthSelect.appendChild(option);
-            }
-            elSwimmerFeesMonthSelect.value = new Date().getMonth();
-        }
-
-        if (elSwimmerFeesYearSelect) {
-            elSwimmerFeesYearSelect.innerHTML = '';
-            for (let i = 2025; i <= 2028; i++) {
-                const option = document.createElement('option');
-                option.value = i;
-                option.textContent = i;
-                elSwimmerFeesYearSelect.appendChild(option);
-            }
-            elSwimmerFeesYearSelect.value = currentYear;
-        }
+        // Opomba: elSwimmerFeesMonthSelect in elSwimmerFeesYearSelect so bili zamenjani z navigacijskimi gumbi
+        // Vrednosti se sedaj upravljajo preko currentSwimmerFeesMonth in currentSwimmerFeesYear
     }
 
     // ===== FUNKCIJE ZA POVZETEK UDELEŽBE PLAVALCEV =====
@@ -3657,8 +3540,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Funkcija za osvežitev prikaza pristojbin plavalcev
     async function refreshSwimmerFees() {
-        const month = parseInt(elSwimmerFeesMonthSelect.value);
-        const year = parseInt(elSwimmerFeesYearSelect.value);
+        const month = currentSwimmerFeesMonth;
+        const year = currentSwimmerFeesYear;
         
         if (month === undefined || year === undefined) {
             elSwimmerFeesBox.innerHTML = '<p class="muted">Prosim izberite mesec in leto</p>';
