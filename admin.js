@@ -2508,8 +2508,9 @@ document.addEventListener('DOMContentLoaded', () => {
         let csv = 'Datum,Termin,Plavalci,Prisotnost,Opombe\n';
         
         // Ustvari datume za mesec (lokalni čas se obravnava v iso() funkciji)
-        const startDate = new Date(year, month, 1);
-        const endDate = new Date(year, month + 1, 0);
+        // month je 1-based, zato ga pretvorimo v 0-based za JavaScript Date
+        const startDate = new Date(year, month - 1, 1);
+        const endDate = new Date(year, month, 0);
         
 
         
@@ -2829,8 +2830,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Ustvari datume za mesec (lokalni čas se obravnava v iso() funkciji)
-        const startDate = new Date(year, month, 1);
-        const endDate = new Date(year, month + 1, 0);
+        // month je 1-based, zato ga pretvorimo v 0-based za JavaScript Date
+        const startDate = new Date(year, month - 1, 1);
+        const endDate = new Date(year, month, 0);
         
 
         
@@ -3026,8 +3028,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Ustvari datume za mesec (lokalni čas se obravnava v iso() funkciji)
-        const startDate = new Date(year, month, 1);
-        const endDate = new Date(year, month + 1, 0);
+        // month je 1-based, zato ga pretvorimo v 0-based za JavaScript Date
+        const startDate = new Date(year, month - 1, 1);
+        const endDate = new Date(year, month, 0);
         
 
         
@@ -3120,10 +3123,13 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Funkcija za izračun povzetka udeležbe plavalcev
     function calculateSwimmerSummaryData(year, month) {
+        console.log('🔍 calculateSwimmerSummaryData - prej: year:', year, 'month:', month, '(1-based)');
         const res = {};
         // Ustvari datume za mesec (lokalni čas se obravnava v iso() funkciji)
-        const monthStart = new Date(year, month, 1);
-        const monthEnd = new Date(year, month + 1, 0);
+        // month je 1-based, zato ga pretvorimo v 0-based za JavaScript Date
+        const monthStart = new Date(year, month - 1, 1);
+        const monthEnd = new Date(year, month, 0);
+        console.log('🔍 calculateSwimmerSummaryData - po: monthStart:', monthStart, 'monthEnd:', monthEnd);
         
 
         
@@ -3217,9 +3223,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Funkcija za nalaganje podatkov o prisotnosti za določen mesec
     async function loadAttendanceForMonth(year, month) {
+        console.log('🔍 loadAttendanceForMonth - prej: year:', year, 'month:', month, '(1-based)');
         // Ustvari datume za mesec (lokalni čas se obravnava v iso() funkciji)
-        const monthStart = new Date(year, month, 1);
-        const monthEnd = new Date(year, month + 1, 0);
+        // month je 1-based, zato ga pretvorimo v 0-based za JavaScript Date
+        const monthStart = new Date(year, month - 1, 1);
+        const monthEnd = new Date(year, month, 0);
+        console.log('🔍 loadAttendanceForMonth - po: monthStart:', monthStart, 'monthEnd:', monthEnd);
         
 
         
@@ -3684,7 +3693,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <th>Plavalec</th>
                             <th>Dodeljeni termini</th>
                             <th>Mesečna pristojbina (€)</th>
-                            <th>Dodatni popust za ${new Date(year, month, 1).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' })} (€)</th>
+                            <th>Dodatni popust za ${new Date(year, month - 1, 1).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' })} (€)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -3912,8 +3921,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (!recentError && recentData.length > 0) {
                             const recentFee = recentData[0];
                             // Uporabi najnovejšo pristojbino samo če je iz preteklosti ali sedanjosti
-                            const feeDate = new Date(recentFee.year, recentFee.month, 1);
-                            const currentDate = new Date(year, month, 1);
+                            const feeDate = new Date(recentFee.year, recentFee.month - 1, 1);
+                            const currentDate = new Date(year, month - 1, 1);
                             
                             if (feeDate <= currentDate) {
                                 swimmerFees[swimmer.id] = {
