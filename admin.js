@@ -2632,87 +2632,11 @@ document.addEventListener('DOMContentLoaded', () => {
             event.preventDefault();
             event.stopPropagation();
             
-            // Ustvari overlay z input elementom
-            const overlay = document.createElement('div');
-            overlay.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0,0,0,0.5);
-                z-index: 9999;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-            `;
-            
-            const input = document.createElement('input');
-            input.type = 'month';
-            input.value = `${currentFinanceYear}-${currentFinanceMonth.toString().padStart(2, '0')}`;
-            input.style.cssText = `
-                padding: 20px;
-                font-size: 18px;
-                border-radius: 8px;
-                border: none;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-                cursor: pointer;
-            `;
-            
-            // Dodaj scroll funkcionalnost
-            input.addEventListener('wheel', (e) => {
-                e.preventDefault();
-                const currentValue = input.value;
-                const [year, month] = currentValue.split('-').map(Number);
-                
-                if (e.deltaY < 0) {
-                    // Scroll navzgor - naslednji mesec
-                    let newMonth = month + 1;
-                    let newYear = year;
-                    if (newMonth > 12) {
-                        newMonth = 1;
-                        newYear++;
-                    }
-                    input.value = `${newYear}-${newMonth.toString().padStart(2, '0')}`;
-                } else {
-                    // Scroll navzdol - prejšnji mesec
-                    let newMonth = month - 1;
-                    let newYear = year;
-                    if (newMonth < 1) {
-                        newMonth = 12;
-                        newYear--;
-                    }
-                    input.value = `${newYear}-${newMonth.toString().padStart(2, '0')}`;
-                }
-            });
-            
-            overlay.appendChild(input);
-            document.body.appendChild(overlay);
-            
-            // Fokusiraj in odpri kalendar
-            input.focus();
-            
-            // Poskusi odpreti kalendar z showPicker (moderne brskalniki)
-            if (input.showPicker) {
-                input.showPicker();
-            } else {
-                // Fallback za starejše brskalnike
-                input.click();
-            }
-            
-            input.addEventListener('change', (e) => {
-                const [year, month] = e.target.value.split('-');
-                currentFinanceMonth = parseInt(month);
-                currentFinanceYear = parseInt(year);
+            createCustomDatePicker(currentFinanceMonth, currentFinanceYear, (month, year) => {
+                currentFinanceMonth = month;
+                currentFinanceYear = year;
                 updateFinanceMonthDisplay();
                 calculateFinanceData();
-                document.body.removeChild(overlay);
-            });
-            
-            overlay.addEventListener('click', (e) => {
-                if (e.target === overlay) {
-                    document.body.removeChild(overlay);
-                }
             });
         });
     } else {
@@ -2745,87 +2669,11 @@ document.addEventListener('DOMContentLoaded', () => {
             event.preventDefault();
             event.stopPropagation();
             
-            // Ustvari overlay z input elementom
-            const overlay = document.createElement('div');
-            overlay.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0,0,0,0.5);
-                z-index: 9999;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-            `;
-            
-            const input = document.createElement('input');
-            input.type = 'month';
-            input.value = `${currentSwimmerFeesYear}-${currentSwimmerFeesMonth.toString().padStart(2, '0')}`;
-            input.style.cssText = `
-                padding: 20px;
-                font-size: 18px;
-                border-radius: 8px;
-                border: none;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-                cursor: pointer;
-            `;
-            
-            // Dodaj scroll funkcionalnost
-            input.addEventListener('wheel', (e) => {
-                e.preventDefault();
-                const currentValue = input.value;
-                const [year, month] = currentValue.split('-').map(Number);
-                
-                if (e.deltaY < 0) {
-                    // Scroll navzgor - naslednji mesec
-                    let newMonth = month + 1;
-                    let newYear = year;
-                    if (newMonth > 12) {
-                        newMonth = 1;
-                        newYear++;
-                    }
-                    input.value = `${newYear}-${newMonth.toString().padStart(2, '0')}`;
-                } else {
-                    // Scroll navzdol - prejšnji mesec
-                    let newMonth = month - 1;
-                    let newYear = year;
-                    if (newMonth < 1) {
-                        newMonth = 12;
-                        newYear--;
-                    }
-                    input.value = `${newYear}-${newMonth.toString().padStart(2, '0')}`;
-                }
-            });
-            
-            overlay.appendChild(input);
-            document.body.appendChild(overlay);
-            
-            // Fokusiraj in odpri kalendar
-            input.focus();
-            
-            // Poskusi odpreti kalendar z showPicker (moderne brskalniki)
-            if (input.showPicker) {
-                input.showPicker();
-            } else {
-                // Fallback za starejše brskalnike
-                input.click();
-            }
-            
-            input.addEventListener('change', (e) => {
-                const [year, month] = e.target.value.split('-');
-                currentSwimmerFeesMonth = parseInt(month);
-                currentSwimmerFeesYear = parseInt(year);
+            createCustomDatePicker(currentSwimmerFeesMonth, currentSwimmerFeesYear, (month, year) => {
+                currentSwimmerFeesMonth = month;
+                currentSwimmerFeesYear = year;
                 updateSwimmerFeesMonthDisplay();
                 refreshSwimmerFees();
-                document.body.removeChild(overlay);
-            });
-            
-            overlay.addEventListener('click', (e) => {
-                if (e.target === overlay) {
-                    document.body.removeChild(overlay);
-                }
             });
         });
     }
@@ -2862,87 +2710,11 @@ document.addEventListener('DOMContentLoaded', () => {
             event.preventDefault();
             event.stopPropagation();
             
-            // Ustvari overlay z input elementom
-            const overlay = document.createElement('div');
-            overlay.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0,0,0,0.5);
-                z-index: 9999;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-            `;
-            
-            const input = document.createElement('input');
-            input.type = 'month';
-            input.value = `${currentTrainerSummaryYear}-${currentTrainerSummaryMonth.toString().padStart(2, '0')}`;
-            input.style.cssText = `
-                padding: 20px;
-                font-size: 18px;
-                border-radius: 8px;
-                border: none;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-                cursor: pointer;
-            `;
-            
-            // Dodaj scroll funkcionalnost
-            input.addEventListener('wheel', (e) => {
-                e.preventDefault();
-                const currentValue = input.value;
-                const [year, month] = currentValue.split('-').map(Number);
-                
-                if (e.deltaY < 0) {
-                    // Scroll navzgor - naslednji mesec
-                    let newMonth = month + 1;
-                    let newYear = year;
-                    if (newMonth > 12) {
-                        newMonth = 1;
-                        newYear++;
-                    }
-                    input.value = `${newYear}-${newMonth.toString().padStart(2, '0')}`;
-                } else {
-                    // Scroll navzdol - prejšnji mesec
-                    let newMonth = month - 1;
-                    let newYear = year;
-                    if (newMonth < 1) {
-                        newMonth = 12;
-                        newYear--;
-                    }
-                    input.value = `${newYear}-${newMonth.toString().padStart(2, '0')}`;
-                }
-            });
-            
-            overlay.appendChild(input);
-            document.body.appendChild(overlay);
-            
-            // Fokusiraj in odpri kalendar
-            input.focus();
-            
-            // Poskusi odpreti kalendar z showPicker (moderne brskalniki)
-            if (input.showPicker) {
-                input.showPicker();
-            } else {
-                // Fallback za starejše brskalnike
-                input.click();
-            }
-            
-            input.addEventListener('change', (e) => {
-                const [year, month] = e.target.value.split('-');
-                currentTrainerSummaryMonth = parseInt(month);
-                currentTrainerSummaryYear = parseInt(year);
+            createCustomDatePicker(currentTrainerSummaryMonth, currentTrainerSummaryYear, (month, year) => {
+                currentTrainerSummaryMonth = month;
+                currentTrainerSummaryYear = year;
                 updateTrainerSummaryMonthDisplay();
                 calculateTrainerSummaryData();
-                document.body.removeChild(overlay);
-            });
-            
-            overlay.addEventListener('click', (e) => {
-                if (e.target === overlay) {
-                    document.body.removeChild(overlay);
-                }
             });
         });
     }
@@ -2977,87 +2749,11 @@ document.addEventListener('DOMContentLoaded', () => {
             event.preventDefault();
             event.stopPropagation();
             
-            // Ustvari overlay z input elementom
-            const overlay = document.createElement('div');
-            overlay.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0,0,0,0.5);
-                z-index: 9999;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-            `;
-            
-            const input = document.createElement('input');
-            input.type = 'month';
-            input.value = `${currentTrainerNotesYear}-${currentTrainerNotesMonth.toString().padStart(2, '0')}`;
-            input.style.cssText = `
-                padding: 20px;
-                font-size: 18px;
-                border-radius: 8px;
-                border: none;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-                cursor: pointer;
-            `;
-            
-            // Dodaj scroll funkcionalnost
-            input.addEventListener('wheel', (e) => {
-                e.preventDefault();
-                const currentValue = input.value;
-                const [year, month] = currentValue.split('-').map(Number);
-                
-                if (e.deltaY < 0) {
-                    // Scroll navzgor - naslednji mesec
-                    let newMonth = month + 1;
-                    let newYear = year;
-                    if (newMonth > 12) {
-                        newMonth = 1;
-                        newYear++;
-                    }
-                    input.value = `${newYear}-${newMonth.toString().padStart(2, '0')}`;
-                } else {
-                    // Scroll navzdol - prejšnji mesec
-                    let newMonth = month - 1;
-                    let newYear = year;
-                    if (newMonth < 1) {
-                        newMonth = 12;
-                        newYear--;
-                    }
-                    input.value = `${newYear}-${newMonth.toString().padStart(2, '0')}`;
-                }
-            });
-            
-            overlay.appendChild(input);
-            document.body.appendChild(overlay);
-            
-            // Fokusiraj in odpri kalendar
-            input.focus();
-            
-            // Poskusi odpreti kalendar z showPicker (moderne brskalniki)
-            if (input.showPicker) {
-                input.showPicker();
-            } else {
-                // Fallback za starejše brskalnike
-                input.click();
-            }
-            
-            input.addEventListener('change', (e) => {
-                const [year, month] = e.target.value.split('-');
-                currentTrainerNotesMonth = parseInt(month);
-                currentTrainerNotesYear = parseInt(year);
+            createCustomDatePicker(currentTrainerNotesMonth, currentTrainerNotesYear, (month, year) => {
+                currentTrainerNotesMonth = month;
+                currentTrainerNotesYear = year;
                 updateTrainerNotesMonthDisplay();
                 calculateTrainerNotesData();
-                document.body.removeChild(overlay);
-            });
-            
-            overlay.addEventListener('click', (e) => {
-                if (e.target === overlay) {
-                    document.body.removeChild(overlay);
-                }
             });
         });
     }
@@ -3092,87 +2788,11 @@ document.addEventListener('DOMContentLoaded', () => {
             event.preventDefault();
             event.stopPropagation();
             
-            // Ustvari overlay z input elementom
-            const overlay = document.createElement('div');
-            overlay.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0,0,0,0.5);
-                z-index: 9999;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-            `;
-            
-            const input = document.createElement('input');
-            input.type = 'month';
-            input.value = `${currentSwimmerSummaryYear}-${currentSwimmerSummaryMonth.toString().padStart(2, '0')}`;
-            input.style.cssText = `
-                padding: 20px;
-                font-size: 18px;
-                border-radius: 8px;
-                border: none;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-                cursor: pointer;
-            `;
-            
-            // Dodaj scroll funkcionalnost
-            input.addEventListener('wheel', (e) => {
-                e.preventDefault();
-                const currentValue = input.value;
-                const [year, month] = currentValue.split('-').map(Number);
-                
-                if (e.deltaY < 0) {
-                    // Scroll navzgor - naslednji mesec
-                    let newMonth = month + 1;
-                    let newYear = year;
-                    if (newMonth > 12) {
-                        newMonth = 1;
-                        newYear++;
-                    }
-                    input.value = `${newYear}-${newMonth.toString().padStart(2, '0')}`;
-                } else {
-                    // Scroll navzdol - prejšnji mesec
-                    let newMonth = month - 1;
-                    let newYear = year;
-                    if (newMonth < 1) {
-                        newMonth = 12;
-                        newYear--;
-                    }
-                    input.value = `${newYear}-${newMonth.toString().padStart(2, '0')}`;
-                }
-            });
-            
-            overlay.appendChild(input);
-            document.body.appendChild(overlay);
-            
-            // Fokusiraj in odpri kalendar
-            input.focus();
-            
-            // Poskusi odpreti kalendar z showPicker (moderne brskalniki)
-            if (input.showPicker) {
-                input.showPicker();
-            } else {
-                // Fallback za starejše brskalnike
-                input.click();
-            }
-            
-            input.addEventListener('change', (e) => {
-                const [year, month] = e.target.value.split('-');
-                currentSwimmerSummaryMonth = parseInt(month);
-                currentSwimmerSummaryYear = parseInt(year);
+            createCustomDatePicker(currentSwimmerSummaryMonth, currentSwimmerSummaryYear, (month, year) => {
+                currentSwimmerSummaryMonth = month;
+                currentSwimmerSummaryYear = year;
                 updateSwimmerSummaryMonthDisplay();
                 refreshSwimmerSummary();
-                document.body.removeChild(overlay);
-            });
-            
-            overlay.addEventListener('click', (e) => {
-                if (e.target === overlay) {
-                    document.body.removeChild(overlay);
-                }
             });
         });
     }
@@ -3501,6 +3121,283 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Opomba: elSwimmerFeesMonthSelect in elSwimmerFeesYearSelect so bili zamenjani z navigacijskimi gumbi
         // Vrednosti se sedaj upravljajo preko currentSwimmerFeesMonth in currentSwimmerFeesYear
+    }
+
+    // ===== FUNKCIJE ZA CUSTOM DATE PICKER =====
+    
+    // Funkcija za ustvarjanje custom date picker-ja
+    function createCustomDatePicker(currentMonth, currentYear, onConfirm) {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        `;
+        
+        const picker = document.createElement('div');
+        picker.style.cssText = `
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            padding: 20px;
+            max-width: 90vw;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        `;
+        
+        // Header
+        const header = document.createElement('div');
+        header.style.cssText = `
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            padding: 10px 0;
+            border-bottom: 2px solid #eee;
+        `;
+        header.textContent = 'Izberi mesec in leto';
+        picker.appendChild(header);
+        
+        // Container za sidebara
+        const sidebarContainer = document.createElement('div');
+        sidebarContainer.style.cssText = `
+            display: flex;
+            gap: 20px;
+            min-height: 300px;
+        `;
+        
+        // Sidebar za mesece
+        const monthSidebar = document.createElement('div');
+        monthSidebar.style.cssText = `
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow-y: auto;
+            max-height: 300px;
+        `;
+        
+        const monthHeader = document.createElement('div');
+        monthHeader.style.cssText = `
+            background: #f8f9fa;
+            padding: 10px;
+            font-weight: bold;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+            position: sticky;
+            top: 0;
+        `;
+        monthHeader.textContent = 'Meseci';
+        monthSidebar.appendChild(monthHeader);
+        
+        const monthNames = ['Januar', 'Februar', 'Marec', 'April', 'Maj', 'Junij', 
+                          'Julij', 'Avgust', 'September', 'Oktober', 'November', 'December'];
+        
+        let selectedMonth = currentMonth;
+        let selectedYear = currentYear;
+        
+        monthNames.forEach((monthName, index) => {
+            const monthItem = document.createElement('div');
+            monthItem.style.cssText = `
+                padding: 12px 16px;
+                cursor: pointer;
+                border-bottom: 1px solid #f0f0f0;
+                transition: background-color 0.2s;
+            `;
+            monthItem.textContent = monthName;
+            
+            if (index + 1 === selectedMonth) {
+                monthItem.style.backgroundColor = '#007bff';
+                monthItem.style.color = 'white';
+            }
+            
+            monthItem.addEventListener('mouseenter', () => {
+                if (index + 1 !== selectedMonth) {
+                    monthItem.style.backgroundColor = '#f8f9fa';
+                }
+            });
+            
+            monthItem.addEventListener('mouseleave', () => {
+                if (index + 1 !== selectedMonth) {
+                    monthItem.style.backgroundColor = 'white';
+                }
+            });
+            
+            monthItem.addEventListener('click', () => {
+                // Odstrani prejšnjo selekcijo
+                monthSidebar.querySelectorAll('div').forEach(item => {
+                    if (item !== monthHeader) {
+                        item.style.backgroundColor = 'white';
+                        item.style.color = 'black';
+                    }
+                });
+                
+                // Označi trenutni
+                monthItem.style.backgroundColor = '#007bff';
+                monthItem.style.color = 'white';
+                
+                selectedMonth = index + 1;
+                updatePreview();
+            });
+            
+            monthSidebar.appendChild(monthItem);
+        });
+        
+        // Sidebar za leta
+        const yearSidebar = document.createElement('div');
+        yearSidebar.style.cssText = `
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow-y: auto;
+            max-height: 300px;
+        `;
+        
+        const yearHeader = document.createElement('div');
+        yearHeader.style.cssText = `
+            background: #f8f9fa;
+            padding: 10px;
+            font-weight: bold;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+            position: sticky;
+            top: 0;
+        `;
+        yearHeader.textContent = 'Leto';
+        yearSidebar.appendChild(yearHeader);
+        
+        // Generiraj leta (5 let nazaj do 5 let naprej)
+        const currentYear = new Date().getFullYear();
+        for (let year = currentYear - 5; year <= currentYear + 5; year++) {
+            const yearItem = document.createElement('div');
+            yearItem.style.cssText = `
+                padding: 12px 16px;
+                cursor: pointer;
+                border-bottom: 1px solid #f0f0f0;
+                transition: background-color 0.2s;
+            `;
+            yearItem.textContent = year;
+            
+            if (year === selectedYear) {
+                yearItem.style.backgroundColor = '#007bff';
+                yearItem.style.color = 'white';
+            }
+            
+            yearItem.addEventListener('mouseenter', () => {
+                if (year !== selectedYear) {
+                    yearItem.style.backgroundColor = '#f8f9fa';
+                }
+            });
+            
+            yearItem.addEventListener('mouseleave', () => {
+                if (year !== selectedYear) {
+                    yearItem.style.backgroundColor = 'white';
+                }
+            });
+            
+            yearItem.addEventListener('click', () => {
+                // Odstrani prejšnjo selekcijo
+                yearSidebar.querySelectorAll('div').forEach(item => {
+                    if (item !== yearHeader) {
+                        item.style.backgroundColor = 'white';
+                        item.style.color = 'black';
+                    }
+                });
+                
+                // Označi trenutno
+                yearItem.style.backgroundColor = '#007bff';
+                yearItem.style.color = 'white';
+                
+                selectedYear = year;
+                updatePreview();
+            });
+            
+            yearSidebar.appendChild(yearItem);
+        }
+        
+        // Preview trenutnega datuma
+        const preview = document.createElement('div');
+        preview.style.cssText = `
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        `;
+        
+        function updatePreview() {
+            preview.textContent = `${monthNames[selectedMonth - 1]} ${selectedYear}`;
+        }
+        updatePreview();
+        
+        // Gumbi
+        const buttons = document.createElement('div');
+        buttons.style.cssText = `
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        `;
+        
+        const cancelBtn = document.createElement('button');
+        cancelBtn.textContent = 'Prekliči';
+        cancelBtn.style.cssText = `
+            padding: 10px 20px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        `;
+        
+        const confirmBtn = document.createElement('button');
+        confirmBtn.textContent = 'Potrdi';
+        confirmBtn.style.cssText = `
+            padding: 10px 20px;
+            border: none;
+            background: #007bff;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        `;
+        
+        buttons.appendChild(cancelBtn);
+        buttons.appendChild(confirmBtn);
+        
+        // Sestavi picker
+        sidebarContainer.appendChild(monthSidebar);
+        sidebarContainer.appendChild(yearSidebar);
+        picker.appendChild(sidebarContainer);
+        picker.appendChild(preview);
+        picker.appendChild(buttons);
+        overlay.appendChild(picker);
+        document.body.appendChild(overlay);
+        
+        // Event listenerji
+        cancelBtn.addEventListener('click', () => {
+            document.body.removeChild(overlay);
+        });
+        
+        confirmBtn.addEventListener('click', () => {
+            onConfirm(selectedMonth, selectedYear);
+            document.body.removeChild(overlay);
+        });
+        
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                document.body.removeChild(overlay);
+            }
+        });
     }
 
     // ===== FUNKCIJE ZA POVZETEK UDELEŽBE PLAVALCEV =====
