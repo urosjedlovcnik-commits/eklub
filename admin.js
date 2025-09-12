@@ -3950,12 +3950,36 @@ document.addEventListener('DOMContentLoaded', () => {
             
             console.log(`📅 Ustvarjam ${newFees2026.length} vadnin za leto 2026 (${december2025Fees.length} plavalcev × 12 mesecev)`);
             
-            // Uvozi vadnine za 2026 v bazo
+            // Preveri, katere vadnine za 2026 že obstajajo
+            const { data: existingFees2026, error: existingError } = await supabase
+                .from('swimmer_monthly_fees')
+                .select('swimmer_id, month')
+                .eq('year', 2026);
+            
+            if (existingError) {
+                console.error('❌ Napaka pri preverjanju obstoječih vadnin za 2026:', existingError);
+                showMessage('Napaka pri preverjanju obstoječih vadnin za 2026!', 'error');
+                return false;
+            }
+            
+            // Filtriraj samo nove vadnine (ki še ne obstajajo)
+            const existingKeys = new Set(existingFees2026.map(fee => `${fee.swimmer_id}-${fee.month}`));
+            const newFeesToInsert = newFees2026.filter(fee => 
+                !existingKeys.has(`${fee.swimmer_id}-${fee.month}`)
+            );
+            
+            console.log(`📊 Obstaja ${existingFees2026.length} vadnin za 2026, ustvarjam ${newFeesToInsert.length} novih`);
+            
+            if (newFeesToInsert.length === 0) {
+                console.log('✅ Vse vadnine za leto 2026 že obstajajo');
+                showMessage('Vse vadnine za leto 2026 že obstajajo!', 'info');
+                return true;
+            }
+            
+            // Uvozi samo nove vadnine za 2026 v bazo
             const { data: insertedFees, error: insertError } = await supabase
                 .from('swimmer_monthly_fees')
-                .upsert(newFees2026, { 
-                    onConflict: 'swimmer_id,month,year' 
-                })
+                .insert(newFeesToInsert)
                 .select();
             
             if (insertError) {
@@ -3964,8 +3988,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 return false;
             }
             
-            console.log(`✅ Uspešno ustvarjenih ${insertedFees.length} vadnin za leto 2026`);
-            showMessage(`Uspešno ustvarjenih ${insertedFees.length} vadnin za leto 2026!`, 'success');
+            console.log(`✅ Uspešno ustvarjenih ${insertedFees.length} novih vadnin za leto 2026`);
+            showMessage(`Uspešno ustvarjenih ${insertedFees.length} novih vadnin za leto 2026!`, 'success');
             
             // Osveži prikaz
             if (currentSection === 'finance') {
