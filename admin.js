@@ -3880,7 +3880,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.updateSwimmerDiscount = updateSwimmerDiscount;
     window.updateTermCost = updateTermCost;
     window.updateTrainerRate = updateTrainerRate;
-    window.copyFeesForYear2026 = copyFeesForYear2026;
+    window.copyFeesForNextYear = copyFeesForNextYear;
     
                 // Funkcija za prenos primera CSV datoteke za termine plavalcev
             window.downloadSwimmerTermsExample = function() {
@@ -3908,88 +3908,92 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===== FUNKCIJE ZA KOPIRANJE VADNIN =====
     
-    // Funkcija za kopiranje vadnin za celo leto 2026
-    async function copyFeesForYear2026() {
+    // Funkcija za kopiranje vadnin za naslednje leto (leto + 1)
+    async function copyFeesForNextYear() {
         try {
-            console.log('🔄 Začenjam kopiranje vadnin za leto 2026...');
+            const currentYear = new Date().getFullYear();
+            const nextYear = currentYear + 1;
+            const sourceYear = currentYear;
             
-            // Pridobi vadnine iz decembra 2025 (zadnji mesec 2025)
-            const { data: december2025Fees, error: fetchError } = await supabase
+            console.log(`🔄 Začenjam kopiranje vadnin iz ${sourceYear} v ${nextYear}...`);
+            
+            // Pridobi vadnine iz decembra trenutnega leta (zadnji mesec)
+            const { data: decemberFees, error: fetchError } = await supabase
                 .from('swimmer_monthly_fees')
                 .select('*')
                 .eq('month', 12) // December (1-based)
-                .eq('year', 2025);
+                .eq('year', sourceYear);
             
             if (fetchError) {
-                console.error('❌ Napaka pri pridobivanju vadnin iz decembra 2025:', fetchError);
-                showMessage('Napaka pri pridobivanju vadnin iz decembra 2025!', 'error');
+                console.error(`❌ Napaka pri pridobivanju vadnin iz decembra ${sourceYear}:`, fetchError);
+                showMessage(`Napaka pri pridobivanju vadnin iz decembra ${sourceYear}!`, 'error');
                 return false;
             }
             
-            if (!december2025Fees || december2025Fees.length === 0) {
-                console.log('⚠️ Ni vadnin za december 2025');
-                showMessage('Ni vadnin za december 2025! Najprej ustvarite vadnine za december 2025.', 'info');
+            if (!decemberFees || decemberFees.length === 0) {
+                console.log(`⚠️ Ni vadnin za december ${sourceYear}`);
+                showMessage(`Ni vadnin za december ${sourceYear}! Najprej ustvarite vadnine za december ${sourceYear}.`, 'info');
                 return false;
             }
             
-            console.log(`✅ Najdenih ${december2025Fees.length} vadnin iz decembra 2025 za kopiranje`);
+            console.log(`✅ Najdenih ${decemberFees.length} vadnin iz decembra ${sourceYear} za kopiranje`);
             
-            // Ustvari vadnine za vse mesece 2026
-            const newFees2026 = [];
+            // Ustvari vadnine za vse mesece naslednjega leta
+            const newFeesNextYear = [];
             for (let month = 1; month <= 12; month++) {
-                december2025Fees.forEach(fee => {
-                    newFees2026.push({
+                decemberFees.forEach(fee => {
+                    newFeesNextYear.push({
                         swimmer_id: fee.swimmer_id,
                         month: month,
-                        year: 2026,
+                        year: nextYear,
                         monthly_fee: fee.monthly_fee,
                         discount: 0 // Brez popusta za nove mesece
                     });
                 });
             }
             
-            console.log(`📅 Ustvarjam ${newFees2026.length} vadnin za leto 2026 (${december2025Fees.length} plavalcev × 12 mesecev)`);
+            console.log(`📅 Ustvarjam ${newFeesNextYear.length} vadnin za leto ${nextYear} (${decemberFees.length} plavalcev × 12 mesecev)`);
             
-            // Preveri, katere vadnine za 2026 že obstajajo
-            const { data: existingFees2026, error: existingError } = await supabase
+            // Preveri, katere vadnine za naslednje leto že obstajajo
+            const { data: existingFeesNextYear, error: existingError } = await supabase
                 .from('swimmer_monthly_fees')
                 .select('swimmer_id, month')
-                .eq('year', 2026);
+                .eq('year', nextYear);
             
             if (existingError) {
-                console.error('❌ Napaka pri preverjanju obstoječih vadnin za 2026:', existingError);
-                showMessage('Napaka pri preverjanju obstoječih vadnin za 2026!', 'error');
+                console.error(`❌ Napaka pri preverjanju obstoječih vadnin za ${nextYear}:`, existingError);
+                showMessage(`Napaka pri preverjanju obstoječih vadnin za ${nextYear}!`, 'error');
                 return false;
             }
             
             // Filtriraj samo nove vadnine (ki še ne obstajajo)
-            const existingKeys = new Set(existingFees2026.map(fee => `${fee.swimmer_id}-${fee.month}`));
-            const newFeesToInsert = newFees2026.filter(fee => 
+            const existingKeys = new Set(existingFeesNextYear.map(fee => `${fee.swimmer_id}-${fee.month}`));
+            const newFeesToInsert = newFeesNextYear.filter(fee => 
                 !existingKeys.has(`${fee.swimmer_id}-${fee.month}`)
             );
             
-            console.log(`📊 Obstaja ${existingFees2026.length} vadnin za 2026, ustvarjam ${newFeesToInsert.length} novih`);
+            console.log(`📊 Obstaja ${existingFeesNextYear.length} vadnin za ${nextYear}, ustvarjam ${newFeesToInsert.length} novih`);
             
             if (newFeesToInsert.length === 0) {
-                console.log('✅ Vse vadnine za leto 2026 že obstajajo');
-                showMessage('Vse vadnine za leto 2026 že obstajajo!', 'info');
+                console.log(`✅ Vse vadnine za leto ${nextYear} že obstajajo`);
+                showMessage(`Vse vadnine za leto ${nextYear} že obstajajo!`, 'info');
                 return true;
             }
             
-            // Uvozi samo nove vadnine za 2026 v bazo
+            // Uvozi samo nove vadnine za naslednje leto v bazo
             const { data: insertedFees, error: insertError } = await supabase
                 .from('swimmer_monthly_fees')
                 .insert(newFeesToInsert)
                 .select();
             
             if (insertError) {
-                console.error('❌ Napaka pri vstavljanju vadnin za 2026:', insertError);
-                showMessage('Napaka pri vstavljanju vadnin za 2026!', 'error');
+                console.error(`❌ Napaka pri vstavljanju vadnin za ${nextYear}:`, insertError);
+                showMessage(`Napaka pri vstavljanju vadnin za ${nextYear}!`, 'error');
                 return false;
             }
             
-            console.log(`✅ Uspešno ustvarjenih ${insertedFees.length} novih vadnin za leto 2026`);
-            showMessage(`Uspešno ustvarjenih ${insertedFees.length} novih vadnin za leto 2026!`, 'success');
+            console.log(`✅ Uspešno ustvarjenih ${insertedFees.length} novih vadnin za leto ${nextYear}`);
+            showMessage(`Uspešno ustvarjenih ${insertedFees.length} novih vadnin za leto ${nextYear}!`, 'success');
             
             // Osveži prikaz
             if (currentSection === 'finance') {
@@ -4172,7 +4176,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Poveži gumbe za kopiranje in preverjanje vadnin z obstoječimi gumbi v HTML
     function setupCopyFeesButton() {
         const copyButton = document.getElementById('copyFeesBtn');
-        const copy2026Button = document.getElementById('copyFees2026Btn');
+        const copyNextYearButton = document.getElementById('copyFeesNextYearBtn');
         const checkButton = document.getElementById('checkFeesStatusBtn');
         
         if (copyButton) {
@@ -4182,11 +4186,16 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('⚠️ Gumb za kopiranje vadnin ni bil najden');
         }
         
-        if (copy2026Button) {
-            copy2026Button.onclick = copyFeesForYear2026;
-            console.log('✅ Gumb za kopiranje vadnin za 2026 je povezan');
+        if (copyNextYearButton) {
+            copyNextYearButton.onclick = copyFeesForNextYear;
+            
+            // Dinamično posodobi besedilo gumba z naslednjim letom
+            const nextYear = new Date().getFullYear() + 1;
+            copyNextYearButton.textContent = `📅 Kopiraj vadnine za leto ${nextYear}`;
+            
+            console.log(`✅ Gumb za kopiranje vadnin za leto ${nextYear} je povezan`);
         } else {
-            console.warn('⚠️ Gumb za kopiranje vadnin za 2026 ni bil najden');
+            console.warn('⚠️ Gumb za kopiranje vadnin za naslednje leto ni bil najden');
         }
         
         if (checkButton) {
