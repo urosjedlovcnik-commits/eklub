@@ -2656,13 +2656,49 @@ document.addEventListener('DOMContentLoaded', () => {
                 border-radius: 8px;
                 border: none;
                 box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                cursor: pointer;
             `;
+            
+            // Dodaj scroll funkcionalnost
+            input.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const currentValue = input.value;
+                const [year, month] = currentValue.split('-').map(Number);
+                
+                if (e.deltaY < 0) {
+                    // Scroll navzgor - naslednji mesec
+                    let newMonth = month + 1;
+                    let newYear = year;
+                    if (newMonth > 12) {
+                        newMonth = 1;
+                        newYear++;
+                    }
+                    input.value = `${newYear}-${newMonth.toString().padStart(2, '0')}`;
+                } else {
+                    // Scroll navzdol - prejšnji mesec
+                    let newMonth = month - 1;
+                    let newYear = year;
+                    if (newMonth < 1) {
+                        newMonth = 12;
+                        newYear--;
+                    }
+                    input.value = `${newYear}-${newMonth.toString().padStart(2, '0')}`;
+                }
+            });
             
             overlay.appendChild(input);
             document.body.appendChild(overlay);
             
+            // Fokusiraj in odpri kalendar
             input.focus();
-            input.click();
+            
+            // Poskusi odpreti kalendar z showPicker (moderne brskalniki)
+            if (input.showPicker) {
+                input.showPicker();
+            } else {
+                // Fallback za starejše brskalnike
+                input.click();
+            }
             
             input.addEventListener('change', (e) => {
                 const [year, month] = e.target.value.split('-');
@@ -2733,13 +2769,49 @@ document.addEventListener('DOMContentLoaded', () => {
                 border-radius: 8px;
                 border: none;
                 box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                cursor: pointer;
             `;
+            
+            // Dodaj scroll funkcionalnost
+            input.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const currentValue = input.value;
+                const [year, month] = currentValue.split('-').map(Number);
+                
+                if (e.deltaY < 0) {
+                    // Scroll navzgor - naslednji mesec
+                    let newMonth = month + 1;
+                    let newYear = year;
+                    if (newMonth > 12) {
+                        newMonth = 1;
+                        newYear++;
+                    }
+                    input.value = `${newYear}-${newMonth.toString().padStart(2, '0')}`;
+                } else {
+                    // Scroll navzdol - prejšnji mesec
+                    let newMonth = month - 1;
+                    let newYear = year;
+                    if (newMonth < 1) {
+                        newMonth = 12;
+                        newYear--;
+                    }
+                    input.value = `${newYear}-${newMonth.toString().padStart(2, '0')}`;
+                }
+            });
             
             overlay.appendChild(input);
             document.body.appendChild(overlay);
             
+            // Fokusiraj in odpri kalendar
             input.focus();
-            input.click();
+            
+            // Poskusi odpreti kalendar z showPicker (moderne brskalniki)
+            if (input.showPicker) {
+                input.showPicker();
+            } else {
+                // Fallback za starejše brskalnike
+                input.click();
+            }
             
             input.addEventListener('change', (e) => {
                 const [year, month] = e.target.value.split('-');
@@ -2814,13 +2886,49 @@ document.addEventListener('DOMContentLoaded', () => {
                 border-radius: 8px;
                 border: none;
                 box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                cursor: pointer;
             `;
+            
+            // Dodaj scroll funkcionalnost
+            input.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const currentValue = input.value;
+                const [year, month] = currentValue.split('-').map(Number);
+                
+                if (e.deltaY < 0) {
+                    // Scroll navzgor - naslednji mesec
+                    let newMonth = month + 1;
+                    let newYear = year;
+                    if (newMonth > 12) {
+                        newMonth = 1;
+                        newYear++;
+                    }
+                    input.value = `${newYear}-${newMonth.toString().padStart(2, '0')}`;
+                } else {
+                    // Scroll navzdol - prejšnji mesec
+                    let newMonth = month - 1;
+                    let newYear = year;
+                    if (newMonth < 1) {
+                        newMonth = 12;
+                        newYear--;
+                    }
+                    input.value = `${newYear}-${newMonth.toString().padStart(2, '0')}`;
+                }
+            });
             
             overlay.appendChild(input);
             document.body.appendChild(overlay);
             
+            // Fokusiraj in odpri kalendar
             input.focus();
-            input.click();
+            
+            // Poskusi odpreti kalendar z showPicker (moderne brskalniki)
+            if (input.showPicker) {
+                input.showPicker();
+            } else {
+                // Fallback za starejše brskalnike
+                input.click();
+            }
             
             input.addEventListener('change', (e) => {
                 const [year, month] = e.target.value.split('-');
@@ -2893,13 +3001,49 @@ document.addEventListener('DOMContentLoaded', () => {
                 border-radius: 8px;
                 border: none;
                 box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                cursor: pointer;
             `;
+            
+            // Dodaj scroll funkcionalnost
+            input.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const currentValue = input.value;
+                const [year, month] = currentValue.split('-').map(Number);
+                
+                if (e.deltaY < 0) {
+                    // Scroll navzgor - naslednji mesec
+                    let newMonth = month + 1;
+                    let newYear = year;
+                    if (newMonth > 12) {
+                        newMonth = 1;
+                        newYear++;
+                    }
+                    input.value = `${newYear}-${newMonth.toString().padStart(2, '0')}`;
+                } else {
+                    // Scroll navzdol - prejšnji mesec
+                    let newMonth = month - 1;
+                    let newYear = year;
+                    if (newMonth < 1) {
+                        newMonth = 12;
+                        newYear--;
+                    }
+                    input.value = `${newYear}-${newMonth.toString().padStart(2, '0')}`;
+                }
+            });
             
             overlay.appendChild(input);
             document.body.appendChild(overlay);
             
+            // Fokusiraj in odpri kalendar
             input.focus();
-            input.click();
+            
+            // Poskusi odpreti kalendar z showPicker (moderne brskalniki)
+            if (input.showPicker) {
+                input.showPicker();
+            } else {
+                // Fallback za starejše brskalnike
+                input.click();
+            }
             
             input.addEventListener('change', (e) => {
                 const [year, month] = e.target.value.split('-');
@@ -2972,13 +3116,49 @@ document.addEventListener('DOMContentLoaded', () => {
                 border-radius: 8px;
                 border: none;
                 box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                cursor: pointer;
             `;
+            
+            // Dodaj scroll funkcionalnost
+            input.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const currentValue = input.value;
+                const [year, month] = currentValue.split('-').map(Number);
+                
+                if (e.deltaY < 0) {
+                    // Scroll navzgor - naslednji mesec
+                    let newMonth = month + 1;
+                    let newYear = year;
+                    if (newMonth > 12) {
+                        newMonth = 1;
+                        newYear++;
+                    }
+                    input.value = `${newYear}-${newMonth.toString().padStart(2, '0')}`;
+                } else {
+                    // Scroll navzdol - prejšnji mesec
+                    let newMonth = month - 1;
+                    let newYear = year;
+                    if (newMonth < 1) {
+                        newMonth = 12;
+                        newYear--;
+                    }
+                    input.value = `${newYear}-${newMonth.toString().padStart(2, '0')}`;
+                }
+            });
             
             overlay.appendChild(input);
             document.body.appendChild(overlay);
             
+            // Fokusiraj in odpri kalendar
             input.focus();
-            input.click();
+            
+            // Poskusi odpreti kalendar z showPicker (moderne brskalniki)
+            if (input.showPicker) {
+                input.showPicker();
+            } else {
+                // Fallback za starejše brskalnike
+                input.click();
+            }
             
             input.addEventListener('change', (e) => {
                 const [year, month] = e.target.value.split('-');
