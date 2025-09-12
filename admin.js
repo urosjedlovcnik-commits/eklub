@@ -3880,6 +3880,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.updateSwimmerDiscount = updateSwimmerDiscount;
     window.updateTermCost = updateTermCost;
     window.updateTrainerRate = updateTrainerRate;
+    window.copyFeesForYear2026 = copyFeesForYear2026;
     
                 // Funkcija za prenos primera CSV datoteke za termine plavalcev
             window.downloadSwimmerTermsExample = function() {
@@ -3905,7 +3906,81 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.body.removeChild(link);
             };
 
-    // ===== FUNKCIJA ZA KOPIRANJE VADNIN IZ PREJŠNEGA MESECA =====
+    // ===== FUNKCIJE ZA KOPIRANJE VADNIN =====
+    
+    // Funkcija za kopiranje vadnin za celo leto 2026
+    async function copyFeesForYear2026() {
+        try {
+            console.log('🔄 Začenjam kopiranje vadnin za leto 2026...');
+            
+            // Pridobi vadnine iz decembra 2025 (zadnji mesec 2025)
+            const { data: december2025Fees, error: fetchError } = await supabase
+                .from('swimmer_monthly_fees')
+                .select('*')
+                .eq('month', 11) // December (0-based)
+                .eq('year', 2025);
+            
+            if (fetchError) {
+                console.error('❌ Napaka pri pridobivanju vadnin iz decembra 2025:', fetchError);
+                showMessage('Napaka pri pridobivanju vadnin iz decembra 2025!', 'error');
+                return false;
+            }
+            
+            if (!december2025Fees || december2025Fees.length === 0) {
+                console.log('⚠️ Ni vadnin za december 2025');
+                showMessage('Ni vadnin za december 2025! Najprej ustvarite vadnine za december 2025.', 'info');
+                return false;
+            }
+            
+            console.log(`✅ Najdenih ${december2025Fees.length} vadnin iz decembra 2025 za kopiranje`);
+            
+            // Ustvari vadnine za vse mesece 2026
+            const newFees2026 = [];
+            for (let month = 0; month < 12; month++) {
+                december2025Fees.forEach(fee => {
+                    newFees2026.push({
+                        swimmer_id: fee.swimmer_id,
+                        month: month,
+                        year: 2026,
+                        monthly_fee: fee.monthly_fee,
+                        discount: 0 // Brez popusta za nove mesece
+                    });
+                });
+            }
+            
+            console.log(`📅 Ustvarjam ${newFees2026.length} vadnin za leto 2026 (${december2025Fees.length} plavalcev × 12 mesecev)`);
+            
+            // Uvozi vadnine za 2026 v bazo
+            const { data: insertedFees, error: insertError } = await supabase
+                .from('swimmer_monthly_fees')
+                .upsert(newFees2026, { 
+                    onConflict: 'swimmer_id,month,year' 
+                })
+                .select();
+            
+            if (insertError) {
+                console.error('❌ Napaka pri vstavljanju vadnin za 2026:', insertError);
+                showMessage('Napaka pri vstavljanju vadnin za 2026!', 'error');
+                return false;
+            }
+            
+            console.log(`✅ Uspešno ustvarjenih ${insertedFees.length} vadnin za leto 2026`);
+            showMessage(`Uspešno ustvarjenih ${insertedFees.length} vadnin za leto 2026!`, 'success');
+            
+            // Osveži prikaz
+            if (currentSection === 'finance') {
+                await refreshSwimmerFees();
+                calculateFinanceData();
+            }
+            
+            return true;
+            
+        } catch (error) {
+            console.error('❌ Napaka pri kopiranju vadnin za 2026:', error);
+            showMessage('Napaka pri kopiranju vadnin za 2026!', 'error');
+            return false;
+        }
+    }
     
     // Funkcija za kopiranje vadnin iz prejšnega meseca v trenutni mesec
     async function copyPreviousMonthFees() {
@@ -4073,6 +4148,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Poveži gumbe za kopiranje in preverjanje vadnin z obstoječimi gumbi v HTML
     function setupCopyFeesButton() {
         const copyButton = document.getElementById('copyFeesBtn');
+        const copy2026Button = document.getElementById('copyFees2026Btn');
         const checkButton = document.getElementById('checkFeesStatusBtn');
         
         if (copyButton) {
@@ -4080,6 +4156,13 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('✅ Gumb za kopiranje vadnin je povezan');
         } else {
             console.warn('⚠️ Gumb za kopiranje vadnin ni bil najden');
+        }
+        
+        if (copy2026Button) {
+            copy2026Button.onclick = copyFeesForYear2026;
+            console.log('✅ Gumb za kopiranje vadnin za 2026 je povezan');
+        } else {
+            console.warn('⚠️ Gumb za kopiranje vadnin za 2026 ni bil najden');
         }
         
         if (checkButton) {
