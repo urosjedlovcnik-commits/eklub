@@ -399,17 +399,41 @@ document.addEventListener('DOMContentLoaded', () => {
             
             console.log('✅ Vsi podatki so bili uspešno naloženi in UI posodobljen!');
             
-            // Dodatno preverjanje - preveri, ali so podatki res v bazi
-            console.log('🔍 Preverjam podatke v bazi podatkov...');
-            const { data: testData, error: testError } = await supabase
-                .from('swimmers')
-                .select('count(*)')
-                .eq('is_deleted', false);
+            // Preveri vadnine, stroške terminov in urne postavke trenerjev
+            console.log('🔍 Preverjam vadnine, stroške terminov in urne postavke trenerjev...');
             
-            if (testError) {
-                console.error('❌ Napaka pri preverjanju podatkov:', testError);
+            // Preveri vadnine
+            const { data: feesData, error: feesError } = await supabase
+                .from('swimmer_monthly_fees')
+                .select('*')
+                .limit(5);
+            
+            if (feesError) {
+                console.error('❌ Napaka pri nalaganju vadnin:', feesError);
             } else {
-                console.log('📊 Število aktivnih plavalcev v bazi:', testData);
+                console.log('📊 Vadnine v bazi:', feesData);
+            }
+            
+            // Preveri stroške terminov
+            const { data: termCostsData, error: termCostsError } = await supabase
+                .from('term_costs')
+                .select('*');
+            
+            if (termCostsError) {
+                console.error('❌ Napaka pri nalaganju stroškov terminov:', termCostsError);
+            } else {
+                console.log('📊 Stroški terminov v bazi:', termCostsData);
+            }
+            
+            // Preveri urne postavke trenerjev
+            const { data: trainerRatesData, error: trainerRatesError } = await supabase
+                .from('trainer_rates')
+                .select('*');
+            
+            if (trainerRatesError) {
+                console.error('❌ Napaka pri nalaganju urnih postavk trenerjev:', trainerRatesError);
+            } else {
+                console.log('📊 Urne postavke trenerjev v bazi:', trainerRatesData);
             }
 
         } catch (error) {
@@ -3341,11 +3365,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // Funkcija za pridobivanje stroškov prog po terminih iz baze
     async function getTermCostsFromDB() {
         try {
+            console.log('🔍 Nalagam stroške terminov iz baze...');
             const { data, error } = await supabase
                 .from('term_costs')
                 .select('*');
             
-            if (error) throw error;
+            if (error) {
+                console.error('❌ Napaka pri nalaganju stroškov terminov:', error);
+                throw error;
+            }
+            
+            console.log('✅ Naloženih stroškov terminov:', data.length, data);
             
             // Pretvori v obliko, ki jo pričakuje aplikacija
             const termCosts = {};
@@ -3384,11 +3414,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // Funkcija za pridobivanje postavk trenerjev iz baze
     async function getTrainerRatesFromDB() {
         try {
+            console.log('🔍 Nalagam urne postavke trenerjev iz baze...');
             const { data, error } = await supabase
                 .from('trainer_rates')
                 .select('*');
             
-            if (error) throw error;
+            if (error) {
+                console.error('❌ Napaka pri nalaganju urnih postavk trenerjev:', error);
+                throw error;
+            }
+            
+            console.log('✅ Naloženih urnih postavk trenerjev:', data.length, data);
             
             // Pretvori v obliko, ki jo pričakuje aplikacija
             const trainerRates = {};
@@ -3427,6 +3463,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Funkcija za pridobivanje mesečnih pristojbin plavalcev iz baze
     async function getSwimmerFeesFromDB(month, year) {
         try {
+            console.log(`🔍 Nalagam vadnine za mesec ${month}/${year}...`);
             // Najprej poskusi najti pristojbine za točen mesec in leto
             let { data, error } = await supabase
                 .from('swimmer_monthly_fees')
@@ -3434,7 +3471,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 .eq('month', month)
                 .eq('year', year);
             
-            if (error) throw error;
+            if (error) {
+                console.error('❌ Napaka pri nalaganju vadnin:', error);
+                throw error;
+            }
+            
+            console.log(`✅ Naloženih vadnin za ${month}/${year}:`, data.length, data);
             
             // Pretvori v obliko, ki jo pričakuje aplikacija
             const swimmerFees = {};
