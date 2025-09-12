@@ -1,11 +1,15 @@
 // Admin stran za upravljanje plavalne šole
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('🚀 Admin stran se nalaga...');
+    
     // Preveri, če je uporabnik prijavljen
     const session = authManager.isAdminLoggedIn();
     if (!session) {
+        console.log('❌ Uporabnik ni prijavljen, preusmerjam na login...');
         window.location.href = 'admin-login.html';
         return;
     }
+    console.log('✅ Uporabnik je prijavljen:', session);
     
     // Prikaži informacije o sessiona
     const adminInfo = document.getElementById('adminInfo');
@@ -56,9 +60,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentSection = 'swimmers'; // Dodano: sledi trenutni sekciji
     
     // Trenutni mesec in leto za finance sekcijo
-    let currentFinanceMonth = new Date().getMonth() + 1; // 1-12
-    let currentFinanceYear = new Date().getFullYear();
-    console.log('🔍 Inicializacija mesecev - trenutni mesec:', currentFinanceMonth, 'leto:', currentFinanceYear);
+    const now = new Date();
+    let currentFinanceMonth = now.getMonth() + 1; // 1-12 (September = 9)
+    let currentFinanceYear = now.getFullYear();
+    console.log('🔍 Inicializacija mesecev:');
+    console.log('- Trenutni datum:', now);
+    console.log('- now.getMonth():', now.getMonth(), '(0-based)');
+    console.log('- currentFinanceMonth:', currentFinanceMonth, '(1-based)');
+    console.log('- currentFinanceYear:', currentFinanceYear);
     
     // Trenutni mesec in leto za swimmer fees sekcijo
     let currentSwimmerFeesMonth = new Date().getMonth() + 1; // 1-12
@@ -88,15 +97,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // Funkcije za navigacijo skozi mesece
     function updateFinanceMonthDisplay() {
         console.log('🔍 updateFinanceMonthDisplay - currentFinanceMonth:', currentFinanceMonth, 'currentFinanceYear:', currentFinanceYear);
+        console.log('🔍 updateFinanceMonthDisplay - elCurrentMonthYear:', elCurrentMonthYear);
+        console.log('🔍 updateFinanceMonthDisplay - elMonthYearInput:', elMonthYearInput);
+        
         if (elCurrentMonthYear) {
             const monthNames = ["Januar", "Februar", "Marec", "April", "Maj", "Junij", 
                               "Julij", "Avgust", "September", "Oktober", "November", "December"];
-            elCurrentMonthYear.textContent = `${monthNames[currentFinanceMonth - 1]} ${currentFinanceYear}`;
-            console.log('✅ Prikazan mesec:', monthNames[currentFinanceMonth - 1], currentFinanceYear);
+            const monthIndex = currentFinanceMonth - 1; // Convert 1-based to 0-based
+            console.log('🔍 updateFinanceMonthDisplay - monthIndex:', monthIndex);
+            console.log('🔍 updateFinanceMonthDisplay - monthNames[monthIndex]:', monthNames[monthIndex]);
+            
+            elCurrentMonthYear.textContent = `${monthNames[monthIndex]} ${currentFinanceYear}`;
+            console.log('✅ Prikazan mesec:', monthNames[monthIndex], currentFinanceYear);
+        } else {
+            console.warn('⚠️ elCurrentMonthYear element ni najden');
         }
+        
         if (elMonthYearInput) {
             elMonthYearInput.value = `${currentFinanceYear}-${currentFinanceMonth.toString().padStart(2, '0')}`;
             console.log('✅ Kalendar nastavljen na:', elMonthYearInput.value);
+        } else {
+            console.warn('⚠️ elMonthYearInput element ni najden');
         }
     }
     
@@ -313,9 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const elExportCsvBtn = document.getElementById("exportCsvBtn");
 
     // UI elementi za povzetek udeležbe plavalcev
-    const elSwimmerSummaryMonthSelect = document.getElementById("swimmerSummaryMonthSelect");
-    const elSwimmerSummaryYearSelect = document.getElementById("swimmerSummaryYearSelect");
-    const elRefreshSwimmerSummaryBtn = document.getElementById("refreshSwimmerSummaryBtn");
+    // Opomba: Stari elementi so bili zamenjani z navigacijskimi gumbi
     const elSwimmerSummaryBox = document.getElementById("swimmerSummaryBox");
     
     // UI elementi za navigacijo mesecev
@@ -359,15 +378,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const elDeleteTrainerBtn = document.getElementById("deleteTrainerBtn");
     const elTrainerInfo = document.getElementById("trainerInfo");
     const elTrainersList = document.getElementById("trainersList");
-    const elTrainerSummaryMonthSelect = document.getElementById("trainerSummaryMonthSelect");
-    const elTrainerSummaryYearSelect = document.getElementById("trainerSummaryYearSelect");
-    const elRefreshTrainerSummaryBtn = document.getElementById("refreshTrainerSummaryBtn");
+    // Opomba: Stari elementi za trainer summary so bili zamenjani z navigacijskimi gumbi
     const elTrainerSummaryBox = document.getElementById("trainerSummaryBox");
     
     // UI elementi za Finance sekcijo
-    const elFinanceMonthSelect = document.getElementById("financeMonthSelect");
-    const elFinanceYearSelect = document.getElementById("financeYearSelect");
-    const elRefreshFinanceBtn = document.getElementById("refreshFinanceBtn");
+    // Opomba: Stari elementi so bili zamenjani z navigacijskimi gumbi
     const elFinanceSummaryBox = document.getElementById("financeSummaryBox");
     const elDetailedCostsBox = document.getElementById("detailedCostsBox");
     const elManagementCostPerMonth = document.getElementById("managementCostPerMonth");
@@ -380,9 +395,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const elSaveTrainerRatesBtn = document.getElementById("saveTrainerRatesBtn");
     
     // UI elementi za upravljanje pristojbin plavalcev
-    const elSwimmerFeesMonthSelect = document.getElementById("swimmerFeesMonthSelect");
-    const elSwimmerFeesYearSelect = document.getElementById("swimmerFeesYearSelect");
-    const elRefreshSwimmerFeesBtn = document.getElementById("refreshSwimmerFeesBtn");
+    // Opomba: Stari elementi so bili zamenjani z navigacijskimi gumbi
     const elSwimmerFeesBox = document.getElementById("swimmerFeesBox");
     
     const elEditTermModal = document.getElementById("editTermModal");
@@ -641,11 +654,17 @@ document.addEventListener('DOMContentLoaded', () => {
             // Inicializiraj prikaz mesecev
             console.log('🔄 Inicializiram prikaz mesecev...');
             console.log('🔍 Trenutni mesec (finance):', currentFinanceMonth, currentFinanceYear);
+            console.log('🔍 Elementi za inicializacijo:');
+            console.log('- elCurrentMonthYear:', document.getElementById("currentMonthYear"));
+            console.log('- elMonthYearInput:', document.getElementById("monthYearInput"));
+            
             updateFinanceMonthDisplay();
             updateSwimmerFeesMonthDisplay();
             updateTrainerSummaryMonthDisplay();
             updateTrainerNotesMonthDisplay();
             updateSwimmerSummaryMonthDisplay();
+            
+            console.log('✅ Inicializacija prikaza mesecev končana');
             
             console.log('✅ Vsi podatki so bili uspešno naloženi in UI posodobljen!');
             
@@ -2560,14 +2579,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // Event listener za klik na mesec/leto (finance)
     const monthYearContainer = document.getElementById('monthYearContainer');
-    console.log('🔍 monthYearContainer:', monthYearContainer);
-    console.log('🔍 elMonthYearInput:', elMonthYearInput);
+    console.log('🔍 Event listenerji - monthYearContainer:', monthYearContainer);
+    console.log('🔍 Event listenerji - elMonthYearInput:', elMonthYearInput);
+    
     if (monthYearContainer) {
-        monthYearContainer.addEventListener('click', () => {
-            console.log('🖱️ Klik na monthYearContainer');
+        console.log('✅ Dodajam event listener za monthYearContainer');
+        monthYearContainer.addEventListener('click', (event) => {
+            console.log('🖱️ Klik na monthYearContainer', event);
+            event.preventDefault();
+            event.stopPropagation();
+            
             if (elMonthYearInput) {
-                console.log('📅 Odpiram kalendar');
+                console.log('📅 Poskušam odpreti kalendar...');
+                elMonthYearInput.focus();
                 elMonthYearInput.click();
+                
+                // Poskusi tudi z dispatchEvent
+                const clickEvent = new MouseEvent('click', {
+                    view: window,
+                    bubbles: true,
+                    cancelable: true
+                });
+                elMonthYearInput.dispatchEvent(clickEvent);
             } else {
                 console.error('❌ elMonthYearInput ni definiran');
             }
