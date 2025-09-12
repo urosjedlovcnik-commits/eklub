@@ -472,12 +472,17 @@
         <div class="card">
           <h3>Mesečna vadnina - Pregled stroškov</h3>
           <div class="inner">
-            <div class="summary-controls">
-              <select id="financeMonthSelect"></select>
-              <select id="financeYearSelect"></select>
-              <button class="btn" id="refreshFinanceBtn">Izračunaj</button>
+            <div class="summary-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+              <button class="btn" id="prevMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Prejšnji mesec">←</button>
+              <div style="text-align: center; min-width: 200px; cursor: pointer; padding: 10px; border-radius: 8px; transition: background-color 0.2s;" id="monthYearContainer" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
+                <div id="currentMonthYear" style="font-size: 18px; font-weight: bold; color: #333;"></div>
+                <div style="font-size: 12px; color: #666;">Klikni za izbiro datuma</div>
+              </div>
+              <button class="btn" id="nextMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Naslednji mesec">→</button>
+              <button class="btn" id="currentMonthBtn" style="background: #007bff; color: white; padding: 8px 12px; cursor: pointer;" title="Pojdi na trenutni mesec">Trenutni mesec</button>
+              <input type="month" id="monthYearInput" style="display: none;">
             </div>
-            <div id="financeSummaryBox">Izberite mesec in leto za izračun stroškov...</div>
+            <div id="financeSummaryBox">Nalaganje podatkov...</div>
           </div>
         </div>
 
@@ -513,12 +518,17 @@
         <div class="card">
           <h3>Upravljanje mesečnih pristojbin plavalcev</h3>
           <div class="inner">
-            <div class="summary-controls">
-              <select id="swimmerFeesMonthSelect"></select>
-              <select id="swimmerFeesYearSelect"></select>
-              <button class="btn" id="refreshSwimmerFeesBtn">Osveži</button>
+            <div class="summary-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+              <button class="btn" id="prevSwimmerFeesMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Prejšnji mesec">←</button>
+              <div style="text-align: center; min-width: 200px; cursor: pointer; padding: 10px; border-radius: 8px; transition: background-color 0.2s;" id="swimmerFeesMonthYearContainer" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
+                <div id="currentSwimmerFeesMonthYear" style="font-size: 18px; font-weight: bold; color: #333;"></div>
+                <div style="font-size: 12px; color: #666;">Klikni za izbiro datuma</div>
+              </div>
+              <button class="btn" id="nextSwimmerFeesMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Naslednji mesec">→</button>
+              <button class="btn" id="currentSwimmerFeesMonthBtn" style="background: #007bff; color: white; padding: 8px 12px; cursor: pointer;" title="Pojdi na trenutni mesec">Trenutni mesec</button>
+              <input type="month" id="swimmerFeesMonthYearInput" style="display: none;">
             </div>
-            <div id="swimmerFeesBox">Izberite mesec in leto za upravljanje pristojbin...</div>
+            <div id="swimmerFeesBox">Nalaganje podatkov...</div>
           </div>
         </div>
 

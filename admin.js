@@ -54,6 +54,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let termStatus = {};
     let trainerAttendance = {};
     let currentSection = 'swimmers'; // Dodano: sledi trenutni sekciji
+    
+    // Trenutni mesec in leto za finance sekcijo
+    let currentFinanceMonth = new Date().getMonth() + 1; // 1-12
+    let currentFinanceYear = new Date().getFullYear();
+    
+    // Trenutni mesec in leto za swimmer fees sekcijo
+    let currentSwimmerFeesMonth = new Date().getMonth() + 1; // 1-12
+    let currentSwimmerFeesYear = new Date().getFullYear();
 
     const DAYNAME = ["","Ponedeljek","Torek","Sreda","Četrtek","Petek","Sobota","Nedelja"];
     const DAY_SHORT_NAME = ["", "Pon.", "Tor.", "Sre.", "Čet.", "Pet.", "Sob.", "Ned."];
@@ -62,6 +70,81 @@ document.addEventListener('DOMContentLoaded', () => {
     function isValidEmail(email) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return emailRegex.test(email);
+    }
+    
+    // Funkcije za navigacijo skozi mesece
+    function updateFinanceMonthDisplay() {
+        if (elCurrentMonthYear) {
+            const monthNames = ["Januar", "Februar", "Marec", "April", "Maj", "Junij", 
+                              "Julij", "Avgust", "September", "Oktober", "November", "December"];
+            elCurrentMonthYear.textContent = `${monthNames[currentFinanceMonth - 1]} ${currentFinanceYear}`;
+        }
+        if (elMonthYearInput) {
+            elMonthYearInput.value = `${currentFinanceYear}-${currentFinanceMonth.toString().padStart(2, '0')}`;
+        }
+    }
+    
+    function updateSwimmerFeesMonthDisplay() {
+        if (elCurrentSwimmerFeesMonthYear) {
+            const monthNames = ["Januar", "Februar", "Marec", "April", "Maj", "Junij", 
+                              "Julij", "Avgust", "September", "Oktober", "November", "December"];
+            elCurrentSwimmerFeesMonthYear.textContent = `${monthNames[currentSwimmerFeesMonth - 1]} ${currentSwimmerFeesYear}`;
+        }
+        if (elSwimmerFeesMonthYearInput) {
+            elSwimmerFeesMonthYearInput.value = `${currentSwimmerFeesYear}-${currentSwimmerFeesMonth.toString().padStart(2, '0')}`;
+        }
+    }
+    
+    function navigateFinanceMonth(direction) {
+        if (direction === 'prev') {
+            currentFinanceMonth--;
+            if (currentFinanceMonth < 1) {
+                currentFinanceMonth = 12;
+                currentFinanceYear--;
+            }
+        } else if (direction === 'next') {
+            currentFinanceMonth++;
+            if (currentFinanceMonth > 12) {
+                currentFinanceMonth = 1;
+                currentFinanceYear++;
+            }
+        }
+        updateFinanceMonthDisplay();
+        calculateFinanceData();
+    }
+    
+    function navigateSwimmerFeesMonth(direction) {
+        if (direction === 'prev') {
+            currentSwimmerFeesMonth--;
+            if (currentSwimmerFeesMonth < 1) {
+                currentSwimmerFeesMonth = 12;
+                currentSwimmerFeesYear--;
+            }
+        } else if (direction === 'next') {
+            currentSwimmerFeesMonth++;
+            if (currentSwimmerFeesMonth > 12) {
+                currentSwimmerFeesMonth = 1;
+                currentSwimmerFeesYear++;
+            }
+        }
+        updateSwimmerFeesMonthDisplay();
+        refreshSwimmerFees();
+    }
+    
+    function goToCurrentFinanceMonth() {
+        const now = new Date();
+        currentFinanceMonth = now.getMonth() + 1;
+        currentFinanceYear = now.getFullYear();
+        updateFinanceMonthDisplay();
+        calculateFinanceData();
+    }
+    
+    function goToCurrentSwimmerFeesMonth() {
+        const now = new Date();
+        currentSwimmerFeesMonth = now.getMonth() + 1;
+        currentSwimmerFeesYear = now.getFullYear();
+        updateSwimmerFeesMonthDisplay();
+        refreshSwimmerFees();
     }
 
     function isValidPhone(phone) {
@@ -95,6 +178,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const elSwimmerSummaryYearSelect = document.getElementById("swimmerSummaryYearSelect");
     const elRefreshSwimmerSummaryBtn = document.getElementById("refreshSwimmerSummaryBtn");
     const elSwimmerSummaryBox = document.getElementById("swimmerSummaryBox");
+    
+    // UI elementi za navigacijo mesecev
+    const elCurrentMonthYear = document.getElementById("currentMonthYear");
+    const elPrevMonthBtn = document.getElementById("prevMonthBtn");
+    const elNextMonthBtn = document.getElementById("nextMonthBtn");
+    const elCurrentMonthBtn = document.getElementById("currentMonthBtn");
+    const elMonthYearInput = document.getElementById("monthYearInput");
+    
+    // UI elementi za navigacijo mesecev plavalcev
+    const elCurrentSwimmerFeesMonthYear = document.getElementById("currentSwimmerFeesMonthYear");
+    const elPrevSwimmerFeesMonthBtn = document.getElementById("prevSwimmerFeesMonthBtn");
+    const elNextSwimmerFeesMonthBtn = document.getElementById("nextSwimmerFeesMonthBtn");
+    const elCurrentSwimmerFeesMonthBtn = document.getElementById("currentSwimmerFeesMonthBtn");
+    const elSwimmerFeesMonthYearInput = document.getElementById("swimmerFeesMonthYearInput");
 
     const elNewTermDay = document.getElementById("newTermDay");
     const elNewTermStart = document.getElementById("newTermStart");
@@ -396,6 +493,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Prikaži nastavitve stroškov prog in urnih postavk trenerjev
             renderTermCostsSettings();
             renderTrainerRatesSettings();
+            
+            // Inicializiraj prikaz mesecev
+            updateFinanceMonthDisplay();
+            updateSwimmerFeesMonthDisplay();
             
             console.log('✅ Vsi podatki so bili uspešno naloženi in UI posodobljen!');
             
@@ -2311,6 +2412,78 @@ document.addEventListener('DOMContentLoaded', () => {
             refreshSwimmerFees();
         });
     }
+    
+    // Event listenerji za navigacijo mesecev
+    if (elPrevMonthBtn) {
+        elPrevMonthBtn.addEventListener('click', () => navigateFinanceMonth('prev'));
+    }
+    if (elNextMonthBtn) {
+        elNextMonthBtn.addEventListener('click', () => navigateFinanceMonth('next'));
+    }
+    if (elCurrentMonthBtn) {
+        elCurrentMonthBtn.addEventListener('click', goToCurrentFinanceMonth);
+    }
+    if (elCurrentMonthYear) {
+        elCurrentMonthYear.addEventListener('click', () => {
+            if (elMonthYearInput) {
+                elMonthYearInput.click();
+            }
+        });
+    }
+    // Dodaj event listener tudi za kontejner
+    const monthYearContainer = document.getElementById('monthYearContainer');
+    if (monthYearContainer) {
+        monthYearContainer.addEventListener('click', () => {
+            if (elMonthYearInput) {
+                elMonthYearInput.click();
+            }
+        });
+    }
+    if (elMonthYearInput) {
+        elMonthYearInput.addEventListener('change', (e) => {
+            const [year, month] = e.target.value.split('-');
+            currentFinanceYear = parseInt(year);
+            currentFinanceMonth = parseInt(month);
+            updateFinanceMonthDisplay();
+            calculateFinanceData();
+        });
+    }
+    
+    // Event listenerji za navigacijo mesecev plavalcev
+    if (elPrevSwimmerFeesMonthBtn) {
+        elPrevSwimmerFeesMonthBtn.addEventListener('click', () => navigateSwimmerFeesMonth('prev'));
+    }
+    if (elNextSwimmerFeesMonthBtn) {
+        elNextSwimmerFeesMonthBtn.addEventListener('click', () => navigateSwimmerFeesMonth('next'));
+    }
+    if (elCurrentSwimmerFeesMonthBtn) {
+        elCurrentSwimmerFeesMonthBtn.addEventListener('click', goToCurrentSwimmerFeesMonth);
+    }
+    if (elCurrentSwimmerFeesMonthYear) {
+        elCurrentSwimmerFeesMonthYear.addEventListener('click', () => {
+            if (elSwimmerFeesMonthYearInput) {
+                elSwimmerFeesMonthYearInput.click();
+            }
+        });
+    }
+    // Dodaj event listener tudi za kontejner
+    const swimmerFeesMonthYearContainer = document.getElementById('swimmerFeesMonthYearContainer');
+    if (swimmerFeesMonthYearContainer) {
+        swimmerFeesMonthYearContainer.addEventListener('click', () => {
+            if (elSwimmerFeesMonthYearInput) {
+                elSwimmerFeesMonthYearInput.click();
+            }
+        });
+    }
+    if (elSwimmerFeesMonthYearInput) {
+        elSwimmerFeesMonthYearInput.addEventListener('change', (e) => {
+            const [year, month] = e.target.value.split('-');
+            currentSwimmerFeesYear = parseInt(year);
+            currentSwimmerFeesMonth = parseInt(month);
+            updateSwimmerFeesMonthDisplay();
+            refreshSwimmerFees();
+        });
+    }
 
 
 
@@ -2956,8 +3129,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Funkcija za izračun finančnih podatkov
     async function calculateFinanceData() {
         try {
-            const month = parseInt(elFinanceMonthSelect.value);
-            const year = parseInt(elFinanceYearSelect.value);
+            const month = currentFinanceMonth;
+            const year = currentFinanceYear;
             
 
             
@@ -3760,8 +3933,8 @@ document.addEventListener('DOMContentLoaded', () => {
     async function refreshSwimmerFees() {
         if (!elSwimmerFeesBox) return;
         
-        const month = parseInt(elSwimmerFeesMonthSelect.value);
-        const year = parseInt(elSwimmerFeesYearSelect.value);
+        const month = currentSwimmerFeesMonth;
+        const year = currentSwimmerFeesYear;
         
         if (!month || !year) {
             elSwimmerFeesBox.innerHTML = '<p class="muted">Izberite mesec in leto za upravljanje pristojbin...</p>';
