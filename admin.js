@@ -2591,16 +2591,27 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (elMonthYearInput) {
                 console.log('📅 Poskušam odpreti kalendar...');
+                
+                // Naredi input vidnega za trenutek
+                const originalDisplay = elMonthYearInput.style.display;
+                elMonthYearInput.style.display = 'block';
+                elMonthYearInput.style.position = 'absolute';
+                elMonthYearInput.style.left = '-9999px';
+                elMonthYearInput.style.opacity = '0';
+                
+                // Poskusi odpreti kalendar
                 elMonthYearInput.focus();
                 elMonthYearInput.click();
                 
-                // Poskusi tudi z dispatchEvent
-                const clickEvent = new MouseEvent('click', {
-                    view: window,
-                    bubbles: true,
-                    cancelable: true
-                });
-                elMonthYearInput.dispatchEvent(clickEvent);
+                // Počakaj malo in skrij input
+                setTimeout(() => {
+                    elMonthYearInput.style.display = originalDisplay;
+                    elMonthYearInput.style.position = '';
+                    elMonthYearInput.style.left = '';
+                    elMonthYearInput.style.opacity = '';
+                }, 100);
+                
+                console.log('✅ Kalendar poskus odprt');
             } else {
                 console.error('❌ elMonthYearInput ni definiran');
             }
@@ -3292,6 +3303,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const month = currentFinanceMonth;
             const year = currentFinanceYear;
             console.log('🔍 calculateFinanceData - mesec:', month, 'leto:', year);
+            console.log('🔍 calculateFinanceData - mesec tip:', typeof month, 'leto tip:', typeof year);
             
 
             
@@ -3306,6 +3318,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const startDate = new Date(year, month - 1, 1); // month - 1 ker je JavaScript 0-based
             const endDate = new Date(year, month, 0); // month ker je JavaScript 0-based
             console.log('🔍 calculateFinanceData - startDate:', startDate, 'endDate:', endDate);
+            console.log('🔍 calculateFinanceData - startDate mesec:', startDate.getMonth() + 1, 'endDate mesec:', endDate.getMonth() + 1);
             
 
             
@@ -3321,6 +3334,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Pridobi pristojbine plavalcev iz baze
             const swimmerFees = await getSwimmerFeesFromDB(month, year);
             console.log('🔍 calculateFinanceData - swimmerFees:', swimmerFees.length);
+            console.log('🔍 calculateFinanceData - swimmerFees za mesec:', month, 'leto:', year);
 
             
             let totalRevenue = 0;
@@ -3330,7 +3344,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const feeData = swimmerFees[swimmer.id] || { fee: 80, discount: 0 };
                 const finalFee = Math.max(0, feeData.fee - feeData.discount);
                 totalRevenue += finalFee;
-                console.log('🔍 calculateFinanceData - plavalec:', swimmer.first_name, swimmer.last_name, 'fee:', feeData.fee, 'discount:', feeData.discount, 'finalFee:', finalFee);
+                // console.log('🔍 calculateFinanceData - plavalec:', swimmer.first_name, swimmer.last_name, 'fee:', feeData.fee, 'discount:', feeData.discount, 'finalFee:', finalFee);
                 
 
             });
