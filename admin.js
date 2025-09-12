@@ -274,6 +274,13 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 swimmers = swimmersData || [];
                 console.log(`✅ Naloženih plavalcev: ${swimmers.length}`, swimmers);
+                
+                // Preveri, ali so podatki pravilno naloženi
+                if (swimmers.length > 0) {
+                    console.log('📊 Prvi plavalec:', swimmers[0]);
+                } else {
+                    console.log('⚠️ Ni plavalcev v bazi podatkov');
+                }
             }
 
             // Naloži prisotnost iz Supabase
@@ -544,9 +551,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateSwimmersList() {
+        console.log('🔄 Posodabljam seznam plavalcev...', swimmers.length, 'plavalcev');
         elSwimmersList.innerHTML = '';
         
         if (swimmers.length === 0) {
+            console.log('⚠️ Ni plavalcev za prikaz');
             elSwimmersList.innerHTML = '<p class="muted">Ni plavalcev</p>';
             return;
         }
@@ -602,6 +611,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         elSwimmersList.appendChild(table);
+        console.log('✅ Seznam plavalcev uspešno posodobljen');
     }
 
     function updateTrainersList() {

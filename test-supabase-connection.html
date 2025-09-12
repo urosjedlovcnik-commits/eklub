@@ -159,13 +159,13 @@
                     try {
                         const { data, error } = await supabase
                             .from(table)
-                            .select('count(*)')
+                            .select('*')
                             .limit(1);
                         
                         if (error) {
                             results[table] = { error: error.message, code: error.code };
                         } else {
-                            results[table] = { success: true, count: data[0]?.count || 0 };
+                            results[table] = { success: true, count: data.length };
                         }
                     } catch (err) {
                         results[table] = { error: err.message };
