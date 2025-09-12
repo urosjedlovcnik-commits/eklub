@@ -2632,32 +2632,52 @@ document.addEventListener('DOMContentLoaded', () => {
             event.preventDefault();
             event.stopPropagation();
             
-            if (elMonthYearInput) {
-                console.log('📅 Poskušam odpreti kalendar...');
-                
-                // Naredi input vidnega za trenutek
-                const originalDisplay = elMonthYearInput.style.display;
-                elMonthYearInput.style.display = 'block';
-                elMonthYearInput.style.position = 'absolute';
-                elMonthYearInput.style.left = '-9999px';
-                elMonthYearInput.style.opacity = '0';
-                
-                // Poskusi odpreti kalendar
-                elMonthYearInput.focus();
-                elMonthYearInput.click();
-                
-                // Počakaj malo in skrij input
-                setTimeout(() => {
-                    elMonthYearInput.style.display = originalDisplay;
-                    elMonthYearInput.style.position = '';
-                    elMonthYearInput.style.left = '';
-                    elMonthYearInput.style.opacity = '';
-                }, 100);
-                
-                console.log('✅ Kalendar poskus odprt');
-            } else {
-                console.error('❌ elMonthYearInput ni definiran');
-            }
+            // Ustvari overlay z input elementom
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                z-index: 9999;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            `;
+            
+            const input = document.createElement('input');
+            input.type = 'month';
+            input.value = `${currentFinanceYear}-${currentFinanceMonth.toString().padStart(2, '0')}`;
+            input.style.cssText = `
+                padding: 20px;
+                font-size: 18px;
+                border-radius: 8px;
+                border: none;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            `;
+            
+            overlay.appendChild(input);
+            document.body.appendChild(overlay);
+            
+            input.focus();
+            input.click();
+            
+            input.addEventListener('change', (e) => {
+                const [year, month] = e.target.value.split('-');
+                currentFinanceMonth = parseInt(month);
+                currentFinanceYear = parseInt(year);
+                updateFinanceMonthDisplay();
+                calculateFinanceData();
+                document.body.removeChild(overlay);
+            });
+            
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    document.body.removeChild(overlay);
+                }
+            });
         });
     } else {
         console.error('❌ monthYearContainer ni najden');
@@ -2685,10 +2705,56 @@ document.addEventListener('DOMContentLoaded', () => {
     // Event listener za klik na mesec/leto (swimmer fees)
     const swimmerFeesMonthYearContainer = document.getElementById('swimmerFeesMonthYearContainer');
     if (swimmerFeesMonthYearContainer) {
-        swimmerFeesMonthYearContainer.addEventListener('click', () => {
-            if (elSwimmerFeesMonthYearInput) {
-                elSwimmerFeesMonthYearInput.click();
-            }
+        swimmerFeesMonthYearContainer.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            // Ustvari overlay z input elementom
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                z-index: 9999;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            `;
+            
+            const input = document.createElement('input');
+            input.type = 'month';
+            input.value = `${currentSwimmerFeesYear}-${currentSwimmerFeesMonth.toString().padStart(2, '0')}`;
+            input.style.cssText = `
+                padding: 20px;
+                font-size: 18px;
+                border-radius: 8px;
+                border: none;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            `;
+            
+            overlay.appendChild(input);
+            document.body.appendChild(overlay);
+            
+            input.focus();
+            input.click();
+            
+            input.addEventListener('change', (e) => {
+                const [year, month] = e.target.value.split('-');
+                currentSwimmerFeesMonth = parseInt(month);
+                currentSwimmerFeesYear = parseInt(year);
+                updateSwimmerFeesMonthDisplay();
+                refreshSwimmerFees();
+                document.body.removeChild(overlay);
+            });
+            
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    document.body.removeChild(overlay);
+                }
+            });
         });
     }
     if (elSwimmerFeesMonthYearInput) {
@@ -2720,10 +2786,56 @@ document.addEventListener('DOMContentLoaded', () => {
         elCurrentTrainerSummaryMonthBtn.addEventListener('click', goToCurrentTrainerSummaryMonth);
     }
     if (trainerSummaryMonthYearContainer) {
-        trainerSummaryMonthYearContainer.addEventListener('click', () => {
-            if (elTrainerSummaryMonthYearInput) {
-                elTrainerSummaryMonthYearInput.click();
-            }
+        trainerSummaryMonthYearContainer.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            // Ustvari overlay z input elementom
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                z-index: 9999;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            `;
+            
+            const input = document.createElement('input');
+            input.type = 'month';
+            input.value = `${currentTrainerSummaryYear}-${currentTrainerSummaryMonth.toString().padStart(2, '0')}`;
+            input.style.cssText = `
+                padding: 20px;
+                font-size: 18px;
+                border-radius: 8px;
+                border: none;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            `;
+            
+            overlay.appendChild(input);
+            document.body.appendChild(overlay);
+            
+            input.focus();
+            input.click();
+            
+            input.addEventListener('change', (e) => {
+                const [year, month] = e.target.value.split('-');
+                currentTrainerSummaryMonth = parseInt(month);
+                currentTrainerSummaryYear = parseInt(year);
+                updateTrainerSummaryMonthDisplay();
+                calculateTrainerSummaryData();
+                document.body.removeChild(overlay);
+            });
+            
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    document.body.removeChild(overlay);
+                }
+            });
         });
     }
     if (elTrainerSummaryMonthYearInput) {
@@ -2753,10 +2865,56 @@ document.addEventListener('DOMContentLoaded', () => {
         elCurrentTrainerNotesMonthBtn.addEventListener('click', goToCurrentTrainerNotesMonth);
     }
     if (trainerNotesMonthYearContainer) {
-        trainerNotesMonthYearContainer.addEventListener('click', () => {
-            if (elTrainerNotesMonthYearInput) {
-                elTrainerNotesMonthYearInput.click();
-            }
+        trainerNotesMonthYearContainer.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            // Ustvari overlay z input elementom
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                z-index: 9999;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            `;
+            
+            const input = document.createElement('input');
+            input.type = 'month';
+            input.value = `${currentTrainerNotesYear}-${currentTrainerNotesMonth.toString().padStart(2, '0')}`;
+            input.style.cssText = `
+                padding: 20px;
+                font-size: 18px;
+                border-radius: 8px;
+                border: none;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            `;
+            
+            overlay.appendChild(input);
+            document.body.appendChild(overlay);
+            
+            input.focus();
+            input.click();
+            
+            input.addEventListener('change', (e) => {
+                const [year, month] = e.target.value.split('-');
+                currentTrainerNotesMonth = parseInt(month);
+                currentTrainerNotesYear = parseInt(year);
+                updateTrainerNotesMonthDisplay();
+                calculateTrainerNotesData();
+                document.body.removeChild(overlay);
+            });
+            
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    document.body.removeChild(overlay);
+                }
+            });
         });
     }
     if (elTrainerNotesMonthYearInput) {
@@ -2786,10 +2944,56 @@ document.addEventListener('DOMContentLoaded', () => {
         elCurrentSwimmerSummaryMonthBtn.addEventListener('click', goToCurrentSwimmerSummaryMonth);
     }
     if (swimmerSummaryMonthYearContainer) {
-        swimmerSummaryMonthYearContainer.addEventListener('click', () => {
-            if (elSwimmerSummaryMonthYearInput) {
-                elSwimmerSummaryMonthYearInput.click();
-            }
+        swimmerSummaryMonthYearContainer.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            // Ustvari overlay z input elementom
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                z-index: 9999;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            `;
+            
+            const input = document.createElement('input');
+            input.type = 'month';
+            input.value = `${currentSwimmerSummaryYear}-${currentSwimmerSummaryMonth.toString().padStart(2, '0')}`;
+            input.style.cssText = `
+                padding: 20px;
+                font-size: 18px;
+                border-radius: 8px;
+                border: none;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            `;
+            
+            overlay.appendChild(input);
+            document.body.appendChild(overlay);
+            
+            input.focus();
+            input.click();
+            
+            input.addEventListener('change', (e) => {
+                const [year, month] = e.target.value.split('-');
+                currentSwimmerSummaryMonth = parseInt(month);
+                currentSwimmerSummaryYear = parseInt(year);
+                updateSwimmerSummaryMonthDisplay();
+                refreshSwimmerSummary();
+                document.body.removeChild(overlay);
+            });
+            
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    document.body.removeChild(overlay);
+                }
+            });
         });
     }
     if (elSwimmerSummaryMonthYearInput) {
