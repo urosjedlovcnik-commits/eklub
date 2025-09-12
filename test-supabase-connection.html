@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Supabase Povezave</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Test Supabase Povezave</h1>
+        <p>Ta stran preveri, ali se lahko poveže z Supabase bazo podatkov in naloži podatke.</p>
+        
+        <div id="status"></div>
+        
+        <button onclick="testConnection()">Testiraj Povezavo</button>
+        <button onclick="testDataLoad()">Testiraj Nalaganje Podatkov</button>
+        <button onclick="testRLS()">Testiraj RLS</button>
+        <button onclick="clearResults()">Počisti Rezultate</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./config.js"></script>
+    <script>
+        const supabase = createSupabaseClient();
+        const statusDiv = document.getElementById('status');
+        const resultsDiv = document.getElementById('results');
+
+        function addStatus(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.textContent = message;
+            statusDiv.appendChild(div);
+        }
+
+        function addResult(title, data) {
+            const div = document.createElement('div');
+            div.innerHTML = `
+                <h3>${title}</h3>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+            resultsDiv.appendChild(div);
+        }
+
+        function clearResults() {
+            statusDiv.innerHTML = '';
+            resultsDiv.innerHTML = '';
+        }
+
+        async function testConnection() {
+            clearResults();
+            addStatus('🔄 Testiram povezavo z Supabase...', 'info');
+            
+            try {
+                if (!supabase) {
+                    throw new Error('Supabase client ni ustvarjen');
+                }
+                
+                addStatus('✅ Supabase client uspešno ustvarjen', 'success');
+                addResult('Supabase Client', { 
+                    url: supabase.supabaseUrl,
+                    key: supabase.supabaseKey ? 'Nastavljen' : 'Ni nastavljen'
+                });
+                
+            } catch (error) {
+                addStatus(`❌ Napaka pri testiranju povezave: ${error.message}`, 'error');
+                addResult('Napaka', { error: error.message });
+            }
+        }
+
+        async function testDataLoad() {
+            addStatus('🔄 Testiram nalaganje podatkov...', 'info');
+            
+            try {
+                // Test plavalcev
+                const { data: swimmersData, error: swimmersError } = await supabase
+                    .from('swimmers')
+                    .select('*')
+                    .limit(5);
+                
+                if (swimmersError) {
+                    addStatus(`❌ Napaka pri nalaganju plavalcev: ${swimmersError.message}`, 'error');
+                    addResult('Napaka plavalci', swimmersError);
+                } else {
+                    addStatus(`✅ Naloženih plavalcev: ${swimmersData.length}`, 'success');
+                    addResult('Plavalci', swimmersData);
+                }
+
+                // Test terminov
+                const { data: termsData, error: termsError } = await supabase
+                    .from('terms')
+                    .select('*')
+                    .limit(5);
+                
+                if (termsError) {
+                    addStatus(`❌ Napaka pri nalaganju terminov: ${termsError.message}`, 'error');
+                    addResult('Napaka termini', termsError);
+                } else {
+                    addStatus(`✅ Naloženih terminov: ${termsData.length}`, 'success');
+                    addResult('Termini', termsData);
+                }
+
+                // Test trenerjev
+                const { data: trainersData, error: trainersError } = await supabase
+                    .from('trainers')
+                    .select('*')
+                    .limit(5);
+                
+                if (trainersError) {
+                    addStatus(`❌ Napaka pri nalaganju trenerjev: ${trainersError.message}`, 'error');
+                    addResult('Napaka trenerji', trainersError);
+                } else {
+                    addStatus(`✅ Naloženih trenerjev: ${trainersData.length}`, 'success');
+                    addResult('Trenerji', trainersData);
+                }
+
+            } catch (error) {
+                addStatus(`❌ Napaka pri testiranju podatkov: ${error.message}`, 'error');
+                addResult('Napaka', { error: error.message });
+            }
+        }
+
+        async function testRLS() {
+            addStatus('🔄 Testiram Row Level Security...', 'info');
+            
+            try {
+                // Preveri, ali so tabele dostopne
+                const tables = ['swimmers', 'trainers', 'terms', 'attendance', 'term_status', 'trainer_attendance', 'trainer_terms'];
+                const results = {};
+                
+                for (const table of tables) {
+                    try {
+                        const { data, error } = await supabase
+                            .from(table)
+                            .select('count(*)')
+                            .limit(1);
+                        
+                        if (error) {
+                            results[table] = { error: error.message, code: error.code };
+                        } else {
+                            results[table] = { success: true, count: data[0]?.count || 0 };
+                        }
+                    } catch (err) {
+                        results[table] = { error: err.message };
+                    }
+                }
+                
+                addResult('RLS Test Rezultati', results);
+                
+                // Preveri, ali so podatki dostopni
+                const { data: testData, error: testError } = await supabase
+                    .from('swimmers')
+                    .select('id, first_name, last_name')
+                    .eq('is_deleted', false)
+                    .limit(3);
+                
+                if (testError) {
+                    addStatus(`❌ RLS blokira dostop do podatkov: ${testError.message}`, 'error');
+                } else {
+                    addStatus(`✅ RLS omogoča dostop do podatkov (${testData.length} zapisov)`, 'success');
+                }
+                
+            } catch (error) {
+                addStatus(`❌ Napaka pri testiranju RLS: ${error.message}`, 'error');
+                addResult('RLS Napaka', { error: error.message });
+            }
+        }
+
+        // Avtomatsko testiraj povezavo ob nalaganju strani
+        window.addEventListener('load', () => {
+            testConnection();
+        });
+    </script>
+</body>
+</html>

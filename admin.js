@@ -17,9 +17,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Uporabi centralizirano konfiguracijo
     const supabase = createSupabaseClient();
     if (!supabase) {
+        console.error('❌ Napaka: Ne morem vzpostaviti povezave z bazo podatkov.');
         alert('Napaka: Ne morem vzpostaviti povezave z bazo podatkov.');
         return;
     }
+    
+    console.log('✅ Supabase client uspešno ustvarjen:', supabase);
     
 
 
@@ -246,26 +249,31 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===== Nalaganje podatkov =====
     async function loadData() {
         try {
+            console.log('🔄 Začenjam nalaganje podatkov iz Supabase...');
+            
             // Naloži termine iz Supabase
             const { data: termsData, error: termsError } = await supabase
                 .from('terms')
                 .select('*');
             
             if (termsError) {
-                console.error('Napaka pri nalaganju terminov:', termsError);
+                console.error('❌ Napaka pri nalaganju terminov:', termsError);
             } else {
                 TERMS = termsData || [];
+                console.log(`✅ Naloženih terminov: ${TERMS.length}`, TERMS);
             }
 
             // Naloži plavalce iz Supabase
+            console.log('🔍 Nalagam plavalce iz Supabase...');
             const { data: swimmersData, error: swimmersError } = await supabase
                 .from('swimmers')
                 .select('*');
             
             if (swimmersError) {
-                console.error('Napaka pri nalaganju plavalcev:', swimmersError);
+                console.error('❌ Napaka pri nalaganju plavalcev:', swimmersError);
             } else {
                 swimmers = swimmersData || [];
+                console.log(`✅ Naloženih plavalcev: ${swimmers.length}`, swimmers);
             }
 
             // Naloži prisotnost iz Supabase
@@ -315,9 +323,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 .select('*');
             
             if (trainersError) {
-                console.error('Napaka pri nalaganju trenerjev:', trainersError);
+                console.error('❌ Napaka pri nalaganju trenerjev:', trainersError);
             } else {
                 trainers = trainersData || [];
+                console.log(`✅ Naloženih trenerjev: ${trainers.length}`, trainers);
             }
 
             // Naloži prisotnost trenerjev iz Supabase
@@ -366,6 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateSwimmerSelects();
             updateTermSelects();
             updateTrainerSelects();
+            console.log('🔄 Posodabljam UI elemente...');
             updateSwimmersList();
             updateTermList();
             updateTrainersList();
@@ -379,9 +389,24 @@ document.addEventListener('DOMContentLoaded', () => {
             // Prikaži nastavitve stroškov prog in urnih postavk trenerjev
             renderTermCostsSettings();
             renderTrainerRatesSettings();
+            
+            console.log('✅ Vsi podatki so bili uspešno naloženi in UI posodobljen!');
+            
+            // Dodatno preverjanje - preveri, ali so podatki res v bazi
+            console.log('🔍 Preverjam podatke v bazi podatkov...');
+            const { data: testData, error: testError } = await supabase
+                .from('swimmers')
+                .select('count(*)')
+                .eq('is_deleted', false);
+            
+            if (testError) {
+                console.error('❌ Napaka pri preverjanju podatkov:', testError);
+            } else {
+                console.log('📊 Število aktivnih plavalcev v bazi:', testData);
+            }
 
         } catch (error) {
-            console.error('Napaka pri nalaganju podatkov:', error);
+            console.error('❌ Napaka pri nalaganju podatkov:', error);
         }
     }
 
