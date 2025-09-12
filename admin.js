@@ -70,20 +70,24 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('- currentFinanceYear:', currentFinanceYear);
     
     // Trenutni mesec in leto za swimmer fees sekcijo
-    let currentSwimmerFeesMonth = new Date().getMonth() + 1; // 1-12
-    let currentSwimmerFeesYear = new Date().getFullYear();
+    let currentSwimmerFeesMonth = now.getMonth() + 1; // 1-12 (September = 9)
+    let currentSwimmerFeesYear = now.getFullYear();
+    console.log('🔍 Inicializacija swimmer fees - mesec:', currentSwimmerFeesMonth, 'leto:', currentSwimmerFeesYear);
     
     // Trenutni mesec in leto za trainer summary sekcijo
-    let currentTrainerSummaryMonth = new Date().getMonth() + 1; // 1-12
-    let currentTrainerSummaryYear = new Date().getFullYear();
+    let currentTrainerSummaryMonth = now.getMonth() + 1; // 1-12 (September = 9)
+    let currentTrainerSummaryYear = now.getFullYear();
+    console.log('🔍 Inicializacija trainer summary - mesec:', currentTrainerSummaryMonth, 'leto:', currentTrainerSummaryYear);
     
     // Trenutni mesec in leto za trainer notes sekcijo
-    let currentTrainerNotesMonth = new Date().getMonth() + 1; // 1-12
-    let currentTrainerNotesYear = new Date().getFullYear();
+    let currentTrainerNotesMonth = now.getMonth() + 1; // 1-12 (September = 9)
+    let currentTrainerNotesYear = now.getFullYear();
+    console.log('🔍 Inicializacija trainer notes - mesec:', currentTrainerNotesMonth, 'leto:', currentTrainerNotesYear);
     
     // Trenutni mesec in leto za swimmer summary sekcijo
-    let currentSwimmerSummaryMonth = new Date().getMonth() + 1; // 1-12
-    let currentSwimmerSummaryYear = new Date().getFullYear();
+    let currentSwimmerSummaryMonth = now.getMonth() + 1; // 1-12 (September = 9)
+    let currentSwimmerSummaryYear = now.getFullYear();
+    console.log('🔍 Inicializacija swimmer summary - mesec:', currentSwimmerSummaryMonth, 'leto:', currentSwimmerSummaryYear);
 
     const DAYNAME = ["","Ponedeljek","Torek","Sreda","Četrtek","Petek","Sobota","Nedelja"];
     const DAY_SHORT_NAME = ["", "Pon.", "Tor.", "Sre.", "Čet.", "Pet.", "Sob.", "Ned."];
@@ -122,13 +126,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function updateSwimmerFeesMonthDisplay() {
+        console.log('🔍 updateSwimmerFeesMonthDisplay - currentSwimmerFeesMonth:', currentSwimmerFeesMonth, 'currentSwimmerFeesYear:', currentSwimmerFeesYear);
         if (elCurrentSwimmerFeesMonthYear) {
             const monthNames = ["Januar", "Februar", "Marec", "April", "Maj", "Junij", 
                               "Julij", "Avgust", "September", "Oktober", "November", "December"];
-            elCurrentSwimmerFeesMonthYear.textContent = `${monthNames[currentSwimmerFeesMonth - 1]} ${currentSwimmerFeesYear}`;
+            const monthIndex = currentSwimmerFeesMonth - 1; // Convert 1-based to 0-based
+            elCurrentSwimmerFeesMonthYear.textContent = `${monthNames[monthIndex]} ${currentSwimmerFeesYear}`;
+            console.log('✅ Swimmer fees prikazan mesec:', monthNames[monthIndex], currentSwimmerFeesYear);
+        } else {
+            console.warn('⚠️ elCurrentSwimmerFeesMonthYear element ni najden');
         }
         if (elSwimmerFeesMonthYearInput) {
             elSwimmerFeesMonthYearInput.value = `${currentSwimmerFeesYear}-${currentSwimmerFeesMonth.toString().padStart(2, '0')}`;
+            console.log('✅ Swimmer fees kalendar nastavljen na:', elSwimmerFeesMonthYearInput.value);
+        } else {
+            console.warn('⚠️ elSwimmerFeesMonthYearInput element ni najden');
         }
     }
     
@@ -189,15 +201,25 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Funkcije za prikaz mesecev - trainer summary
     function updateTrainerSummaryMonthDisplay() {
+        console.log('🔍 updateTrainerSummaryMonthDisplay - currentTrainerSummaryMonth:', currentTrainerSummaryMonth, 'currentTrainerSummaryYear:', currentTrainerSummaryYear);
         const elCurrentTrainerSummaryMonthYear = document.getElementById('currentTrainerSummaryMonthYear');
         const elTrainerSummaryMonthYearInput = document.getElementById('trainerSummaryMonthYearInput');
+        
         if (elCurrentTrainerSummaryMonthYear) {
             const monthNames = ["Januar", "Februar", "Marec", "April", "Maj", "Junij", 
                               "Julij", "Avgust", "September", "Oktober", "November", "December"];
-            elCurrentTrainerSummaryMonthYear.textContent = `${monthNames[currentTrainerSummaryMonth - 1]} ${currentTrainerSummaryYear}`;
+            const monthIndex = currentTrainerSummaryMonth - 1; // Convert 1-based to 0-based
+            elCurrentTrainerSummaryMonthYear.textContent = `${monthNames[monthIndex]} ${currentTrainerSummaryYear}`;
+            console.log('✅ Trainer summary prikazan mesec:', monthNames[monthIndex], currentTrainerSummaryYear);
+        } else {
+            console.warn('⚠️ elCurrentTrainerSummaryMonthYear element ni najden');
         }
+        
         if (elTrainerSummaryMonthYearInput) {
             elTrainerSummaryMonthYearInput.value = `${currentTrainerSummaryYear}-${currentTrainerSummaryMonth.toString().padStart(2, '0')}`;
+            console.log('✅ Trainer summary kalendar nastavljen na:', elTrainerSummaryMonthYearInput.value);
+        } else {
+            console.warn('⚠️ elTrainerSummaryMonthYearInput element ni najden');
         }
     }
     
@@ -229,15 +251,25 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Funkcije za prikaz mesecev - trainer notes
     function updateTrainerNotesMonthDisplay() {
+        console.log('🔍 updateTrainerNotesMonthDisplay - currentTrainerNotesMonth:', currentTrainerNotesMonth, 'currentTrainerNotesYear:', currentTrainerNotesYear);
         const elCurrentTrainerNotesMonthYear = document.getElementById('currentTrainerNotesMonthYear');
         const elTrainerNotesMonthYearInput = document.getElementById('trainerNotesMonthYearInput');
+        
         if (elCurrentTrainerNotesMonthYear) {
             const monthNames = ["Januar", "Februar", "Marec", "April", "Maj", "Junij", 
                               "Julij", "Avgust", "September", "Oktober", "November", "December"];
-            elCurrentTrainerNotesMonthYear.textContent = `${monthNames[currentTrainerNotesMonth - 1]} ${currentTrainerNotesYear}`;
+            const monthIndex = currentTrainerNotesMonth - 1; // Convert 1-based to 0-based
+            elCurrentTrainerNotesMonthYear.textContent = `${monthNames[monthIndex]} ${currentTrainerNotesYear}`;
+            console.log('✅ Trainer notes prikazan mesec:', monthNames[monthIndex], currentTrainerNotesYear);
+        } else {
+            console.warn('⚠️ elCurrentTrainerNotesMonthYear element ni najden');
         }
+        
         if (elTrainerNotesMonthYearInput) {
             elTrainerNotesMonthYearInput.value = `${currentTrainerNotesYear}-${currentTrainerNotesMonth.toString().padStart(2, '0')}`;
+            console.log('✅ Trainer notes kalendar nastavljen na:', elTrainerNotesMonthYearInput.value);
+        } else {
+            console.warn('⚠️ elTrainerNotesMonthYearInput element ni najden');
         }
     }
     
@@ -269,15 +301,25 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Funkcije za prikaz mesecev - swimmer summary
     function updateSwimmerSummaryMonthDisplay() {
+        console.log('🔍 updateSwimmerSummaryMonthDisplay - currentSwimmerSummaryMonth:', currentSwimmerSummaryMonth, 'currentSwimmerSummaryYear:', currentSwimmerSummaryYear);
         const elCurrentSwimmerSummaryMonthYear = document.getElementById('currentSwimmerSummaryMonthYear');
         const elSwimmerSummaryMonthYearInput = document.getElementById('swimmerSummaryMonthYearInput');
+        
         if (elCurrentSwimmerSummaryMonthYear) {
             const monthNames = ["Januar", "Februar", "Marec", "April", "Maj", "Junij", 
                               "Julij", "Avgust", "September", "Oktober", "November", "December"];
-            elCurrentSwimmerSummaryMonthYear.textContent = `${monthNames[currentSwimmerSummaryMonth - 1]} ${currentSwimmerSummaryYear}`;
+            const monthIndex = currentSwimmerSummaryMonth - 1; // Convert 1-based to 0-based
+            elCurrentSwimmerSummaryMonthYear.textContent = `${monthNames[monthIndex]} ${currentSwimmerSummaryYear}`;
+            console.log('✅ Swimmer summary prikazan mesec:', monthNames[monthIndex], currentSwimmerSummaryYear);
+        } else {
+            console.warn('⚠️ elCurrentSwimmerSummaryMonthYear element ni najden');
         }
+        
         if (elSwimmerSummaryMonthYearInput) {
             elSwimmerSummaryMonthYearInput.value = `${currentSwimmerSummaryYear}-${currentSwimmerSummaryMonth.toString().padStart(2, '0')}`;
+            console.log('✅ Swimmer summary kalendar nastavljen na:', elSwimmerSummaryMonthYearInput.value);
+        } else {
+            console.warn('⚠️ elSwimmerSummaryMonthYearInput element ni najden');
         }
     }
     
@@ -2779,6 +2821,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function calculateTrainerSummaryData() {
         const month = currentTrainerSummaryMonth;
         const year = currentTrainerSummaryYear;
+        console.log('🔍 calculateTrainerSummaryData - mesec:', month, 'leto:', year);
         
         if (month === undefined || year === undefined) {
             elTrainerSummaryBox.innerHTML = '<p class="muted">Prosim izberite mesec in leto</p>';
@@ -2975,6 +3018,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function calculateTrainerNotesData() {
         const month = currentTrainerNotesMonth;
         const year = currentTrainerNotesYear;
+        console.log('🔍 calculateTrainerNotesData - mesec:', month, 'leto:', year);
         
         if (month === undefined || year === undefined) {
             document.getElementById('trainerNotesBox').innerHTML = '<p class="muted">Prosim izberite mesec in leto</p>';
@@ -3161,6 +3205,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function refreshSwimmerSummary() {
         const month = currentSwimmerSummaryMonth;
         const year = currentSwimmerSummaryYear;
+        console.log('🔍 refreshSwimmerSummary - mesec:', month, 'leto:', year);
         
         // Osveži podatke o prisotnosti za izbrani mesec
         await loadAttendanceForMonth(year, month);
@@ -3621,6 +3666,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function refreshSwimmerFees() {
         const month = currentSwimmerFeesMonth;
         const year = currentSwimmerFeesYear;
+        console.log('🔍 refreshSwimmerFees - mesec:', month, 'leto:', year);
         
         if (month === undefined || year === undefined) {
             elSwimmerFeesBox.innerHTML = '<p class="muted">Prosim izberite mesec in leto</p>';
