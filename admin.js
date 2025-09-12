@@ -62,6 +62,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // Trenutni mesec in leto za swimmer fees sekcijo
     let currentSwimmerFeesMonth = new Date().getMonth() + 1; // 1-12
     let currentSwimmerFeesYear = new Date().getFullYear();
+    
+    // Trenutni mesec in leto za trainer summary sekcijo
+    let currentTrainerSummaryMonth = new Date().getMonth() + 1; // 1-12
+    let currentTrainerSummaryYear = new Date().getFullYear();
+    
+    // Trenutni mesec in leto za trainer notes sekcijo
+    let currentTrainerNotesMonth = new Date().getMonth() + 1; // 1-12
+    let currentTrainerNotesYear = new Date().getFullYear();
+    
+    // Trenutni mesec in leto za swimmer summary sekcijo
+    let currentSwimmerSummaryMonth = new Date().getMonth() + 1; // 1-12
+    let currentSwimmerSummaryYear = new Date().getFullYear();
 
     const DAYNAME = ["","Ponedeljek","Torek","Sreda","Četrtek","Petek","Sobota","Nedelja"];
     const DAY_SHORT_NAME = ["", "Pon.", "Tor.", "Sre.", "Čet.", "Pet.", "Sob.", "Ned."];
@@ -145,6 +157,126 @@ document.addEventListener('DOMContentLoaded', () => {
         currentSwimmerFeesYear = now.getFullYear();
         updateSwimmerFeesMonthDisplay();
         refreshSwimmerFees();
+    }
+    
+    // Funkcije za prikaz mesecev - trainer summary
+    function updateTrainerSummaryMonthDisplay() {
+        const elCurrentTrainerSummaryMonthYear = document.getElementById('currentTrainerSummaryMonthYear');
+        const elTrainerSummaryMonthYearInput = document.getElementById('trainerSummaryMonthYearInput');
+        if (elCurrentTrainerSummaryMonthYear) {
+            const monthNames = ["Januar", "Februar", "Marec", "April", "Maj", "Junij", 
+                              "Julij", "Avgust", "September", "Oktober", "November", "December"];
+            elCurrentTrainerSummaryMonthYear.textContent = `${monthNames[currentTrainerSummaryMonth - 1]} ${currentTrainerSummaryYear}`;
+        }
+        if (elTrainerSummaryMonthYearInput) {
+            elTrainerSummaryMonthYearInput.value = `${currentTrainerSummaryYear}-${currentTrainerSummaryMonth.toString().padStart(2, '0')}`;
+        }
+    }
+    
+    function navigateTrainerSummaryMonth(direction) {
+        if (direction === 'prev') {
+            currentTrainerSummaryMonth--;
+            if (currentTrainerSummaryMonth < 1) {
+                currentTrainerSummaryMonth = 12;
+                currentTrainerSummaryYear--;
+            }
+        } else if (direction === 'next') {
+            currentTrainerSummaryMonth++;
+            if (currentTrainerSummaryMonth > 12) {
+                currentTrainerSummaryMonth = 1;
+                currentTrainerSummaryYear++;
+            }
+        }
+        updateTrainerSummaryMonthDisplay();
+        calculateTrainerSummaryData();
+    }
+    
+    function goToCurrentTrainerSummaryMonth() {
+        const now = new Date();
+        currentTrainerSummaryMonth = now.getMonth() + 1;
+        currentTrainerSummaryYear = now.getFullYear();
+        updateTrainerSummaryMonthDisplay();
+        calculateTrainerSummaryData();
+    }
+    
+    // Funkcije za prikaz mesecev - trainer notes
+    function updateTrainerNotesMonthDisplay() {
+        const elCurrentTrainerNotesMonthYear = document.getElementById('currentTrainerNotesMonthYear');
+        const elTrainerNotesMonthYearInput = document.getElementById('trainerNotesMonthYearInput');
+        if (elCurrentTrainerNotesMonthYear) {
+            const monthNames = ["Januar", "Februar", "Marec", "April", "Maj", "Junij", 
+                              "Julij", "Avgust", "September", "Oktober", "November", "December"];
+            elCurrentTrainerNotesMonthYear.textContent = `${monthNames[currentTrainerNotesMonth - 1]} ${currentTrainerNotesYear}`;
+        }
+        if (elTrainerNotesMonthYearInput) {
+            elTrainerNotesMonthYearInput.value = `${currentTrainerNotesYear}-${currentTrainerNotesMonth.toString().padStart(2, '0')}`;
+        }
+    }
+    
+    function navigateTrainerNotesMonth(direction) {
+        if (direction === 'prev') {
+            currentTrainerNotesMonth--;
+            if (currentTrainerNotesMonth < 1) {
+                currentTrainerNotesMonth = 12;
+                currentTrainerNotesYear--;
+            }
+        } else if (direction === 'next') {
+            currentTrainerNotesMonth++;
+            if (currentTrainerNotesMonth > 12) {
+                currentTrainerNotesMonth = 1;
+                currentTrainerNotesYear++;
+            }
+        }
+        updateTrainerNotesMonthDisplay();
+        calculateTrainerNotesData();
+    }
+    
+    function goToCurrentTrainerNotesMonth() {
+        const now = new Date();
+        currentTrainerNotesMonth = now.getMonth() + 1;
+        currentTrainerNotesYear = now.getFullYear();
+        updateTrainerNotesMonthDisplay();
+        calculateTrainerNotesData();
+    }
+    
+    // Funkcije za prikaz mesecev - swimmer summary
+    function updateSwimmerSummaryMonthDisplay() {
+        const elCurrentSwimmerSummaryMonthYear = document.getElementById('currentSwimmerSummaryMonthYear');
+        const elSwimmerSummaryMonthYearInput = document.getElementById('swimmerSummaryMonthYearInput');
+        if (elCurrentSwimmerSummaryMonthYear) {
+            const monthNames = ["Januar", "Februar", "Marec", "April", "Maj", "Junij", 
+                              "Julij", "Avgust", "September", "Oktober", "November", "December"];
+            elCurrentSwimmerSummaryMonthYear.textContent = `${monthNames[currentSwimmerSummaryMonth - 1]} ${currentSwimmerSummaryYear}`;
+        }
+        if (elSwimmerSummaryMonthYearInput) {
+            elSwimmerSummaryMonthYearInput.value = `${currentSwimmerSummaryYear}-${currentSwimmerSummaryMonth.toString().padStart(2, '0')}`;
+        }
+    }
+    
+    function navigateSwimmerSummaryMonth(direction) {
+        if (direction === 'prev') {
+            currentSwimmerSummaryMonth--;
+            if (currentSwimmerSummaryMonth < 1) {
+                currentSwimmerSummaryMonth = 12;
+                currentSwimmerSummaryYear--;
+            }
+        } else if (direction === 'next') {
+            currentSwimmerSummaryMonth++;
+            if (currentSwimmerSummaryMonth > 12) {
+                currentSwimmerSummaryMonth = 1;
+                currentSwimmerSummaryYear++;
+            }
+        }
+        updateSwimmerSummaryMonthDisplay();
+        refreshSwimmerSummary();
+    }
+    
+    function goToCurrentSwimmerSummaryMonth() {
+        const now = new Date();
+        currentSwimmerSummaryMonth = now.getMonth() + 1;
+        currentSwimmerSummaryYear = now.getFullYear();
+        updateSwimmerSummaryMonthDisplay();
+        refreshSwimmerSummary();
     }
 
     function isValidPhone(phone) {
@@ -497,6 +629,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Inicializiraj prikaz mesecev
             updateFinanceMonthDisplay();
             updateSwimmerFeesMonthDisplay();
+            updateTrainerSummaryMonthDisplay();
+            updateTrainerNotesMonthDisplay();
+            updateSwimmerSummaryMonthDisplay();
             
             console.log('✅ Vsi podatki so bili uspešno naloženi in UI posodobljen!');
             
@@ -2423,14 +2558,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (elCurrentMonthBtn) {
         elCurrentMonthBtn.addEventListener('click', goToCurrentFinanceMonth);
     }
-    if (elCurrentMonthYear) {
-        elCurrentMonthYear.addEventListener('click', () => {
-            if (elMonthYearInput) {
-                elMonthYearInput.click();
-            }
-        });
-    }
-    // Dodaj event listener tudi za kontejner
+    // Event listener za klik na mesec/leto (finance)
     const monthYearContainer = document.getElementById('monthYearContainer');
     if (monthYearContainer) {
         monthYearContainer.addEventListener('click', () => {
@@ -2459,14 +2587,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (elCurrentSwimmerFeesMonthBtn) {
         elCurrentSwimmerFeesMonthBtn.addEventListener('click', goToCurrentSwimmerFeesMonth);
     }
-    if (elCurrentSwimmerFeesMonthYear) {
-        elCurrentSwimmerFeesMonthYear.addEventListener('click', () => {
-            if (elSwimmerFeesMonthYearInput) {
-                elSwimmerFeesMonthYearInput.click();
-            }
-        });
-    }
-    // Dodaj event listener tudi za kontejner
+    // Event listener za klik na mesec/leto (swimmer fees)
     const swimmerFeesMonthYearContainer = document.getElementById('swimmerFeesMonthYearContainer');
     if (swimmerFeesMonthYearContainer) {
         swimmerFeesMonthYearContainer.addEventListener('click', () => {
@@ -2487,6 +2608,105 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+    // Event listenerji za navigacijo mesecev - trainer summary
+    const elPrevTrainerSummaryMonthBtn = document.getElementById('prevTrainerSummaryMonthBtn');
+    const elNextTrainerSummaryMonthBtn = document.getElementById('nextTrainerSummaryMonthBtn');
+    const elCurrentTrainerSummaryMonthBtn = document.getElementById('currentTrainerSummaryMonthBtn');
+    const elTrainerSummaryMonthYearInput = document.getElementById('trainerSummaryMonthYearInput');
+    const trainerSummaryMonthYearContainer = document.getElementById('trainerSummaryMonthYearContainer');
+    
+    if (elPrevTrainerSummaryMonthBtn) {
+        elPrevTrainerSummaryMonthBtn.addEventListener('click', () => navigateTrainerSummaryMonth('prev'));
+    }
+    if (elNextTrainerSummaryMonthBtn) {
+        elNextTrainerSummaryMonthBtn.addEventListener('click', () => navigateTrainerSummaryMonth('next'));
+    }
+    if (elCurrentTrainerSummaryMonthBtn) {
+        elCurrentTrainerSummaryMonthBtn.addEventListener('click', goToCurrentTrainerSummaryMonth);
+    }
+    if (trainerSummaryMonthYearContainer) {
+        trainerSummaryMonthYearContainer.addEventListener('click', () => {
+            if (elTrainerSummaryMonthYearInput) {
+                elTrainerSummaryMonthYearInput.click();
+            }
+        });
+    }
+    if (elTrainerSummaryMonthYearInput) {
+        elTrainerSummaryMonthYearInput.addEventListener('change', (e) => {
+            const [year, month] = e.target.value.split('-');
+            currentTrainerSummaryYear = parseInt(year);
+            currentTrainerSummaryMonth = parseInt(month);
+            updateTrainerSummaryMonthDisplay();
+            calculateTrainerSummaryData();
+        });
+    }
+    
+    // Event listenerji za navigacijo mesecev - trainer notes
+    const elPrevTrainerNotesMonthBtn = document.getElementById('prevTrainerNotesMonthBtn');
+    const elNextTrainerNotesMonthBtn = document.getElementById('nextTrainerNotesMonthBtn');
+    const elCurrentTrainerNotesMonthBtn = document.getElementById('currentTrainerNotesMonthBtn');
+    const elTrainerNotesMonthYearInput = document.getElementById('trainerNotesMonthYearInput');
+    const trainerNotesMonthYearContainer = document.getElementById('trainerNotesMonthYearContainer');
+    
+    if (elPrevTrainerNotesMonthBtn) {
+        elPrevTrainerNotesMonthBtn.addEventListener('click', () => navigateTrainerNotesMonth('prev'));
+    }
+    if (elNextTrainerNotesMonthBtn) {
+        elNextTrainerNotesMonthBtn.addEventListener('click', () => navigateTrainerNotesMonth('next'));
+    }
+    if (elCurrentTrainerNotesMonthBtn) {
+        elCurrentTrainerNotesMonthBtn.addEventListener('click', goToCurrentTrainerNotesMonth);
+    }
+    if (trainerNotesMonthYearContainer) {
+        trainerNotesMonthYearContainer.addEventListener('click', () => {
+            if (elTrainerNotesMonthYearInput) {
+                elTrainerNotesMonthYearInput.click();
+            }
+        });
+    }
+    if (elTrainerNotesMonthYearInput) {
+        elTrainerNotesMonthYearInput.addEventListener('change', (e) => {
+            const [year, month] = e.target.value.split('-');
+            currentTrainerNotesYear = parseInt(year);
+            currentTrainerNotesMonth = parseInt(month);
+            updateTrainerNotesMonthDisplay();
+            calculateTrainerNotesData();
+        });
+    }
+    
+    // Event listenerji za navigacijo mesecev - swimmer summary
+    const elPrevSwimmerSummaryMonthBtn = document.getElementById('prevSwimmerSummaryMonthBtn');
+    const elNextSwimmerSummaryMonthBtn = document.getElementById('nextSwimmerSummaryMonthBtn');
+    const elCurrentSwimmerSummaryMonthBtn = document.getElementById('currentSwimmerSummaryMonthBtn');
+    const elSwimmerSummaryMonthYearInput = document.getElementById('swimmerSummaryMonthYearInput');
+    const swimmerSummaryMonthYearContainer = document.getElementById('swimmerSummaryMonthYearContainer');
+    
+    if (elPrevSwimmerSummaryMonthBtn) {
+        elPrevSwimmerSummaryMonthBtn.addEventListener('click', () => navigateSwimmerSummaryMonth('prev'));
+    }
+    if (elNextSwimmerSummaryMonthBtn) {
+        elNextSwimmerSummaryMonthBtn.addEventListener('click', () => navigateSwimmerSummaryMonth('next'));
+    }
+    if (elCurrentSwimmerSummaryMonthBtn) {
+        elCurrentSwimmerSummaryMonthBtn.addEventListener('click', goToCurrentSwimmerSummaryMonth);
+    }
+    if (swimmerSummaryMonthYearContainer) {
+        swimmerSummaryMonthYearContainer.addEventListener('click', () => {
+            if (elSwimmerSummaryMonthYearInput) {
+                elSwimmerSummaryMonthYearInput.click();
+            }
+        });
+    }
+    if (elSwimmerSummaryMonthYearInput) {
+        elSwimmerSummaryMonthYearInput.addEventListener('change', (e) => {
+            const [year, month] = e.target.value.split('-');
+            currentSwimmerSummaryYear = parseInt(year);
+            currentSwimmerSummaryMonth = parseInt(month);
+            updateSwimmerSummaryMonthDisplay();
+            refreshSwimmerSummary();
+        });
+    }
+
     // ===== Event listener za izbiro plavalca pri dodeljevanju terminov =====
     if (elSwimmerSelect) {
         elSwimmerSelect.addEventListener('change', () => {
@@ -2505,8 +2725,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===== Funkcije za povzetek trenerjev =====
     function calculateTrainerSummaryData() {
-        const month = parseInt(elTrainerSummaryMonthSelect.value);
-        const year = parseInt(elTrainerSummaryYearSelect.value);
+        const month = currentTrainerSummaryMonth;
+        const year = currentTrainerSummaryYear;
         
         if (month === undefined || year === undefined) {
             elTrainerSummaryBox.innerHTML = '<p class="muted">Prosim izberite mesec in leto</p>';
@@ -2701,8 +2921,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===== Funkcije za opombe trenerjev =====
     function calculateTrainerNotesData() {
-        const month = parseInt(document.getElementById('trainerNotesMonthSelect').value);
-        const year = parseInt(document.getElementById('trainerNotesYearSelect').value);
+        const month = currentTrainerNotesMonth;
+        const year = currentTrainerNotesYear;
         
         if (month === undefined || year === undefined) {
             document.getElementById('trainerNotesBox').innerHTML = '<p class="muted">Prosim izberite mesec in leto</p>';
@@ -2988,8 +3208,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Funkcija za osvežitev povzetka udeležbe plavalcev
     async function refreshSwimmerSummary() {
-        const month = parseInt(elSwimmerSummaryMonthSelect.value);
-        const year = parseInt(elSwimmerSummaryYearSelect.value);
+        const month = currentSwimmerSummaryMonth;
+        const year = currentSwimmerSummaryYear;
         
         // Osveži podatke o prisotnosti za izbrani mesec
         await loadAttendanceForMonth(year, month);
