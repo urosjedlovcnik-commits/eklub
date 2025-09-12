@@ -58,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Trenutni mesec in leto za finance sekcijo
     let currentFinanceMonth = new Date().getMonth() + 1; // 1-12
     let currentFinanceYear = new Date().getFullYear();
+    console.log('🔍 Inicializacija mesecev - trenutni mesec:', currentFinanceMonth, 'leto:', currentFinanceYear);
     
     // Trenutni mesec in leto za swimmer fees sekcijo
     let currentSwimmerFeesMonth = new Date().getMonth() + 1; // 1-12
@@ -86,13 +87,16 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Funkcije za navigacijo skozi mesece
     function updateFinanceMonthDisplay() {
+        console.log('🔍 updateFinanceMonthDisplay - currentFinanceMonth:', currentFinanceMonth, 'currentFinanceYear:', currentFinanceYear);
         if (elCurrentMonthYear) {
             const monthNames = ["Januar", "Februar", "Marec", "April", "Maj", "Junij", 
                               "Julij", "Avgust", "September", "Oktober", "November", "December"];
             elCurrentMonthYear.textContent = `${monthNames[currentFinanceMonth - 1]} ${currentFinanceYear}`;
+            console.log('✅ Prikazan mesec:', monthNames[currentFinanceMonth - 1], currentFinanceYear);
         }
         if (elMonthYearInput) {
             elMonthYearInput.value = `${currentFinanceYear}-${currentFinanceMonth.toString().padStart(2, '0')}`;
+            console.log('✅ Kalendar nastavljen na:', elMonthYearInput.value);
         }
     }
     
@@ -108,6 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function navigateFinanceMonth(direction) {
+        console.log('🔄 navigateFinanceMonth - smer:', direction, 'trenutni mesec:', currentFinanceMonth, 'leto:', currentFinanceYear);
         if (direction === 'prev') {
             currentFinanceMonth--;
             if (currentFinanceMonth < 1) {
@@ -121,6 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentFinanceYear++;
             }
         }
+        console.log('🔄 navigateFinanceMonth - novi mesec:', currentFinanceMonth, 'leto:', currentFinanceYear);
         updateFinanceMonthDisplay();
         calculateFinanceData();
     }
@@ -147,6 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const now = new Date();
         currentFinanceMonth = now.getMonth() + 1;
         currentFinanceYear = now.getFullYear();
+        console.log('🔄 goToCurrentFinanceMonth - nastavljam na:', currentFinanceMonth, currentFinanceYear);
         updateFinanceMonthDisplay();
         calculateFinanceData();
     }
@@ -317,6 +324,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const elNextMonthBtn = document.getElementById("nextMonthBtn");
     const elCurrentMonthBtn = document.getElementById("currentMonthBtn");
     const elMonthYearInput = document.getElementById("monthYearInput");
+    
+    console.log('🔍 UI elementi za navigacijo mesecev:');
+    console.log('- elCurrentMonthYear:', elCurrentMonthYear);
+    console.log('- elPrevMonthBtn:', elPrevMonthBtn);
+    console.log('- elNextMonthBtn:', elNextMonthBtn);
+    console.log('- elCurrentMonthBtn:', elCurrentMonthBtn);
+    console.log('- elMonthYearInput:', elMonthYearInput);
     
     // UI elementi za navigacijo mesecev plavalcev
     const elCurrentSwimmerFeesMonthYear = document.getElementById("currentSwimmerFeesMonthYear");
@@ -625,6 +639,8 @@ document.addEventListener('DOMContentLoaded', () => {
             renderTrainerRatesSettings();
             
             // Inicializiraj prikaz mesecev
+            console.log('🔄 Inicializiram prikaz mesecev...');
+            console.log('🔍 Trenutni mesec (finance):', currentFinanceMonth, currentFinanceYear);
             updateFinanceMonthDisplay();
             updateSwimmerFeesMonthDisplay();
             updateTrainerSummaryMonthDisplay();
@@ -2544,12 +2560,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // Event listener za klik na mesec/leto (finance)
     const monthYearContainer = document.getElementById('monthYearContainer');
+    console.log('🔍 monthYearContainer:', monthYearContainer);
+    console.log('🔍 elMonthYearInput:', elMonthYearInput);
     if (monthYearContainer) {
         monthYearContainer.addEventListener('click', () => {
+            console.log('🖱️ Klik na monthYearContainer');
             if (elMonthYearInput) {
+                console.log('📅 Odpiram kalendar');
                 elMonthYearInput.click();
+            } else {
+                console.error('❌ elMonthYearInput ni definiran');
             }
         });
+    } else {
+        console.error('❌ monthYearContainer ni najden');
     }
     if (elMonthYearInput) {
         elMonthYearInput.addEventListener('change', (e) => {
@@ -3234,38 +3258,46 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const month = currentFinanceMonth;
             const year = currentFinanceYear;
+            console.log('🔍 calculateFinanceData - mesec:', month, 'leto:', year);
             
 
             
             if (month === undefined || year === undefined) {
+                console.log('❌ calculateFinanceData - mesec ali leto ni definiran');
                 elFinanceSummaryBox.innerHTML = '<p class="muted">Prosim izberite mesec in leto</p>';
                 elDetailedCostsBox.innerHTML = '<p class="muted">Prosim izberite mesec in leto</p>';
                 return;
             }
 
             // Ustvari datume za mesec
-            const startDate = new Date(year, month, 1);
-            const endDate = new Date(year, month + 1, 0);
+            const startDate = new Date(year, month - 1, 1); // month - 1 ker je JavaScript 0-based
+            const endDate = new Date(year, month, 0); // month ker je JavaScript 0-based
+            console.log('🔍 calculateFinanceData - startDate:', startDate, 'endDate:', endDate);
             
 
             
             // Pridobi nastavitve cen
             const managementCostPerMonth = parseFloat(elManagementCostPerMonth.value) || 500;
+            console.log('🔍 calculateFinanceData - managementCostPerMonth:', managementCostPerMonth);
             
             // Izračunaj prihodke - uporabi individualne pristojbine plavalcev
             const activeSwimmers = swimmers.filter(s => !s.is_deleted);
+            console.log('🔍 calculateFinanceData - activeSwimmers:', activeSwimmers.length);
 
             
             // Pridobi pristojbine plavalcev iz baze
             const swimmerFees = await getSwimmerFeesFromDB(month, year);
+            console.log('🔍 calculateFinanceData - swimmerFees:', swimmerFees.length);
 
             
             let totalRevenue = 0;
+            console.log('🔍 calculateFinanceData - začenjam izračun prihodkov...');
             
             activeSwimmers.forEach(swimmer => {
                 const feeData = swimmerFees[swimmer.id] || { fee: 80, discount: 0 };
                 const finalFee = Math.max(0, feeData.fee - feeData.discount);
                 totalRevenue += finalFee;
+                console.log('🔍 calculateFinanceData - plavalec:', swimmer.first_name, swimmer.last_name, 'fee:', feeData.fee, 'discount:', feeData.discount, 'finalFee:', finalFee);
                 
 
             });
