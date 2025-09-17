@@ -756,13 +756,21 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateSwimmerSelects() {
         // Posodobi select za plavalce
         elSwimmerSelect.innerHTML = '<option value="">Izberi plavalca</option>';
-        swimmers.forEach(s => {
-            if (!s.is_deleted) {
-                const option = document.createElement('option');
-                option.value = s.id;
-                option.textContent = `${s.first_name} ${s.last_name}`;
-                elSwimmerSelect.appendChild(option);
-            }
+        
+        // Sortiraj plavalce po abecedi po priimku, nato po imenu
+        const sortedSwimmers = swimmers
+            .filter(s => !s.is_deleted)
+            .sort((a, b) => {
+                const aName = `${a.last_name} ${a.first_name}`;
+                const bName = `${b.last_name} ${b.first_name}`;
+                return aName.localeCompare(bName, 'sl');
+            });
+        
+        sortedSwimmers.forEach(s => {
+            const option = document.createElement('option');
+            option.value = s.id;
+            option.textContent = `${s.first_name} ${s.last_name}`;
+            elSwimmerSelect.appendChild(option);
         });
 
         // Počisti select za termine
@@ -772,13 +780,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const modalSwimmerSelect = document.getElementById('modalSwimmerSelect');
         if (modalSwimmerSelect) {
             modalSwimmerSelect.innerHTML = '<option value="">Izberi plavalca</option>';
-            swimmers.forEach(s => {
-                if (!s.is_deleted) {
-                    const option = document.createElement('option');
-                    option.value = s.id;
-                    option.textContent = `${s.first_name} ${s.last_name}`;
-                    modalSwimmerSelect.appendChild(option);
-                }
+            
+            // Sortiraj plavalce po abecedi po priimku, nato po imenu
+            const sortedSwimmers = swimmers
+                .filter(s => !s.is_deleted)
+                .sort((a, b) => {
+                    const aName = `${a.last_name} ${a.first_name}`;
+                    const bName = `${b.last_name} ${b.first_name}`;
+                    return aName.localeCompare(bName, 'sl');
+                });
+            
+            sortedSwimmers.forEach(s => {
+                const option = document.createElement('option');
+                option.value = s.id;
+                option.textContent = `${s.first_name} ${s.last_name}`;
+                modalSwimmerSelect.appendChild(option);
             });
         }
     }
@@ -911,9 +927,18 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         const tbody = table.querySelector('tbody');
-        swimmers.forEach(swimmer => {
-            if (!swimmer.is_deleted) {
-                const row = document.createElement('tr');
+        
+        // Sortiraj plavalce po abecedi po priimku, nato po imenu
+        const sortedSwimmers = swimmers
+            .filter(swimmer => !swimmer.is_deleted)
+            .sort((a, b) => {
+                const aName = `${a.last_name} ${a.first_name}`;
+                const bName = `${b.last_name} ${b.first_name}`;
+                return aName.localeCompare(bName, 'sl');
+            });
+        
+        sortedSwimmers.forEach(swimmer => {
+            const row = document.createElement('tr');
                 
                 // Ustvari termine kot "chips" z možnostjo brisanja
                 const termsChips = swimmer.terms.map(termId => {
@@ -929,20 +954,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     return `<span class="chip" data-term-id="${termId}">${termId}</span>`;
                 }).join(' ');
 
-                row.innerHTML = `
-                    <td>${swimmer.first_name}</td>
-                    <td>${swimmer.last_name}</td>
-                    <td>${swimmer.email || '<span class="muted">Brez email naslova</span>'}</td>
-                    <td>${swimmer.phone || '<span class="muted">Brez telefona</span>'}</td>
-                    <td class="terms-cell">${termsChips || '<span class="muted">Brez terminov</span>'}</td>
-                    <td>
-                        <button class="btn warn" onclick="deleteSwimmer('${swimmer.id}')" style="font-size: 12px; padding: 4px 8px;">
-                            Zbriši plavalca
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            }
+            row.innerHTML = `
+                <td>${swimmer.first_name}</td>
+                <td>${swimmer.last_name}</td>
+                <td>${swimmer.email || '<span class="muted">Brez email naslova</span>'}</td>
+                <td>${swimmer.phone || '<span class="muted">Brez telefona</span>'}</td>
+                <td class="terms-cell">${termsChips || '<span class="muted">Brez terminov</span>'}</td>
+                <td>
+                    <button class="btn warn" onclick="deleteSwimmer('${swimmer.id}')" style="font-size: 12px; padding: 4px 8px;">
+                        Zbriši plavalca
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
         });
 
         elSwimmersList.appendChild(table);
@@ -1469,10 +1493,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const termCard = document.createElement('div');
                 termCard.className = 'term-card';
                 
-                // Poišči plavalce za ta termin
-                const assignedSwimmers = swimmers.filter(s => 
-                    s.terms && s.terms.includes(term.id) && !s.is_deleted
-                );
+                // Poišči plavalce za ta termin in jih sortiraj po abecedi
+                const assignedSwimmers = swimmers
+                    .filter(s => s.terms && s.terms.includes(term.id) && !s.is_deleted)
+                    .sort((a, b) => {
+                        const aName = `${a.last_name} ${a.first_name}`;
+                        const bName = `${b.last_name} ${b.first_name}`;
+                        return aName.localeCompare(bName, 'sl');
+                    });
                 
                 let swimmersList = '';
                 if (assignedSwimmers.length > 0) {
@@ -2523,10 +2551,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     const dateStr = formatDate(isoDate);
                     const timeStr = `${term.start_time}-${term.end_time}`;
                     
-                    // Poišči plavalce za ta termin
-                    const assignedSwimmers = swimmers.filter(s => 
-                        s.terms.includes(term.id) && !s.is_deleted
-                    );
+                    // Poišči plavalce za ta termin in jih sortiraj po abecedi
+                    const assignedSwimmers = swimmers
+                        .filter(s => s.terms.includes(term.id) && !s.is_deleted)
+                        .sort((a, b) => {
+                            const aName = `${a.last_name} ${a.first_name}`;
+                            const bName = `${b.last_name} ${b.first_name}`;
+                            return aName.localeCompare(bName, 'sl');
+                        });
                     
                     const swimmerNames = assignedSwimmers.map(s => `${s.first_name} ${s.last_name}`).join('; ');
                     
@@ -3980,7 +4012,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     <tbody>
         `;
         
-        activeSwimmers.forEach(swimmer => {
+        // Sortiraj plavalce po abecedi po priimku, nato po imenu
+        const sortedActiveSwimmers = activeSwimmers.sort((a, b) => {
+            const aName = `${a.last_name} ${a.first_name}`;
+            const bName = `${b.last_name} ${b.first_name}`;
+            return aName.localeCompare(bName, 'sl');
+        });
+        
+        sortedActiveSwimmers.forEach(swimmer => {
             const feeData = swimmerFees[swimmer.id] || { fee: 80, discount: 0 };
             const currentFee = feeData.fee;
             const discount = feeData.discount;
@@ -4475,8 +4514,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 <tbody>
         `;
         
-        for (const swimmer of swimmers) {
-            if (swimmer.is_deleted) continue;
+        // Sortiraj plavalce po abecedi po priimku, nato po imenu
+        const sortedSwimmers = swimmers
+            .filter(swimmer => !swimmer.is_deleted)
+            .sort((a, b) => {
+                const aName = `${a.last_name} ${a.first_name}`;
+                const bName = `${b.last_name} ${b.first_name}`;
+                return aName.localeCompare(bName, 'sl');
+            });
+        
+        for (const swimmer of sortedSwimmers) {
             
             const feeData = swimmerFees[swimmer.id] || { fee: 80, discount: 0 };
             const finalFee = Math.max(0, feeData.fee - feeData.discount);
