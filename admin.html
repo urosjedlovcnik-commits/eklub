@@ -249,6 +249,50 @@
 #terms-section button {
   margin: 0 auto;
 }
+
+/* Stili za tabelico ur in stroškov trenerjev */
+.trainer-hours-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+
+.trainer-hours-table th,
+.trainer-hours-table td {
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.trainer-hours-table th {
+  background-color: #f8f9fa;
+  font-weight: bold;
+  color: #333;
+}
+
+.trainer-hours-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.trainer-hours-table tr:hover {
+  background-color: #f5f5f5;
+}
+
+.trainer-hours-total {
+  font-weight: bold;
+  background-color: #e3f2fd !important;
+  border-top: 2px solid #2196f3 !important;
+}
+
+.trainer-hours-cost {
+  color: #2e7d32;
+  font-weight: bold;
+}
+
+.trainer-hours-hours {
+  color: #1976d2;
+  font-weight: bold;
+}
 </style>
 </head>
 <body>
@@ -434,6 +478,23 @@
             <input type="month" id="trainerSummaryMonthYearInput" style="display: none;">
           </div>
           <div id="trainerSummaryBox">Nalaganje podatkov...</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Izračun ur in stroškov trenerjev (za prikazani mesec)</h3>
+        <div class="inner">
+          <div class="summary-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+            <button class="btn" id="prevTrainerHoursMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Prejšnji mesec">←</button>
+            <div style="text-align: center; min-width: 200px; cursor: pointer; padding: 10px; border-radius: 8px; transition: background-color 0.2s;" id="trainerHoursMonthYearContainer" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
+              <div id="currentTrainerHoursMonthYear" style="font-size: 18px; font-weight: bold; color: #333;"></div>
+              <div style="font-size: 12px; color: #666;">Klikni za izbiro datuma</div>
+            </div>
+            <button class="btn" id="nextTrainerHoursMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Naslednji mesec">→</button>
+            <button class="btn" id="currentTrainerHoursMonthBtn" style="background: #007bff; color: white; padding: 8px 12px; cursor: pointer;" title="Pojdi na trenutni mesec">Trenutni mesec</button>
+            <input type="month" id="trainerHoursMonthYearInput" style="display: none;">
+          </div>
+          <div id="trainerHoursCostsBox">Nalaganje podatkov...</div>
         </div>
       </div>
 

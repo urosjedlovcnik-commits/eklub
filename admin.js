@@ -84,6 +84,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentTrainerNotesYear = now.getFullYear();
     console.log('🔍 Inicializacija trainer notes - mesec:', currentTrainerNotesMonth, 'leto:', currentTrainerNotesYear);
     
+    // Trenutni mesec in leto za trainer hours sekcijo
+    let currentTrainerHoursMonth = now.getMonth() + 1; // 1-12 (September = 9)
+    let currentTrainerHoursYear = now.getFullYear();
+    console.log('🔍 Inicializacija trainer hours - mesec:', currentTrainerHoursMonth, 'leto:', currentTrainerHoursYear);
+    
     // Trenutni mesec in leto za swimmer summary sekcijo
     let currentSwimmerSummaryMonth = now.getMonth() + 1; // 1-12 (September = 9)
     let currentSwimmerSummaryYear = now.getFullYear();
@@ -247,6 +252,56 @@ document.addEventListener('DOMContentLoaded', () => {
         currentTrainerSummaryYear = now.getFullYear();
         updateTrainerSummaryMonthDisplay();
         calculateTrainerSummaryData();
+    }
+    
+    // Funkcije za prikaz mesecev - trainer hours
+    function updateTrainerHoursMonthDisplay() {
+        console.log('🔍 updateTrainerHoursMonthDisplay - currentTrainerHoursMonth:', currentTrainerHoursMonth, 'currentTrainerHoursYear:', currentTrainerHoursYear);
+        const elCurrentTrainerHoursMonthYear = document.getElementById('currentTrainerHoursMonthYear');
+        const elTrainerHoursMonthYearInput = document.getElementById('trainerHoursMonthYearInput');
+        
+        if (elCurrentTrainerHoursMonthYear) {
+            const monthNames = ["Januar", "Februar", "Marec", "April", "Maj", "Junij", 
+                              "Julij", "Avgust", "September", "Oktober", "November", "December"];
+            const monthIndex = currentTrainerHoursMonth - 1; // Convert 1-based to 0-based
+            elCurrentTrainerHoursMonthYear.textContent = `${monthNames[monthIndex]} ${currentTrainerHoursYear}`;
+            console.log('✅ Trainer hours prikazan mesec:', monthNames[monthIndex], currentTrainerHoursYear);
+        } else {
+            console.warn('⚠️ elCurrentTrainerHoursMonthYear element ni najden');
+        }
+        
+        if (elTrainerHoursMonthYearInput) {
+            elTrainerHoursMonthYearInput.value = `${currentTrainerHoursYear}-${currentTrainerHoursMonth.toString().padStart(2, '0')}`;
+            console.log('✅ Trainer hours kalendar nastavljen na:', elTrainerHoursMonthYearInput.value);
+        } else {
+            console.warn('⚠️ elTrainerHoursMonthYearInput element ni najden');
+        }
+    }
+    
+    function navigateTrainerHoursMonth(direction) {
+        if (direction === 'prev') {
+            currentTrainerHoursMonth--;
+            if (currentTrainerHoursMonth < 1) {
+                currentTrainerHoursMonth = 12;
+                currentTrainerHoursYear--;
+            }
+        } else if (direction === 'next') {
+            currentTrainerHoursMonth++;
+            if (currentTrainerHoursMonth > 12) {
+                currentTrainerHoursMonth = 1;
+                currentTrainerHoursYear++;
+            }
+        }
+        updateTrainerHoursMonthDisplay();
+        calculateTrainerHoursCostsData();
+    }
+    
+    function goToCurrentTrainerHoursMonth() {
+        const now = new Date();
+        currentTrainerHoursMonth = now.getMonth() + 1;
+        currentTrainerHoursYear = now.getFullYear();
+        updateTrainerHoursMonthDisplay();
+        calculateTrainerHoursCostsData();
     }
     
     // Funkcije za prikaz mesecev - trainer notes
@@ -422,6 +477,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const elTrainersList = document.getElementById("trainersList");
     // Opomba: Stari elementi za trainer summary so bili zamenjani z navigacijskimi gumbi
     const elTrainerSummaryBox = document.getElementById("trainerSummaryBox");
+    const elTrainerHoursCostsBox = document.getElementById("trainerHoursCostsBox");
     
     // UI elementi za Finance sekcijo
     // Opomba: Stari elementi so bili zamenjani z navigacijskimi gumbi
@@ -684,6 +740,8 @@ document.addEventListener('DOMContentLoaded', () => {
             updateTrainersList();
             updateExportSelects();
             updateTrainerSummaryControls();
+            calculateTrainerSummaryData(); // Prikaži povzetek trenerjev
+            calculateTrainerHoursCostsData(); // Prikaži ure in stroške trenerjev
             calculateTrainerNotesData(); // Prikaži opombe trenerjev
             
             // Osveži povzetek udeležbe plavalcev
@@ -703,6 +761,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateFinanceMonthDisplay();
             updateSwimmerFeesMonthDisplay();
             updateTrainerSummaryMonthDisplay();
+            updateTrainerHoursMonthDisplay();
             updateTrainerNotesMonthDisplay();
             updateSwimmerSummaryMonthDisplay();
             
@@ -2760,6 +2819,45 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
+    // Event listenerji za navigacijo mesecev - trainer hours
+    const elPrevTrainerHoursMonthBtn = document.getElementById('prevTrainerHoursMonthBtn');
+    const elNextTrainerHoursMonthBtn = document.getElementById('nextTrainerHoursMonthBtn');
+    const elCurrentTrainerHoursMonthBtn = document.getElementById('currentTrainerHoursMonthBtn');
+    const elTrainerHoursMonthYearInput = document.getElementById('trainerHoursMonthYearInput');
+    const trainerHoursMonthYearContainer = document.getElementById('trainerHoursMonthYearContainer');
+    
+    if (elPrevTrainerHoursMonthBtn) {
+        elPrevTrainerHoursMonthBtn.addEventListener('click', () => navigateTrainerHoursMonth('prev'));
+    }
+    if (elNextTrainerHoursMonthBtn) {
+        elNextTrainerHoursMonthBtn.addEventListener('click', () => navigateTrainerHoursMonth('next'));
+    }
+    if (elCurrentTrainerHoursMonthBtn) {
+        elCurrentTrainerHoursMonthBtn.addEventListener('click', goToCurrentTrainerHoursMonth);
+    }
+    if (trainerHoursMonthYearContainer) {
+        trainerHoursMonthYearContainer.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            createCustomDatePicker(currentTrainerHoursMonth, currentTrainerHoursYear, (month, year) => {
+                currentTrainerHoursMonth = month;
+                currentTrainerHoursYear = year;
+                updateTrainerHoursMonthDisplay();
+                calculateTrainerHoursCostsData();
+            });
+        });
+    }
+    if (elTrainerHoursMonthYearInput) {
+        elTrainerHoursMonthYearInput.addEventListener('change', (e) => {
+            const [year, month] = e.target.value.split('-');
+            currentTrainerHoursYear = parseInt(year);
+            currentTrainerHoursMonth = parseInt(month);
+            updateTrainerHoursMonthDisplay();
+            calculateTrainerHoursCostsData();
+        });
+    }
+    
     // Event listenerji za navigacijo mesecev - trainer notes
     const elPrevTrainerNotesMonthBtn = document.getElementById('prevTrainerNotesMonthBtn');
     const elNextTrainerNotesMonthBtn = document.getElementById('nextTrainerNotesMonthBtn');
@@ -3050,6 +3148,173 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         elTrainerSummaryBox.innerHTML = summary;
+    }
+
+    // ===== Funkcije za izračun ur in stroškov trenerjev =====
+    async function calculateTrainerHoursCostsData() {
+        const month = currentTrainerHoursMonth;
+        const year = currentTrainerHoursYear;
+        console.log('🔍 calculateTrainerHoursCostsData - mesec:', month, 'leto:', year);
+        
+        if (month === undefined || year === undefined) {
+            elTrainerHoursCostsBox.innerHTML = '<p class="muted">Prosim izberite mesec in leto</p>';
+            return;
+        }
+
+        // Ustvari datume za mesec
+        const startDate = new Date(year, month - 1, 1);
+        const endDate = new Date(year, month, 0);
+        
+        // Pridobi postavke trenerjev iz baze
+        const trainerRates = await getTrainerRatesFromDB();
+        
+        let summary = '<table class="trainer-hours-table"><thead><tr><th>Trener</th><th>Število terminov</th><th>Skupaj ur</th><th>Postavka/termin</th><th>Skupni strošek</th></tr></thead><tbody>';
+        
+        const trainerStats = {};
+        const processedTrainers = new Set();
+        
+        // Iteriraj po vseh dnevih v mesecu
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+            const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
+            const isoDate = iso(d);
+            
+            TERMS.forEach(term => {
+                if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
+                    // Poišči trenerje za ta termin (redno dodeljeni)
+                    const trainersForTerm = trainers.filter(t => 
+                        t.terms && t.terms.includes(term.id) && !t.is_deleted
+                    );
+                    
+                    // Izračunaj trajanje termina v urah
+                    const startTime = new Date(`2000-01-01T${term.start_time}`);
+                    const endTime = new Date(`2000-01-01T${term.end_time}`);
+                    const durationHours = (endTime - startTime) / (1000 * 60 * 60);
+                    
+                    // Dodaj redno dodeljene trenerje
+                    trainersForTerm.forEach(trainer => {
+                        const key = `${trainer.id}`;
+                        if (!trainerStats[key]) {
+                            trainerStats[key] = {
+                                trainer: trainer,
+                                sessions: 0,
+                                totalHours: 0,
+                                cost: 0
+                            };
+                        }
+                        
+                        // Preveri, ali je trener prisoten na ta dan
+                        const trainerAtt = trainerAttendance[isoDate]?.[term.id]?.[trainer.id];
+                        if (!trainerAtt || trainerAtt.present !== false) {
+                            // Trener je prisoten (ali ni označen kot odsoten)
+                            trainerStats[key].sessions += 1;
+                            trainerStats[key].totalHours += durationHours;
+                            processedTrainers.add(trainer.id);
+                        } else if (trainerAtt.present === false) {
+                            // Trener je odsoten, preveri nadomestnega trenerja
+                            if (trainerAtt.note) {
+                                const substituteIdMatch = trainerAtt.note.match(/\(([a-f0-9-]{36})\)/);
+                                if (substituteIdMatch) {
+                                    const substituteTrainerId = substituteIdMatch[1];
+                                    const substituteTrainer = trainers.find(t => t.id === substituteTrainerId && !t.is_deleted);
+                                    
+                                    if (substituteTrainer) {
+                                        const substituteKey = `${substituteTrainer.id}`;
+                                        
+                                        if (!trainerStats[substituteKey]) {
+                                            trainerStats[substituteKey] = {
+                                                trainer: substituteTrainer,
+                                                sessions: 0,
+                                                totalHours: 0,
+                                                cost: 0
+                                            };
+                                        }
+                                        
+                                        trainerStats[substituteKey].sessions += 1;
+                                        trainerStats[substituteKey].totalHours += durationHours;
+                                        processedTrainers.add(substituteTrainer.id);
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    
+                    // Dodaj nadomestne trenerje iz trainer_attendance (ki niso redno dodeljeni)
+                    if (trainerAttendance[isoDate]?.[term.id]) {
+                        Object.keys(trainerAttendance[isoDate][term.id]).forEach(trainerId => {
+                            // Preveri, če trener ni že vključen kot redno dodeljen
+                            const isRegularlyAssigned = trainersForTerm.some(t => t.id === trainerId);
+                            if (!isRegularlyAssigned) {
+                                const trainer = trainers.find(t => t.id === trainerId && !t.is_deleted);
+                                if (trainer) {
+                                    const key = `${trainer.id}`;
+                                    if (!trainerStats[key]) {
+                                        trainerStats[key] = {
+                                            trainer: trainer,
+                                            sessions: 0,
+                                            totalHours: 0,
+                                            cost: 0
+                                        };
+                                    }
+                                    
+                                    const trainerAtt = trainerAttendance[isoDate][term.id][trainerId];
+                                    if (trainerAtt && trainerAtt.present === true) {
+                                        trainerStats[key].sessions += 1;
+                                        trainerStats[key].totalHours += durationHours;
+                                        processedTrainers.add(trainer.id);
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }
+            });
+        }
+        
+        // Izračunaj stroške za vsakega trenerja
+        let totalCost = 0;
+        let totalSessions = 0;
+        let totalHours = 0;
+        
+        Object.values(trainerStats).forEach(stat => {
+            const trainerRate = trainerRates[stat.trainer.id] || 25; // Default 25€/termin
+            stat.cost = stat.sessions * trainerRate;
+            totalCost += stat.cost;
+            totalSessions += stat.sessions;
+            totalHours += stat.totalHours;
+        });
+        
+        // Prikaži rezultate
+        Object.values(trainerStats).forEach(stat => {
+            const trainerRate = trainerRates[stat.trainer.id] || 25;
+            summary += `
+                <tr>
+                    <td>${stat.trainer.first_name} ${stat.trainer.last_name}</td>
+                    <td class="trainer-hours-hours">${stat.sessions}</td>
+                    <td class="trainer-hours-hours">${stat.totalHours.toFixed(1)}h</td>
+                    <td>${trainerRate.toFixed(2)}€</td>
+                    <td class="trainer-hours-cost">${stat.cost.toFixed(2)}€</td>
+                </tr>
+            `;
+        });
+        
+        // Dodaj skupno vrstico
+        summary += `
+            <tr class="trainer-hours-total">
+                <td><strong>SKUPAJ</strong></td>
+                <td class="trainer-hours-hours"><strong>${totalSessions}</strong></td>
+                <td class="trainer-hours-hours"><strong>${totalHours.toFixed(1)}h</strong></td>
+                <td><strong>-</strong></td>
+                <td class="trainer-hours-cost"><strong>${totalCost.toFixed(2)}€</strong></td>
+            </tr>
+        `;
+        
+        summary += '</tbody></table>';
+        
+        if (Object.keys(trainerStats).length === 0) {
+            summary = '<p class="muted">Ni podatkov o prisotnosti trenerjev za izbrani mesec</p>';
+        }
+        
+        elTrainerHoursCostsBox.innerHTML = summary;
     }
 
     // ===== Funkcije za opombe trenerjev =====
