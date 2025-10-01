@@ -3983,84 +3983,118 @@ document.addEventListener('DOMContentLoaded', () => {
             
 
             
-            // Izračunaj stroške trenerjev - za vsak izveden termin v mesecu
+            // Izračunaj stroške trenerjev - na podlagi ur (enako kot v tabelici ur in stroškov)
             let totalTrainerSessions = 0;
+            let totalTrainerHours = 0;
             let trainerCosts = {};
             
             // Pridobi postavke trenerjev iz baze
             const trainerRates = await getTrainerRatesFromDB();
 
-            
-            // Filtriraj samo aktivne termine za izračun stroškov trenerjev
-            const activeTermsForTrainers = TERMS.filter(term => {
-                const termEndDate = new Date(term.date_to);
-                const today = new Date();
-                const isActive = termEndDate >= today;
-                if (!isActive) {
-                    console.log(`Skipping inactive term ${term.label} (${term.date_to}) for trainer costs`);
-                }
-                return termEndDate >= today;
-            });
-            
-            if (activeTermsForTrainers.length !== TERMS.length) {
-                console.log(`Using ${activeTermsForTrainers.length} active terms out of ${TERMS.length} total terms for trainer cost calculation`);
-            }
-            
-            // Za vsak aktivni termin preštejemo vse dni v mesecu, ko se izvaja
-            activeTermsForTrainers.forEach(term => {
-                // Preveri, ali je termin aktiven v izbranem mesecu
-                const termStartDate = new Date(term.date_from);
-                const termEndDate = new Date(term.date_to);
+            // Iteriraj po vseh dnevih v mesecu
+            for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
+                const isoDate = iso(d);
                 
-                if (startDate <= termEndDate && endDate >= termStartDate) {
-                    // Poišči trenerje za ta termin
-                    const trainersForTerm = trainers.filter(t => 
-                        t.terms && t.terms.includes(term.id) && !t.is_deleted
-                    );
-                    
-                    // Preštej vse dni v mesecu, ko se termin izvaja
-                    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-                        const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
-                        const isoDate = iso(d);
+                TERMS.forEach(term => {
+                    if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
+                        // Poišči trenerje za ta termin (redno dodeljeni)
+                        const trainersForTerm = trainers.filter(t => 
+                            t.terms && t.terms.includes(term.id) && !t.is_deleted
+                        );
                         
-                        // Preveri, ali je termin na ta dan in ali je aktiven
-                        if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
-                            // Preveri, ali je termin deaktiviran za ta dan
-                            const termStatus = getTermStatus(d, term.id);
-                            if (termStatus.status !== "inactive") {
-                                // Termin je aktiven, preveri prisotnost trenerjev
-                                trainersForTerm.forEach(trainer => {
-                                    if (!trainerCosts[trainer.id]) {
-                                        trainerCosts[trainer.id] = {
-                                            trainer: trainer,
-                                            sessions: 0,
-                                            cost: 0
-                                        };
-                                    }
-                                    
-                                    // Preveri, ali je trener prisoten na ta dan
-                                    const trainerAtt = trainerAttendance[isoDate]?.[term.id]?.[trainer.id];
-                                    if (!trainerAtt || trainerAtt.present !== false) {
-                                        // Trener je prisoten (ali ni označen kot odsoten)
-                                        trainerCosts[trainer.id].sessions += 1;
-                                        totalTrainerSessions += 1;
-                                    }
-                                });
-                            } else {
-                                console.log(`Term ${term.label} is inactive on ${isoDate}`);
+                        // Izračunaj trajanje termina v urah
+                        const startTime = new Date(`2000-01-01T${term.start_time}`);
+                        const endTime = new Date(`2000-01-01T${term.end_time}`);
+                        const durationHours = (endTime - startTime) / (1000 * 60 * 60);
+                        
+                        // Dodaj redno dodeljene trenerje
+                        trainersForTerm.forEach(trainer => {
+                            const key = `${trainer.id}`;
+                            if (!trainerCosts[key]) {
+                                trainerCosts[key] = {
+                                    trainer: trainer,
+                                    sessions: 0,
+                                    totalHours: 0,
+                                    cost: 0
+                                };
                             }
+                            
+                            // Preveri, ali je trener prisoten na ta dan
+                            const trainerAtt = trainerAttendance[isoDate]?.[term.id]?.[trainer.id];
+                            if (!trainerAtt || trainerAtt.present !== false) {
+                                // Trener je prisoten (ali ni označen kot odsoten)
+                                trainerCosts[key].sessions += 1;
+                                trainerCosts[key].totalHours += durationHours;
+                                totalTrainerSessions += 1;
+                                totalTrainerHours += durationHours;
+                            } else if (trainerAtt.present === false) {
+                                // Trener je odsoten, preveri nadomestnega trenerja
+                                if (trainerAtt.note) {
+                                    const substituteIdMatch = trainerAtt.note.match(/\(([a-f0-9-]{36})\)/);
+                                    if (substituteIdMatch) {
+                                        const substituteTrainerId = substituteIdMatch[1];
+                                        const substituteTrainer = trainers.find(t => t.id === substituteTrainerId && !t.is_deleted);
+                                        
+                                        if (substituteTrainer) {
+                                            const substituteKey = `${substituteTrainer.id}`;
+                                            
+                                            if (!trainerCosts[substituteKey]) {
+                                                trainerCosts[substituteKey] = {
+                                                    trainer: substituteTrainer,
+                                                    sessions: 0,
+                                                    totalHours: 0,
+                                                    cost: 0
+                                                };
+                                            }
+                                            
+                                            trainerCosts[substituteKey].sessions += 1;
+                                            trainerCosts[substituteKey].totalHours += durationHours;
+                                            totalTrainerSessions += 1;
+                                            totalTrainerHours += durationHours;
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                        
+                        // Dodaj nadomestne trenerje iz trainer_attendance (ki niso redno dodeljeni)
+                        if (trainerAttendance[isoDate]?.[term.id]) {
+                            Object.keys(trainerAttendance[isoDate][term.id]).forEach(trainerId => {
+                                // Preveri, če trener ni že vključen kot redno dodeljen
+                                const isRegularlyAssigned = trainersForTerm.some(t => t.id === trainerId);
+                                if (!isRegularlyAssigned) {
+                                    const trainer = trainers.find(t => t.id === trainerId && !t.is_deleted);
+                                    if (trainer) {
+                                        const key = `${trainer.id}`;
+                                        if (!trainerCosts[key]) {
+                                            trainerCosts[key] = {
+                                                trainer: trainer,
+                                                sessions: 0,
+                                                totalHours: 0,
+                                                cost: 0
+                                            };
+                                        }
+                                        
+                                        const trainerAtt = trainerAttendance[isoDate][term.id][trainerId];
+                                        if (trainerAtt && trainerAtt.present === true) {
+                                            trainerCosts[key].sessions += 1;
+                                            trainerCosts[key].totalHours += durationHours;
+                                            totalTrainerSessions += 1;
+                                            totalTrainerHours += durationHours;
+                                        }
+                                    }
+                                }
+                            });
                         }
                     }
-                }
-            });
+                });
+            }
             
-
-            
-            // Izračunaj stroške trenerjev - za vsak izveden termin v mesecu
+            // Izračunaj stroške trenerjev - na podlagi ur
             for (const trainerCost of Object.values(trainerCosts)) {
-                const trainerRate = trainerRates[trainerCost.trainer.id] || 25; // Default 25€/termin
-                trainerCost.cost = trainerCost.sessions * trainerRate;
-
+                const trainerHourlyRate = trainerRates[trainerCost.trainer.id] || 25; // Default 25€/uro
+                trainerCost.cost = trainerCost.totalHours * trainerHourlyRate;
             }
             
             const totalTrainerCost = Object.values(trainerCosts).reduce((sum, tc) => sum + tc.cost, 0);
@@ -4188,7 +4222,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <tr>
                             <td>Stroški trenerjev</td>
                             <td>${totalTrainerCost.toFixed(2)} €</td>
-                            <td>${totalTrainerSessions} izvedenih terminov (individualne postavke na termin)</td>
+                            <td>${totalTrainerHours.toFixed(2)}h opravljenih ur (individualne postavke na uro)</td>
                         </tr>
                         <tr>
                             <td>Stroški vodenja</td>
