@@ -3168,7 +3168,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Pridobi postavke trenerjev iz baze
         const trainerRates = await getTrainerRatesFromDB();
         
-        let summary = '<table class="trainer-hours-table"><thead><tr><th>Trener</th><th>Število terminov</th><th>Skupaj ur</th><th>Postavka/termin</th><th>Skupni strošek</th></tr></thead><tbody>';
+        let summary = '<table class="trainer-hours-table"><thead><tr><th>Trener</th><th>Število terminov</th><th>Skupaj ur</th><th>Urna postavka</th><th>Skupni strošek</th></tr></thead><tbody>';
         
         const trainerStats = {};
         const processedTrainers = new Set();
@@ -3276,8 +3276,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let totalHours = 0;
         
         Object.values(trainerStats).forEach(stat => {
-            const trainerRate = trainerRates[stat.trainer.id] || 25; // Default 25€/termin
-            stat.cost = stat.sessions * trainerRate;
+            const trainerHourlyRate = trainerRates[stat.trainer.id] || 25; // Default 25€/uro
+            stat.cost = stat.totalHours * trainerHourlyRate;
             totalCost += stat.cost;
             totalSessions += stat.sessions;
             totalHours += stat.totalHours;
@@ -3285,13 +3285,13 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Prikaži rezultate
         Object.values(trainerStats).forEach(stat => {
-            const trainerRate = trainerRates[stat.trainer.id] || 25;
+            const trainerHourlyRate = trainerRates[stat.trainer.id] || 25;
             summary += `
                 <tr>
                     <td>${stat.trainer.first_name} ${stat.trainer.last_name}</td>
                     <td class="trainer-hours-hours">${stat.sessions}</td>
-                    <td class="trainer-hours-hours">${stat.totalHours.toFixed(1)}h</td>
-                    <td>${trainerRate.toFixed(2)}€</td>
+                    <td class="trainer-hours-hours">${stat.totalHours.toFixed(2)}h</td>
+                    <td>${trainerHourlyRate.toFixed(2)}€/h</td>
                     <td class="trainer-hours-cost">${stat.cost.toFixed(2)}€</td>
                 </tr>
             `;
@@ -3302,7 +3302,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <tr class="trainer-hours-total">
                 <td><strong>SKUPAJ</strong></td>
                 <td class="trainer-hours-hours"><strong>${totalSessions}</strong></td>
-                <td class="trainer-hours-hours"><strong>${totalHours.toFixed(1)}h</strong></td>
+                <td class="trainer-hours-hours"><strong>${totalHours.toFixed(2)}h</strong></td>
                 <td><strong>-</strong></td>
                 <td class="trainer-hours-cost"><strong>${totalCost.toFixed(2)}€</strong></td>
             </tr>
