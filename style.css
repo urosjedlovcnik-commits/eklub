@@ -15,6 +15,9 @@ h1{margin:0 0 12px;text-align:center}
 .btn.primary-btn{background:var(--pri);border-color:var(--pri);color:#fff}
 .btn.primary-btn:hover{background:var(--pri);opacity:0.9}
 .tag{display:inline-block;background:#eef2ff;border:1px solid #c7d2fe;border-radius:999px;padding:3px 10px;font-size:13px}
+.badge{display:inline-block;background:#fef3c7;border:1px solid #f59e0b;border-radius:4px;padding:2px 6px;font-size:11px;font-weight:600;margin-left:6px}
+.badge.warn{background:#fef2f2;border-color:#f87171;color:#dc2626}
+.badge.success{background:#f0fdf4;border-color:#4ade80;color:#16a34a}
 .grid{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr;gap:12px}
 /* Koledar (širok, nižji) */
 .calendar{grid-column:1 / -1;background:#fff;border:1px solid var(--border);border-radius:12px;padding:8px}

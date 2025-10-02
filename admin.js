@@ -988,13 +988,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const tbody = table.querySelector('tbody');
         
         // Sortiraj plavalce po abecedi po priimku, nato po imenu
-        const sortedSwimmers = swimmers
+        const activeSwimmers = swimmers
             .filter(swimmer => !swimmer.is_deleted)
             .sort((a, b) => {
                 const aName = `${a.last_name} ${a.first_name}`;
                 const bName = `${b.last_name} ${b.first_name}`;
                 return aName.localeCompare(bName, 'sl');
             });
+        
+        const deletedSwimmers = swimmers
+            .filter(swimmer => swimmer.is_deleted)
+            .sort((a, b) => {
+                const aName = `${a.last_name} ${a.first_name}`;
+                const bName = `${b.last_name} ${b.first_name}`;
+                return aName.localeCompare(bName, 'sl');
+            });
+        
+        const sortedSwimmers = [...activeSwimmers, ...deletedSwimmers];
         
         sortedSwimmers.forEach(swimmer => {
             const row = document.createElement('tr');
@@ -1013,16 +1023,27 @@ document.addEventListener('DOMContentLoaded', () => {
                     return `<span class="chip" data-term-id="${termId}">${termId}</span>`;
                 }).join(' ');
 
+            // Določi stil vrstice glede na status
+            if (swimmer.is_deleted) {
+                row.style.opacity = '0.6';
+                row.style.backgroundColor = '#f8f9fa';
+            }
+            
             row.innerHTML = `
-                <td>${swimmer.first_name}</td>
+                <td>${swimmer.first_name} ${swimmer.is_deleted ? '<span class="badge warn">Izbrisan</span>' : ''}</td>
                 <td>${swimmer.last_name}</td>
                 <td>${swimmer.email || '<span class="muted">Brez email naslova</span>'}</td>
                 <td>${swimmer.phone || '<span class="muted">Brez telefona</span>'}</td>
-                <td class="terms-cell">${termsChips || '<span class="muted">Brez terminov</span>'}</td>
+                <td class="terms-cell">${swimmer.is_deleted ? '<span class="muted">Izbrisan</span>' : (termsChips || '<span class="muted">Brez terminov</span>')}</td>
                 <td>
-                    <button class="btn warn" onclick="deleteSwimmer('${swimmer.id}')" style="font-size: 12px; padding: 4px 8px;">
-                        Zbriši plavalca
-                    </button>
+                    ${swimmer.is_deleted ? 
+                        `<button class="btn success" onclick="restoreSwimmer('${swimmer.id}')" style="font-size: 12px; padding: 4px 8px;">
+                            Obnovi plavalca
+                        </button>` :
+                        `<button class="btn warn" onclick="deleteSwimmer('${swimmer.id}')" style="font-size: 12px; padding: 4px 8px;">
+                            Zbriši plavalca
+                        </button>`
+                    }
                 </td>
             `;
             tbody.appendChild(row);
@@ -1390,31 +1411,106 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // ===== Brisanje plavalcev =====
+    // ===== Brisanje plavalcev s kaskadnim brisanjem =====
     window.deleteSwimmer = async function(swimmerId) {
         const swimmer = swimmers.find(s => s.id === swimmerId);
-        if (swimmer) {
-            try {
-                const { error } = await supabase
-                    .from('swimmers')
-                    .update({ is_deleted: true })
-                    .eq('id', swimmerId);
+        if (!swimmer) {
+            alert('Plavalec ne obstaja.');
+            return;
+        }
 
-                if (error) {
-                    console.error('Napaka pri brisanju plavalca:', error);
-                    alert('Napaka pri brisanju plavalca. Preverite konzolo.');
-                    return;
-                }
+        // Preveri povezave pred brisanjem
+        try {
+            const { data: connections, error: checkError } = await supabase
+                .rpc('check_swimmer_connections', { swimmer_uuid: swimmerId });
 
-                // Posodobi lokalno stanje
-                swimmer.is_deleted = true;
-                updateSwimmerSelects();
-                updateSwimmersList();
-                alert('Plavalec uspešno izbrisan.');
-            } catch (error) {
-                console.error('Napaka pri brisanju plavalca:', error);
-                alert('Napaka pri brisanju plavalca.');
+            if (checkError) {
+                console.error('Napaka pri preverjanju povezav:', checkError);
+                alert('Napaka pri preverjanju povezav plavalca.');
+                return;
             }
+
+            if (!connections.exists) {
+                alert('Plavalec ne obstaja ali je že izbrisan.');
+                return;
+            }
+
+            // Prikaži potrditev z informacijami o povezavah
+            const totalConnections = connections.attendance_records + connections.fees_records;
+            const confirmMessage = `Ali ste prepričani, da želite izbrisati plavalca "${connections.swimmer_name}"?\n\n` +
+                `To bo izbrisalo:\n` +
+                `• ${connections.attendance_records} zapisov prisotnosti\n` +
+                `• ${connections.fees_records} zapisov mesečnih pristojbin\n` +
+                `• Skupaj ${totalConnections} povezanih zapisov\n\n` +
+                `To dejanje ni mogoče razveljaviti!`;
+
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            // Izvedi kaskadno brisanje
+            const { data: result, error } = await supabase
+                .rpc('delete_swimmer_cascade', { swimmer_uuid: swimmerId });
+
+            if (error) {
+                console.error('Napaka pri kaskadnem brisanju:', error);
+                alert('Napaka pri brisanju plavalca. Preverite konzolo.');
+                return;
+            }
+
+            if (!result.success) {
+                alert('Napaka: ' + result.message);
+                return;
+            }
+
+            // Posodobi lokalno stanje
+            swimmer.is_deleted = true;
+            updateSwimmerSelects();
+            updateSwimmersList();
+
+            // Prikaži rezultat
+            alert(`Plavalec uspešno izbrisan!\n\n` +
+                `Izbrisano:\n` +
+                `• ${result.deleted_attendance} zapisov prisotnosti\n` +
+                `• ${result.deleted_fees} zapisov mesečnih pristojbin\n` +
+                `• Plavalec označen kot izbrisan`);
+
+        } catch (error) {
+            console.error('Napaka pri brisanju plavalca:', error);
+            alert('Napaka pri brisanju plavalca: ' + error.message);
+        }
+    };
+
+    // ===== Obnovitev plavalca =====
+    window.restoreSwimmer = async function(swimmerId) {
+        try {
+            const { data: result, error } = await supabase
+                .rpc('restore_swimmer', { swimmer_uuid: swimmerId });
+
+            if (error) {
+                console.error('Napaka pri obnavljanju plavalca:', error);
+                alert('Napaka pri obnavljanju plavalca. Preverite konzolo.');
+                return;
+            }
+
+            if (!result.success) {
+                alert('Napaka: ' + result.message);
+                return;
+            }
+
+            // Posodobi lokalno stanje
+            const swimmer = swimmers.find(s => s.id === swimmerId);
+            if (swimmer) {
+                swimmer.is_deleted = false;
+            }
+            updateSwimmerSelects();
+            updateSwimmersList();
+
+            alert(`Plavalec "${result.swimmer_name}" uspešno obnovljen!`);
+
+        } catch (error) {
+            console.error('Napaka pri obnavljanju plavalca:', error);
+            alert('Napaka pri obnavljanju plavalca: ' + error.message);
         }
     };
 
