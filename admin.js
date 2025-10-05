@@ -2678,7 +2678,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // CSV izvoz
-    elExportCsvBtn.addEventListener('click', () => {
+    elExportCsvBtn.addEventListener('click', async () => {
         const month = parseInt(elExportMonthSelect.value);
         const year = parseInt(elExportYearSelect.value);
         
@@ -2687,64 +2687,84 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Ustvari CSV vsebino
-        let csv = 'Datum,Termin,Plavalci,Prisotnost,Opombe\n';
-        
-        // Ustvari datume za mesec (lokalni čas se obravnava v iso() funkciji)
-        // month je 1-based, zato ga pretvorimo v 0-based za JavaScript Date
-        const startDate = new Date(year, month - 1, 1);
-        const endDate = new Date(year, month, 0);
-        
+        try {
+            // Pridobi podatke o vadninah iz baze
+            console.log(`🔍 Pridobivam vadnine za mesec ${month}/${year}...`);
+            const swimmerFees = await getSwimmerFeesFromDB(month, year);
+            console.log('✅ Pridobljene vadnine:', swimmerFees);
 
-        
-        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-            const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
-            const isoDate = iso(d);
+            // Ustvari CSV vsebino z dodano kolono za znesek vadnine
+            let csv = 'Datum,Termin,Plavalci,Prisotnost,Znesek vadnine,Opombe\n';
             
-            TERMS.forEach(term => {
-                if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
-                    const dateStr = formatDate(isoDate);
-                    const timeStr = `${term.start_time}-${term.end_time}`;
-                    
-                    // Poišči plavalce za ta termin in jih sortiraj po abecedi
-                    const assignedSwimmers = swimmers
-                        .filter(s => s.terms.includes(term.id) && !s.is_deleted)
-                        .sort((a, b) => {
-                            const aName = `${a.last_name} ${a.first_name}`;
-                            const bName = `${b.last_name} ${b.first_name}`;
-                            return aName.localeCompare(bName, 'sl');
-                        });
-                    
-                    const swimmerNames = assignedSwimmers.map(s => `${s.first_name} ${s.last_name}`).join('; ');
-                    
-                    // Poišči prisotnost
-                    const termAtt = attendance[isoDate]?.[term.id] || {};
-                    const attendanceList = assignedSwimmers.map(s => {
-                        const status = termAtt[s.id];
-                        return status === 'present' ? 'Prisoten' : 
-                               status === 'absent' ? 'Odstoten' : 
-                               status === 'late' ? 'Pozno' : 'Ni vneseno';
-                    }).join('; ');
-                    
-                    // Poišči opombe
-                    const status = termStatus[isoDate]?.[term.id];
-                    const notes = status?.notes || '';
-                    
-                    csv += `"${dateStr}","${timeStr}","${swimmerNames}","${attendanceList}","${notes}"\n`;
-                }
-            });
+            // Ustvari datume za mesec (lokalni čas se obravnava v iso() funkciji)
+            // month je 1-based, zato ga pretvorimo v 0-based za JavaScript Date
+            const startDate = new Date(year, month - 1, 1);
+            const endDate = new Date(year, month, 0);
+            
+
+            
+            for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
+                const isoDate = iso(d);
+                
+                TERMS.forEach(term => {
+                    if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
+                        const dateStr = formatDate(isoDate);
+                        const timeStr = `${term.start_time}-${term.end_time}`;
+                        
+                        // Poišči plavalce za ta termin in jih sortiraj po abecedi
+                        const assignedSwimmers = swimmers
+                            .filter(s => s.terms.includes(term.id) && !s.is_deleted)
+                            .sort((a, b) => {
+                                const aName = `${a.last_name} ${a.first_name}`;
+                                const bName = `${b.last_name} ${b.first_name}`;
+                                return aName.localeCompare(bName, 'sl');
+                            });
+                        
+                        const swimmerNames = assignedSwimmers.map(s => `${s.first_name} ${s.last_name}`).join('; ');
+                        
+                        // Poišči prisotnost
+                        const termAtt = attendance[isoDate]?.[term.id] || {};
+                        const attendanceList = assignedSwimmers.map(s => {
+                            const status = termAtt[s.id];
+                            return status === 'present' ? 'Prisoten' : 
+                                   status === 'absent' ? 'Odstoten' : 
+                                   status === 'late' ? 'Pozno' : 'Ni vneseno';
+                        }).join('; ');
+                        
+                        // Poišči zneske vadnin za plavalce
+                        const feeList = assignedSwimmers.map(s => {
+                            const feeData = swimmerFees[s.id] || { fee: 80, discount: 0 };
+                            const finalFee = Math.max(0, feeData.fee - feeData.discount);
+                            return `${s.first_name} ${s.last_name}: ${finalFee.toFixed(2)}€`;
+                        }).join('; ');
+                        
+                        // Poišči opombe
+                        const status = termStatus[isoDate]?.[term.id];
+                        const notes = status?.notes || '';
+                        
+                        csv += `"${dateStr}","${timeStr}","${swimmerNames}","${attendanceList}","${feeList}","${notes}"\n`;
+                    }
+                });
+            }
+            
+            // Prenesi CSV datoteko
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `prisotnost_${year}_${month}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            console.log('✅ CSV izvoz uspešno končan');
+            
+        } catch (error) {
+            console.error('❌ Napaka pri izvozu CSV:', error);
+            alert('Napaka pri izvozu povzetka: ' + error.message);
         }
-        
-        // Prenesi CSV datoteko
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', `prisotnost_${year}_${month + 1}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
     });
 
 
