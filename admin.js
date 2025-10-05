@@ -1886,11 +1886,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===== CSV uvoz/izvoz =====
     function updateExportSelects() {
-        // Mesec
+        // Mesec - uporabi 1-based vrednosti za boljšo berljivost
         elExportMonthSelect.innerHTML = '';
         for (let i = 1; i <= 12; i++) {
             const option = document.createElement('option');
-            option.value = i - 1;
+            option.value = i - 1; // Še vedno 0-based za JavaScript Date
             option.textContent = new Date(2024, i - 1, 1).toLocaleDateString('sl-SI', { month: 'long' });
             elExportMonthSelect.appendChild(option);
         }
@@ -1899,7 +1899,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Leto
         elExportYearSelect.innerHTML = '';
         const currentYear = new Date().getFullYear();
-        for (let i = 2025; i <= 2028; i++) {
+        for (let i = currentYear - 1; i <= currentYear + 2; i++) {
             const option = document.createElement('option');
             option.value = i;
             option.textContent = i;
@@ -2677,9 +2677,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // CSV izvoz
+    // CSV izvoz - Povzetek udeležbe plavalcev
     elExportCsvBtn.addEventListener('click', async () => {
-        const month = parseInt(elExportMonthSelect.value);
+        // Popravi problem z meseci - exportMonthSelect vsebuje 0-based vrednosti
+        const month = parseInt(elExportMonthSelect.value) + 1; // Pretvori iz 0-based v 1-based
         const year = parseInt(elExportYearSelect.value);
         
         if (month === undefined || year === undefined) {
@@ -2688,63 +2689,42 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
+            console.log(`🔍 Izvoz povzetka udeležbe za mesec ${month}/${year}...`);
+            
             // Pridobi podatke o vadninah iz baze
-            console.log(`🔍 Pridobivam vadnine za mesec ${month}/${year}...`);
             const swimmerFees = await getSwimmerFeesFromDB(month, year);
             console.log('✅ Pridobljene vadnine:', swimmerFees);
-
-            // Ustvari CSV vsebino z dodano kolono za znesek vadnine
-            let csv = 'Datum,Termin,Plavalci,Prisotnost,Znesek vadnine,Opombe\n';
             
-            // Ustvari datume za mesec (lokalni čas se obravnava v iso() funkciji)
-            // month je 1-based, zato ga pretvorimo v 0-based za JavaScript Date
-            const startDate = new Date(year, month - 1, 1);
-            const endDate = new Date(year, month, 0);
+            // Osveži podatke o prisotnosti za izbrani mesec
+            await loadAttendanceForMonth(year, month);
             
-
+            // Izračunaj povzetek udeležbe (uporabi isto logiko kot na admin strani)
+            const summaryData = calculateSwimmerSummaryData(year, month);
             
-            for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-                const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
-                const isoDate = iso(d);
-                
-                TERMS.forEach(term => {
-                    if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
-                        const dateStr = formatDate(isoDate);
-                        const timeStr = `${term.start_time}-${term.end_time}`;
-                        
-                        // Poišči plavalce za ta termin in jih sortiraj po abecedi
-                        const assignedSwimmers = swimmers
-                            .filter(s => s.terms.includes(term.id) && !s.is_deleted)
-                            .sort((a, b) => {
-                                const aName = `${a.last_name} ${a.first_name}`;
-                                const bName = `${b.last_name} ${b.first_name}`;
-                                return aName.localeCompare(bName, 'sl');
-                            });
-                        
-                        const swimmerNames = assignedSwimmers.map(s => `${s.first_name} ${s.last_name}`).join('; ');
-                        
-                        // Poišči prisotnost
-                        const termAtt = attendance[isoDate]?.[term.id] || {};
-                        const attendanceList = assignedSwimmers.map(s => {
-                            const status = termAtt[s.id];
-                            return status === 'present' ? 'Prisoten' : 
-                                   status === 'absent' ? 'Odstoten' : 
-                                   status === 'late' ? 'Pozno' : 'Ni vneseno';
-                        }).join('; ');
-                        
-                        // Poišči zneske vadnin za plavalce
-                        const feeList = assignedSwimmers.map(s => {
-                            const feeData = swimmerFees[s.id] || { fee: 80, discount: 0 };
-                            const finalFee = Math.max(0, feeData.fee - feeData.discount);
-                            return `${s.first_name} ${s.last_name}: ${finalFee.toFixed(2)}€`;
-                        }).join('; ');
-                        
-                        // Poišči opombe
-                        const status = termStatus[isoDate]?.[term.id];
-                        const notes = status?.notes || '';
-                        
-                        csv += `"${dateStr}","${timeStr}","${swimmerNames}","${attendanceList}","${feeList}","${notes}"\n`;
+            // Ustvari CSV vsebino v obliki povzetka udeležbe plavalcev
+            let csv = 'Plavalec,Obiskani treningi,Možni treningi,Delež (%),Znesek vadnine (€)\n';
+            
+            // Filtriraj plavalce, ki nimajo nobenega možnega obiska in jih sortiraj
+            const rows = Object.values(summaryData)
+                .filter(r => r.pos > 0)
+                .sort((a, b) => (a.last + a.first).localeCompare(b.last + b.first));
+            
+            if (rows.length === 0) {
+                csv += 'Ni plavalcev za izbrani mesec\n';
+            } else {
+                rows.forEach(r => {
+                    const pct = r.pos > 0 ? (r.att / r.pos * 100).toFixed(1) : "0.0";
+                    
+                    // Poišči znesek vadnine za plavalca
+                    const swimmer = swimmers.find(s => s.first_name === r.first && s.last_name === r.last);
+                    let feeAmount = '0.00';
+                    if (swimmer) {
+                        const feeData = swimmerFees[swimmer.id] || { fee: 80, discount: 0 };
+                        const finalFee = Math.max(0, feeData.fee - feeData.discount);
+                        feeAmount = finalFee.toFixed(2);
                     }
+                    
+                    csv += `"${r.first} ${r.last}",${r.att},${r.pos},${pct},${feeAmount}\n`;
                 });
             }
             
@@ -2753,13 +2733,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const link = document.createElement('a');
             const url = URL.createObjectURL(blob);
             link.setAttribute('href', url);
-            link.setAttribute('download', `prisotnost_${year}_${month}.csv`);
+            link.setAttribute('download', `povzetek_udelezbe_${year}_${month}.csv`);
             link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             
-            console.log('✅ CSV izvoz uspešno končan');
+            console.log('✅ CSV izvoz povzetka udeležbe uspešno končan');
             
         } catch (error) {
             console.error('❌ Napaka pri izvozu CSV:', error);
