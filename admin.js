@@ -980,8 +980,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <th>Priimek</th>
                     <th>Email</th>
                     <th>Telefon</th>
-                    <th>Naslov</th>
-                    <th>Pošta</th>
                     <th>Termini</th>
                     <th>Akcije</th>
                 </tr>
@@ -1038,8 +1036,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${swimmer.last_name}</td>
                 <td>${swimmer.email || '<span class="muted">Brez email naslova</span>'}</td>
                 <td>${swimmer.phone || '<span class="muted">Brez telefona</span>'}</td>
-                <td>${swimmer.address || '<span class="muted">Brez naslova</span>'}</td>
-                <td>${swimmer.postal_code || '<span class="muted">Brez pošte</span>'}</td>
                 <td class="terms-cell">${swimmer.is_deleted ? '<span class="muted">Izbrisan</span>' : (termsChips || '<span class="muted">Brez terminov</span>')}</td>
                 <td>
                     ${swimmer.is_deleted ? 

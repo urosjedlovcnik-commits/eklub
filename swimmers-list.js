@@ -134,6 +134,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             <h3 class="swimmer-name">${swimmer.first_name} ${swimmer.last_name}</h3>
                             ${swimmer.email ? `<div class="swimmer-contact">📧 ${swimmer.email}</div>` : ''}
                             ${swimmer.phone ? `<div class="swimmer-contact">📞 ${swimmer.phone}</div>` : ''}
+                            ${swimmer.address ? `<div class="swimmer-contact">🏠 ${swimmer.address}</div>` : ''}
+                            ${swimmer.postal_code ? `<div class="swimmer-contact">📮 ${swimmer.postal_code}</div>` : ''}
                         </div>
                         <div class="swimmer-contact">
                             ${assignedTerms.length} termin${assignedTerms.length === 1 ? '' : assignedTerms.length === 2 ? 'a' : 'ov'}
@@ -195,7 +197,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 swimmer.first_name.toLowerCase().includes(term) ||
                 swimmer.last_name.toLowerCase().includes(term) ||
                 (swimmer.email && swimmer.email.toLowerCase().includes(term)) ||
-                (swimmer.phone && swimmer.phone.includes(term))
+                (swimmer.phone && swimmer.phone.includes(term)) ||
+                (swimmer.address && swimmer.address.toLowerCase().includes(term)) ||
+                (swimmer.postal_code && swimmer.postal_code.includes(term))
             );
         }
         
