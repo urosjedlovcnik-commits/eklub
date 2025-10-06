@@ -5031,6 +5031,50 @@ document.addEventListener('DOMContentLoaded', () => {
     window.updateTrainerRate = updateTrainerRate;
     window.copyFeesForNextYear = copyFeesForNextYear;
     
+    // Funkcija za izvoz seznama plavalcev
+    window.exportSwimmersList = function() {
+        try {
+            // Ustvari CSV vsebino z vsemi plavalci
+            let csv = 'first_name,last_name,email,phone,address,postal_code,terms\n';
+            
+            // Filtriraj samo aktivne plavalce
+            const activeSwimmers = swimmers.filter(s => !s.is_deleted);
+            
+            if (activeSwimmers.length === 0) {
+                alert('Ni plavalcev za izvoz');
+                return;
+            }
+            
+            activeSwimmers.forEach(swimmer => {
+                const termsStr = swimmer.terms && swimmer.terms.length > 0 
+                    ? swimmer.terms.map(termId => {
+                        const term = TERMS.find(t => t.id === termId);
+                        return term ? `${DAY_SHORT_NAME[term.day]}-${term.start_time}-${term.end_time}` : termId;
+                    }).join(',')
+                    : '';
+                
+                csv += `"${swimmer.first_name}","${swimmer.last_name}","${swimmer.email || ''}","${swimmer.phone || ''}","${swimmer.address || ''}","${swimmer.postal_code || ''}","${termsStr}"\n`;
+            });
+            
+            // Prenesi CSV datoteko
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `seznam_plavalcev_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            console.log('✅ CSV izvoz seznama plavalcev uspešno končan');
+            
+        } catch (error) {
+            console.error('❌ Napaka pri izvozu seznama plavalcev:', error);
+            alert('Napaka pri izvozu seznama plavalcev: ' + error.message);
+        }
+    };
+    
                 // Funkcija za prenos primera CSV datoteke za termine plavalcev
             window.downloadSwimmerTermsExample = function() {
                 const csvContent = `first_name,last_name,email,phone,address,postal_code,terms
