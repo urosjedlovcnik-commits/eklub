@@ -1,15 +1,15 @@
 // Admin stran za upravljanje plavalne šole
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 Admin stran se nalaga...');
+    //// console.log('🚀 Admin stran se nalaga...');
     
     // Preveri, če je uporabnik prijavljen
     const session = authManager.isAdminLoggedIn();
     if (!session) {
-        console.log('❌ Uporabnik ni prijavljen, preusmerjam na login...');
+        //// console.log('❌ Uporabnik ni prijavljen, preusmerjam na login...');
         window.location.href = 'admin-login.html';
         return;
     }
-    console.log('✅ Uporabnik je prijavljen:', session);
+    //// console.log('✅ Uporabnik je prijavljen:', session);
     
     // Prikaži informacije o sessiona
     const adminInfo = document.getElementById('adminInfo');
@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
     
-    console.log('✅ Supabase client uspešno ustvarjen:', supabase);
+// console.log('✅ Supabase client uspešno ustvarjen:', supabase);
     
 
 
@@ -63,36 +63,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const now = new Date();
     let currentFinanceMonth = now.getMonth() + 1; // 1-12 (September = 9)
     let currentFinanceYear = now.getFullYear();
-    console.log('🔍 Inicializacija mesecev:');
-    console.log('- Trenutni datum:', now);
-    console.log('- now.getMonth():', now.getMonth(), '(0-based)');
-    console.log('- currentFinanceMonth:', currentFinanceMonth, '(1-based)');
-    console.log('- currentFinanceYear:', currentFinanceYear);
+    //// console.log('🔍 Inicializacija mesecev:');
+    //// console.log('- Trenutni datum:', now);
+    //// console.log('- now.getMonth():', now.getMonth(), '(0-based)');
+    //// console.log('- currentFinanceMonth:', currentFinanceMonth, '(1-based)');
+    //// console.log('- currentFinanceYear:', currentFinanceYear);
     
     // Trenutni mesec in leto za swimmer fees sekcijo
     let currentSwimmerFeesMonth = now.getMonth() + 1; // 1-12 (September = 9)
     let currentSwimmerFeesYear = now.getFullYear();
-    console.log('🔍 Inicializacija swimmer fees - mesec:', currentSwimmerFeesMonth, 'leto:', currentSwimmerFeesYear);
+    //// console.log('🔍 Inicializacija swimmer fees - mesec:', currentSwimmerFeesMonth, 'leto:', currentSwimmerFeesYear);
     
     // Trenutni mesec in leto za trainer summary sekcijo
     let currentTrainerSummaryMonth = now.getMonth() + 1; // 1-12 (September = 9)
     let currentTrainerSummaryYear = now.getFullYear();
-    console.log('🔍 Inicializacija trainer summary - mesec:', currentTrainerSummaryMonth, 'leto:', currentTrainerSummaryYear);
+    //// console.log('🔍 Inicializacija trainer summary - mesec:', currentTrainerSummaryMonth, 'leto:', currentTrainerSummaryYear);
     
     // Trenutni mesec in leto za trainer notes sekcijo
     let currentTrainerNotesMonth = now.getMonth() + 1; // 1-12 (September = 9)
     let currentTrainerNotesYear = now.getFullYear();
-    console.log('🔍 Inicializacija trainer notes - mesec:', currentTrainerNotesMonth, 'leto:', currentTrainerNotesYear);
+    //// console.log('🔍 Inicializacija trainer notes - mesec:', currentTrainerNotesMonth, 'leto:', currentTrainerNotesYear);
     
     // Trenutni mesec in leto za trainer hours sekcijo
     let currentTrainerHoursMonth = now.getMonth() + 1; // 1-12 (September = 9)
     let currentTrainerHoursYear = now.getFullYear();
-    console.log('🔍 Inicializacija trainer hours - mesec:', currentTrainerHoursMonth, 'leto:', currentTrainerHoursYear);
+    //// console.log('🔍 Inicializacija trainer hours - mesec:', currentTrainerHoursMonth, 'leto:', currentTrainerHoursYear);
     
     // Trenutni mesec in leto za swimmer summary sekcijo
     let currentSwimmerSummaryMonth = now.getMonth() + 1; // 1-12 (September = 9)
     let currentSwimmerSummaryYear = now.getFullYear();
-    console.log('🔍 Inicializacija swimmer summary - mesec:', currentSwimmerSummaryMonth, 'leto:', currentSwimmerSummaryYear);
+    //// console.log('🔍 Inicializacija swimmer summary - mesec:', currentSwimmerSummaryMonth, 'leto:', currentSwimmerSummaryYear);
 
     const DAYNAME = ["","Ponedeljek","Torek","Sreda","Četrtek","Petek","Sobota","Nedelja"];
     const DAY_SHORT_NAME = ["", "Pon.", "Tor.", "Sre.", "Čet.", "Pet.", "Sob.", "Ned."];
@@ -105,52 +105,52 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Funkcije za navigacijo skozi mesece
     function updateFinanceMonthDisplay() {
-        console.log('🔍 updateFinanceMonthDisplay - currentFinanceMonth:', currentFinanceMonth, 'currentFinanceYear:', currentFinanceYear);
-        console.log('🔍 updateFinanceMonthDisplay - elCurrentMonthYear:', elCurrentMonthYear);
-        console.log('🔍 updateFinanceMonthDisplay - elMonthYearInput:', elMonthYearInput);
+        //// console.log('🔍 updateFinanceMonthDisplay - currentFinanceMonth:', currentFinanceMonth, 'currentFinanceYear:', currentFinanceYear);
+        //// console.log('🔍 updateFinanceMonthDisplay - elCurrentMonthYear:', elCurrentMonthYear);
+        //// console.log('🔍 updateFinanceMonthDisplay - elMonthYearInput:', elMonthYearInput);
         
         if (elCurrentMonthYear) {
             const monthNames = ["Januar", "Februar", "Marec", "April", "Maj", "Junij", 
                               "Julij", "Avgust", "September", "Oktober", "November", "December"];
             const monthIndex = currentFinanceMonth - 1; // Convert 1-based to 0-based
-            console.log('🔍 updateFinanceMonthDisplay - monthIndex:', monthIndex);
-            console.log('🔍 updateFinanceMonthDisplay - monthNames[monthIndex]:', monthNames[monthIndex]);
+// console.log('🔍 updateFinanceMonthDisplay - monthIndex:', monthIndex);
+// console.log('🔍 updateFinanceMonthDisplay - monthNames[monthIndex]:', monthNames[monthIndex]);
             
             elCurrentMonthYear.textContent = `${monthNames[monthIndex]} ${currentFinanceYear}`;
-            console.log('✅ Prikazan mesec:', monthNames[monthIndex], currentFinanceYear);
+// console.log('✅ Prikazan mesec:', monthNames[monthIndex], currentFinanceYear);
         } else {
             console.warn('⚠️ elCurrentMonthYear element ni najden');
         }
         
         if (elMonthYearInput) {
             elMonthYearInput.value = `${currentFinanceYear}-${currentFinanceMonth.toString().padStart(2, '0')}`;
-            console.log('✅ Kalendar nastavljen na:', elMonthYearInput.value);
+// console.log('✅ Kalendar nastavljen na:', elMonthYearInput.value);
         } else {
             console.warn('⚠️ elMonthYearInput element ni najden');
         }
     }
     
     function updateSwimmerFeesMonthDisplay() {
-        console.log('🔍 updateSwimmerFeesMonthDisplay - currentSwimmerFeesMonth:', currentSwimmerFeesMonth, 'currentSwimmerFeesYear:', currentSwimmerFeesYear);
+// console.log('🔍 updateSwimmerFeesMonthDisplay - currentSwimmerFeesMonth:', currentSwimmerFeesMonth, 'currentSwimmerFeesYear:', currentSwimmerFeesYear);
         if (elCurrentSwimmerFeesMonthYear) {
             const monthNames = ["Januar", "Februar", "Marec", "April", "Maj", "Junij", 
                               "Julij", "Avgust", "September", "Oktober", "November", "December"];
             const monthIndex = currentSwimmerFeesMonth - 1; // Convert 1-based to 0-based
             elCurrentSwimmerFeesMonthYear.textContent = `${monthNames[monthIndex]} ${currentSwimmerFeesYear}`;
-            console.log('✅ Swimmer fees prikazan mesec:', monthNames[monthIndex], currentSwimmerFeesYear);
+// console.log('✅ Swimmer fees prikazan mesec:', monthNames[monthIndex], currentSwimmerFeesYear);
         } else {
             console.warn('⚠️ elCurrentSwimmerFeesMonthYear element ni najden');
         }
         if (elSwimmerFeesMonthYearInput) {
             elSwimmerFeesMonthYearInput.value = `${currentSwimmerFeesYear}-${currentSwimmerFeesMonth.toString().padStart(2, '0')}`;
-            console.log('✅ Swimmer fees kalendar nastavljen na:', elSwimmerFeesMonthYearInput.value);
+// console.log('✅ Swimmer fees kalendar nastavljen na:', elSwimmerFeesMonthYearInput.value);
         } else {
             console.warn('⚠️ elSwimmerFeesMonthYearInput element ni najden');
         }
     }
     
     function navigateFinanceMonth(direction) {
-        console.log('🔄 navigateFinanceMonth - smer:', direction, 'trenutni mesec:', currentFinanceMonth, 'leto:', currentFinanceYear);
+// console.log('🔄 navigateFinanceMonth - smer:', direction, 'trenutni mesec:', currentFinanceMonth, 'leto:', currentFinanceYear);
         if (direction === 'prev') {
             currentFinanceMonth--;
             if (currentFinanceMonth < 1) {
@@ -164,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentFinanceYear++;
             }
         }
-        console.log('🔄 navigateFinanceMonth - novi mesec:', currentFinanceMonth, 'leto:', currentFinanceYear);
+// console.log('🔄 navigateFinanceMonth - novi mesec:', currentFinanceMonth, 'leto:', currentFinanceYear);
         updateFinanceMonthDisplay();
         calculateFinanceData();
     }
@@ -191,7 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const now = new Date();
         currentFinanceMonth = now.getMonth() + 1;
         currentFinanceYear = now.getFullYear();
-        console.log('🔄 goToCurrentFinanceMonth - nastavljam na:', currentFinanceMonth, currentFinanceYear);
+// console.log('🔄 goToCurrentFinanceMonth - nastavljam na:', currentFinanceMonth, currentFinanceYear);
         updateFinanceMonthDisplay();
         calculateFinanceData();
     }
@@ -206,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Funkcije za prikaz mesecev - trainer summary
     function updateTrainerSummaryMonthDisplay() {
-        console.log('🔍 updateTrainerSummaryMonthDisplay - currentTrainerSummaryMonth:', currentTrainerSummaryMonth, 'currentTrainerSummaryYear:', currentTrainerSummaryYear);
+// console.log('🔍 updateTrainerSummaryMonthDisplay - currentTrainerSummaryMonth:', currentTrainerSummaryMonth, 'currentTrainerSummaryYear:', currentTrainerSummaryYear);
         const elCurrentTrainerSummaryMonthYear = document.getElementById('currentTrainerSummaryMonthYear');
         const elTrainerSummaryMonthYearInput = document.getElementById('trainerSummaryMonthYearInput');
         
@@ -215,14 +215,14 @@ document.addEventListener('DOMContentLoaded', () => {
                               "Julij", "Avgust", "September", "Oktober", "November", "December"];
             const monthIndex = currentTrainerSummaryMonth - 1; // Convert 1-based to 0-based
             elCurrentTrainerSummaryMonthYear.textContent = `${monthNames[monthIndex]} ${currentTrainerSummaryYear}`;
-            console.log('✅ Trainer summary prikazan mesec:', monthNames[monthIndex], currentTrainerSummaryYear);
+// console.log('✅ Trainer summary prikazan mesec:', monthNames[monthIndex], currentTrainerSummaryYear);
         } else {
             console.warn('⚠️ elCurrentTrainerSummaryMonthYear element ni najden');
         }
         
         if (elTrainerSummaryMonthYearInput) {
             elTrainerSummaryMonthYearInput.value = `${currentTrainerSummaryYear}-${currentTrainerSummaryMonth.toString().padStart(2, '0')}`;
-            console.log('✅ Trainer summary kalendar nastavljen na:', elTrainerSummaryMonthYearInput.value);
+// console.log('✅ Trainer summary kalendar nastavljen na:', elTrainerSummaryMonthYearInput.value);
         } else {
             console.warn('⚠️ elTrainerSummaryMonthYearInput element ni najden');
         }
@@ -256,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Funkcije za prikaz mesecev - trainer hours
     function updateTrainerHoursMonthDisplay() {
-        console.log('🔍 updateTrainerHoursMonthDisplay - currentTrainerHoursMonth:', currentTrainerHoursMonth, 'currentTrainerHoursYear:', currentTrainerHoursYear);
+// console.log('🔍 updateTrainerHoursMonthDisplay - currentTrainerHoursMonth:', currentTrainerHoursMonth, 'currentTrainerHoursYear:', currentTrainerHoursYear);
         const elCurrentTrainerHoursMonthYear = document.getElementById('currentTrainerHoursMonthYear');
         const elTrainerHoursMonthYearInput = document.getElementById('trainerHoursMonthYearInput');
         
@@ -265,14 +265,14 @@ document.addEventListener('DOMContentLoaded', () => {
                               "Julij", "Avgust", "September", "Oktober", "November", "December"];
             const monthIndex = currentTrainerHoursMonth - 1; // Convert 1-based to 0-based
             elCurrentTrainerHoursMonthYear.textContent = `${monthNames[monthIndex]} ${currentTrainerHoursYear}`;
-            console.log('✅ Trainer hours prikazan mesec:', monthNames[monthIndex], currentTrainerHoursYear);
+// console.log('✅ Trainer hours prikazan mesec:', monthNames[monthIndex], currentTrainerHoursYear);
         } else {
             console.warn('⚠️ elCurrentTrainerHoursMonthYear element ni najden');
         }
         
         if (elTrainerHoursMonthYearInput) {
             elTrainerHoursMonthYearInput.value = `${currentTrainerHoursYear}-${currentTrainerHoursMonth.toString().padStart(2, '0')}`;
-            console.log('✅ Trainer hours kalendar nastavljen na:', elTrainerHoursMonthYearInput.value);
+// console.log('✅ Trainer hours kalendar nastavljen na:', elTrainerHoursMonthYearInput.value);
         } else {
             console.warn('⚠️ elTrainerHoursMonthYearInput element ni najden');
         }
@@ -306,7 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Funkcije za prikaz mesecev - trainer notes
     function updateTrainerNotesMonthDisplay() {
-        console.log('🔍 updateTrainerNotesMonthDisplay - currentTrainerNotesMonth:', currentTrainerNotesMonth, 'currentTrainerNotesYear:', currentTrainerNotesYear);
+// console.log('🔍 updateTrainerNotesMonthDisplay - currentTrainerNotesMonth:', currentTrainerNotesMonth, 'currentTrainerNotesYear:', currentTrainerNotesYear);
         const elCurrentTrainerNotesMonthYear = document.getElementById('currentTrainerNotesMonthYear');
         const elTrainerNotesMonthYearInput = document.getElementById('trainerNotesMonthYearInput');
         
@@ -315,14 +315,14 @@ document.addEventListener('DOMContentLoaded', () => {
                               "Julij", "Avgust", "September", "Oktober", "November", "December"];
             const monthIndex = currentTrainerNotesMonth - 1; // Convert 1-based to 0-based
             elCurrentTrainerNotesMonthYear.textContent = `${monthNames[monthIndex]} ${currentTrainerNotesYear}`;
-            console.log('✅ Trainer notes prikazan mesec:', monthNames[monthIndex], currentTrainerNotesYear);
+// console.log('✅ Trainer notes prikazan mesec:', monthNames[monthIndex], currentTrainerNotesYear);
         } else {
             console.warn('⚠️ elCurrentTrainerNotesMonthYear element ni najden');
         }
         
         if (elTrainerNotesMonthYearInput) {
             elTrainerNotesMonthYearInput.value = `${currentTrainerNotesYear}-${currentTrainerNotesMonth.toString().padStart(2, '0')}`;
-            console.log('✅ Trainer notes kalendar nastavljen na:', elTrainerNotesMonthYearInput.value);
+// console.log('✅ Trainer notes kalendar nastavljen na:', elTrainerNotesMonthYearInput.value);
         } else {
             console.warn('⚠️ elTrainerNotesMonthYearInput element ni najden');
         }
@@ -356,7 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Funkcije za prikaz mesecev - swimmer summary
     function updateSwimmerSummaryMonthDisplay() {
-        console.log('🔍 updateSwimmerSummaryMonthDisplay - currentSwimmerSummaryMonth:', currentSwimmerSummaryMonth, 'currentSwimmerSummaryYear:', currentSwimmerSummaryYear);
+// console.log('🔍 updateSwimmerSummaryMonthDisplay - currentSwimmerSummaryMonth:', currentSwimmerSummaryMonth, 'currentSwimmerSummaryYear:', currentSwimmerSummaryYear);
         const elCurrentSwimmerSummaryMonthYear = document.getElementById('currentSwimmerSummaryMonthYear');
         const elSwimmerSummaryMonthYearInput = document.getElementById('swimmerSummaryMonthYearInput');
         
@@ -365,14 +365,14 @@ document.addEventListener('DOMContentLoaded', () => {
                               "Julij", "Avgust", "September", "Oktober", "November", "December"];
             const monthIndex = currentSwimmerSummaryMonth - 1; // Convert 1-based to 0-based
             elCurrentSwimmerSummaryMonthYear.textContent = `${monthNames[monthIndex]} ${currentSwimmerSummaryYear}`;
-            console.log('✅ Swimmer summary prikazan mesec:', monthNames[monthIndex], currentSwimmerSummaryYear);
+// console.log('✅ Swimmer summary prikazan mesec:', monthNames[monthIndex], currentSwimmerSummaryYear);
         } else {
             console.warn('⚠️ elCurrentSwimmerSummaryMonthYear element ni najden');
         }
         
         if (elSwimmerSummaryMonthYearInput) {
             elSwimmerSummaryMonthYearInput.value = `${currentSwimmerSummaryYear}-${currentSwimmerSummaryMonth.toString().padStart(2, '0')}`;
-            console.log('✅ Swimmer summary kalendar nastavljen na:', elSwimmerSummaryMonthYearInput.value);
+// console.log('✅ Swimmer summary kalendar nastavljen na:', elSwimmerSummaryMonthYearInput.value);
         } else {
             console.warn('⚠️ elSwimmerSummaryMonthYearInput element ni najden');
         }
@@ -441,12 +441,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const elCurrentMonthBtn = document.getElementById("currentMonthBtn");
     const elMonthYearInput = document.getElementById("monthYearInput");
     
-    console.log('🔍 UI elementi za navigacijo mesecev:');
-    console.log('- elCurrentMonthYear:', elCurrentMonthYear);
-    console.log('- elPrevMonthBtn:', elPrevMonthBtn);
-    console.log('- elNextMonthBtn:', elNextMonthBtn);
-    console.log('- elCurrentMonthBtn:', elCurrentMonthBtn);
-    console.log('- elMonthYearInput:', elMonthYearInput);
+// console.log('🔍 UI elementi za navigacijo mesecev:');
+// console.log('- elCurrentMonthYear:', elCurrentMonthYear);
+// console.log('- elPrevMonthBtn:', elPrevMonthBtn);
+// console.log('- elNextMonthBtn:', elNextMonthBtn);
+// console.log('- elCurrentMonthBtn:', elCurrentMonthBtn);
+// console.log('- elMonthYearInput:', elMonthYearInput);
     
     // UI elementi za navigacijo mesecev plavalcev
     const elCurrentSwimmerFeesMonthYear = document.getElementById("currentSwimmerFeesMonthYear");
@@ -601,7 +601,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===== Nalaganje podatkov =====
     async function loadData() {
         try {
-            console.log('🔄 Začenjam nalaganje podatkov iz Supabase...');
+// console.log('🔄 Začenjam nalaganje podatkov iz Supabase...');
             
             // Naloži termine iz Supabase
             const { data: termsData, error: termsError } = await supabase
@@ -612,11 +612,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('❌ Napaka pri nalaganju terminov:', termsError);
             } else {
                 TERMS = termsData || [];
-                console.log(`✅ Naloženih terminov: ${TERMS.length}`, TERMS);
+// console.log(`✅ Naloženih terminov: ${TERMS.length}`, TERMS);
             }
 
             // Naloži plavalce iz Supabase
-            console.log('🔍 Nalagam plavalce iz Supabase...');
+// console.log('🔍 Nalagam plavalce iz Supabase...');
             const { data: swimmersData, error: swimmersError } = await supabase
                 .from('swimmers')
                 .select('*');
@@ -625,13 +625,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('❌ Napaka pri nalaganju plavalcev:', swimmersError);
             } else {
                 swimmers = swimmersData || [];
-                console.log(`✅ Naloženih plavalcev: ${swimmers.length}`, swimmers);
+// console.log(`✅ Naloženih plavalcev: ${swimmers.length}`, swimmers);
                 
                 // Preveri, ali so podatki pravilno naloženi
                 if (swimmers.length > 0) {
-                    console.log('📊 Prvi plavalec:', swimmers[0]);
+// console.log('📊 Prvi plavalec:', swimmers[0]);
                 } else {
-                    console.log('⚠️ Ni plavalcev v bazi podatkov');
+// console.log('⚠️ Ni plavalcev v bazi podatkov');
                 }
             }
 
@@ -685,7 +685,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('❌ Napaka pri nalaganju trenerjev:', trainersError);
             } else {
                 trainers = trainersData || [];
-                console.log(`✅ Naloženih trenerjev: ${trainers.length}`, trainers);
+// console.log(`✅ Naloženih trenerjev: ${trainers.length}`, trainers);
             }
 
             // Naloži prisotnost trenerjev iz Supabase
@@ -734,7 +734,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateSwimmerSelects();
             updateTermSelects();
             updateTrainerSelects();
-            console.log('🔄 Posodabljam UI elemente...');
+// console.log('🔄 Posodabljam UI elemente...');
             updateSwimmersList();
             updateTermList();
             updateTrainersList();
@@ -752,11 +752,11 @@ document.addEventListener('DOMContentLoaded', () => {
             renderTrainerRatesSettings();
             
             // Inicializiraj prikaz mesecev
-            console.log('🔄 Inicializiram prikaz mesecev...');
-            console.log('🔍 Trenutni mesec (finance):', currentFinanceMonth, currentFinanceYear);
-            console.log('🔍 Elementi za inicializacijo:');
-            console.log('- elCurrentMonthYear:', document.getElementById("currentMonthYear"));
-            console.log('- elMonthYearInput:', document.getElementById("monthYearInput"));
+// console.log('🔄 Inicializiram prikaz mesecev...');
+// console.log('🔍 Trenutni mesec (finance):', currentFinanceMonth, currentFinanceYear);
+// console.log('🔍 Elementi za inicializacijo:');
+// console.log('- elCurrentMonthYear:', document.getElementById("currentMonthYear"));
+// console.log('- elMonthYearInput:', document.getElementById("monthYearInput"));
             
             updateFinanceMonthDisplay();
             updateSwimmerFeesMonthDisplay();
@@ -765,12 +765,12 @@ document.addEventListener('DOMContentLoaded', () => {
             updateTrainerNotesMonthDisplay();
             updateSwimmerSummaryMonthDisplay();
             
-            console.log('✅ Inicializacija prikaza mesecev končana');
+// console.log('✅ Inicializacija prikaza mesecev končana');
             
-            console.log('✅ Vsi podatki so bili uspešno naloženi in UI posodobljen!');
+// console.log('✅ Vsi podatki so bili uspešno naloženi in UI posodobljen!');
             
             // Preveri vadnine, stroške terminov in urne postavke trenerjev
-            console.log('🔍 Preverjam vadnine, stroške terminov in urne postavke trenerjev...');
+// console.log('🔍 Preverjam vadnine, stroške terminov in urne postavke trenerjev...');
             
             // Preveri vadnine
             const { data: feesData, error: feesError } = await supabase
@@ -781,7 +781,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (feesError) {
                 console.error('❌ Napaka pri nalaganju vadnin:', feesError);
             } else {
-                console.log('📊 Vadnine v bazi:', feesData);
+// console.log('📊 Vadnine v bazi:', feesData);
             }
             
             // Preveri stroške terminov
@@ -792,7 +792,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (termCostsError) {
                 console.error('❌ Napaka pri nalaganju stroškov terminov:', termCostsError);
             } else {
-                console.log('📊 Stroški terminov v bazi:', termCostsData);
+// console.log('📊 Stroški terminov v bazi:', termCostsData);
             }
             
             // Preveri urne postavke trenerjev
@@ -803,7 +803,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (trainerRatesError) {
                 console.error('❌ Napaka pri nalaganju urnih postavk trenerjev:', trainerRatesError);
             } else {
-                console.log('📊 Urne postavke trenerjev v bazi:', trainerRatesData);
+// console.log('📊 Urne postavke trenerjev v bazi:', trainerRatesData);
             }
 
         } catch (error) {
@@ -961,11 +961,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateSwimmersList() {
-        console.log('🔄 Posodabljam seznam plavalcev...', swimmers.length, 'plavalcev');
+// console.log('🔄 Posodabljam seznam plavalcev...', swimmers.length, 'plavalcev');
         elSwimmersList.innerHTML = '';
         
         if (swimmers.length === 0) {
-            console.log('⚠️ Ni plavalcev za prikaz');
+// console.log('⚠️ Ni plavalcev za prikaz');
             elSwimmersList.innerHTML = '<p class="muted">Ni plavalcev</p>';
             return;
         }
@@ -1050,7 +1050,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         elSwimmersList.appendChild(table);
-        console.log('✅ Seznam plavalcev uspešno posodobljen');
+// console.log('✅ Seznam plavalcev uspešno posodobljen');
     }
 
     function updateTrainersList() {
@@ -1989,7 +1989,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 console.warn(`Invalid phone for ${first} ${last}: ${phone}`);
                             }
                             
-                            console.log(`Parsed swimmer: ${first} ${last}, email: ${email || 'none'}, phone: ${phone || 'none'}, valid terms: [${validTerms.join(', ')}]`);
+// console.log(`Parsed swimmer: ${first} ${last}, email: ${email || 'none'}, phone: ${phone || 'none'}, valid terms: [${validTerms.join(', ')}]`);
                             
                             newSwimmers.push({
                                 first_name: first,
@@ -2054,11 +2054,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                         // Posodobi obstoječe plavalce
                     if (existingSwimmersToUpdate.length > 0) {
                         for (const updateData of existingSwimmersToUpdate) {
-                            console.log(`Updating swimmer ${updateData.id} with terms: [${updateData.terms.join(', ')}]`);
-                            console.log('Terms array type:', typeof updateData.terms, 'Length:', updateData.terms.length);
-                            console.log('Terms array content:', JSON.stringify(updateData.terms));
-                            console.log('Terms array isArray:', Array.isArray(updateData.terms));
-                            console.log('Terms array constructor:', updateData.terms.constructor.name);
+// console.log(`Updating swimmer ${updateData.id} with terms: [${updateData.terms.join(', ')}]`);
+// console.log('Terms array type:', typeof updateData.terms, 'Length:', updateData.terms.length);
+// console.log('Terms array content:', JSON.stringify(updateData.terms));
+// console.log('Terms array isArray:', Array.isArray(updateData.terms));
+// console.log('Terms array constructor:', updateData.terms.constructor.name);
                             
                             const { data: updateResult, error: updateError } = await supabase
                                 .from('swimmers')
@@ -2076,10 +2076,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                             
                             if (updateResult && updateResult.length > 0) {
-                                console.log(`Database update successful for swimmer ${updateData.id}:`, updateResult[0]);
-                                console.log(`Database returned terms:`, updateResult[0].terms);
-                                console.log(`Database terms type:`, typeof updateResult[0].terms);
-                                console.log(`Database terms isArray:`, Array.isArray(updateResult[0].terms));
+// console.log(`Database update successful for swimmer ${updateData.id}:`, updateResult[0]);
+// console.log(`Database returned terms:`, updateResult[0].terms);
+// console.log(`Database terms type:`, typeof updateResult[0].terms);
+// console.log(`Database terms isArray:`, Array.isArray(updateResult[0].terms));
                             }
                             
                             // Posodobi lokalno stanje
@@ -2088,7 +2088,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 localSwimmer.terms = updateData.terms;
                                 localSwimmer.email = updateData.email;
                                 localSwimmer.phone = updateData.phone;
-                                console.log(`Updated local swimmer ${localSwimmer.first_name} ${localSwimmer.last_name} with terms: [${localSwimmer.terms.join(', ')}], email: ${localSwimmer.email || 'none'}, phone: ${localSwimmer.phone || 'none'}`);
+// console.log(`Updated local swimmer ${localSwimmer.first_name} ${localSwimmer.last_name} with terms: [${localSwimmer.terms.join(', ')}], email: ${localSwimmer.email || 'none'}, phone: ${localSwimmer.phone || 'none'}`);
                             }
 
                             updatedCount++;
@@ -2097,7 +2097,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     // Osveži podatke iz baze za posodobljene plavalce
                     if (existingSwimmersToUpdate.length > 0) {
-                        console.log('Refreshing swimmers data from database...');
+// console.log('Refreshing swimmers data from database...');
                         const { data: refreshedSwimmers, error: refreshError } = await supabase
                             .from('swimmers')
                             .select('*')
@@ -2111,10 +2111,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const localIndex = swimmers.findIndex(s => s.id === refreshedSwimmer.id);
                                 if (localIndex !== -1) {
                                     swimmers[localIndex] = refreshedSwimmer;
-                                    console.log(`Refreshed swimmer ${refreshedSwimmer.first_name} ${refreshedSwimmer.last_name} with terms: [${refreshedSwimmer.terms.join(', ')}]`);
-                                    console.log(`Refreshed terms type:`, typeof refreshedSwimmer.terms);
-                                    console.log(`Refreshed terms isArray:`, Array.isArray(refreshedSwimmer.terms));
-                                    console.log(`Refreshed terms content:`, JSON.stringify(refreshedSwimmer.terms));
+// console.log(`Refreshed swimmer ${refreshedSwimmer.first_name} ${refreshedSwimmer.last_name} with terms: [${refreshedSwimmer.terms.join(', ')}]`);
+// console.log(`Refreshed terms type:`, typeof refreshedSwimmer.terms);
+// console.log(`Refreshed terms isArray:`, Array.isArray(refreshedSwimmer.terms));
+// console.log(`Refreshed terms content:`, JSON.stringify(refreshedSwimmer.terms));
                                 }
                             });
                         }
@@ -2124,11 +2124,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateSwimmersList();
                     
                     // Dodaj dodatno debugiranje
-                    console.log('After update - checking local swimmers:');
+// console.log('After update - checking local swimmers:');
                     for (const updateData of existingSwimmersToUpdate) {
                         const localSwimmer = swimmers.find(s => s.id === updateData.id);
                         if (localSwimmer) {
-                            console.log(`Local swimmer ${localSwimmer.first_name} ${localSwimmer.last_name} has terms: [${localSwimmer.terms.join(', ')}]`);
+// console.log(`Local swimmer ${localSwimmer.first_name} ${localSwimmer.last_name} has terms: [${localSwimmer.terms.join(', ')}]`);
                         }
                     }
                     
@@ -2261,11 +2261,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     const month = currentFinanceMonth;
                     const year = currentFinanceYear;
                     
-                    console.log('🔍 Debugging month parsing:');
-                    console.log('- currentFinanceMonth:', currentFinanceMonth);
-                    console.log('- Parsed month:', month);
-                    console.log('- Month type:', typeof month);
-                    console.log('- Is NaN:', isNaN(month));
+// console.log('🔍 Debugging month parsing:');
+// console.log('- currentFinanceMonth:', currentFinanceMonth);
+// console.log('- Parsed month:', month);
+// console.log('- Month type:', typeof month);
+// console.log('- Is NaN:', isNaN(month));
                     
                     if (month === undefined || year === undefined || isNaN(month) || isNaN(year)) {
                         alert('Prosim izberite mesec in leto za uvoz vadnin');
@@ -2279,7 +2279,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         return;
                     }
                     
-                    console.log(`✅ Mesec ${month} (${month + 1} v človeškem formatu) je veljaven`);
+// console.log(`✅ Mesec ${month} (${month + 1} v človeškem formatu) je veljaven`);
 
                     const importedFees = [];
                     for (let i = 1; i < lines.length; i++) {
@@ -2317,7 +2317,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         discount: discount
                                     };
                                     
-                                    console.log(`📝 Ustvarjam vadnino za ${firstName} ${lastName}:`, newFee);
+// console.log(`📝 Ustvarjam vadnino za ${firstName} ${lastName}:`, newFee);
                                     
                                     // Posodobi plavalca z novimi podatki, če so podani
                                     if (email || phone) {
@@ -2338,7 +2338,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                                 
                                                 // Posodobi lokalno stanje
                                                 Object.assign(swimmer, updateData);
-                                                console.log(`📝 Posodobljen plavalec ${firstName} ${lastName} z novimi podatki:`, updateData);
+// console.log(`📝 Posodobljen plavalec ${firstName} ${lastName} z novimi podatki:`, updateData);
                                             } catch (error) {
                                                 console.error(`Napaka pri posodabljanju plavalca ${firstName} ${lastName}:`, error);
                                             }
@@ -2384,7 +2384,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         
                         // Ustvari vadnine za vse mesece od startMonth do konca leta
-                        console.log(`Creating fees for months ${startMonth} to ${11} (${startMonth + 1} to ${12} in human-readable) in year ${startYear}`);
+// console.log(`Creating fees for months ${startMonth} to ${11} (${startMonth + 1} to ${12} in human-readable) in year ${startYear}`);
                         
                         // Validacija startMonth
                         if (startMonth < 0 || startMonth > 11) {
@@ -2401,7 +2401,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 return;
                             }
                             
-                            console.log(`📅 Ustvarjam vadnine za mesec ${m} (${m + 1} v človeškem formatu) v letu ${startYear}`);
+// console.log(`📅 Ustvarjam vadnine za mesec ${m} (${m + 1} v človeškem formatu) v letu ${startYear}`);
                             
                             for (const fee of importedFees) {
                                 const newFee = {
@@ -2412,7 +2412,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     discount: m === startMonth ? fee.discount : 0 // Popust samo za začetni mesec
                                 };
                                 
-                                console.log(`🔍 Loop validation - m: ${m}, newFee.month: ${newFee.month}, type: ${typeof newFee.month}`);
+// console.log(`🔍 Loop validation - m: ${m}, newFee.month: ${newFee.month}, type: ${typeof newFee.month}`);
                                 
                                 // Dvojna validacija pred dodajanjem
                                 if (newFee.month < 0 || newFee.month > 11) {
@@ -2425,7 +2425,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         // Če je startYear trenutno leto, dodaj tudi za naslednje leto
                         if (startYear === currentYear) {
-                            console.log(`Creating fees for months 0 to 11 (1 to 12 in human-readable) in year ${startYear + 1}`);
+// console.log(`Creating fees for months 0 to 11 (1 to 12 in human-readable) in year ${startYear + 1}`);
                             for (let m = 0; m < 12; m++) {
                                 // Validacija meseca v zanki za naslednje leto
                                 if (m < 0 || m > 11) {
@@ -2434,7 +2434,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     return;
                                 }
                                 
-                                console.log(`📅 Ustvarjam vadnine za mesec ${m} (${m + 1} v človeškem formatu) v letu ${startYear + 1}`);
+// console.log(`📅 Ustvarjam vadnine za mesec ${m} (${m + 1} v človeškem formatu) v letu ${startYear + 1}`);
                                 
                                 for (const fee of importedFees) {
                                     const newFee = {
@@ -2445,7 +2445,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         discount: 0 // Brez popusta za prihodnje mesece
                                     };
                                     
-                                    console.log(`🔍 Loop validation (next year) - m: ${m}, newFee.month: ${newFee.month}, type: ${typeof newFee.month}`);
+// console.log(`🔍 Loop validation (next year) - m: ${m}, newFee.month: ${newFee.month}, type: ${typeof newFee.month}`);
                                     
                                     // Dvojna validacija pred dodajanjem
                                     if (newFee.month < 0 || newFee.month > 11) {
@@ -2472,17 +2472,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         
                         // Uvozi vadnine v bazo za vse prihodnje mesece
-                        console.log('Importing future fees:', validFees);
+// console.log('Importing future fees:', validFees);
                         
                         // Dodatna validacija pred upsert - preveri vsako vadnino posebej
-                        console.log('🔍 Končna validacija pred upsert:');
+// console.log('🔍 Končna validacija pred upsert:');
                         let hasInvalidFees = false;
                         validFees.forEach((fee, index) => {
                             if (fee.month < 0 || fee.month > 11) {
                                 console.error(`❌ KRITIČNA NAPAKA: Vadnina ${index} ima neveljaven mesec ${fee.month}:`, fee);
                                 hasInvalidFees = true;
                             } else {
-                                console.log(`✅ Vadnina ${index}: mesec ${fee.month} (${fee.month + 1} v človeškem formatu) za plavalca ${fee.swimmer_id}`);
+// console.log(`✅ Vadnina ${index}: mesec ${fee.month} (${fee.month + 1} v človeškem formatu) za plavalca ${fee.swimmer_id}`);
                             }
                         });
                         
@@ -2508,17 +2508,17 @@ document.addEventListener('DOMContentLoaded', () => {
                             
                             if (rawInsertResult.error) {
                                 // Če SQL ne gre, poskusi z običajnim insert
-                                console.log('🔄 SQL insert ni uspel, poskušam z običajnim insert...');
+// console.log('🔄 SQL insert ni uspel, poskušam z običajnim insert...');
                                 console.error('❌ SQL napaka:', rawInsertResult.error);
                             } else {
-                                console.log('✅ Raw SQL insert uspešen!');
+// console.log('✅ Raw SQL insert uspešen!');
                                 data = rawInsertResult.data;
                                 error = null;
-                                console.log('📊 Raw SQL rezultat:', data);
+// console.log('📊 Raw SQL rezultat:', data);
                                 
                                 // Preveri, ali je bilo vstavljenih vseh vadnin
                                 if (data && data.success !== undefined) {
-                                    console.log(`✅ Raw SQL: ${data.success}/${data.total} vadnin uspešno vstavljenih`);
+// console.log(`✅ Raw SQL: ${data.success}/${data.total} vadnin uspešno vstavljenih`);
                                     if (data.errors > 0) {
                                         console.warn(`⚠️ Raw SQL: ${data.errors} napak pri vstavljanju`);
                                     }
@@ -2538,15 +2538,15 @@ document.addEventListener('DOMContentLoaded', () => {
                                 return;
                             }
                         } catch (rawError) {
-                            console.log('🔄 Raw SQL insert ni na voljo, poskušam z običajnim insert...');
+// console.log('🔄 Raw SQL insert ni na voljo, poskušam z običajnim insert...');
                             console.error('❌ Raw SQL izjema:', rawError);
                         }
                         
-                        console.log('🔄 Poskušam z običajnim Supabase insert...');
+// console.log('🔄 Poskušam z običajnim Supabase insert...');
                         
                         // Poskusi z batch processing, če je preveč vadnin
                         if (feesWithExplicitTypes.length > 100) {
-                            console.log('📦 Preveč vadnin za enkrat, poskušam z batch processing...');
+// console.log('📦 Preveč vadnin za enkrat, poskušam z batch processing...');
                             
                             const batchSize = 50;
                             const batches = [];
@@ -2554,13 +2554,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                 batches.push(feesWithExplicitTypes.slice(i, i + batchSize));
                             }
                             
-                            console.log(`📦 Delim v ${batches.length} batch-ev po ${batchSize} vadnin`);
+// console.log(`📦 Delim v ${batches.length} batch-ev po ${batchSize} vadnin`);
                             
                             let allData = [];
                             let hasErrors = false;
                             
                             for (let i = 0; i < batches.length; i++) {
-                                console.log(`📦 Batch ${i + 1}/${batches.length} (${batches[i].length} vadnin)...`);
+// console.log(`📦 Batch ${i + 1}/${batches.length} (${batches[i].length} vadnin)...`);
                                 
                                 try {
                                     const batchResult = await supabase
@@ -2573,7 +2573,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         hasErrors = true;
                                         break;
                                     } else {
-                                        console.log(`✅ Batch ${i + 1} uspešen: ${batchResult.data.length} vadnin`);
+// console.log(`✅ Batch ${i + 1} uspešen: ${batchResult.data.length} vadnin`);
                                         allData = allData.concat(batchResult.data);
                                     }
                                 } catch (batchError) {
@@ -2586,9 +2586,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (!hasErrors) {
                                 data = allData;
                                 error = null;
-                                console.log(`✅ Vsi batch-i uspešni: ${data.length} vadnin`);
+// console.log(`✅ Vsi batch-i uspešni: ${data.length} vadnin`);
                             } else {
-                                console.log('🔄 Batch processing ni uspel, poskušam z običajnim insert...');
+// console.log('🔄 Batch processing ni uspel, poskušam z običajnim insert...');
                                 const insertResult = await supabase
                                     .from('swimmer_monthly_fees')
                                     .insert(feesWithExplicitTypes)
@@ -2608,7 +2608,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         
                         if (error && error.code === '23505') { // Unique constraint violation
-                            console.log('🔄 Insert ni uspel zaradi duplikatov, poskušam z upsert...');
+// console.log('🔄 Insert ni uspel zaradi duplikatov, poskušam z upsert...');
                             const upsertResult = await supabase
                                 .from('swimmer_monthly_fees')
                                 .upsert(feesWithExplicitTypes, { 
@@ -2644,7 +2644,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             return;
                         }
 
-                        console.log('✅ Uspešno uvoženih vadnin:', data);
+// console.log('✅ Uspešno uvoženih vadnin:', data);
                         
                         // Izračunaj število mesecev na podlagi podatkov
                         let totalMonths = 0;
@@ -2689,11 +2689,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            console.log(`🔍 Izvoz povzetka udeležbe za mesec ${month}/${year}...`);
+// console.log(`🔍 Izvoz povzetka udeležbe za mesec ${month}/${year}...`);
             
             // Pridobi podatke o vadninah iz baze
             const swimmerFees = await getSwimmerFeesFromDB(month, year);
-            console.log('✅ Pridobljene vadnine:', swimmerFees);
+// console.log('✅ Pridobljene vadnine:', swimmerFees);
             
             // Osveži podatke o prisotnosti za izbrani mesec
             await loadAttendanceForMonth(year, month);
@@ -2739,7 +2739,7 @@ document.addEventListener('DOMContentLoaded', () => {
             link.click();
             document.body.removeChild(link);
             
-            console.log('✅ CSV izvoz povzetka udeležbe uspešno končan');
+// console.log('✅ CSV izvoz povzetka udeležbe uspešno končan');
             
         } catch (error) {
             console.error('❌ Napaka pri izvozu CSV:', error);
@@ -2809,13 +2809,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // Event listener za klik na mesec/leto (finance)
     const monthYearContainer = document.getElementById('monthYearContainer');
-    console.log('🔍 Event listenerji - monthYearContainer:', monthYearContainer);
-    console.log('🔍 Event listenerji - elMonthYearInput:', elMonthYearInput);
+// console.log('🔍 Event listenerji - monthYearContainer:', monthYearContainer);
+// console.log('🔍 Event listenerji - elMonthYearInput:', elMonthYearInput);
     
     if (monthYearContainer) {
-        console.log('✅ Dodajam event listener za monthYearContainer');
+// console.log('✅ Dodajam event listener za monthYearContainer');
         monthYearContainer.addEventListener('click', (event) => {
-            console.log('🖱️ Klik na monthYearContainer', event);
+// console.log('🖱️ Klik na monthYearContainer', event);
             event.preventDefault();
             event.stopPropagation();
             
@@ -3052,7 +3052,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function calculateTrainerSummaryData() {
         const month = currentTrainerSummaryMonth;
         const year = currentTrainerSummaryYear;
-        console.log('🔍 calculateTrainerSummaryData - mesec:', month, 'leto:', year);
+// console.log('🔍 calculateTrainerSummaryData - mesec:', month, 'leto:', year);
         
         if (month === undefined || year === undefined) {
             elTrainerSummaryBox.innerHTML = '<p class="muted">Prosim izberite mesec in leto</p>';
@@ -3114,7 +3114,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         
                                         if (substituteTrainer) {
                                             const substituteKey = `${substituteTrainer.id}`;
-                                            console.log('🔍 DEBUG: Najden nadomestni trener v opombi:', substituteTrainer.first_name, substituteTrainer.last_name);
+// console.log('🔍 DEBUG: Najden nadomestni trener v opombi:', substituteTrainer.first_name, substituteTrainer.last_name);
                                             
                                             if (!trainerStats[substituteKey]) {
                                                 trainerStats[substituteKey] = {
@@ -3175,8 +3175,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Dodaj debug informacije
-        console.log('🔍 DEBUG: trainerStats:', trainerStats);
-        console.log('🔍 DEBUG: trainerAttendance za september 2025:', trainerAttendance);
+// console.log('🔍 DEBUG: trainerStats:', trainerStats);
+// console.log('🔍 DEBUG: trainerAttendance za september 2025:', trainerAttendance);
         
         // Dodatno: preveri vse trenerje iz trainer_attendance za ta mesec
         // in dodaj tiste, ki morda niso bili vključeni v zgornji logiki
@@ -3250,7 +3250,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function calculateTrainerHoursCostsData() {
         const month = currentTrainerHoursMonth;
         const year = currentTrainerHoursYear;
-        console.log('🔍 calculateTrainerHoursCostsData - mesec:', month, 'leto:', year);
+// console.log('🔍 calculateTrainerHoursCostsData - mesec:', month, 'leto:', year);
         
         if (month === undefined || year === undefined) {
             elTrainerHoursCostsBox.innerHTML = '<p class="muted">Prosim izberite mesec in leto</p>';
@@ -3417,7 +3417,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function calculateTrainerNotesData() {
         const month = currentTrainerNotesMonth;
         const year = currentTrainerNotesYear;
-        console.log('🔍 calculateTrainerNotesData - mesec:', month, 'leto:', year);
+// console.log('🔍 calculateTrainerNotesData - mesec:', month, 'leto:', year);
         
         if (month === undefined || year === undefined) {
             document.getElementById('trainerNotesBox').innerHTML = '<p class="muted">Prosim izberite mesec in leto</p>';
@@ -3797,13 +3797,13 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Funkcija za izračun povzetka udeležbe plavalcev
     function calculateSwimmerSummaryData(year, month) {
-        console.log('🔍 calculateSwimmerSummaryData - prej: year:', year, 'month:', month, '(1-based)');
+// console.log('🔍 calculateSwimmerSummaryData - prej: year:', year, 'month:', month, '(1-based)');
         const res = {};
         // Ustvari datume za mesec (lokalni čas se obravnava v iso() funkciji)
         // month je 1-based, zato ga pretvorimo v 0-based za JavaScript Date
         const monthStart = new Date(year, month - 1, 1);
         const monthEnd = new Date(year, month, 0);
-        console.log('🔍 calculateSwimmerSummaryData - po: monthStart:', monthStart, 'monthEnd:', monthEnd);
+// console.log('🔍 calculateSwimmerSummaryData - po: monthStart:', monthStart, 'monthEnd:', monthEnd);
         
 
         
@@ -3885,7 +3885,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function refreshSwimmerSummary() {
         const month = currentSwimmerSummaryMonth;
         const year = currentSwimmerSummaryYear;
-        console.log('🔍 refreshSwimmerSummary - mesec:', month, 'leto:', year);
+// console.log('🔍 refreshSwimmerSummary - mesec:', month, 'leto:', year);
         
         // Osveži podatke o prisotnosti za izbrani mesec
         await loadAttendanceForMonth(year, month);
@@ -3897,12 +3897,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Funkcija za nalaganje podatkov o prisotnosti za določen mesec
     async function loadAttendanceForMonth(year, month) {
-        console.log('🔍 loadAttendanceForMonth - prej: year:', year, 'month:', month, '(1-based)');
+// console.log('🔍 loadAttendanceForMonth - prej: year:', year, 'month:', month, '(1-based)');
         // Ustvari datume za mesec (lokalni čas se obravnava v iso() funkciji)
         // month je 1-based, zato ga pretvorimo v 0-based za JavaScript Date
         const monthStart = new Date(year, month - 1, 1);
         const monthEnd = new Date(year, month, 0);
-        console.log('🔍 loadAttendanceForMonth - po: monthStart:', monthStart, 'monthEnd:', monthEnd);
+// console.log('🔍 loadAttendanceForMonth - po: monthStart:', monthStart, 'monthEnd:', monthEnd);
         
 
         
@@ -3925,7 +3925,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 attendance[row.date][row.term_id][row.swimmer_id] = row.status;
             });
             
-            console.log('Podatki o prisotnosti za mesec osveženi:', data);
+// console.log('Podatki o prisotnosti za mesec osveženi:', data);
         } catch (error) {
             console.error('Napaka pri nalaganju prisotnosti za mesec:', error);
         }
@@ -4030,13 +4030,13 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const month = currentFinanceMonth;
             const year = currentFinanceYear;
-            console.log('🔍 calculateFinanceData - mesec:', month, 'leto:', year);
-            console.log('🔍 calculateFinanceData - mesec tip:', typeof month, 'leto tip:', typeof year);
+// console.log('🔍 calculateFinanceData - mesec:', month, 'leto:', year);
+// console.log('🔍 calculateFinanceData - mesec tip:', typeof month, 'leto tip:', typeof year);
             
 
             
             if (month === undefined || year === undefined) {
-                console.log('❌ calculateFinanceData - mesec ali leto ni definiran');
+// console.log('❌ calculateFinanceData - mesec ali leto ni definiran');
                 elFinanceSummaryBox.innerHTML = '<p class="muted">Prosim izberite mesec in leto</p>';
                 elDetailedCostsBox.innerHTML = '<p class="muted">Prosim izberite mesec in leto</p>';
                 return;
@@ -4045,34 +4045,34 @@ document.addEventListener('DOMContentLoaded', () => {
             // Ustvari datume za mesec
             const startDate = new Date(year, month - 1, 1); // month - 1 ker je JavaScript 0-based
             const endDate = new Date(year, month, 0); // month ker je JavaScript 0-based
-            console.log('🔍 calculateFinanceData - startDate:', startDate, 'endDate:', endDate);
-            console.log('🔍 calculateFinanceData - startDate mesec:', startDate.getMonth() + 1, 'endDate mesec:', endDate.getMonth() + 1);
+// console.log('🔍 calculateFinanceData - startDate:', startDate, 'endDate:', endDate);
+// console.log('🔍 calculateFinanceData - startDate mesec:', startDate.getMonth() + 1, 'endDate mesec:', endDate.getMonth() + 1);
             
 
             
             // Pridobi nastavitve cen
             const managementCostPerMonth = parseFloat(elManagementCostPerMonth.value) || 500;
-            console.log('🔍 calculateFinanceData - managementCostPerMonth:', managementCostPerMonth);
+// console.log('🔍 calculateFinanceData - managementCostPerMonth:', managementCostPerMonth);
             
             // Izračunaj prihodke - uporabi individualne pristojbine plavalcev
             const activeSwimmers = swimmers.filter(s => !s.is_deleted);
-            console.log('🔍 calculateFinanceData - activeSwimmers:', activeSwimmers.length);
+// console.log('🔍 calculateFinanceData - activeSwimmers:', activeSwimmers.length);
 
             
             // Pridobi pristojbine plavalcev iz baze
             const swimmerFees = await getSwimmerFeesFromDB(month, year);
-            console.log('🔍 calculateFinanceData - swimmerFees:', swimmerFees.length);
-            console.log('🔍 calculateFinanceData - swimmerFees za mesec:', month, 'leto:', year);
+// console.log('🔍 calculateFinanceData - swimmerFees:', swimmerFees.length);
+// console.log('🔍 calculateFinanceData - swimmerFees za mesec:', month, 'leto:', year);
 
             
             let totalRevenue = 0;
-            console.log('🔍 calculateFinanceData - začenjam izračun prihodkov...');
+// console.log('🔍 calculateFinanceData - začenjam izračun prihodkov...');
             
             activeSwimmers.forEach(swimmer => {
                 const feeData = swimmerFees[swimmer.id] || { fee: 80, discount: 0 };
                 const finalFee = Math.max(0, feeData.fee - feeData.discount);
                 totalRevenue += finalFee;
-                // console.log('🔍 calculateFinanceData - plavalec:', swimmer.first_name, swimmer.last_name, 'fee:', feeData.fee, 'discount:', feeData.discount, 'finalFee:', finalFee);
+                //// console.log('🔍 calculateFinanceData - plavalec:', swimmer.first_name, swimmer.last_name, 'fee:', feeData.fee, 'discount:', feeData.discount, 'finalFee:', finalFee);
                 
 
             });
@@ -4383,7 +4383,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function refreshSwimmerFees() {
         const month = currentSwimmerFeesMonth;
         const year = currentSwimmerFeesYear;
-        console.log('🔍 refreshSwimmerFees - mesec:', month, 'leto:', year);
+// console.log('🔍 refreshSwimmerFees - mesec:', month, 'leto:', year);
         
         if (month === undefined || year === undefined) {
             elSwimmerFeesBox.innerHTML = '<p class="muted">Prosim izberite mesec in leto</p>';
@@ -4490,7 +4490,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Funkcija za pridobivanje stroškov prog po terminih iz baze
     async function getTermCostsFromDB() {
         try {
-            console.log('🔍 Nalagam stroške terminov iz baze...');
+// console.log('🔍 Nalagam stroške terminov iz baze...');
             const { data, error } = await supabase
                 .from('term_costs')
                 .select('*');
@@ -4500,7 +4500,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw error;
             }
             
-            console.log('✅ Naloženih stroškov terminov:', data.length, data);
+// console.log('✅ Naloženih stroškov terminov:', data.length, data);
             
             // Pretvori v obliko, ki jo pričakuje aplikacija
             const termCosts = {};
@@ -4539,7 +4539,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Funkcija za pridobivanje postavk trenerjev iz baze
     async function getTrainerRatesFromDB() {
         try {
-            console.log('🔍 Nalagam urne postavke trenerjev iz baze...');
+// console.log('🔍 Nalagam urne postavke trenerjev iz baze...');
             const { data, error } = await supabase
                 .from('trainer_rates')
                 .select('*');
@@ -4549,7 +4549,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw error;
             }
             
-            console.log('✅ Naloženih urnih postavk trenerjev:', data.length, data);
+// console.log('✅ Naloženih urnih postavk trenerjev:', data.length, data);
             
             // Pretvori v obliko, ki jo pričakuje aplikacija
             const trainerRates = {};
@@ -4588,7 +4588,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Funkcija za pridobivanje mesečnih pristojbin plavalcev iz baze
     async function getSwimmerFeesFromDB(month, year) {
         try {
-            console.log(`🔍 Nalagam vadnine za mesec ${month}/${year}...`);
+// console.log(`🔍 Nalagam vadnine za mesec ${month}/${year}...`);
             // Najprej poskusi najti pristojbine za točen mesec in leto
             let { data, error } = await supabase
                 .from('swimmer_monthly_fees')
@@ -4601,7 +4601,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw error;
             }
             
-            console.log(`✅ Naloženih vadnin za ${month}/${year}:`, data.length, data);
+// console.log(`✅ Naloženih vadnin za ${month}/${year}:`, data.length, data);
             
             // Pretvori v obliko, ki jo pričakuje aplikacija
             const swimmerFees = {};
@@ -4614,14 +4614,14 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Če nismo našli pristojbin za točen mesec/leto, poišči najnovejše pristojbine za vsakega plavalca
             if (data.length === 0) {
-                console.log(`No fees found for ${month + 1}/${year}, looking for most recent fees...`);
+// console.log(`No fees found for ${month + 1}/${year}, looking for most recent fees...`);
                 
                 // Pridobi vse plavalce, ki nimajo pristojbin za ta mesec
                 const activeSwimmers = swimmers.filter(s => !s.is_deleted);
                 const swimmersWithoutFees = activeSwimmers.filter(s => !swimmerFees[s.id]);
                 
                 if (swimmersWithoutFees.length > 0) {
-                    console.log(`Looking for recent fees for ${swimmersWithoutFees.length} swimmers...`);
+// console.log(`Looking for recent fees for ${swimmersWithoutFees.length} swimmers...`);
                     
                     // Za vsakega plavalca poišči najnovejšo pristojbino
                     for (const swimmer of swimmersWithoutFees) {
@@ -4644,7 +4644,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     fee: recentFee.monthly_fee,
                                     discount: 0 // Popusti se ne prenašajo na prihodnje mesece
                                 };
-                                console.log(`Using recent fee for ${swimmer.first_name} ${swimmer.last_name}: ${recentFee.monthly_fee}€ (from ${recentFee.month + 1}/${recentFee.year})`);
+// console.log(`Using recent fee for ${swimmer.first_name} ${swimmer.last_name}: ${recentFee.monthly_fee}€ (from ${recentFee.month + 1}/${recentFee.year})`);
                             }
                         }
                     }
@@ -4727,7 +4727,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Funkcija za debugiranje pristojbin v bazi
     async function debugSwimmerFees() {
         try {
-            console.log('=== DEBUG: All swimmer fees in database ===');
+// console.log('=== DEBUG: All swimmer fees in database ===');
             const { data, error } = await supabase
                 .from('swimmer_monthly_fees')
                 .select('*')
@@ -4736,11 +4736,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (error) throw error;
             
-            console.log('Total fees in database:', data.length);
+// console.log('Total fees in database:', data.length);
             data.forEach(fee => {
                 const swimmer = swimmers.find(s => s.id === fee.swimmer_id);
                 const swimmerName = swimmer ? `${swimmer.first_name} ${swimmer.last_name}` : `Unknown (${fee.swimmer_id})`;
-                console.log(`${swimmerName}: ${fee.monthly_fee}€ for ${fee.month + 1}/${fee.year} (discount: ${fee.discount}€)`);
+// console.log(`${swimmerName}: ${fee.monthly_fee}€ for ${fee.month + 1}/${fee.year} (discount: ${fee.discount}€)`);
             });
             
             return data;
@@ -4770,7 +4770,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return termEndDate >= today;
         });
         
-        console.log(`Term costs settings: showing ${activeTermsForSettings.length} active terms out of ${TERMS.length} total terms`);
+// console.log(`Term costs settings: showing ${activeTermsForSettings.length} active terms out of ${TERMS.length} total terms`);
         
         for (const term of activeTermsForSettings) {
             const cost = termCosts[term.id] || 50; // Default to 50€/uro
@@ -4835,7 +4835,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return termEndDate >= today;
         });
         
-        console.log(`Saving term costs: processing ${activeTermsForSaving.length} active terms out of ${TERMS.length} total terms`);
+// console.log(`Saving term costs: processing ${activeTermsForSaving.length} active terms out of ${TERMS.length} total terms`);
         
         for (const term of activeTermsForSaving) {
             const input = document.getElementById(`term-cost-${term.id}`);
@@ -5048,7 +5048,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const nextYear = currentYear + 1;
             const sourceYear = currentYear;
             
-            console.log(`🔄 Začenjam kopiranje vadnin iz ${sourceYear} v ${nextYear}...`);
+// console.log(`🔄 Začenjam kopiranje vadnin iz ${sourceYear} v ${nextYear}...`);
             
             // Pridobi vadnine iz decembra trenutnega leta (zadnji mesec)
             const { data: decemberFees, error: fetchError } = await supabase
@@ -5064,12 +5064,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             if (!decemberFees || decemberFees.length === 0) {
-                console.log(`⚠️ Ni vadnin za december ${sourceYear}`);
+// console.log(`⚠️ Ni vadnin za december ${sourceYear}`);
                 showMessage(`Ni vadnin za december ${sourceYear}! Najprej ustvarite vadnine za december ${sourceYear}.`, 'info');
                 return false;
             }
             
-            console.log(`✅ Najdenih ${decemberFees.length} vadnin iz decembra ${sourceYear} za kopiranje`);
+// console.log(`✅ Najdenih ${decemberFees.length} vadnin iz decembra ${sourceYear} za kopiranje`);
             
             // Ustvari vadnine za vse mesece naslednjega leta
             const newFeesNextYear = [];
@@ -5085,7 +5085,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
             
-            console.log(`📅 Ustvarjam ${newFeesNextYear.length} vadnin za leto ${nextYear} (${decemberFees.length} plavalcev × 12 mesecev)`);
+// console.log(`📅 Ustvarjam ${newFeesNextYear.length} vadnin za leto ${nextYear} (${decemberFees.length} plavalcev × 12 mesecev)`);
             
             // Preveri, katere vadnine za naslednje leto že obstajajo
             const { data: existingFeesNextYear, error: existingError } = await supabase
@@ -5105,10 +5105,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 !existingKeys.has(`${fee.swimmer_id}-${fee.month}`)
             );
             
-            console.log(`📊 Obstaja ${existingFeesNextYear.length} vadnin za ${nextYear}, ustvarjam ${newFeesToInsert.length} novih`);
+// console.log(`📊 Obstaja ${existingFeesNextYear.length} vadnin za ${nextYear}, ustvarjam ${newFeesToInsert.length} novih`);
             
             if (newFeesToInsert.length === 0) {
-                console.log(`✅ Vse vadnine za leto ${nextYear} že obstajajo`);
+// console.log(`✅ Vse vadnine za leto ${nextYear} že obstajajo`);
                 showMessage(`Vse vadnine za leto ${nextYear} že obstajajo!`, 'info');
                 return true;
             }
@@ -5125,7 +5125,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return false;
             }
             
-            console.log(`✅ Uspešno ustvarjenih ${insertedFees.length} novih vadnin za leto ${nextYear}`);
+// console.log(`✅ Uspešno ustvarjenih ${insertedFees.length} novih vadnin za leto ${nextYear}`);
             showMessage(`Uspešno ustvarjenih ${insertedFees.length} novih vadnin za leto ${nextYear}!`, 'success');
             
             // Osveži prikaz
@@ -5172,7 +5172,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return false;
             }
             
-            console.log(`🔄 Začenjam kopiranje vadnin iz ${previousMonth + 1}/${previousYear} v ${currentMonth + 1}/${currentYear}...`);
+// console.log(`🔄 Začenjam kopiranje vadnin iz ${previousMonth + 1}/${previousYear} v ${currentMonth + 1}/${currentYear}...`);
             
             // Pridobi vse vadnine iz prejšnega meseca
             const { data: previousMonthFees, error: fetchError } = await supabase
@@ -5188,12 +5188,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             if (!previousMonthFees || previousMonthFees.length === 0) {
-                console.log(`Ni vadnin za prejšnji mesec ${previousMonth + 1}/${previousYear}`);
+// console.log(`Ni vadnin za prejšnji mesec ${previousMonth + 1}/${previousYear}`);
                 showMessage(`Ni vadnin za prejšnji mesec ${previousMonth + 1}/${previousYear}!`, 'info');
                 return false;
             }
             
-            console.log(`Najdenih ${previousMonthFees.length} vadnin iz prejšnega meseca za kopiranje`);
+// console.log(`Najdenih ${previousMonthFees.length} vadnin iz prejšnega meseca za kopiranje`);
             
             // Preveri, ali vadnine za trenutni mesec že obstajajo
             const { data: currentMonthFees, error: currentError } = await supabase
@@ -5227,12 +5227,12 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             
             if (newFees.length === 0) {
-                console.log('Vse vadnine za trenutni mesec že obstajajo');
+// console.log('Vse vadnine za trenutni mesec že obstajajo');
                 showMessage('Vse vadnine za trenutni mesec že obstajajo!', 'info');
                 return true;
             }
             
-            console.log(`Ustvarjam ${newFees.length} novih vadnin za trenutni mesec`);
+// console.log(`Ustvarjam ${newFees.length} novih vadnin za trenutni mesec`);
             
             // Uvozi nove vadnine v bazo
             const { data: insertedFees, error: insertError } = await supabase
@@ -5248,7 +5248,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return false;
             }
             
-            console.log('✅ Uspešno kopirane vadnine:', insertedFees);
+// console.log('✅ Uspešno kopirane vadnine:', insertedFees);
             showMessage(`Uspešno kopiranih ${insertedFees.length} vadnin iz ${previousMonth + 1}/${previousYear} v ${currentMonth + 1}/${currentYear}!`, 'success');
             
             // Osveži finance sekcijo, če je prikazana
@@ -5279,7 +5279,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
-            console.log(`🔍 Preverjam vadnine za trenutni mesec: ${currentMonth + 1}/${currentYear}`);
+// console.log(`🔍 Preverjam vadnine za trenutni mesec: ${currentMonth + 1}/${currentYear}`);
             
             // Preveri, ali obstajajo vadnine za trenutni mesec
             const { data: currentMonthFees, error: fetchError } = await supabase
@@ -5295,10 +5295,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Če ni vadnin za trenutni mesec, poskusi kopirati iz prejšnega meseca
             if (!currentMonthFees || currentMonthFees.length === 0) {
-                console.log(`🔄 Ni vadnin za trenutni mesec ${currentMonth + 1}/${currentYear} - poskušam kopirati iz prejšnega meseca...`);
+// console.log(`🔄 Ni vadnin za trenutni mesec ${currentMonth + 1}/${currentYear} - poskušam kopirati iz prejšnega meseca...`);
                 await copyPreviousMonthFees();
             } else {
-                console.log(`✅ Vadnine za trenutni mesec ${currentMonth + 1}/${currentYear} že obstajajo (${currentMonthFees.length} vadnin)`);
+// console.log(`✅ Vadnine za trenutni mesec ${currentMonth + 1}/${currentYear} že obstajajo (${currentMonthFees.length} vadnin)`);
             }
             
         } catch (error) {
@@ -5314,7 +5314,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (copyButton) {
             copyButton.onclick = copyPreviousMonthFees;
-            console.log('✅ Gumb za kopiranje vadnin je povezan');
+// console.log('✅ Gumb za kopiranje vadnin je povezan');
         } else {
             console.warn('⚠️ Gumb za kopiranje vadnin ni bil najden');
         }
@@ -5326,7 +5326,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const nextYear = new Date().getFullYear() + 1;
             copyNextYearButton.textContent = `📅 Kopiraj vadnine za leto ${nextYear}`;
             
-            console.log(`✅ Gumb za kopiranje vadnin za leto ${nextYear} je povezan`);
+// console.log(`✅ Gumb za kopiranje vadnin za leto ${nextYear} je povezan`);
         } else {
             console.warn('⚠️ Gumb za kopiranje vadnin za naslednje leto ni bil najden');
         }
@@ -5342,7 +5342,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     showMessage(`❌ Napaka pri preverjanju: ${status.error}`, 'error');
                 }
             };
-            console.log('✅ Gumb za preverjanje stanja vadnin je povezan');
+// console.log('✅ Gumb za preverjanje stanja vadnin je povezan');
         } else {
             console.warn('⚠️ Gumb za kopiranje vadnin ni bil najden');
         }
@@ -5361,7 +5361,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return { status: 'error', error: `Neveljaven trenutni mesec: ${currentMonth}` };
             }
             
-            console.log(`🔍 Preverjam stanje vadnin za trenutni mesec: ${currentMonth + 1}/${currentYear}...`);
+// console.log(`🔍 Preverjam stanje vadnin za trenutni mesec: ${currentMonth + 1}/${currentYear}...`);
             
             // Preveri vadnine za trenutni mesec
             const { data: currentMonthFees, error } = await supabase
@@ -5376,10 +5376,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             if (!currentMonthFees || currentMonthFees.length === 0) {
-                console.log(`⚠️ Ni vadnin za trenutni mesec ${currentMonth + 1}/${currentYear}`);
+// console.log(`⚠️ Ni vadnin za trenutni mesec ${currentMonth + 1}/${currentYear}`);
                 return { status: 'incomplete', totalFees: 0, missingMonths: [`${currentMonth + 1}/${currentYear}`] };
             } else {
-                console.log(`✅ Vadnine za trenutni mesec ${currentMonth + 1}/${currentYear} obstajajo (skupaj ${currentMonthFees.length} vadnin)`);
+// console.log(`✅ Vadnine za trenutni mesec ${currentMonth + 1}/${currentYear} obstajajo (skupaj ${currentMonthFees.length} vadnin)`);
                 return { status: 'complete', totalFees: currentMonthFees.length, missingMonths: [] };
             }
             
@@ -5392,7 +5392,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Funkcija za čiščenje neveljavnih vadnin iz baze
     async function clearInvalidFees() {
         try {
-            console.log('🧹 Začenjam čiščenje neveljavnih vadnin...');
+// console.log('🧹 Začenjam čiščenje neveljavnih vadnin...');
             
             // Poišči vse vadnine z neveljavnimi meseci
             const { data: allFees, error: fetchError } = await supabase
@@ -5408,12 +5408,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const invalidFees = allFees.filter(fee => fee.month < 0 || fee.month > 11);
             
             if (invalidFees.length === 0) {
-                console.log('✅ Ni neveljavnih vadnin za čiščenje');
+// console.log('✅ Ni neveljavnih vadnin za čiščenje');
                 showMessage('Ni neveljavnih vadnin za čiščenje!', 'info');
                 return true;
             }
             
-            console.log(`🧹 Najdenih ${invalidFees.length} neveljavnih vadnin za brisanje`);
+// console.log(`🧹 Najdenih ${invalidFees.length} neveljavnih vadnin za brisanje`);
             
             // Izbriši neveljavne vadnine
             const { error: deleteError } = await supabase
@@ -5427,7 +5427,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return false;
             }
             
-            console.log(`✅ Uspešno izbrisanih ${invalidFees.length} neveljavnih vadnin`);
+// console.log(`✅ Uspešno izbrisanih ${invalidFees.length} neveljavnih vadnin`);
             showMessage(`Uspešno izbrisanih ${invalidFees.length} neveljavnih vadnin!`, 'success');
             
             return true;
@@ -5442,7 +5442,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Funkcija za preverjanje baze podatkov za neveljavne podatke
     async function checkDatabaseIntegrity() {
         try {
-            console.log('🔍 Preverjam integriteto baze podatkov...');
+// console.log('🔍 Preverjam integriteto baze podatkov...');
             
             // Poišči vse vadnine
             const { data: allFees, error: fetchError } = await supabase
@@ -5457,12 +5457,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const invalidFees = allFees.filter(fee => fee.month < 0 || fee.month > 11);
             const validFees = allFees.filter(fee => fee.month >= 0 && fee.month <= 11);
             
-            console.log(`📊 Skupaj vadnin: ${allFees.length}`);
-            console.log(`✅ Veljavne vadnine: ${validFees.length}`);
-            console.log(`❌ Neveljavne vadnine: ${invalidFees.length}`);
+// console.log(`📊 Skupaj vadnin: ${allFees.length}`);
+// console.log(`✅ Veljavne vadnine: ${validFees.length}`);
+// console.log(`❌ Neveljavne vadnine: ${invalidFees.length}`);
             
             if (invalidFees.length > 0) {
-                console.log('Neveljavne vadnine:', invalidFees);
+// console.log('Neveljavne vadnine:', invalidFees);
                 return { 
                     status: 'corrupted', 
                     total: allFees.length, 
@@ -5501,7 +5501,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Dodaj dodatno zakasnitev za avtomatsko kopiranje, da se izognemo konfliktom
                 setTimeout(() => {
                     try {
-                        console.log('🚀 Začenjam avtomatsko kopiranje vadnin...');
+// console.log('🚀 Začenjam avtomatsko kopiranje vadnin...');
                         autoCopyFeesIfNeeded();
                     } catch (error) {
                         console.error('❌ Napaka pri avtomatskem kopiranju vadnin:', error);

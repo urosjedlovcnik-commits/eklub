@@ -634,7 +634,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (isInactive(date, termId)) { btnAbsent.disabled = true; }
           
                      // Pravilno barvno kodiranje za trenerje
-           console.log('🔍 DEBUG: Barvno kodiranje trenerja:', trainer.id);
+// console.log('🔍 DEBUG: Barvno kodiranje trenerja:', trainer.id);
            // Najprej počisti vse barvne razrede
            btnPresent.classList.remove("ok", "warn", "neutral");
            btnAbsent.classList.remove("ok", "warn", "neutral");
@@ -723,27 +723,27 @@ document.addEventListener('DOMContentLoaded', () => {
           if (isInactive(date, termId)) { btnPresent.disabled = true; }
           
                      // Pravilno barvno kodiranje za plavalce
-           console.log('🔍 DEBUG: Barvno kodiranje plavalca:', s.id);
-           console.log('🔍 DEBUG: Trenutno stanje status:', status);
+// console.log('🔍 DEBUG: Barvno kodiranje plavalca:', s.id);
+// console.log('🔍 DEBUG: Trenutno stanje status:', status);
            
            // Najprej počisti vse barvne razrede
            btnPresent.classList.remove("ok", "warn", "neutral");
            
            if (status === true) { 
              btnPresent.classList.add("ok"); 
-             console.log('🔍 DEBUG: Plavalec prisoten - Prisoten: ok (zelen)');
+// console.log('🔍 DEBUG: Plavalec prisoten - Prisoten: ok (zelen)');
            } else { 
              btnPresent.classList.add("neutral"); 
-             console.log('🔍 DEBUG: Plavalec brez statusa - Prisoten: neutral (siv)');
+// console.log('🔍 DEBUG: Plavalec brez statusa - Prisoten: neutral (siv)');
            }
           
           btnPresent.addEventListener("click", async ()=>{
-            console.log('🔍 DEBUG: Plavalec gumb Prisoten kliknjen');
-            console.log('🔍 DEBUG: Trenutno stanje status:', status);
-            console.log('🔍 DEBUG: Plavalec ID:', s.id);
+// console.log('🔍 DEBUG: Plavalec gumb Prisoten kliknjen');
+// console.log('🔍 DEBUG: Trenutno stanje status:', status);
+// console.log('🔍 DEBUG: Plavalec ID:', s.id);
             
             const newStatus = status === true ? false : true;
-            console.log('🔍 DEBUG: Novo stanje:', newStatus);
+// console.log('🔍 DEBUG: Novo stanje:', newStatus);
             
             const { error } = await supabase
               .from('attendance')
@@ -840,24 +840,24 @@ document.addEventListener('DOMContentLoaded', () => {
             btnPresent.classList.add("neutral"); 
           }
           btnPresent.addEventListener("click", async ()=>{
-            console.log('🔍 DEBUG: Nadomeščanje gumb Prisoten kliknjen');
-            console.log('🔍 DEBUG: Trenutno stanje status:', status);
-            console.log('🔍 DEBUG: Plavalec ID:', s.id);
+// console.log('🔍 DEBUG: Nadomeščanje gumb Prisoten kliknjen');
+// console.log('🔍 DEBUG: Trenutno stanje status:', status);
+// console.log('🔍 DEBUG: Plavalec ID:', s.id);
             
             const newStatus = status === true ? false : true;
-            console.log('🔍 DEBUG: Novo stanje:', newStatus);
+// console.log('🔍 DEBUG: Novo stanje:', newStatus);
             
             const { error } = await supabase
               .from('attendance')
               .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: newStatus }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
             if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
-              console.log('🔍 DEBUG: Nadomeščanje prisotnost posodobljena v Supabase');
+// console.log('🔍 DEBUG: Nadomeščanje prisotnost posodobljena v Supabase');
               // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
               if (!attendance[ymd]) attendance[ymd] = {};
               if (!attendance[ymd][termId]) attendance[ymd][termId] = {};
               attendance[ymd][termId][s.id] = newStatus;
               
-              console.log('🔍 DEBUG: Lokalni podatki posodobljeni:', attendance[ymd][termId][s.id]);
+// console.log('🔍 DEBUG: Lokalni podatki posodobljeni:', attendance[ymd][termId][s.id]);
               
               await refreshModalData(date, termId);
               renderMonth();
