@@ -2746,8 +2746,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
-        // Prenesi CSV datoteko
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        // Prenesi CSV datoteko z BOM za pravilno podporo šumnikov
+        const BOM = '\uFEFF';
+        const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
         link.setAttribute('href', url);
@@ -5058,8 +5059,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 csv += `"${swimmer.first_name}","${swimmer.last_name}","${swimmer.email || ''}","${swimmer.phone || ''}","${swimmer.address || ''}","${swimmer.postal_code || ''}","${termsStr}"\n`;
             });
             
-            // Prenesi CSV datoteko
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            // Prenesi CSV datoteko z BOM za pravilno podporo šumnikov
+            const BOM = '\uFEFF';
+            const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             const url = URL.createObjectURL(blob);
             link.setAttribute('href', url);
@@ -5091,7 +5093,9 @@ document.addEventListener('DOMContentLoaded', () => {
             Tomaž,Petek,tomaz.petek@email.com,048901234,Novi trg 11,8000 Novo Mesto,"sre-07:15-08:15"
             Eva,Horvat,eva.horvat@email.com,049012345,Mestni trg 2,9000 Murska Sobota,"pon-06:15-07:15,sre-07:15-08:15,čet-06:15-07:15"`;
 
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                // Prenesi CSV datoteko z BOM za pravilno podporo šumnikov
+                const BOM = '\uFEFF';
+                const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement('a');
                 const url = URL.createObjectURL(blob);
                 link.setAttribute('href', url);
