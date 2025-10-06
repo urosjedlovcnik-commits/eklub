@@ -2742,7 +2742,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         postalCode = swimmer.postal_code || '';
                     }
                     
-                    csv += `"${r.first} ${r.last}","${email}",${r.att},${r.pos},${pct},${feeAmount},"${address}","${postalCode}"\n`;
+                    csv += `${r.first} ${r.last},${email},${r.att},${r.pos},${pct},${feeAmount},${address},${postalCode}\n`;
             });
         }
         
@@ -5056,7 +5056,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }).join(',')
                     : '';
                 
-                csv += `"${swimmer.first_name}","${swimmer.last_name}","${swimmer.email || ''}","${swimmer.phone || ''}","${swimmer.address || ''}","${swimmer.postal_code || ''}","${termsStr}"\n`;
+                csv += `${swimmer.first_name},${swimmer.last_name},${swimmer.email || ''},${swimmer.phone || ''},${swimmer.address || ''},${swimmer.postal_code || ''},"${termsStr}"\n`;
             });
             
             // Prenesi CSV datoteko z BOM za pravilno podporo šumnikov
