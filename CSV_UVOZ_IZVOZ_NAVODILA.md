@@ -30,8 +30,8 @@ Maja,Kovač,maja.kovac@email.com,041234567,Cesta na Gorenjsko 15,4000 Kranj,"pon
 
 ### Izvoz povzetka udeležbe:
 ```csv
-Plavalec,Obiskani treningi,Možni treningi,Delež (%),Znesek vadnine (€),Naslov,Pošta
-"Janez Novak",8,12,66.7,80.00,"Trg svobode 1","1000 Ljubljana"
+Plavalec,Email,Obiskani treningi,Možni treningi,Delež (%),Znesek vadnine (€),Naslov,Pošta
+"Janez Novak","janez.novak@email.com",8,12,66.7,80.00,"Trg svobode 1","1000 Ljubljana"
 ```
 
 ### Izvoz seznama plavalcev:

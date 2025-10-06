@@ -2714,7 +2714,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const summaryData = calculateSwimmerSummaryData(year, month);
             
             // Ustvari CSV vsebino v obliki povzetka udeležbe plavalcev
-            let csv = 'Plavalec,Obiskani treningi,Možni treningi,Delež (%),Znesek vadnine (€),Naslov,Pošta\n';
+            let csv = 'Plavalec,Email,Obiskani treningi,Možni treningi,Delež (%),Znesek vadnine (€),Naslov,Pošta\n';
             
             // Filtriraj plavalce, ki nimajo nobenega možnega obiska in jih sortiraj
             const rows = Object.values(summaryData)
@@ -2730,30 +2730,32 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Poišči znesek vadnine za plavalca
                     const swimmer = swimmers.find(s => s.first_name === r.first && s.last_name === r.last);
                     let feeAmount = '0.00';
+                    let email = '';
                     let address = '';
                     let postalCode = '';
                     if (swimmer) {
                         const feeData = swimmerFees[swimmer.id] || { fee: 80, discount: 0 };
                         const finalFee = Math.max(0, feeData.fee - feeData.discount);
                         feeAmount = finalFee.toFixed(2);
+                        email = swimmer.email || '';
                         address = swimmer.address || '';
                         postalCode = swimmer.postal_code || '';
                     }
                     
-                    csv += `"${r.first} ${r.last}",${r.att},${r.pos},${pct},${feeAmount},"${address}","${postalCode}"\n`;
-                });
-            }
-            
-            // Prenesi CSV datoteko
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
+                    csv += `"${r.first} ${r.last}","${email}",${r.att},${r.pos},${pct},${feeAmount},"${address}","${postalCode}"\n`;
+            });
+        }
+        
+        // Prenesi CSV datoteko
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
             link.setAttribute('download', `povzetek_udelezbe_${year}_${month}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
             
 // console.log('✅ CSV izvoz povzetka udeležbe uspešno končan');
             
