@@ -416,6 +416,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const elNewLast = document.getElementById("newLast");
     const elNewEmail = document.getElementById("newEmail");
     const elNewPhone = document.getElementById("newPhone");
+    const elNewAddress = document.getElementById("newAddress");
+    const elNewPostalCode = document.getElementById("newPostalCode");
     const elAddSwimmerBtn = document.getElementById("addSwimmerBtn");
     const elSwimmerSelect = document.getElementById("swimmerSelect");
     const elTermSelect = document.getElementById("termSelect");
@@ -978,6 +980,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <th>Priimek</th>
                     <th>Email</th>
                     <th>Telefon</th>
+                    <th>Naslov</th>
+                    <th>Pošta</th>
                     <th>Termini</th>
                     <th>Akcije</th>
                 </tr>
@@ -1034,6 +1038,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${swimmer.last_name}</td>
                 <td>${swimmer.email || '<span class="muted">Brez email naslova</span>'}</td>
                 <td>${swimmer.phone || '<span class="muted">Brez telefona</span>'}</td>
+                <td>${swimmer.address || '<span class="muted">Brez naslova</span>'}</td>
+                <td>${swimmer.postal_code || '<span class="muted">Brez pošte</span>'}</td>
                 <td class="terms-cell">${swimmer.is_deleted ? '<span class="muted">Izbrisan</span>' : (termsChips || '<span class="muted">Brez terminov</span>')}</td>
                 <td>
                     ${swimmer.is_deleted ? 
@@ -1121,6 +1127,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const last = elNewLast.value.trim();
         const email = elNewEmail.value.trim();
         const phone = elNewPhone.value.trim();
+        const address = elNewAddress.value.trim();
+        const postalCode = elNewPostalCode.value.trim();
         
         if (!first || !last) {
             alert('Prosim vnesite ime in priimek');
@@ -1147,6 +1155,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     last_name: last,
                     email: email || null,
                     phone: phone || null,
+                    address: address || null,
+                    postal_code: postalCode || null,
                     terms: [],
                     is_deleted: false
                 }])
@@ -1167,10 +1177,12 @@ document.addEventListener('DOMContentLoaded', () => {
             elNewLast.value = '';
             elNewEmail.value = '';
             elNewPhone.value = '';
+            elNewAddress.value = '';
+            elNewPostalCode.value = '';
             
             updateSwimmerSelects();
             updateSwimmersList();
-            elSwimmerInfo.textContent = `Dodan plavalec: ${first} ${last}${email ? ` (${email})` : ''}${phone ? ` (${phone})` : ''}`;
+            elSwimmerInfo.textContent = `Dodan plavalec: ${first} ${last}${email ? ` (${email})` : ''}${phone ? ` (${phone})` : ''}${address ? ` (${address})` : ''}${postalCode ? ` (${postalCode})` : ''}`;
             
             setTimeout(() => {
                 elSwimmerInfo.textContent = '';
@@ -1945,7 +1957,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const headers = parseCSVLine(lines[0]);
                 
                 if (!headers.includes('first_name') || !headers.includes('last_name') || !headers.includes('terms')) {
-                    alert('CSV mora vsebovati stolpce: first_name, last_name, terms (email in phone sta opcijska)');
+                    alert('CSV mora vsebovati stolpce: first_name, last_name, terms (email, phone, address, postal_code so opcijski)');
                     return;
                 }
 
@@ -1958,6 +1970,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         const termsStr = values[headers.indexOf('terms')];
                         const email = headers.includes('email') ? values[headers.indexOf('email')] : '';
                         const phone = headers.includes('phone') ? values[headers.indexOf('phone')] : '';
+                        const address = headers.includes('address') ? values[headers.indexOf('address')] : '';
+                        const postalCode = headers.includes('postal_code') ? values[headers.indexOf('postal_code')] : '';
                         
                         if (first && last) {
                             // Razčleni termine, ločene z vejico, vendar znotraj istega polja
@@ -1996,6 +2010,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 last_name: last,
                                 email: email && isValidEmail(email) ? email : null,
                                 phone: phone && isValidPhone(phone) ? phone : null,
+                                address: address || null,
+                                postal_code: postalCode || null,
                                 terms: validTerms,
                                 is_deleted: false
                             });
@@ -2702,7 +2718,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const summaryData = calculateSwimmerSummaryData(year, month);
             
             // Ustvari CSV vsebino v obliki povzetka udeležbe plavalcev
-            let csv = 'Plavalec,Obiskani treningi,Možni treningi,Delež (%),Znesek vadnine (€)\n';
+            let csv = 'Plavalec,Obiskani treningi,Možni treningi,Delež (%),Znesek vadnine (€),Naslov,Pošta\n';
             
             // Filtriraj plavalce, ki nimajo nobenega možnega obiska in jih sortiraj
             const rows = Object.values(summaryData)
@@ -2718,13 +2734,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Poišči znesek vadnine za plavalca
                     const swimmer = swimmers.find(s => s.first_name === r.first && s.last_name === r.last);
                     let feeAmount = '0.00';
+                    let address = '';
+                    let postalCode = '';
                     if (swimmer) {
                         const feeData = swimmerFees[swimmer.id] || { fee: 80, discount: 0 };
                         const finalFee = Math.max(0, feeData.fee - feeData.discount);
                         feeAmount = finalFee.toFixed(2);
+                        address = swimmer.address || '';
+                        postalCode = swimmer.postal_code || '';
                     }
                     
-                    csv += `"${r.first} ${r.last}",${r.att},${r.pos},${pct},${feeAmount}\n`;
+                    csv += `"${r.first} ${r.last}",${r.att},${r.pos},${pct},${feeAmount},"${address}","${postalCode}"\n`;
                 });
             }
             
@@ -5017,17 +5037,17 @@ document.addEventListener('DOMContentLoaded', () => {
     
                 // Funkcija za prenos primera CSV datoteke za termine plavalcev
             window.downloadSwimmerTermsExample = function() {
-                const csvContent = `first_name,last_name,terms
-            Janez,Novak,"pon-20:00-21:00,sre-20:00-21:00,čet-20:00-21:00"
-            Maja,Kovač,"pon-06:15-07:15,čet-06:15-07:15"
-            Peter,Horvat,"sre-07:15-08:15,čet-20:00-21:00"
-            Ana,Žnidar,"pon-06:15-07:15"
-            Marko,Potočnik,"sre-07:15-08:15,čet-06:15-07:15,čet-20:00-21:00"
-            Sara,Medvešek,"pon-20:00-21:00,sre-20:00-21:00"
-            Luka,Žagar,"čet-06:15-07:15,čet-20:00-21:00"
-            Nina,Košir,"pon-06:15-07:15,pon-20:00-21:00"
-            Tomaž,Petek,"sre-07:15-08:15"
-            Eva,Horvat,"pon-06:15-07:15,sre-07:15-08:15,čet-06:15-07:15"`;
+                const csvContent = `first_name,last_name,email,phone,address,postal_code,terms
+            Janez,Novak,janez.novak@email.com,040123456,Trg svobode 1,1000 Ljubljana,"pon-20:00-21:00,sre-20:00-21:00,čet-20:00-21:00"
+            Maja,Kovač,maja.kovac@email.com,041234567,Cesta na Gorenjsko 15,4000 Kranj,"pon-06:15-07:15,čet-06:15-07:15"
+            Peter,Horvat,peter.horvat@email.com,042345678,Prešernova 8,2000 Maribor,"sre-07:15-08:15,čet-20:00-21:00"
+            Ana,Žnidar,ana.znidar@email.com,043456789,Slovenska cesta 22,1000 Ljubljana,"pon-06:15-07:15"
+            Marko,Potočnik,marko.potocnik@email.com,044567890,Trubarjeva 5,1000 Ljubljana,"sre-07:15-08:15,čet-06:15-07:15,čet-20:00-21:00"
+            Sara,Medvešek,sara.medvesek@email.com,045678901,Partizanska 12,3000 Celje,"pon-20:00-21:00,sre-20:00-21:00"
+            Luka,Žagar,luka.zagar@email.com,046789012,Glavna ulica 3,5000 Nova Gorica,"čet-06:15-07:15,čet-20:00-21:00"
+            Nina,Košir,nina.kosir@email.com,047890123,Stara cesta 7,6000 Koper,"pon-06:15-07:15,pon-20:00-21:00"
+            Tomaž,Petek,tomaz.petek@email.com,048901234,Novi trg 11,8000 Novo Mesto,"sre-07:15-08:15"
+            Eva,Horvat,eva.horvat@email.com,049012345,Mestni trg 2,9000 Murska Sobota,"pon-06:15-07:15,sre-07:15-08:15,čet-06:15-07:15"`;
 
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement('a');
