@@ -1042,6 +1042,70 @@ document.addEventListener('DOMContentLoaded', () => {
       renderMonth();
     });
 
+    // Event listener za gumb "Ponastavi trening"
+    const elResetAttendanceBtn = document.getElementById('resetAttendanceBtn');
+    if (elResetAttendanceBtn) {
+      elResetAttendanceBtn.addEventListener('click', async () => {
+        if (!modalCtx.date || !modalCtx.termId) return;
+        
+        const confirmed = confirm('Ali ste prepričani, da želite ponastaviti vso prisotnost za ta trening? To bo izbrisalo vse vnesene podatke o prisotnosti plavalcev in trenerjev.');
+        if (!confirmed) return;
+        
+        try {
+          const ymd = iso(modalCtx.date);
+          const termId = modalCtx.termId;
+          
+          // Izbriši vso prisotnost plavalcev za ta termin
+          const { error: attendanceError } = await supabase
+            .from('attendance')
+            .delete()
+            .eq('date', ymd)
+            .eq('term_id', termId);
+          
+          if (attendanceError) {
+            console.error('Napaka pri brisanju prisotnosti plavalcev:', attendanceError);
+            alert('Napaka pri brisanju prisotnosti plavalcev: ' + attendanceError.message);
+            return;
+          }
+          
+          // Izbriši vso prisotnost trenerjev za ta termin
+          const { error: trainerAttendanceError } = await supabase
+            .from('trainer_attendance')
+            .delete()
+            .eq('date', ymd)
+            .eq('term_id', termId);
+          
+          if (trainerAttendanceError) {
+            console.error('Napaka pri brisanju prisotnosti trenerjev:', trainerAttendanceError);
+            alert('Napaka pri brisanju prisotnosti trenerjev: ' + trainerAttendanceError.message);
+            return;
+          }
+          
+          // Počisti lokalne podatke
+          if (attendance[ymd] && attendance[ymd][termId]) {
+            delete attendance[ymd][termId];
+          }
+          
+          if (trainerAttendance[ymd] && trainerAttendance[ymd][termId]) {
+            delete trainerAttendance[ymd][termId];
+          }
+          
+          // Počisti cache
+          clearCache();
+          
+          // Osveži modal
+          await refreshModalData(modalCtx.date, modalCtx.termId);
+          renderMonth();
+          
+          alert('Prisotnost je bila uspešno ponastavljena!');
+          
+        } catch (error) {
+          console.error('Napaka pri ponastavitvi prisotnosti:', error);
+          alert('Napaka pri ponastavitvi prisotnosti: ' + error.message);
+        }
+      });
+    }
+
     elModal.addEventListener("click", (e)=>{
       if(e.target === elModal){
         closeModal(elModal);
