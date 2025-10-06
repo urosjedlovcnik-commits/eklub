@@ -106,10 +106,20 @@ document.addEventListener('DOMContentLoaded', () => {
       return `${String(d).padStart(2, '0')} / ${String(m).padStart(2, '0')} / ${y}`;
     }
 
+    // Cache za getTermsForDate
+    let termsForDateCache = new Map();
+    
     function getTermsForDate(date) {
+      const cacheKey = iso(date);
+      let cached = termsForDateCache.get(cacheKey);
+      if (cached) return cached;
+      
       const w = date.getDay() === 0 ? 7 : date.getDay();
       const isoDate = iso(date);
-      return TERMS.filter(t => isoDate >= t.date_from && isoDate <= t.date_to && t.day == w);
+      const result = TERMS.filter(t => isoDate >= t.date_from && isoDate <= t.date_to && t.day == w);
+      
+      termsForDateCache.set(cacheKey, result);
+      return result;
     }
     function termById(id){ return TERMS.find(t=>t.id===id); }
 
@@ -281,7 +291,14 @@ document.addEventListener('DOMContentLoaded', () => {
      }
 
     // POPRAVEK: Prenovljena in poenostavljena logika barvnega kodiranja
+    // Cache za getAttendanceStatus
+    let attendanceStatusFunctionCache = new Map();
+    
     function getAttendanceStatus(date, termId) {
+        const cacheKey = `${iso(date)}-${termId}`;
+        let cached = attendanceStatusFunctionCache.get(cacheKey);
+        if (cached !== undefined) return cached;
+        
         const ymd = iso(date);
         
         // Plavalci, ki so TRENUTNO dodeljeni temu terminu in niso izbrisani
@@ -297,16 +314,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalAssignedCount = assignedSwimmers.length;
 
         // Logika določitve statusa
+        let result;
         if (totalAssignedCount === 0) {
             // Če ni dodeljenih plavalcev, status ne more biti določen in je lahko "popoln"
-            return 'complete'; 
+            result = 'complete'; 
         } else if (markedAssignedSwimmersCount === 0) {
-            return 'unfilled'; // Ni vnesena nobena prisotnost
+            result = 'unfilled'; // Ni vnesena nobena prisotnost
         } else if (markedAssignedSwimmersCount === totalAssignedCount) {
-            return 'complete'; // Vsi dodeljeni imajo vneseno prisotnost
+            result = 'complete'; // Vsi dodeljeni imajo vneseno prisotnost
         } else {
-            return 'partial'; // Vsaj ena, a ne vsa prisotnost je vnesena
+            result = 'partial'; // Vsaj ena, a ne vsa prisotnost je vnesena
         }
+        
+        attendanceStatusFunctionCache.set(cacheKey, result);
+        return result;
     }
     
     function getTermStatus(date, termId){
@@ -322,39 +343,73 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===== Pogled meseca =====
     let viewDate = new Date(); viewDate.setDate(1);
 
+    // Cache za optimizacijo
+    let termsCache = new Map();
+    let attendanceStatusCache = new Map();
+    
+    // Funkcija za čiščenje cache-ja
+    function clearCache() {
+      termsCache.clear();
+      attendanceStatusCache.clear();
+      termsForDateCache.clear();
+      attendanceStatusFunctionCache.clear();
+    }
+    
     function renderMonth(){
       const y=viewDate.getFullYear(), m=viewDate.getMonth();
       elMonthLabel.textContent = new Date(y,m,1).toLocaleDateString("sl-SI", {month:"long",year:"numeric"});
-      elCalendarGrid.innerHTML = "";
-
+      
+      // Ustvari fragment za boljšo performanco
+      const fragment = document.createDocumentFragment();
+      
       const pad = startWeekday(y,m)-1;
       for(let i=0;i<pad;i++){
-        const div=document.createElement("div"); div.className="day disabled"; elCalendarGrid.appendChild(div);
+        const div=document.createElement("div"); 
+        div.className="day disabled"; 
+        fragment.appendChild(div);
       }
 
       const dim = daysInMonth(y,m);
+      const isMobile = window.innerWidth <= 768;
+      
       for(let d=1; d<=dim; d++){
         const date = new Date(y,m,d);
         const day = document.createElement("div");
         day.className="day"+(isToday(date)?" today":"");
-        const num = document.createElement("div"); num.className="num"; num.textContent=d; day.appendChild(num);
+        
+        const num = document.createElement("div"); 
+        num.className="num"; 
+        num.textContent=d; 
+        day.appendChild(num);
 
-        const todays = getTermsForDate(date);
-        todays.sort((a,b)=> a.start_time.localeCompare(b.start_time));
+        // Cache-iranje terminov za dan
+        const cacheKey = `${y}-${m}-${d}`;
+        let todays = termsCache.get(cacheKey);
+        if (!todays) {
+          todays = getTermsForDate(date);
+          todays.sort((a,b)=> a.start_time.localeCompare(b.start_time));
+          termsCache.set(cacheKey, todays);
+        }
 
         todays.forEach(t=>{
           const e = document.createElement("div");
           e.className = "event";
 
-          // NOV POPRAVEK: Barvno kodiranje se aplicira samo na današnje ali pretekle dogodke.
-          if (!isPast(date) && !isToday(date)) {
-              // Ne delamo nič, barva ostane privzeta
-          } else {
-            const ymd = iso(date);
-            const termAtt = attendance[ymd]?.[t.id] || {};
-            if (Object.keys(termAtt).length > 0) {
-                const status = getAttendanceStatus(date, t.id);
-                e.classList.add(status);
+          // Optimizirano barvno kodiranje
+          const isPastOrToday = isPast(date) || isToday(date);
+          if (isPastOrToday) {
+            const statusCacheKey = `${iso(date)}-${t.id}`;
+            let status = attendanceStatusCache.get(statusCacheKey);
+            if (!status) {
+              const ymd = iso(date);
+              const termAtt = attendance[ymd]?.[t.id] || {};
+              if (Object.keys(termAtt).length > 0) {
+                status = getAttendanceStatus(date, t.id);
+                attendanceStatusCache.set(statusCacheKey, status);
+              }
+            }
+            if (status) {
+              e.classList.add(status);
             }
           }
           
@@ -363,13 +418,12 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           
           e.innerHTML = `<span class="time">${t.start_time.slice(0, 5)}<span class="end-time">–${t.end_time.slice(0, 5)}</span></span>`;
-
           e.title = t.label;
           e.dataset.termId = t.id;
           day.appendChild(e);
         });
 
-        // POPRAVEK: poenostavljena logika za odpiranje modalov
+        // Event delegation za boljšo performanco
         if (todays.length > 0) {
           day.addEventListener("click", (e) => {
             e.stopPropagation();
@@ -381,16 +435,20 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         }
         
-        // Indikator za preveč dogodkov na mobilnih napravah
-        if (window.innerWidth <= 768 && todays.length > 3) {
+        // Mobilni indikator
+        if (isMobile && todays.length > 3) {
           const more = document.createElement("div");
           more.className = "more-events-indicator";
           more.textContent = `+ ${todays.length - 3} več...`;
           day.appendChild(more);
         }
         
-        elCalendarGrid.appendChild(day);
+        fragment.appendChild(day);
       }
+      
+      // Enkratna DOM manipulacija
+      elCalendarGrid.innerHTML = "";
+      elCalendarGrid.appendChild(fragment);
     }
 
     // ===== NOV MODAL: izbira termina na določen dan (za mobilno verzijo) =====
@@ -1010,9 +1068,19 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
+    // Debouncing za navigacijo
+    let navigationTimeout;
+    function debouncedRender() {
+      clearTimeout(navigationTimeout);
+      navigationTimeout = setTimeout(() => {
+        clearCache();
+        renderMonth();
+      }, 50);
+    }
+    
     // ===== Navigacija =====
-    elPrev.addEventListener("click", ()=>{ viewDate.setMonth(viewDate.getMonth()-1); renderMonth(); });
-    elNext.addEventListener("click", ()=>{ viewDate.setMonth(viewDate.getMonth()+1); renderMonth(); });
+    elPrev.addEventListener("click", ()=>{ viewDate.setMonth(viewDate.getMonth()-1); debouncedRender(); });
+    elNext.addEventListener("click", ()=>{ viewDate.setMonth(viewDate.getMonth()+1); debouncedRender(); });
 
     // ===== Nalaganje podatkov =====
     async function loadTerms() {
@@ -1183,6 +1251,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadAllData() {
       await Promise.all([loadTerms(), loadSwimmers(), loadTrainers(), loadAttendance(), loadTrainerAttendance(), loadTermStatus()]);
+      clearCache(); // Počisti cache ob osvežitvi podatkov
       renderMonth();
     }
 
