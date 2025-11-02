@@ -376,6 +376,23 @@
                 <div id="swimmerSummaryBox">Nalaganje podatkov...</div>
               </div>
             </div>
+
+            <div class="card">
+              <h3>Povzetek udeležbe OLY plavalcev (za prikazani mesec)</h3>
+              <div class="inner">
+                <div class="summary-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+                  <button class="btn" id="prevOlySwimmerSummaryMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Prejšnji mesec">←</button>
+                  <div style="text-align: center; min-width: 200px; cursor: pointer; padding: 10px; border-radius: 8px; transition: background-color 0.2s;" id="olySwimmerSummaryMonthYearContainer" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
+                    <div id="currentOlySwimmerSummaryMonthYear" style="font-size: 18px; font-weight: bold; color: #333;"></div>
+                    <div style="font-size: 12px; color: #666;">Klikni za izbiro datuma</div>
+                  </div>
+                  <button class="btn" id="nextOlySwimmerSummaryMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Naslednji mesec">→</button>
+                  <button class="btn" id="currentOlySwimmerSummaryMonthBtn" style="background: #007bff; color: white; padding: 8px 12px; cursor: pointer;" title="Pojdi na trenutni mesec">Trenutni mesec</button>
+                  <input type="month" id="olySwimmerSummaryMonthYearInput" style="display: none;">
+                </div>
+                <div id="olySwimmerSummaryBox">Nalaganje podatkov...</div>
+              </div>
+            </div>
     </div>
   </div>
 
@@ -575,10 +592,7 @@
               <input type="number" id="managementCostPerMonth" value="500" min="0" step="0.01" style="width: 120px;">
               <span>€</span>
             </div>
-            <div class="row" style="margin-top: 12px; gap: 8px;">
-              <button class="btn pri" id="saveCostsBtn">Shrani nastavitve</button>
-              <button class="btn" id="resetManagementCostsBtn" style="background-color: #6c757d; color: white;">Ponastavi na privzeto (500€)</button>
-            </div>
+            <button class="btn pri" id="saveCostsBtn">Shrani nastavitve</button>
           </div>
         </div>
 
@@ -588,10 +602,7 @@
             <div id="trainerRatesSettings">
               <p class="muted">Nalaganje trenerjev...</p>
             </div>
-            <div class="row" style="margin-top: 12px; gap: 8px;">
-              <button class="btn pri" id="saveTrainerRatesBtn">Shrani postavke trenerjev</button>
-              <button class="btn" id="resetTrainerRatesBtn" style="background-color: #6c757d; color: white;">Ponastavi na privzeto (25€/termin)</button>
-            </div>
+            <button class="btn pri" id="saveTrainerRatesBtn">Shrani postavke trenerjev</button>
           </div>
         </div>
 
@@ -687,10 +698,7 @@ Maja,Kovač,maja.kovac@email.com,+386 41 234 567,Prešernova 5,1000 Ljubljana,75
             <div id="termCostsSettings">
               <p class="muted">Nalaganje terminov...</p>
             </div>
-            <div class="row" style="margin-top: 12px; gap: 8px;">
-              <button class="btn pri" id="saveTermCostsBtn">Shrani stroške prog</button>
-              <button class="btn" id="resetTermCostsBtn" style="background-color: #6c757d; color: white;">Ponastavi na privzeto (50€/uro)</button>
-            </div>
+            <button class="btn pri" id="saveTermCostsBtn">Shrani stroške prog</button>
           </div>
         </div>
       </div>
