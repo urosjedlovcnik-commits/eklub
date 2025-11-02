@@ -3241,13 +3241,18 @@ document.addEventListener('DOMContentLoaded', () => {
                             console.log(`📅 Ustvarjam vadnine za mesec ${m + 1} (${monthName}) v letu ${startYear}`);
                             
                             for (const fee of importedFees) {
+                                // m je 0-based (0=Januar, 11=December)
+                                // Baza pričakuje 1-based (1=Januar, 12=December)
+                                const dbMonth = m + 1; // Pretvori iz 0-based v 1-based
                                 const newFee = {
                                     swimmer_id: fee.swimmer_id,
-                                    month: m + 1, // Pretvori v 1-based za bazo (m je 0-based)
+                                    month: dbMonth, // 1-based za bazo
                                     year: startYear,
                                     monthly_fee: fee.monthly_fee,
                                     discount: m === startMonth0Based ? fee.discount : 0 // Popust samo za začetni mesec
                                 };
+                                
+                                console.log(`  → Plavalec ${fee.swimmer_id}: mesec=${dbMonth} (${['Januar', 'Februar', 'Marec', 'April', 'Maj', 'Junij', 'Julij', 'Avgust', 'September', 'Oktober', 'November', 'December'][m]})`);
                                 
 // console.log(`🔍 Loop validation - m: ${m}, newFee.month: ${newFee.month}, type: ${typeof newFee.month}`);
                                 
@@ -3274,9 +3279,12 @@ document.addEventListener('DOMContentLoaded', () => {
 // console.log(`📅 Ustvarjam vadnine za mesec ${m} (${m + 1} v človeškem formatu) v letu ${startYear + 1}`);
                                 
                                 for (const fee of importedFees) {
+                                    // m je 0-based (0=Januar, 11=December)
+                                    // Baza pričakuje 1-based (1=Januar, 12=December) - preveri constraint v bazi!
+                                    const dbMonth = m + 1; // Pretvori iz 0-based v 1-based
                                     const newFee = {
                                         swimmer_id: fee.swimmer_id,
-                                        month: m + 1, // Pretvori v 1-based za bazo (m je 0-based)
+                                        month: dbMonth, // 1-based za bazo
                                         year: startYear + 1,
                                         monthly_fee: fee.monthly_fee,
                                         discount: 0 // Brez popusta za prihodnje mesece
