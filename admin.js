@@ -774,8 +774,8 @@ document.addEventListener('DOMContentLoaded', () => {
             await refreshSwimmerSummary();
             
             // Prikaži nastavitve stroškov prog in urnih postavk trenerjev
-            renderTermCostsSettings();
-            renderTrainerRatesSettings();
+            await renderTermCostsSettings();
+            await renderTrainerRatesSettings();
             
             // Inicializiraj prikaz mesecev
 // console.log('🔄 Inicializiram prikaz mesecev...');
@@ -4840,45 +4840,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===== FUNKCIJE ZA FINANCE SEKCIJO =====
     
-    // Funkcija za prikaz nastavitev stroškov prog po terminih
-    function renderTermCostsSettings() {
-        if (!elTermCostsSettings) return;
-        
-        let html = '<div class="term-costs-grid">';
-        TERMS.forEach(term => {
-            const termCost = getTermCost(term.id) || 0;
-            html += `
-                <div class="term-cost-row">
-                    <label for="term-cost-${term.id}">${term.label}:</label>
-                    <input type="number" id="term-cost-${term.id}" value="${termCost}" min="0" step="0.01" style="width: 100px;">
-                    <span>€/mesec</span>
-                </div>
-            `;
-        });
-        html += '</div>';
-        elTrainerRatesSettings.innerHTML = html;
-    }
-    
-    // Funkcija za prikaz nastavitev postavk trenerjev
-    function renderTrainerRatesSettings() {
-        if (!elTrainerRatesSettings) return;
-        
-        let html = '<div class="trainer-rates-grid">';
-        trainers.forEach(trainer => {
-            if (!trainer.is_deleted) {
-                const trainerRate = getTrainerRate(trainer.id) || 25;
-                html += `
-                    <div class="trainer-rate-row">
-                        <label for="trainer-rate-${trainer.id}">${trainer.first_name} ${trainer.last_name}:</label>
-                        <input type="number" id="trainer-rate-${trainer.id}" value="${trainerRate}" min="0" step="0.01" style="width: 100px;">
-                        <span>€/termin</span>
-                    </div>
-                `;
-            }
-        });
-        html += '</div>';
-        elTrainerRatesSettings.innerHTML = html;
-    }
     
     // Funkcija za shranjevanje stroškov prog po terminih
     function saveTermCosts() {
