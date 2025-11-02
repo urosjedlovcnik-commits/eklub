@@ -3346,6 +3346,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             year: parseInt(fee.year, 10)
                         }));
                         
+                        console.log(`📤 Shranjujem ${feesWithExplicitTypes.length} vadnin v bazo. Prva vadnina:`, feesWithExplicitTypes[0] ? {
+                            swimmer_id: feesWithExplicitTypes[0].swimmer_id,
+                            month: feesWithExplicitTypes[0].month,
+                            year: feesWithExplicitTypes[0].year,
+                            monthly_fee: feesWithExplicitTypes[0].monthly_fee
+                        } : 'ni vadnin');
+                        
                         // Poskusi z raw SQL insert
                         let data, error;
                         try {
