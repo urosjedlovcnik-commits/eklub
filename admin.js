@@ -3472,10 +3472,19 @@ document.addEventListener('DOMContentLoaded', () => {
                             
                             data = upsertResult.data;
                             error = upsertResult.error;
+                            
+                            if (data && data.length > 0) {
+                                console.log(`✅ Upsert uspešen: ${data.length} vadnin shranjenih. Prva vadnina:`, {
+                                    swimmer_id: data[0].swimmer_id,
+                                    month: data[0].month,
+                                    year: data[0].year,
+                                    monthly_fee: data[0].monthly_fee
+                                });
+                            }
                         }
 
                         if (error) {
-                            console.error('Napaka pri uvažanju vadnin:', error);
+                            console.error('❌ Napaka pri uvažanju vadnin:', error);
                             
                             // Preveri, ali gre za constraint violation
                             if (error.code === '23514' && error.message.includes('swimmer_monthly_fees_month_check')) {
@@ -3505,13 +3514,22 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (data && data.length > 0) {
                             // Poišči različne mesece/leta
                             const uniqueMonths = new Set();
+                            const monthDetails = [];
                             data.forEach(fee => {
-                                uniqueMonths.add(`${fee.month}/${fee.year}`);
+                                const key = `${fee.month}/${fee.year}`;
+                                uniqueMonths.add(key);
+                                if (monthDetails.length < 10) {
+                                    monthDetails.push(`${fee.month}/${fee.year}`);
+                                }
                             });
                             totalMonths = uniqueMonths.size;
+                            
+                            console.log(`✅ Shranjenih vadnin: ${data.length}, za ${totalMonths} različnih mesecev/let`);
+                            console.log(`✅ Prvih 10 vadnin (mesec/leto):`, monthDetails);
                         }
                         
-                        alert(`Uvoženih ${data ? data.length : 0} vadnin za ${totalMonths} prihodnjih mesecev (od ${startMonth + 1}/${startYear} naprej)`);
+                        const startMonthDisplay = startMonth0Based + 1;
+                        alert(`Uvoženih ${data ? data.length : 0} vadnin za ${totalMonths} prihodnjih mesecev (od ${startMonthDisplay}/${startYear} naprej)`);
                         
                         // Osveži finance sekcijo, če je prikazana
                         if (currentSection === 'finance') {
