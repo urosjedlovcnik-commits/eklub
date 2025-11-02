@@ -3660,66 +3660,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Event listenerji za ponastavitev stroškov
-    const elResetManagementCostsBtn = document.getElementById("resetManagementCostsBtn");
-    const elResetTermCostsBtn = document.getElementById("resetTermCostsBtn");
-    const elResetTrainerRatesBtn = document.getElementById("resetTrainerRatesBtn");
-    
-    if (elResetManagementCostsBtn) {
-        elResetManagementCostsBtn.addEventListener('click', () => {
-            if (elManagementCostPerMonth) {
-                elManagementCostPerMonth.value = 500;
-                saveCostSettings();
-                showMessage('Stroški vodenja so bili ponastavljeni na 500€/mesec', 'success');
-            }
-        });
-    }
-    
-    if (elResetTermCostsBtn) {
-        elResetTermCostsBtn.addEventListener('click', async () => {
-            if (confirm('Ali ste prepričani, da želite ponastaviti vse stroške prog na 50€/uro? To bo prepisalo vse trenutne nastavitve.')) {
-                const termCosts = {};
-                TERMS.forEach(term => {
-                    termCosts[term.id] = 50; // Privzeta vrednost
-                });
-                
-                const success = await saveTermCostsToDB(termCosts);
-                if (success) {
-                    await renderTermCostsSettings(); // Osveži prikaz
-                    showMessage('Stroški prog so bili ponastavljeni na 50€/uro', 'success');
-                    if (currentSection === 'finance') {
-                        calculateFinanceData();
-                    }
-                } else {
-                    showMessage('Napaka pri ponastavitvi stroškov prog!', 'error');
-                }
-            }
-        });
-    }
-    
-    if (elResetTrainerRatesBtn) {
-        elResetTrainerRatesBtn.addEventListener('click', async () => {
-            if (confirm('Ali ste prepričani, da želite ponastaviti vse postavke trenerjev na 25€/termin? To bo prepisalo vse trenutne nastavitve.')) {
-                const trainerRates = {};
-                trainers.forEach(trainer => {
-                    if (!trainer.is_deleted) {
-                        trainerRates[trainer.id] = 25; // Privzeta vrednost
-                    }
-                });
-                
-                const success = await saveTrainerRatesToDB(trainerRates);
-                if (success) {
-                    await renderTrainerRatesSettings(); // Osveži prikaz
-                    showMessage('Postavke trenerjev so bile ponastavljene na 25€/termin', 'success');
-                    if (currentSection === 'finance') {
-                        calculateFinanceData();
-                    }
-                } else {
-                    showMessage('Napaka pri ponastavitvi postavk trenerjev!', 'error');
-                }
-            }
-        });
-    }
 
     // Opomba: elRefreshSwimmerFeesBtn je bil zamenjan z navigacijskimi gumbi
     // Funkcionalnost je sedaj vključena v navigateSwimmerFeesMonth() funkciji
@@ -5277,7 +5217,31 @@ document.addEventListener('DOMContentLoaded', () => {
             
             elFinanceSummaryBox.innerHTML = summary;
             
-            // Prikaži podrobnosti stroškov
+            // Naloži ročno vnesene vrednosti (če obstajajo)
+            const manualCostsKey = `manualCosts_${currentFinanceYear}_${currentFinanceMonth}`;
+            const savedManualCosts = JSON.parse(localStorage.getItem(manualCostsKey) || '{}');
+            
+            // Izračunane vrednosti (uporabijo se, če ni ročno vnesene vrednosti)
+            const calculatedMonthlyFee = totalRevenue - olyContributions;
+            const calculatedTrainerCost = totalTrainerCost;
+            const calculatedManagementCost = managementCostPerMonth;
+            const calculatedFacilityCost = totalFacilityCost;
+            
+            // Uporabi ročno vnesene vrednosti, če obstajajo, sicer uporabi izračunane
+            const monthlyFee = savedManualCosts.monthlyFee !== undefined ? savedManualCosts.monthlyFee : calculatedMonthlyFee;
+            const trainerCost = savedManualCosts.trainerCost !== undefined ? savedManualCosts.trainerCost : calculatedTrainerCost;
+            const managementCost = savedManualCosts.managementCost !== undefined ? savedManualCosts.managementCost : calculatedManagementCost;
+            const facilityCost = savedManualCosts.facilityCost !== undefined ? savedManualCosts.facilityCost : calculatedFacilityCost;
+            
+            // Članarina - vedno ročno vnesena (privzeto 0)
+            const membershipFee = savedManualCosts.membershipFee !== undefined ? savedManualCosts.membershipFee : 0;
+            
+            // Ponovno izračunaj skupne vrednosti z ročno vnesenimi vrednostmi
+            const manualTotalRevenue = monthlyFee + olyContributions;
+            const manualTotalCosts = trainerCost + managementCost + facilityCost + membershipFee;
+            const manualProfit = manualTotalRevenue - manualTotalCosts;
+            
+            // Prikaži podrobnosti stroškov z urejnimi polji
             let detailedCosts = `
                 <table>
                     <thead>
@@ -5290,7 +5254,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     <tbody>
                         <tr>
                             <td>Mesečna vadnina</td>
-                            <td>${(totalRevenue - olyContributions).toFixed(2)} €</td>
+                            <td>
+                                <input type="number" 
+                                       id="manual-monthly-fee" 
+                                       value="${monthlyFee.toFixed(2)}" 
+                                       min="0" 
+                                       step="0.01" 
+                                       style="width: 120px; text-align: right;"
+                                       onchange="saveManualCost('monthlyFee', this.value, ${currentFinanceMonth}, ${currentFinanceYear})">
+                                <span> €</span>
+                                ${monthlyFee !== calculatedMonthlyFee ? `<span style="color: #999; font-size: 11px; margin-left: 5px;">(izračunano: ${calculatedMonthlyFee.toFixed(2)}€)</span>` : ''}
+                            </td>
                             <td>${activeSwimmers.length - Math.round(olyContributions / 40)} aktivnih plavalcev (individualne pristojbine)</td>
                         </tr>
                         ${olyContributions > 0 ? `
@@ -5302,39 +5276,91 @@ document.addEventListener('DOMContentLoaded', () => {
                         ` : ''}
                         <tr>
                             <td><strong>Skupaj prihodki</strong></td>
-                            <td><strong>${totalRevenue.toFixed(2)} €</strong></td>
+                            <td><strong>${manualTotalRevenue.toFixed(2)} €</strong></td>
                             <td></td>
                         </tr>
                         <tr>
                             <td>Stroški trenerjev</td>
-                            <td>${totalTrainerCost.toFixed(2)} €</td>
+                            <td>
+                                <input type="number" 
+                                       id="manual-trainer-cost" 
+                                       value="${trainerCost.toFixed(2)}" 
+                                       min="0" 
+                                       step="0.01" 
+                                       style="width: 120px; text-align: right;"
+                                       onchange="saveManualCost('trainerCost', this.value, ${currentFinanceMonth}, ${currentFinanceYear})">
+                                <span> €</span>
+                                ${trainerCost !== calculatedTrainerCost ? `<span style="color: #999; font-size: 11px; margin-left: 5px;">(izračunano: ${calculatedTrainerCost.toFixed(2)}€)</span>` : ''}
+                            </td>
                             <td>${totalTrainerHours.toFixed(2)}h opravljenih ur (individualne postavke na uro)</td>
                         </tr>
                         <tr>
                             <td>Stroški vodenja</td>
-                            <td>${managementCostPerMonth.toFixed(2)} €</td>
+                            <td>
+                                <input type="number" 
+                                       id="manual-management-cost" 
+                                       value="${managementCost.toFixed(2)}" 
+                                       min="0" 
+                                       step="0.01" 
+                                       style="width: 120px; text-align: right;"
+                                       onchange="saveManualCost('managementCost', this.value, ${currentFinanceMonth}, ${currentFinanceYear})">
+                                <span> €</span>
+                                ${managementCost !== calculatedManagementCost ? `<span style="color: #999; font-size: 11px; margin-left: 5px;">(izračunano: ${calculatedManagementCost.toFixed(2)}€)</span>` : ''}
+                            </td>
                             <td>Fiksni mesečni strošek</td>
                         </tr>
                         <tr>
                             <td>Stroški objektov</td>
-                            <td>${totalFacilityCost.toFixed(2)} €</td>
+                            <td>
+                                <input type="number" 
+                                       id="manual-facility-cost" 
+                                       value="${facilityCost.toFixed(2)}" 
+                                       min="0" 
+                                       step="0.01" 
+                                       style="width: 120px; text-align: right;"
+                                       onchange="saveManualCost('facilityCost', this.value, ${currentFinanceMonth}, ${currentFinanceYear})">
+                                <span> €</span>
+                                ${facilityCost !== calculatedFacilityCost ? `<span style="color: #999; font-size: 11px; margin-left: 5px;">(izračunano: ${calculatedFacilityCost.toFixed(2)}€)</span>` : ''}
+                            </td>
                             <td>Stroški prog po terminih</td>
+                        </tr>
+                        <tr>
+                            <td>Članarina</td>
+                            <td>
+                                <input type="number" 
+                                       id="manual-membership-fee" 
+                                       value="${membershipFee.toFixed(2)}" 
+                                       min="0" 
+                                       step="0.01" 
+                                       style="width: 120px; text-align: right;"
+                                       onchange="saveManualCost('membershipFee', this.value, ${currentFinanceMonth}, ${currentFinanceYear})">
+                                <span> €</span>
+                            </td>
+                            <td>Ročno vnesena članarina</td>
                         </tr>
                         <tr class="total-row">
                             <td><strong>Skupaj stroški</strong></td>
-                            <td><strong>${totalCosts.toFixed(2)} €</strong></td>
+                            <td><strong>${manualTotalCosts.toFixed(2)} €</strong></td>
                             <td></td>
                         </tr>
                         <tr style="background: #f0f0f0;">
                             <td colspan="3"></td>
                         </tr>
-                        <tr class="profit-row ${profit >= 0 ? 'positive' : 'negative'}">
-                            <td><strong>${profit >= 0 ? 'Dobiček' : 'Izguba'}</strong></td>
-                            <td><strong>${profit.toFixed(2)} €</strong></td>
-                            <td>${profit >= 0 ? 'Pozitivno stanje' : 'Negativno stanje'}</td>
+                        <tr class="profit-row ${manualProfit >= 0 ? 'positive' : 'negative'}">
+                            <td><strong>${manualProfit >= 0 ? 'Dobiček' : 'Izguba'}</strong></td>
+                            <td><strong>${manualProfit.toFixed(2)} €</strong></td>
+                            <td>${manualProfit >= 0 ? 'Pozitivno stanje' : 'Negativno stanje'}</td>
                         </tr>
                     </tbody>
                 </table>
+                <div style="margin-top: 12px;">
+                    <button class="btn" onclick="resetManualCosts(${currentFinanceMonth}, ${currentFinanceYear})" style="background-color: #6c757d; color: white; padding: 6px 12px; font-size: 14px;">
+                        Ponastavi na izračunane vrednosti
+                    </button>
+                    <span style="margin-left: 12px; color: #666; font-size: 12px;">
+                        Ročno vnesene vrednosti se shranjujejo avtomatsko ob spremembi
+                    </span>
+                </div>
             `;
             
             elDetailedCostsBox.innerHTML = detailedCosts;
@@ -6298,12 +6324,40 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Funkcija za shranjevanje ročno vnesene vrednosti stroška
+    function saveManualCost(costType, value, month, year) {
+        const key = `manualCosts_${year}_${month}`;
+        const saved = JSON.parse(localStorage.getItem(key) || '{}');
+        saved[costType] = parseFloat(value);
+        localStorage.setItem(key, JSON.stringify(saved));
+        
+        // Osveži prikaz
+        if (currentSection === 'finance') {
+            calculateFinanceData();
+        }
+    }
+    
+    // Funkcija za ponastavitev ročno vnesenih vrednosti na izračunane
+    function resetManualCosts(month, year) {
+        if (confirm('Ali ste prepričani, da želite ponastaviti vse ročno vnesene vrednosti na izračunane vrednosti?')) {
+            const key = `manualCosts_${year}_${month}`;
+            localStorage.removeItem(key);
+            
+            // Osveži prikaz
+            if (currentSection === 'finance') {
+                calculateFinanceData();
+            }
+        }
+    }
+    
     // ===== GLOBALNE FUNKCIJE =====
     window.updateSwimmerFee = updateSwimmerFee;
     window.updateSwimmerDiscount = updateSwimmerDiscount;
     window.updateTermCost = updateTermCost;
     window.updateTrainerRate = updateTrainerRate;
     window.copyFeesForNextYear = copyFeesForNextYear;
+    window.saveManualCost = saveManualCost;
+    window.resetManualCosts = resetManualCosts;
     
     // Funkcija za izvoz seznama plavalcev
     window.exportSwimmersList = function() {
