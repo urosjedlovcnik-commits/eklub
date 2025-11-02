@@ -380,6 +380,51 @@ document.addEventListener('DOMContentLoaded', () => {
       attendanceStatusFunctionCache.clear();
     }
     
+    // OPTIMIZACIJA: Funkcija za posodobitev barvnega kodiranja samo za določen dan (brez ponovnega renderiranja)
+    function updateDayColor(date, termId) {
+      const ymd = iso(date);
+      const dayElements = elCalendarGrid.querySelectorAll('.day');
+      
+      dayElements.forEach(dayEl => {
+        const dayNum = dayEl.querySelector('.num');
+        if (!dayNum) return;
+        
+        const dayValue = parseInt(dayNum.textContent);
+        const currentMonth = viewDate.getMonth();
+        const currentYear = viewDate.getFullYear();
+        const dayDate = new Date(currentYear, currentMonth, dayValue);
+        
+        if (iso(dayDate) === ymd) {
+          // Najdi termine za ta dan
+          const todays = getTermsForDate(dayDate);
+          todays.forEach(t => {
+            if (t.id === termId) {
+              // Najdi event element za ta termin
+              const eventEl = Array.from(dayEl.querySelectorAll('.event')).find(e => {
+                const timeMatch = e.textContent.match(/\d{1,2}:\d{2}/);
+                if (!timeMatch) return false;
+                return t.start_time.startsWith(timeMatch[0]);
+              });
+              
+              if (eventEl) {
+                // Počisti stare razrede
+                eventEl.classList.remove('unfilled', 'partial', 'complete');
+                
+                // Dodaj nov status (samo za pretekle/današnje termine)
+                const isPastOrToday = isPast(dayDate) || isToday(dayDate);
+                if (isPastOrToday) {
+                  const status = getAttendanceStatus(dayDate, termId);
+                  if (status) {
+                    eventEl.classList.add(status);
+                  }
+                }
+              }
+            }
+          });
+        }
+      });
+    }
+    
     function renderMonth(){
       const y=viewDate.getFullYear(), m=viewDate.getMonth();
       elMonthLabel.textContent = new Date(y,m,1).toLocaleDateString("sl-SI", {month:"long",year:"numeric"});
@@ -784,21 +829,51 @@ document.addEventListener('DOMContentLoaded', () => {
            }
           
           btnPresent.addEventListener("click", async ()=>{
-// console.log('🔍 DEBUG: Plavalec gumb Prisoten kliknjen');
-// console.log('🔍 DEBUG: Trenutno stanje status:', status);
-// console.log('🔍 DEBUG: Plavalec ID:', s.id);
-            
             const newStatus = status === true ? false : true;
-// console.log('🔍 DEBUG: Novo stanje:', newStatus);
             
-            const { error } = await supabase
-              .from('attendance')
-              .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: newStatus }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
-            if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
-              // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
-              await refreshModalData(date, termId);
-              renderMonth();
+            // OPTIMIZACIJA: Takoj posodobi lokalne podatke in UI (optimistična posodobitev)
+            if (!attendance[ymd]) attendance[ymd] = {};
+            if (!attendance[ymd][termId]) attendance[ymd][termId] = {};
+            attendance[ymd][termId][s.id] = newStatus;
+            
+            // Takoj posodobi UI gumbov
+            btnPresent.classList.remove("ok", "neutral");
+            btnAbsent.classList.remove("warn", "neutral");
+            if (newStatus === true) {
+                btnPresent.classList.add("ok");
+                btnAbsent.classList.add("neutral");
+            } else {
+                btnPresent.classList.add("neutral");
             }
+            
+            // Osveži samo barvno kodiranje tega dneva v koledarju (brez ponovnega renderiranja)
+            updateDayColor(date, termId);
+            
+            // V ozadju posodobi bazo (ne čakamo na rezultat za UI)
+            supabase
+              .from('attendance')
+              .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: newStatus }, { onConflict: ['date', 'term_id', 'swimmer_id'] })
+              .then(({ error }) => {
+                if (error) {
+                  console.error('Napaka pri posodabljanju prisotnosti:', error);
+                  // V primeru napake obnovi UI na prejšnje stanje
+                  const oldStatus = status;
+                  attendance[ymd][termId][s.id] = oldStatus;
+                  btnPresent.classList.remove("ok", "neutral");
+                  btnAbsent.classList.remove("warn", "neutral");
+                  if (oldStatus === true) {
+                    btnPresent.classList.add("ok");
+                    btnAbsent.classList.add("neutral");
+                  } else if (oldStatus === false) {
+                    btnAbsent.classList.add("warn");
+                    btnPresent.classList.add("neutral");
+                  } else {
+                    btnPresent.classList.add("neutral");
+                    btnAbsent.classList.add("neutral");
+                  }
+                  updateDayColor(date, termId);
+                }
+              });
           });
           
           const btnAbsent = document.createElement("button");
@@ -819,14 +894,49 @@ document.addEventListener('DOMContentLoaded', () => {
           btnAbsent.addEventListener("click", async ()=>{
             const newStatus = status === false ? true : false;
             
-            const { error } = await supabase
-              .from('attendance')
-              .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: newStatus }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
-          if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
-              // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
-              await refreshModalData(date, termId);
-              renderMonth();
+            // OPTIMIZACIJA: Takoj posodobi lokalne podatke in UI (optimistična posodobitev)
+            if (!attendance[ymd]) attendance[ymd] = {};
+            if (!attendance[ymd][termId]) attendance[ymd][termId] = {};
+            attendance[ymd][termId][s.id] = newStatus;
+            
+            // Takoj posodobi UI gumbov
+            btnPresent.classList.remove("ok", "neutral");
+            btnAbsent.classList.remove("warn", "neutral");
+            if (newStatus === false) {
+                btnAbsent.classList.add("warn");
+                btnPresent.classList.add("neutral");
+            } else {
+                btnAbsent.classList.add("neutral");
             }
+            
+            // Osveži samo barvno kodiranje tega dneva v koledarju (brez ponovnega renderiranja)
+            updateDayColor(date, termId);
+            
+            // V ozadju posodobi bazo (ne čakamo na rezultat za UI)
+            supabase
+              .from('attendance')
+              .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: newStatus }, { onConflict: ['date', 'term_id', 'swimmer_id'] })
+              .then(({ error }) => {
+                if (error) {
+                  console.error('Napaka pri posodabljanju prisotnosti:', error);
+                  // V primeru napake obnovi UI na prejšnje stanje
+                  const oldStatus = status;
+                  attendance[ymd][termId][s.id] = oldStatus;
+                  btnPresent.classList.remove("ok", "neutral");
+                  btnAbsent.classList.remove("warn", "neutral");
+                  if (oldStatus === true) {
+                    btnPresent.classList.add("ok");
+                    btnAbsent.classList.add("neutral");
+                  } else if (oldStatus === false) {
+                    btnAbsent.classList.add("warn");
+                    btnPresent.classList.add("neutral");
+                  } else {
+                    btnPresent.classList.add("neutral");
+                    btnAbsent.classList.add("neutral");
+                  }
+                  updateDayColor(date, termId);
+                }
+              });
           });
           
           const btnRemove = document.createElement("button");
@@ -886,28 +996,51 @@ document.addEventListener('DOMContentLoaded', () => {
             btnPresent.classList.add("neutral"); 
           }
           btnPresent.addEventListener("click", async ()=>{
-// console.log('🔍 DEBUG: Nadomeščanje gumb Prisoten kliknjen');
-// console.log('🔍 DEBUG: Trenutno stanje status:', status);
-// console.log('🔍 DEBUG: Plavalec ID:', s.id);
-            
             const newStatus = status === true ? false : true;
-// console.log('🔍 DEBUG: Novo stanje:', newStatus);
             
-            const { error } = await supabase
-              .from('attendance')
-              .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: newStatus }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
-            if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
-// console.log('🔍 DEBUG: Nadomeščanje prisotnost posodobljena v Supabase');
-              // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
-              if (!attendance[ymd]) attendance[ymd] = {};
-              if (!attendance[ymd][termId]) attendance[ymd][termId] = {};
-              attendance[ymd][termId][s.id] = newStatus;
-              
-// console.log('🔍 DEBUG: Lokalni podatki posodobljeni:', attendance[ymd][termId][s.id]);
-              
-              await refreshModalData(date, termId);
-              renderMonth();
+            // OPTIMIZACIJA: Takoj posodobi lokalne podatke in UI (optimistična posodobitev)
+            if (!attendance[ymd]) attendance[ymd] = {};
+            if (!attendance[ymd][termId]) attendance[ymd][termId] = {};
+            attendance[ymd][termId][s.id] = newStatus;
+            
+            // Takoj posodobi UI gumbov
+            btnPresent.classList.remove("ok", "neutral");
+            btnAbsent.classList.remove("warn", "neutral");
+            if (newStatus === true) {
+                btnPresent.classList.add("ok");
+                btnAbsent.classList.add("neutral");
+            } else {
+                btnPresent.classList.add("neutral");
             }
+            
+            // Osveži samo barvno kodiranje tega dneva v koledarju (brez ponovnega renderiranja)
+            updateDayColor(date, termId);
+            
+            // V ozadju posodobi bazo (ne čakamo na rezultat za UI)
+            supabase
+              .from('attendance')
+              .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: newStatus }, { onConflict: ['date', 'term_id', 'swimmer_id'] })
+              .then(({ error }) => {
+                if (error) {
+                  console.error('Napaka pri posodabljanju prisotnosti:', error);
+                  // V primeru napake obnovi UI na prejšnje stanje
+                  const oldStatus = status;
+                  attendance[ymd][termId][s.id] = oldStatus;
+                  btnPresent.classList.remove("ok", "neutral");
+                  btnAbsent.classList.remove("warn", "neutral");
+                  if (oldStatus === true) {
+                    btnPresent.classList.add("ok");
+                    btnAbsent.classList.add("neutral");
+                  } else if (oldStatus === false) {
+                    btnAbsent.classList.add("warn");
+                    btnPresent.classList.add("neutral");
+                  } else {
+                    btnPresent.classList.add("neutral");
+                    btnAbsent.classList.add("neutral");
+                  }
+                  updateDayColor(date, termId);
+                }
+              });
           });
           
           const btnAbsent = document.createElement("button");
@@ -925,18 +1058,49 @@ document.addEventListener('DOMContentLoaded', () => {
           btnAbsent.addEventListener("click", async ()=>{
             const newStatus = status === false ? true : false;
             
-            const { error } = await supabase
-              .from('attendance')
-              .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: newStatus }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
-          if (error) { console.error('Napaka pri posodabljanju prisotnosti:', error); } else {
-              // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
-              if (!attendance[ymd]) attendance[ymd] = {};
-              if (!attendance[ymd][termId]) attendance[ymd][termId] = {};
-              attendance[ymd][termId][s.id] = newStatus;
-              
-              await refreshModalData(date, termId);
-              renderMonth();
+            // OPTIMIZACIJA: Takoj posodobi lokalne podatke in UI (optimistična posodobitev)
+            if (!attendance[ymd]) attendance[ymd] = {};
+            if (!attendance[ymd][termId]) attendance[ymd][termId] = {};
+            attendance[ymd][termId][s.id] = newStatus;
+            
+            // Takoj posodobi UI gumbov
+            btnPresent.classList.remove("ok", "neutral");
+            btnAbsent.classList.remove("warn", "neutral");
+            if (newStatus === false) {
+                btnAbsent.classList.add("warn");
+                btnPresent.classList.add("neutral");
+            } else {
+                btnAbsent.classList.add("neutral");
             }
+            
+            // Osveži samo barvno kodiranje tega dneva v koledarju (brez ponovnega renderiranja)
+            updateDayColor(date, termId);
+            
+            // V ozadju posodobi bazo (ne čakamo na rezultat za UI)
+            supabase
+              .from('attendance')
+              .upsert({ date: ymd, term_id: termId, swimmer_id: s.id, status: newStatus }, { onConflict: ['date', 'term_id', 'swimmer_id'] })
+              .then(({ error }) => {
+                if (error) {
+                  console.error('Napaka pri posodabljanju prisotnosti:', error);
+                  // V primeru napake obnovi UI na prejšnje stanje
+                  const oldStatus = status;
+                  attendance[ymd][termId][s.id] = oldStatus;
+                  btnPresent.classList.remove("ok", "neutral");
+                  btnAbsent.classList.remove("warn", "neutral");
+                  if (oldStatus === true) {
+                    btnPresent.classList.add("ok");
+                    btnAbsent.classList.add("neutral");
+                  } else if (oldStatus === false) {
+                    btnAbsent.classList.add("warn");
+                    btnPresent.classList.add("neutral");
+                  } else {
+                    btnPresent.classList.add("neutral");
+                    btnAbsent.classList.add("neutral");
+                  }
+                  updateDayColor(date, termId);
+                }
+              });
           });
           
           const btnRemove = document.createElement("button");
@@ -944,17 +1108,50 @@ document.addEventListener('DOMContentLoaded', () => {
           btnRemove.className = "btn remove-btn";
           if (isInactive(date, termId)) { btnRemove.disabled = true; }
           btnRemove.addEventListener("click", async ()=>{
-              const { error } = await supabase
-                .from('attendance')
-                .delete()
-                .eq('date', ymd)
-                .eq('term_id', termId)
-                .eq('swimmer_id', s.id);
-            if (error) { console.error('Napaka pri brisanju prisotnosti:', error); } else {
-                // POSODOBITEV LOKALNIH PODATKOV IN PRIKAZ
-                await refreshModalData(date, termId);
-                renderMonth();
+            // OPTIMIZACIJA: Takoj posodobi lokalne podatke in UI (optimistična posodobitev)
+            if (attendance[ymd] && attendance[ymd][termId]) {
+              delete attendance[ymd][termId][s.id];
             }
+            
+            // Takoj posodobi UI gumbov
+            btnPresent.classList.remove("ok", "neutral");
+            btnAbsent.classList.remove("warn", "neutral");
+            btnPresent.classList.add("neutral");
+            btnAbsent.classList.add("neutral");
+            
+            // Osveži samo barvno kodiranje tega dneva v koledarju (brez ponovnega renderiranja)
+            updateDayColor(date, termId);
+            
+            // V ozadju posodobi bazo (ne čakamo na rezultat za UI)
+            supabase
+              .from('attendance')
+              .delete()
+              .eq('date', ymd)
+              .eq('term_id', termId)
+              .eq('swimmer_id', s.id)
+              .then(({ error }) => {
+                if (error) {
+                  console.error('Napaka pri brisanju prisotnosti:', error);
+                  // V primeru napake obnovi UI na prejšnje stanje
+                  const oldStatus = status;
+                  if (!attendance[ymd]) attendance[ymd] = {};
+                  if (!attendance[ymd][termId]) attendance[ymd][termId] = {};
+                  attendance[ymd][termId][s.id] = oldStatus;
+                  btnPresent.classList.remove("ok", "neutral");
+                  btnAbsent.classList.remove("warn", "neutral");
+                  if (oldStatus === true) {
+                    btnPresent.classList.add("ok");
+                    btnAbsent.classList.add("neutral");
+                  } else if (oldStatus === false) {
+                    btnAbsent.classList.add("warn");
+                    btnPresent.classList.add("neutral");
+                  } else {
+                    btnPresent.classList.add("neutral");
+                    btnAbsent.classList.add("neutral");
+                  }
+                  updateDayColor(date, termId);
+                }
+              });
           });
           
           tr.appendChild(td1); tr.appendChild(td2); 
