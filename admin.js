@@ -878,7 +878,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // Prikaži samo aktivne termine
         const activeTerms = getActiveTerms();
         
-        activeTerms.forEach(t => {
+        // Razvrsti termine: najprej po dnevu (1-7), nato po času začetka (jutranji pred popoldanskimi)
+        const sortedTerms = activeTerms.sort((a, b) => {
+            // Najprej primerjaj po dnevu
+            if (a.day !== b.day) {
+                return a.day - b.day;
+            }
+            // Če sta ista dana, razvrsti po času začetka
+            return a.start_time.localeCompare(b.start_time);
+        });
+        
+        sortedTerms.forEach(t => {
             const option = document.createElement('option');
             option.value = t.id;
             option.textContent = `${DAY_SHORT_NAME[t.day]} ${t.start_time}-${t.end_time}`;
@@ -899,7 +909,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const activeTerms = getActiveTerms();
         const availableTerms = activeTerms.filter(term => !swimmer.terms.includes(term.id));
         
-        availableTerms.forEach(t => {
+        // Razvrsti termine: najprej po dnevu (1-7), nato po času začetka (jutranji pred popoldanskimi)
+        const sortedTerms = availableTerms.sort((a, b) => {
+            // Najprej primerjaj po dnevu
+            if (a.day !== b.day) {
+                return a.day - b.day;
+            }
+            // Če sta ista dana, razvrsti po času začetka
+            return a.start_time.localeCompare(b.start_time);
+        });
+        
+        sortedTerms.forEach(t => {
             const option = document.createElement('option');
             option.value = t.id;
             option.textContent = `${DAY_SHORT_NAME[t.day]} ${t.start_time}-${t.end_time}`;
