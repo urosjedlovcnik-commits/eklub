@@ -428,6 +428,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const elCsvInput = document.getElementById("csvInput");
     const elCsvTermsInput = document.getElementById("csvTermsInput");
     const elCsvFeesInput = document.getElementById("csvFeesInput");
+    const elCsvFeesMonthSelect = document.getElementById("csvFeesMonthSelect");
+    const elCsvFeesYearSelect = document.getElementById("csvFeesYearSelect");
     const elCsvAttendanceInput = document.getElementById("csvAttendanceInput");
     const elRestoreAttendanceBtn = document.getElementById("restoreAttendanceBtn");
     const elRestoreAttendanceInfo = document.getElementById("restoreAttendanceInfo");
@@ -762,6 +764,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateTermList();
             updateTrainersList();
             updateExportSelects();
+    updateCsvFeesSelects();
             updateTrainerSummaryControls();
             calculateTrainerSummaryData(); // Prikaži povzetek trenerjev
             calculateTrainerHoursCostsData(); // Prikaži ure in stroške trenerjev
@@ -2286,6 +2289,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         elExportYearSelect.value = currentYear;
     }
+    
+    // Funkcija za inicializacijo dropdownov za uvoz vadnin
+    function updateCsvFeesSelects() {
+        if (!elCsvFeesYearSelect) return;
+        
+        // Populiraj leta (trenutno leto - 1 do trenutno leto + 2)
+        elCsvFeesYearSelect.innerHTML = '';
+        const currentYear = new Date().getFullYear();
+        for (let i = currentYear - 1; i <= currentYear + 2; i++) {
+            const option = document.createElement('option');
+            option.value = i;
+            option.textContent = i;
+            elCsvFeesYearSelect.appendChild(option);
+        }
+        elCsvFeesYearSelect.value = currentYear;
+        
+        // Nastavi privzeti mesec na trenutni mesec
+        if (elCsvFeesMonthSelect) {
+            const currentMonth = new Date().getMonth() + 1; // 1-based za dropdown
+            elCsvFeesMonthSelect.value = currentMonth;
+        }
+    }
 
     // Funkcija za prepoznavanje separatorja (vejica ali podpičje)
     function detectSeparator(csvLine) {
@@ -3056,28 +3081,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Preveri, ali CSV vsebuje opcijski stolpec za popust
                     const hasDiscountColumn = headers.includes('discount');
 
-                    const month = currentFinanceMonth;
-                    const year = currentFinanceYear;
+                    // Preberi izbrani mesec in leto iz dropdownov
+                    const selectedMonth = elCsvFeesMonthSelect ? parseInt(elCsvFeesMonthSelect.value) : null;
+                    const selectedYear = elCsvFeesYearSelect ? parseInt(elCsvFeesYearSelect.value) : null;
                     
-// console.log('🔍 Debugging month parsing:');
-// console.log('- currentFinanceMonth:', currentFinanceMonth);
-// console.log('- Parsed month:', month);
-// console.log('- Month type:', typeof month);
-// console.log('- Is NaN:', isNaN(month));
-                    
-                    if (month === undefined || year === undefined || isNaN(month) || isNaN(year)) {
+                    if (!selectedMonth || !selectedYear || isNaN(selectedMonth) || isNaN(selectedYear)) {
                         alert('Prosim izberite mesec in leto za uvoz vadnin');
                         return;
                     }
                     
-                    // Validacija meseca
-                    if (month < 0 || month > 11) {
-                        console.error(`❌ Neveljaven mesec: ${month} (tip: ${typeof month})`);
-                        alert(`Napaka: Neveljaven mesec: ${month}. Mesec mora biti med 0 in 11.`);
-                        return;
-                    }
+                    // Mesec v bazi je 1-based (1=Januar, 12=December), vendar v JavaScriptu je 0-based
+                    // Zato uporabimo selectedMonth direktno (ker je že 1-based)
+                    const month = selectedMonth;
+                    const year = selectedYear;
                     
-// console.log(`✅ Mesec ${month} (${month + 1} v človeškem formatu) je veljaven`);
+// console.log('🔍 Debugging month parsing:');
+// console.log('- selectedMonth:', selectedMonth);
+// console.log('- selectedYear:', selectedYear);
+// console.log('- month (za bazo):', month);
+// console.log('- year:', year);
 
                     const importedFees = [];
                     for (let i = 1; i < lines.length; i++) {
@@ -3178,28 +3200,30 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         
                         // Določi, od katerega meseca naprej naj veljajo nove vadnine
-                        let startMonth, startYear;
-                        if (year > currentYear || (year === currentYear && month >= currentMonth)) {
+                        // month je 1-based (1=Januar, 12=December), currentMonth je 0-based (0=Januar, 11=December)
+                        let startMonth0Based, startYear;
+                        const month0Based = month - 1; // Pretvori v 0-based za primerjavo
+                        if (year > currentYear || (year === currentYear && month0Based >= currentMonth)) {
                             // Če je izbran mesec v prihodnosti ali sedanjosti, začni od tam
-                            startMonth = month;
+                            startMonth0Based = month0Based; // 0-based za zanko
                             startYear = year;
                         } else {
                             // Če je izbran mesec v preteklosti, začni od trenutnega meseca
-                            startMonth = currentMonth;
+                            startMonth0Based = currentMonth; // Že 0-based
                             startYear = currentYear;
                         }
                         
                         // Ustvari vadnine za vse mesece od startMonth do konca leta
-// console.log(`Creating fees for months ${startMonth} to ${11} (${startMonth + 1} to ${12} in human-readable) in year ${startYear}`);
+// console.log(`Creating fees for months ${startMonth0Based} to ${11} (${startMonth0Based + 1} to ${12} in human-readable) in year ${startYear}`);
                         
                         // Validacija startMonth
-                        if (startMonth < 0 || startMonth > 11) {
-                            console.error(`❌ Neveljaven startMonth: ${startMonth}`);
-                            alert(`Napaka: Neveljaven začetni mesec: ${startMonth}`);
+                        if (startMonth0Based < 0 || startMonth0Based > 11) {
+                            console.error(`❌ Neveljaven startMonth: ${startMonth0Based}`);
+                            alert(`Napaka: Neveljaven začetni mesec: ${startMonth0Based}`);
                             return;
                         }
                         
-                        for (let m = startMonth; m < 12; m++) {
+                        for (let m = startMonth0Based; m < 12; m++) {
                             // Dodatna validacija v zanki
                             if (m < 0 || m > 11) {
                                 console.error(`❌ Neveljaven mesec v zanki: ${m}`);
@@ -3212,16 +3236,16 @@ document.addEventListener('DOMContentLoaded', () => {
                             for (const fee of importedFees) {
                                 const newFee = {
                                     swimmer_id: fee.swimmer_id,
-                                    month: m,
+                                    month: m + 1, // Pretvori v 1-based za bazo (m je 0-based)
                                     year: startYear,
                                     monthly_fee: fee.monthly_fee,
-                                    discount: m === startMonth ? fee.discount : 0 // Popust samo za začetni mesec
+                                    discount: m === startMonth0Based ? fee.discount : 0 // Popust samo za začetni mesec
                                 };
                                 
 // console.log(`🔍 Loop validation - m: ${m}, newFee.month: ${newFee.month}, type: ${typeof newFee.month}`);
                                 
-                                // Dvojna validacija pred dodajanjem
-                                if (newFee.month < 0 || newFee.month > 11) {
+                                // Dvojna validacija pred dodajanjem (mesec je sedaj 1-based: 1-12)
+                                if (newFee.month < 1 || newFee.month > 12) {
                                     console.error(`❌ KRITIČNA NAPAKA: Poskus dodajanja vadnine z neveljavnim mesecem ${newFee.month}`);
                                 } else {
                                     futureFees.push(newFee);
@@ -3245,7 +3269,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 for (const fee of importedFees) {
                                     const newFee = {
                                         swimmer_id: fee.swimmer_id,
-                                        month: m,
+                                        month: m + 1, // Pretvori v 1-based za bazo (m je 0-based)
                                         year: startYear + 1,
                                         monthly_fee: fee.monthly_fee,
                                         discount: 0 // Brez popusta za prihodnje mesece
@@ -3253,8 +3277,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                     
 // console.log(`🔍 Loop validation (next year) - m: ${m}, newFee.month: ${newFee.month}, type: ${typeof newFee.month}`);
                                     
-                                    // Dvojna validacija pred dodajanjem
-                                    if (newFee.month < 0 || newFee.month > 11) {
+                                    // Dvojna validacija pred dodajanjem (mesec je sedaj 1-based: 1-12)
+                                    if (newFee.month < 1 || newFee.month > 12) {
                                         console.error(`❌ KRITIČNA NAPAKA: Poskus dodajanja vadnine z neveljavnim mesecom ${newFee.month} za naslednje leto`);
                                     } else {
                                         futureFees.push(newFee);
@@ -3265,7 +3289,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         // Validacija vseh vadnin pred uvozom
                         const validFees = futureFees.filter(fee => {
-                            if (fee.month < 0 || fee.month > 11) {
+                            // Mesec je sedaj 1-based (1-12), zato preverjamo to
+                            if (fee.month < 1 || fee.month > 12) {
                                 console.error(`❌ Odstranjujem neveljavno vadnino z mesecem ${fee.month} za plavalca ${fee.swimmer_id}`);
                                 return false;
                             }
