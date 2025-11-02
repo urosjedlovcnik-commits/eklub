@@ -5256,10 +5256,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         sortedActiveSwimmers.forEach(swimmer => {
-            const feeData = swimmerFees[swimmer.id] || { fee: 80, discount: 0 };
-            const currentFee = feeData.fee;
-            const discount = feeData.discount;
-            
             // Poišči dodeljene termine iz swimmer_terms
             const assignedTerms = [];
             if (swimmer.terms && Array.isArray(swimmer.terms)) {
@@ -5269,6 +5265,36 @@ document.addEventListener('DOMContentLoaded', () => {
                         assignedTerms.push(term.label);
                     }
                 });
+            }
+            
+            const numberOfTerms = assignedTerms.length;
+            
+            // Določi default vadnino glede na število terminov
+            // Če vadnina že obstaja, jo pustimo pri miru
+            let defaultFee;
+            if (numberOfTerms === 0) {
+                defaultFee = 0; // Brez terminov = 0€
+            } else if (numberOfTerms === 1) {
+                defaultFee = 55; // 1 termin = 55€
+            } else if (numberOfTerms === 2) {
+                defaultFee = 75; // 2 termina = 75€
+            } else {
+                defaultFee = 90; // 3+ termini = 90€
+            }
+            
+            // Če vadnina že obstaja v bazi, uporabi to vrednost, sicer uporabi default
+            const feeData = swimmerFees[swimmer.id];
+            let currentFee;
+            let discount = 0;
+            
+            if (feeData && feeData.fee !== undefined) {
+                // Vadnina že obstaja - pusti pri miru
+                currentFee = feeData.fee;
+                discount = feeData.discount || 0;
+            } else {
+                // Vadnina še ne obstaja - uporabi default
+                currentFee = defaultFee;
+                discount = 0;
             }
             
             html += `
