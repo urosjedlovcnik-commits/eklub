@@ -669,35 +669,6 @@ Maja,Kovač,maja.kovac@email.com,+386 41 234 567,75.00,5.00
     <div class="card csv-options">
       <h3>Uvoz in izvoz CSV</h3>
       <div class="inner">
-        <h4>Obnovitev prisotnosti</h4>
-        <p class="muted">
-          Če ste izgubili prisotnost za določen termin in mesec, jo lahko obnovite iz Supabase Point-in-Time Recovery ali pa uvozite iz CSV datoteke.
-          <br><br>
-          <strong>Format CSV za uvoz prisotnosti:</strong>
-          <br>
-          CSV datoteka mora vsebovati stolpce: <code>date</code>, <code>term_id</code>, <code>swimmer_id</code>, <code>status</code>
-          <br>
-          <strong>Status:</strong> <code>present</code>, <code>absent</code> ali <code>excused</code>
-          <br><br>
-          <strong>Primer CSV:</strong>
-          <pre style="background:#f1f5f9; padding:8px; border-radius:6px; overflow-x:auto;">
-date,term_id,swimmer_id,status
-2024-11-05,tor-06:15-07:30,uuid-plavalca-1,present
-2024-11-12,tor-06:15-07:30,uuid-plavalca-1,present
-2024-11-19,tor-06:15-07:30,uuid-plavalca-1,absent
-2024-11-26,tor-06:15-07:30,uuid-plavalca-1,present
-          </pre>
-          <strong>Pomembno:</strong> Pri uvozu se obstoječe zapise posodobi, nove zapise pa doda.
-        </p>
-        <div class="row" style="margin-top:0">
-          <label class="btn">
-            Uvozi prisotnost iz CSV
-            <input type="file" id="csvAttendanceInput" accept=".csv" style="display:none">
-          </label>
-          <button class="btn" id="restoreAttendanceBtn" style="margin-left: 8px;">Obnovi iz Supabase backup (prejšnji mesec)</button>
-        </div>
-        <div id="restoreAttendanceInfo" class="muted" style="margin-top: 10px;"></div>
-        
         <h4>Uvoz plavalcev</h4>
         <p class="muted">
           Uvožena CSV datoteka mora v glavi vsebovati stolpce <code>first_name</code>, <code>last_name</code> in <code>terms</code>.
@@ -765,6 +736,7 @@ sre-18:00-19:00,3,18:00,19:00,"01 / 09 / 2024","31 / 05 / 2025"
             Uvozi termine
             <input type="file" id="csvTermsInput" accept=".csv" style="display:none">
           </label>
+          <button class="btn" onclick="exportTermsList()" style="margin-left: 8px;">Izvozi termine (ID-je za CSV)</button>
         </div>
         <hr style="border:none; border-top:1px solid var(--border); margin: 12px 0;">
 
@@ -774,6 +746,36 @@ sre-18:00-19:00,3,18:00,19:00,"01 / 09 / 2024","31 / 05 / 2025"
           <select id="exportYearSelect"></select>
           <button class="btn" id="exportCsvBtn">Izvozi</button>
         </div>
+        <hr style="border:none; border-top:1px solid var(--border); margin: 12px 0;">
+        
+        <h4>Obnovitev prisotnosti</h4>
+        <p class="muted">
+          Če ste izgubili prisotnost za določen termin in mesec, jo lahko obnovite iz Supabase Point-in-Time Recovery ali pa uvozite iz CSV datoteke.
+          <br><br>
+          <strong>Format CSV za uvoz prisotnosti:</strong>
+          <br>
+          CSV datoteka mora vsebovati stolpce: <code>date</code>, <code>term_id</code>, <code>swimmer_id</code>, <code>status</code>
+          <br>
+          <strong>Status:</strong> <code>present</code>, <code>absent</code> ali <code>excused</code>
+          <br><br>
+          <strong>Primer CSV:</strong>
+          <pre style="background:#f1f5f9; padding:8px; border-radius:6px; overflow-x:auto;">
+date,term_id,swimmer_id,status
+2024-11-05,tor-06:15-07:30,uuid-plavalca-1,present
+2024-11-12,tor-06:15-07:30,uuid-plavalca-1,present
+2024-11-19,tor-06:15-07:30,uuid-plavalca-1,absent
+2024-11-26,tor-06:15-07:30,uuid-plavalca-1,present
+          </pre>
+          <strong>Pomembno:</strong> Pri uvozu se obstoječe zapise posodobi, nove zapise pa doda.
+        </p>
+        <div class="row" style="margin-top:0">
+          <label class="btn">
+            Uvozi prisotnost iz CSV
+            <input type="file" id="csvAttendanceInput" accept=".csv" style="display:none">
+          </label>
+          <button class="btn" id="restoreAttendanceBtn" style="margin-left: 8px;">Obnovi iz Supabase backup (prejšnji mesec)</button>
+        </div>
+        <div id="restoreAttendanceInfo" class="muted" style="margin-top: 10px;"></div>
       </div>
     </div>
   </div>

@@ -1017,8 +1017,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <th>Priimek</th>
                     <th>Email</th>
                     <th>Telefon</th>
-                    <th>Naslov</th>
-                    <th>Pošta</th>
                     <th>Termini</th>
                     <th>Akcije</th>
                 </tr>
@@ -1075,8 +1073,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${swimmer.last_name}</td>
                 <td>${swimmer.email || '<span class="muted">Brez email naslova</span>'}</td>
                 <td>${swimmer.phone || '<span class="muted">Brez telefona</span>'}</td>
-                <td>${swimmer.address || '<span class="muted">Brez naslova</span>'}</td>
-                <td>${swimmer.postal_code || '<span class="muted">Brez pošte</span>'}</td>
                 <td class="terms-cell">${swimmer.is_deleted ? '<span class="muted">Izbrisan</span>' : (termsChips || '<span class="muted">Brez terminov</span>')}</td>
                 <td>
                     ${swimmer.is_deleted ? 
@@ -3456,9 +3452,18 @@ document.addEventListener('DOMContentLoaded', () => {
             // Ustvari CSV vsebino v obliki povzetka udeležbe plavalcev
             let csv = 'Plavalec,Email,Naslov,Pošta,Obiskani treningi,Možni treningi,Delež (%),Znesek vadnine (€)\n';
             
-            // Filtriraj plavalce, ki nimajo nobenega možnega obiska in jih sortiraj
-            const rows = Object.values(summaryData)
-                .filter(r => r.pos > 0)
+            // Filtriraj plavalce - izključi izbrisane in plavalce brez terminov
+            const rows = Object.entries(summaryData)
+                .filter(([swimmerId, r]) => {
+                    const swimmer = swimmers.find(s => s.id === swimmerId);
+                    // Izključi izbrisane plavalce
+                    if (swimmer && swimmer.is_deleted) return false;
+                    // Izključi plavalce brez terminov
+                    if (swimmer && (!swimmer.terms || swimmer.terms.length === 0)) return false;
+                    // Izključi plavalce brez možnih obiskov
+                    return r.pos > 0;
+                })
+                .map(([swimmerId, r]) => r)
                 .sort((a, b) => (a.last + a.first).localeCompare(b.last + b.first));
             
             if (rows.length === 0) {
@@ -4569,8 +4574,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const today = new Date();
         today.setHours(0,0,0,0);
 
-        // Inicializacija podatkov za vse plavalce (aktivne in izbrisane)
+        // Inicializacija podatkov samo za aktivne plavalce z dodeljenimi termini
         swimmers.forEach(s => {
+            // Izključi izbrisane plavalce
+            if (s.is_deleted) return;
+            
+            // Izključi plavalce brez terminov
+            if (!s.terms || s.terms.length === 0) return;
+            
             res[s.id] = { first: s.first_name, last: s.last_name, att: 0, pos: 0 };
         });
 
@@ -4583,7 +4594,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 for (const termId in termData) {
                     for (const swimmerId in termData[termId]) {
                         // Preverimo, ali je bil ta termin aktiven, ko je bila prisotnost vnesena
-                        if (termData[termId][swimmerId] === true && res[swimmerId]) {
+                        // Tudi preverimo, ali je plavalec v rezultatih (aktivne in z termini)
+                        const swimmer = swimmers.find(s => s.id === swimmerId);
+                        if (termData[termId][swimmerId] === true && res[swimmerId] && 
+                            swimmer && !swimmer.is_deleted && swimmer.terms && swimmer.terms.length > 0) {
                             res[swimmerId].att += 1;
                         }
                     }
@@ -4602,17 +4616,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (termIsActive) {
                     swimmers.forEach(s => {
+                        // Izključi izbrisane plavalce
+                        if (s.is_deleted) return;
+                        
+                        // Izključi plavalce brez terminov
+                        if (!s.terms || s.terms.length === 0) return;
+                        
+                        // Preveri, ali plavalec ima ta termin dodeljen in ali je v rezultatih
                         if (res[s.id] && s.terms.includes(term.id)) {
-                            
-                            if (s.is_deleted) {
-                                // Plavalec je izbrisan, štejemo samo, če je datum v preteklosti
-                                if (currentDate <= today) {
-                                    res[s.id].pos += 1;
-                                }
-                            } else {
-                                // Plavalec je aktiven, štejemo vse možne obiske
-                                res[s.id].pos += 1;
-                            }
+                            res[s.id].pos += 1;
                         }
                     });
                 }
@@ -4629,8 +4641,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // Funkcija za prikaz povzetka udeležbe plavalcev
     function renderSwimmerSummary(summaryData) {
         let html = `<table><thead><tr><th>Plavalec</th><th>Obiskani</th><th>Možni</th><th>Delež (%)</th></tr></thead><tbody>`;
-        // Filtriramo plavalce, ki nimajo nobenega možnega obiska
-        const rows = Object.values(summaryData).filter(r => r.pos > 0).sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first));
+        // Filtriramo plavalce, ki nimajo nobenega možnega obiska in dodajamo dodatno filtriranje
+        const rows = Object.entries(summaryData)
+            .filter(([swimmerId, r]) => {
+                const swimmer = swimmers.find(s => s.id === swimmerId);
+                // Izključi izbrisane plavalce
+                if (swimmer && swimmer.is_deleted) return false;
+                // Izključi plavalce brez terminov
+                if (swimmer && (!swimmer.terms || swimmer.terms.length === 0)) return false;
+                // Izključi plavalce brez možnih obiskov
+                return r.pos > 0;
+            })
+            .map(([swimmerId, r]) => r)
+            .sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first));
         if(rows.length===0) html += `<tr><td colspan="4" class="muted">Ni plavalcev.</td></tr>`;
         rows.forEach(r=>{
             const pct = r.pos > 0 ? (r.att / r.pos * 100).toFixed(1) : "0.0";
@@ -5846,6 +5869,55 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.body.removeChild(link);
                 URL.revokeObjectURL(url);
             };
+    
+    // Funkcija za izvoz terminov z njihovimi ID-ji (za uporabo v CSV uvozu plavalcev)
+    window.exportTermsList = function() {
+        try {
+            // Ustvari CSV vsebino s termini
+            let csv = 'term_id,dan,dan_kratek,začetna_ura,končna_ura,datum_od,datum_do\n';
+            
+            // Sortiraj termine po dnevu in času (filtrirati samo aktivne, če je property na voljo)
+            const sortedTerms = TERMS.filter(t => t.is_deleted !== true).sort((a, b) => {
+                if (a.day !== b.day) {
+                    return a.day - b.day;
+                }
+                return a.start_time.localeCompare(b.start_time);
+            });
+            
+            if (sortedTerms.length === 0) {
+                alert('Ni terminov za izvoz');
+                return;
+            }
+            
+            sortedTerms.forEach(term => {
+                const dayNames = ['Nedelja', 'Ponedeljek', 'Torek', 'Sreda', 'Četrtek', 'Petek', 'Sobota'];
+                const dayName = dayNames[term.day] || `Dan ${term.day}`;
+                const dateFrom = formatDate(term.date_from);
+                const dateTo = formatDate(term.date_to);
+                
+                csv += `${term.id},${dayName},${DAY_SHORT_NAME[term.day]},${term.start_time},${term.end_time},"${dateFrom}","${dateTo}"\n`;
+            });
+            
+            // Prenesi CSV datoteko z BOM za pravilno podporo šumnikov
+            const BOM = '\uFEFF';
+            const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `seznam_terminov_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            console.log('✅ CSV izvoz seznama terminov uspešno končan');
+            alert(`Izvoženih ${sortedTerms.length} terminov. Uporabite stolpec "term_id" za uvoz plavalcev.`);
+            
+        } catch (error) {
+            console.error('❌ Napaka pri izvozu seznama terminov:', error);
+            alert('Napaka pri izvozu seznama terminov: ' + error.message);
+        }
+    };
 
     // ===== FUNKCIJE ZA KOPIRANJE VADNIN =====
     
