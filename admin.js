@@ -5708,7 +5708,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Funkcija za pridobivanje mesečnih pristojbin plavalcev iz baze
     async function getSwimmerFeesFromDB(month, year) {
         try {
-// console.log(`🔍 Nalagam vadnine za mesec ${month}/${year}...`);
+            console.log(`🔍 getSwimmerFeesFromDB: Iščem vadnine za mesec ${month} (${['Januar', 'Februar', 'Marec', 'April', 'Maj', 'Junij', 'Julij', 'Avgust', 'September', 'Oktober', 'November', 'December'][month - 1]}) leta ${year}...`);
             // Najprej poskusi najti pristojbine za točen mesec in leto
             let { data, error } = await supabase
                 .from('swimmer_monthly_fees')
@@ -5721,7 +5721,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw error;
             }
             
-// console.log(`✅ Naloženih vadnin za ${month}/${year}:`, data.length, data);
+            console.log(`✅ getSwimmerFeesFromDB: Najdenih ${data.length} vadnin za mesec ${month}/${year}`);
             
             // Pretvori v obliko, ki jo pričakuje aplikacija
             const swimmerFees = {};
@@ -5735,7 +5735,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Če nismo našli pristojbin za točen mesec/leto, poišči najnovejše pristojbine za vsakega plavalca
             if (data.length === 0) {
-// console.log(`No fees found for ${month + 1}/${year}, looking for most recent fees...`);
+                console.log(`⚠️ getSwimmerFeesFromDB: Ni vadnin za mesec ${month}/${year}, iščem najnovejše vadnine...`);
                 
                 // Pridobi vse plavalce, ki nimajo pristojbin za ta mesec
                 const activeSwimmers = swimmers.filter(s => !s.is_deleted);
@@ -6018,9 +6018,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        console.log('🔍 refreshSwimmerFees - iščem vadnine za mesec:', month, 'leta', year);
+        console.log('🔍 refreshSwimmerFees - iščem vadnine za mesec:', month, '(', ['Januar', 'Februar', 'Marec', 'April', 'Maj', 'Junij', 'Julij', 'Avgust', 'September', 'Oktober', 'November', 'December'][month - 1], ') leta', year);
         const swimmerFees = await getSwimmerFeesFromDB(month, year);
-        console.log('🔍 refreshSwimmerFees - najdenih vadnin:', Object.keys(swimmerFees).length);
+        console.log('🔍 refreshSwimmerFees - najdenih vadnin:', Object.keys(swimmerFees).length, 'plavalcev');
         
         // Preštej trenutno število OLY plavalcev za ta mesec
         const activeSwimmers = swimmers.filter(s => !s.is_deleted);
