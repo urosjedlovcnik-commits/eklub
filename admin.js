@@ -6101,8 +6101,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Preveri OLY limit
                 const canCheckOly = olyCount < 15;
                 
-                // Obarvaj vrstice z 0€ vadnino z nežno pastelno rdečo barvo
-                const rowStyle = finalFee === 0 ? 'style="background-color: #ffe0e0;"' : '';
+                // Obarvaj vrstice z 0€ vadnino z nežno pastelno rdečo barvo (razen če je OLY obkljukano)
+                // Vendar v tem primeru nimamo isOly, ker nimamo feeData, zato obarvaj samo če ni default fee 0
+                const rowStyle = (finalFee === 0 && effectiveFee !== 0) ? 'style="background-color: #ffe0e0;"' : '';
                 
                 html += `
                     <tr ${rowStyle}>
@@ -6138,8 +6139,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Preveri, ali je checkbox OLY omogočen (maksimalno 15, ali če je že obkljukljen)
             const canCheckOly = olyCount < 15 || isOly;
             
-            // Obarvaj vrstice z 0€ vadnino z nežno pastelno rdečo barvo
-            const rowStyle = finalFee === 0 ? 'style="background-color: #ffe0e0;"' : '';
+            // Obarvaj vrstice z 0€ vadnino z nežno pastelno rdečo barvo (razen če je OLY obkljukano)
+            const rowStyle = (finalFee === 0 && !isOly) ? 'style="background-color: #ffe0e0;"' : '';
             
             html += `
                 <tr ${rowStyle}>
