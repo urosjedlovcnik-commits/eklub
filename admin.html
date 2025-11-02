@@ -610,6 +610,9 @@
               <input type="month" id="swimmerFeesMonthYearInput" style="display: none;">
             </div>
             <div id="swimmerFeesBox">Nalaganje podatkov...</div>
+            <div style="margin-top: 16px;">
+              <button class="btn pri" id="exportFeesBtn">Izvozi vadnine v CSV</button>
+            </div>
           </div>
         </div>
 
@@ -618,21 +621,21 @@
           <div class="inner">
                         <p class="muted">
                 Uvožena CSV datoteka mora v glavi vsebovati stolpce <code>first_name</code>, <code>last_name</code> in <code>monthly_fee</code>.
-                Opcijsko lahko dodate tudi stolpce <code>discount</code> za popuste, <code>email</code> in <code>phone</code> za posodabljanje kontaktnih podatkov.
+                Opcijsko lahko dodate tudi stolpce <code>discount</code> za popuste, <code>email</code>, <code>phone</code>, <code>address</code> in <code>postal_code</code> za posodabljanje podatkov.
               <br><br>
                               <strong>Pomembno:</strong> Uvožene vadnine veljajo za vse prihodnje mesece (od izbranega meseca naprej).
                 <br><br>
                 <strong>Popusti:</strong> Popusti se upoštevajo samo za mesec, v katerem so uvoženi, ne pa tudi za prihodnje mesece.
                 <br><br>
-                <strong>Kontaktni podatki:</strong> Če so v CSV datoteki podani email ali telefon, se bodo obstoječi plavalci avtomatsko posodobili z novimi podatki.
+                <strong>Kontaktni podatki in naslov:</strong> Če so v CSV datoteki podani email, telefon, naslov ali pošta, se bodo obstoječi plavalci avtomatsko posodobili z novimi podatki.
               <br><br>
-              <strong>Opomba:</strong> Uvožena datoteka mora uporabljati vejico (`,`) kot ločilo med stolpci.
+              <strong>Opomba:</strong> Uvožena datoteka lahko uporablja vejico (`,`) ali podpičje (`;`) kot ločilo med stolpci.
               <br>
               <strong>Primer:</strong>
                           <pre style="background:#f1f5f9; padding:8px; border-radius:6px; overflow-x:auto;">
-first_name,last_name,email,phone,monthly_fee,discount
-Janez,Novak,janez.novak@email.com,+386 40 123 456,80.00,0.00
-Maja,Kovač,maja.kovac@email.com,+386 41 234 567,75.00,5.00
+first_name,last_name,email,phone,address,postal_code,monthly_fee,discount
+Janez,Novak,janez.novak@email.com,+386 40 123 456,Trubarjeva 1,1000 Ljubljana,80.00,0.00
+Maja,Kovač,maja.kovac@email.com,+386 41 234 567,Prešernova 5,1000 Ljubljana,75.00,5.00
             </pre>
             </p>
             <div class="row" style="margin-top:12px">

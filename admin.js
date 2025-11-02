@@ -3094,9 +3094,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                 discount = discountValue ? parseFloat(discountValue) || 0 : 0;
                             }
                             
-                            // Preberi email in telefon, če obstajata stolpca
-                            const email = headers.includes('email') ? values[headers.indexOf('email')] : '';
-                            const phone = headers.includes('phone') ? values[headers.indexOf('phone')] : '';
+                            // Preberi vse opcijske podatke
+                            const email = headers.includes('email') ? (values[headers.indexOf('email')] || '').trim() : '';
+                            const phone = headers.includes('phone') ? (values[headers.indexOf('phone')] || '').trim() : '';
+                            const address = headers.includes('address') ? (values[headers.indexOf('address')] || '').trim() : '';
+                            const postalCode = headers.includes('postal_code') ? (values[headers.indexOf('postal_code')] || '').trim() : '';
                             
                             if (firstName && lastName && !isNaN(amount)) {
                                 // Poišči plavalca po imenu in priimku
@@ -3118,13 +3120,19 @@ document.addEventListener('DOMContentLoaded', () => {
 // console.log(`📝 Ustvarjam vadnino za ${firstName} ${lastName}:`, newFee);
                                     
                                     // Posodobi plavalca z novimi podatki, če so podani
-                                    if (email || phone) {
+                                    if (email || phone || address || postalCode) {
                                         const updateData = {};
                                         if (email && isValidEmail(email)) {
                                             updateData.email = email;
                                         }
                                         if (phone && isValidPhone(phone)) {
                                             updateData.phone = phone;
+                                        }
+                                        if (address) {
+                                            updateData.address = address;
+                                        }
+                                        if (postalCode) {
+                                            updateData.postal_code = postalCode;
                                         }
                                         
                                         if (Object.keys(updateData).length > 0) {
@@ -3684,6 +3692,14 @@ document.addEventListener('DOMContentLoaded', () => {
             currentSwimmerFeesMonth = parseInt(month);
             updateSwimmerFeesMonthDisplay();
             refreshSwimmerFees();
+        });
+    }
+    
+    // Event listener za izvoz vadnin
+    const elExportFeesBtn = document.getElementById('exportFeesBtn');
+    if (elExportFeesBtn) {
+        elExportFeesBtn.addEventListener('click', () => {
+            window.exportSwimmerFees();
         });
     }
 
@@ -5336,6 +5352,70 @@ document.addEventListener('DOMContentLoaded', () => {
         
         elSwimmerFeesBox.innerHTML = html;
     }
+    
+    // Funkcija za izvoz vadnin v CSV
+    window.exportSwimmerFees = async function() {
+        const month = currentSwimmerFeesMonth;
+        const year = currentSwimmerFeesYear;
+        
+        if (month === undefined || year === undefined) {
+            alert('Prosim izberite mesec in leto');
+            return;
+        }
+        
+        try {
+            const swimmerFees = await getSwimmerFees(month, year);
+            const activeSwimmers = swimmers.filter(s => !s.is_deleted);
+            
+            // Ustvari CSV vsebino z vsemi podatki
+            let csv = 'first_name,last_name,email,phone,address,postal_code,monthly_fee,discount\n';
+            
+            // Sortiraj plavalce po abecedi po priimku, nato po imenu
+            const sortedActiveSwimmers = activeSwimmers.sort((a, b) => {
+                const aName = `${a.last_name} ${a.first_name}`;
+                const bName = `${b.last_name} ${b.first_name}`;
+                return aName.localeCompare(bName, 'sl');
+            });
+            
+            sortedActiveSwimmers.forEach(swimmer => {
+                const feeData = swimmerFees[swimmer.id];
+                const fee = feeData && feeData.fee !== undefined ? feeData.fee : 0;
+                const discount = feeData && feeData.discount !== undefined ? feeData.discount : 0;
+                
+                // Formatiraj podatke - uporabi narekovaje za polja, ki lahko vsebujejo vejice
+                const formatCSVField = (value) => {
+                    if (!value) return '';
+                    // Če vrednost vsebuje vejico ali narekovaje, jo zavij v narekovaje
+                    if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
+                        return `"${value.replace(/"/g, '""')}"`;
+                    }
+                    return value;
+                };
+                
+                csv += `${formatCSVField(swimmer.first_name)},${formatCSVField(swimmer.last_name)},${formatCSVField(swimmer.email || '')},${formatCSVField(swimmer.phone || '')},${formatCSVField(swimmer.address || '')},${formatCSVField(swimmer.postal_code || '')},${fee.toFixed(2)},${discount.toFixed(2)}\n`;
+            });
+            
+            // Prenesi CSV datoteko z BOM za pravilno podporo šumnikov
+            const BOM = '\uFEFF';
+            const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            const monthName = new Date(year, month - 1, 1).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
+            link.setAttribute('download', `vadnine_${monthName.replace(/\s+/g, '_')}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            console.log('✅ CSV izvoz vadnin uspešno končan');
+            alert(`Izvoženih ${sortedActiveSwimmers.length} vadnin za ${monthName}`);
+            
+        } catch (error) {
+            console.error('❌ Napaka pri izvozu vadnin:', error);
+            alert('Napaka pri izvozu vadnin: ' + error.message);
+        }
+    };
     
     // Funkcija za posodobitev pristojbine plavalca
     async function updateSwimmerFee(swimmerId, fee, month, year) {
