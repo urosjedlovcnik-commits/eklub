@@ -5402,6 +5402,17 @@ document.addEventListener('DOMContentLoaded', () => {
             // Preveri, ali je checkbox OLY omogočen (maksimalno 15, ali če je že obkljukljen)
             const canCheckOly = olyCount < 15 || isOly;
             
+            // Debug: izpis za prvega plavalca
+            if (swimmer.id === activeSwimmers[0]?.id) {
+                console.log('🔍 Debug OLY:', {
+                    swimmer: `${swimmer.first_name} ${swimmer.last_name}`,
+                    feeData: swimmerFees[swimmer.id],
+                    isOly: isOly,
+                    olyCount: olyCount,
+                    canCheckOly: canCheckOly
+                });
+            }
+            
             html += `
                 <tr>
                     <td>${swimmer.first_name} ${swimmer.last_name}</td>
@@ -5413,7 +5424,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <input type="number" id="discount-${swimmer.id}" value="${discount}" min="0" step="0.01" style="width: 80px;" onchange="updateSwimmerDiscount('${swimmer.id}', this.value, ${month}, ${year})" ${isOly ? 'disabled' : ''}>
                     </td>
                     <td style="text-align: center;">
-                        <input type="checkbox" id="oly-${swimmer.id}" ${isOly ? 'checked' : ''} ${canCheckOly ? '' : 'disabled'} onchange="updateSwimmerOly('${swimmer.id}', this.checked, ${month}, ${year})" style="cursor: pointer;">
+                        <input type="checkbox" id="oly-${swimmer.id}" ${isOly ? 'checked' : ''} ${canCheckOly ? '' : 'disabled'} onchange="updateSwimmerOly('${swimmer.id}', this.checked, ${month}, ${year})" style="cursor: pointer; width: 20px; height: 20px;">
                         ${!canCheckOly && !isOly ? '<span style="font-size: 10px; color: #999; display: block;">Max 15</span>' : ''}
                     </td>
                 </tr>
@@ -5736,7 +5747,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (feeDate <= currentDate) {
                                 swimmerFees[swimmer.id] = {
                                     fee: recentFee.monthly_fee,
-                                    discount: 0 // Popusti se ne prenašajo na prihodnje mesece
+                                    discount: 0, // Popusti se ne prenašajo na prihodnje mesece
+                                    is_oly: recentFee.is_oly || false
                                 };
 // console.log(`Using recent fee for ${swimmer.first_name} ${swimmer.last_name}: ${recentFee.monthly_fee}€ (from ${recentFee.month + 1}/${recentFee.year})`);
                             }
