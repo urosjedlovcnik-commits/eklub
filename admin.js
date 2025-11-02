@@ -630,7 +630,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (termsError) {
                 console.error('❌ Napaka pri nalaganju terminov:', termsError);
             } else {
-                TERMS = termsData || [];
+                // Dodaj label za vsak termin (če še ni) - uporabi polni dan namesto okrajšave s piko
+                TERMS = (termsData || []).map(t => ({
+                    ...t,
+                    label: t.label || `${DAYNAME[t.day]} ${t.start_time.slice(0, 5)}–${t.end_time.slice(0, 5)}`
+                }));
 // console.log(`✅ Naloženih terminov: ${TERMS.length}`, TERMS);
             }
 
@@ -4627,7 +4631,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Dodaj plavalca v rezultate, če ima dodeljene termine
             if (s.terms && s.terms.length > 0) {
-                res[s.id] = { first: s.first_name, last: s.last_name, att: 0, pos: 0 };
+            res[s.id] = { first: s.first_name, last: s.last_name, att: 0, pos: 0 };
             }
         });
 
@@ -4649,7 +4653,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 if (!res[swimmerId]) {
                                     res[swimmerId] = { first: swimmer.first_name, last: swimmer.last_name, att: 0, pos: 0 };
                                 }
-                                res[swimmerId].att += 1;
+                            res[swimmerId].att += 1;
                             }
                         }
                     }
@@ -4671,11 +4675,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     swimmers.forEach(s => {
                         // Izključi izbrisane plavalce
                         if (s.is_deleted) return;
-                        
+                            
                         // Preveri, ali plavalec ima ta termin dodeljen in ali je v rezultatih
                         if (res[s.id] && s.terms && s.terms.includes(term.id)) {
-                            res[s.id].pos += 1;
-                        }
+                                    res[s.id].pos += 1;
+                                }
                         
                         // DODANO: Preveri tudi, ali je plavalec v rezultatih (z prisotnostjo) in ali ima prisotnost za ta termin
                         // Če plavalec nima več dodeljenega termina, vendar ima prisotnost, dodaj možni obisk
@@ -5297,10 +5301,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 discount = 0;
             }
             
+            // Formatiraj termine - odstrani vejico na začetku, če obstaja
+            let termsDisplay = '';
+            if (assignedTerms.length > 0) {
+                // Filtrirati prazne stringe in odstraniti vejice na začetku
+                const cleanTerms = assignedTerms
+                    .filter(t => t && t.trim() !== '')
+                    .map(t => t.trim().replace(/^,\s*/, '')) // Odstrani vejico na začetku
+                    .filter(t => t !== '');
+                termsDisplay = cleanTerms.length > 0 ? cleanTerms.join(', ') : 'Brez terminov';
+            } else {
+                termsDisplay = 'Brez terminov';
+            }
+            
             html += `
                 <tr>
                     <td>${swimmer.first_name} ${swimmer.last_name}</td>
-                    <td>${assignedTerms.length > 0 ? assignedTerms.join(', ') : 'Brez terminov'}</td>
+                    <td>${termsDisplay}</td>
                     <td>
                         <input type="number" id="fee-${swimmer.id}" value="${currentFee}" min="0" step="0.01" style="width: 80px;" onchange="updateSwimmerFee('${swimmer.id}', this.value, ${month}, ${year})">
                     </td>
@@ -6005,7 +6022,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('❌ Napaka pri izvozu seznama terminov:', error);
             alert('Napaka pri izvozu seznama terminov: ' + error.message);
         }
-    };
+            };
 
     // ===== FUNKCIJE ZA KOPIRANJE VADNIN =====
     
