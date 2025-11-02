@@ -6004,6 +6004,16 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const swimmerFees = await getSwimmerFeesFromDB(month, year);
         
+        // Preštej trenutno število OLY plavalcev za ta mesec
+        const activeSwimmers = swimmers.filter(s => !s.is_deleted);
+        let olyCount = 0;
+        activeSwimmers.forEach(swimmer => {
+            const feeData = swimmerFees[swimmer.id];
+            if (feeData && feeData.is_oly) {
+                olyCount++;
+            }
+        });
+        
         let html = `
             <table class="swimmer-fees-table">
                 <thead>
@@ -6013,6 +6023,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <th>Mesečna vadnina (€)</th>
                         <th>Popust (€)</th>
                         <th>Končna vadnina (€)</th>
+                        <th>OLY</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -6029,12 +6040,20 @@ document.addEventListener('DOMContentLoaded', () => {
         
         for (const swimmer of sortedSwimmers) {
             
-            const feeData = swimmerFees[swimmer.id] || { fee: 80, discount: 0 };
-            const finalFee = Math.max(0, feeData.fee - feeData.discount);
+            const feeData = swimmerFees[swimmer.id] || { fee: 80, discount: 0, is_oly: false };
+            const isOly = feeData.is_oly || false;
+            
+            // Če je OLY obkljukljeno, nastavi znesek vadnine na 0
+            const effectiveFee = isOly ? 0 : feeData.fee;
+            const finalFee = Math.max(0, effectiveFee - feeData.discount);
+            
             const termLabels = (swimmer.terms || []).map(termId => {
                 const term = TERMS.find(t => t.id === termId);
                 return term ? term.label : termId;
             }).join(', ');
+            
+            // Preveri, ali je checkbox OLY omogočen (maksimalno 15, ali če je že obkljukljen)
+            const canCheckOly = olyCount < 15 || isOly;
             
             html += `
                 <tr>
@@ -6042,11 +6061,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${termLabels || 'Brez terminov'}</td>
                     <td>
                         <input type="number" 
-                               value="${feeData.fee}" 
+                               value="${effectiveFee}" 
                                min="0" 
                                step="0.01" 
                                style="width: 80px;"
-                               onchange="updateSwimmerFee('${swimmer.id}', this.value, ${month}, ${year})">
+                               onchange="updateSwimmerFee('${swimmer.id}', this.value, ${month}, ${year})"
+                               ${isOly ? 'disabled' : ''}>
                     </td>
                     <td>
                         <input type="number" 
@@ -6054,14 +6074,27 @@ document.addEventListener('DOMContentLoaded', () => {
                                min="0" 
                                step="0.01" 
                                style="width: 80px;"
-                               onchange="updateSwimmerDiscount('${swimmer.id}', this.value, ${month}, ${year})">
+                               onchange="updateSwimmerDiscount('${swimmer.id}', this.value, ${month}, ${year})"
+                               ${isOly ? 'disabled' : ''}>
                     </td>
                     <td><strong>${finalFee.toFixed(2)}€</strong></td>
+                    <td style="text-align: center;">
+                        <input type="checkbox" id="oly-${swimmer.id}" ${isOly ? 'checked' : ''} ${canCheckOly ? '' : 'disabled'} onchange="updateSwimmerOly('${swimmer.id}', this.checked, ${month}, ${year})" style="cursor: pointer; width: 20px; height: 20px;">
+                        ${!canCheckOly && !isOly ? '<span style="font-size: 10px; color: #999; display: block;">Max 15</span>' : ''}
+                    </td>
                 </tr>
             `;
         }
         
-        html += '</tbody></table>';
+        html += `
+                </tbody>
+            </table>
+            <div style="margin-top: 10px; padding: 10px; background: #f0f0f0; border-radius: 6px;">
+                <strong>OLY opcija:</strong> Maksimalno 15 plavalcev lahko ima obkljukljeno OLY opcijo. 
+                Plavalci z OLY imajo znesek vadnine 0€, vendar mesečno prispevajo 40€. 
+                Trenutno: <strong>${olyCount}/15</strong> OLY plavalcev.
+            </div>
+        `;
         elSwimmerFeesBox.innerHTML = html;
     }
 
