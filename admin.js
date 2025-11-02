@@ -3370,41 +3370,65 @@ document.addEventListener('DOMContentLoaded', () => {
                             
                             if (rawInsertResult.error) {
                                 // Če SQL ne gre, poskusi z običajnim insert
-// console.log('🔄 SQL insert ni uspel, poskušam z običajnim insert...');
+                                console.warn('⚠️ SQL funkcija insert_monthly_fees ni uspela, poskušam z običajnim insert...');
                                 console.error('❌ SQL napaka:', rawInsertResult.error);
+                                // Ne nastavi data in error tukaj, pusti, da se izvede običajni insert
                             } else {
-// console.log('✅ Raw SQL insert uspešen!');
                                 data = rawInsertResult.data;
                                 error = null;
-// console.log('📊 Raw SQL rezultat:', data);
+                                console.log('📊 Raw SQL rezultat:', data);
                                 
                                 // Preveri, ali je bilo vstavljenih vseh vadnin
                                 if (data && data.success !== undefined) {
-// console.log(`✅ Raw SQL: ${data.success}/${data.total} vadnin uspešno vstavljenih`);
+                                    console.log(`✅ Raw SQL: ${data.success}/${data.total} vadnin uspešno vstavljenih`);
                                     if (data.errors > 0) {
                                         console.warn(`⚠️ Raw SQL: ${data.errors} napak pri vstavljanju`);
+                                        
+                                        // Če so VSE vadnine neuspešne, poskusi z običajnim insert
+                                        if (data.errors === data.total || data.success === 0) {
+                                            console.warn('⚠️ SQL funkcija ni vstavila nobene vadnine, poskušam z običajnim insert...');
+                                            data = null; // Resetiraj data, da se izvede običajni insert
+                                        } else {
+                                            // Nekatere vadnine so bile vstavljene - prikaži rezultat
+                                            if (currentSection === 'finance') {
+                                                calculateFinanceData();
+                                            }
+                                            alert(`Uvoženih ${data.success} vadnin za prihodnje mesece (${data.errors} napak)`);
+                                            return;
+                                        }
+                                    } else {
+                                        // Vse vadnine so bile uspešno vstavljene
+                                        if (currentSection === 'finance') {
+                                            calculateFinanceData();
+                                        }
+                                        alert(`Uvoženih ${data.success} vadnin za prihodnje mesece`);
+                                        return;
+                                    }
+                                } else {
+                                    // Data je vrnil podatke, vendar brez success/errors - morda je uspešno
+                                    if (data && Array.isArray(data) && data.length > 0) {
+                                        console.log(`✅ Raw SQL: Vstavljenih ${data.length} vadnin`);
+                                        if (currentSection === 'finance') {
+                                            calculateFinanceData();
+                                        }
+                                        alert(`Uvoženih ${data.length} vadnin za prihodnje mesece`);
+                                        return;
+                                    } else {
+                                        // Ni podatkov - poskusi z običajnim insert
+                                        console.warn('⚠️ SQL funkcija ni vrnila podatkov, poskušam z običajnim insert...');
+                                        data = null;
                                     }
                                 }
-                                
-                                // Osveži finance sekcijo, če je prikazana
-                                if (currentSection === 'finance') {
-                                    calculateFinanceData();
-                                }
-                                
-                                // Prikaži rezultat uporabniku
-                                if (data && data.success !== undefined) {
-                                    alert(`Uvoženih ${data.success} vadnin za prihodnje mesece (${data.errors} napak)`);
-                                } else {
-                                    alert('Vadnine so bile uvožene preko SQL funkcije.');
-                                }
-                                return;
                             }
                         } catch (rawError) {
-// console.log('🔄 Raw SQL insert ni na voljo, poskušam z običajnim insert...');
+                            console.warn('⚠️ Raw SQL insert ni na voljo ali ima napako, poskušam z običajnim insert...');
                             console.error('❌ Raw SQL izjema:', rawError);
                         }
                         
-// console.log('🔄 Poskušam z običajnim Supabase insert...');
+                        // Če SQL funkcija ni uspela ali je vrnila napake, poskusi z običajnim insert
+                        if (!data || (data && data.errors > 0 && data.errors === data.total)) {
+                            console.log('🔄 SQL funkcija ni uspela, poskušam z običajnim Supabase insert...');
+                        }
                         
                         // Poskusi z batch processing, če je preveč vadnin
                         if (feesWithExplicitTypes.length > 100) {
