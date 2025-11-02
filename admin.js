@@ -5180,11 +5180,20 @@ document.addEventListener('DOMContentLoaded', () => {
             
 
             
+            // Naloži ročno vnesene vrednosti za summary (če obstajajo) - najprej iz baze
+            const summaryDbManualCosts = await getManualCostsFromDB(currentFinanceMonth, currentFinanceYear);
+            const summaryManualCostsKey = `manualCosts_${currentFinanceYear}_${currentFinanceMonth}`;
+            const summaryLocalStorageCosts = JSON.parse(localStorage.getItem(summaryManualCostsKey) || '{}');
+            const summaryMembershipFee = (summaryDbManualCosts?.membershipFee !== undefined ? summaryDbManualCosts.membershipFee : summaryLocalStorageCosts.membershipFee) || 0;
+            
             // Skupni stroški
             const totalCosts = totalTrainerCost + managementCostPerMonth + totalFacilityCost;
             
+            // Prihodki vključujejo članarino
+            const totalRevenueWithMembership = totalRevenue + summaryMembershipFee;
+            
             // Dobiček/izguba
-            const profit = totalRevenue - totalCosts;
+            const profit = totalRevenueWithMembership - totalCosts;
             
 
             
@@ -5195,8 +5204,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="finance-summary">
                     <div class="finance-card revenue">
                         <h4>Prihodki</h4>
-                        <div class="amount">${totalRevenue.toFixed(2)} €</div>
-                        <div class="details">${activeSwimmers.length} plavalcev (individualne pristojbine${olyContributions > 0 ? ` + ${olyContributions}€ OLY prispevkov` : ''})</div>
+                        <div class="amount">${totalRevenueWithMembership.toFixed(2)} €</div>
+                        <div class="details">${activeSwimmers.length} plavalcev (individualne pristojbine${olyContributions > 0 ? ` + ${olyContributions}€ OLY prispevkov` : ''}${summaryMembershipFee > 0 ? ` + ${summaryMembershipFee.toFixed(2)}€ članarina` : ''})</div>
                     </div>
                     <div class="finance-card costs">
                         <h4>Stroški</h4>
@@ -5217,9 +5226,19 @@ document.addEventListener('DOMContentLoaded', () => {
             
             elFinanceSummaryBox.innerHTML = summary;
             
-            // Naloži ročno vnesene vrednosti (če obstajajo)
+            // Naloži ročno vnesene vrednosti (če obstajajo) - najprej iz baze, nato iz localStorage kot fallback
+            const dbManualCosts = await getManualCostsFromDB(currentFinanceMonth, currentFinanceYear);
             const manualCostsKey = `manualCosts_${currentFinanceYear}_${currentFinanceMonth}`;
-            const savedManualCosts = JSON.parse(localStorage.getItem(manualCostsKey) || '{}');
+            const localStorageManualCosts = JSON.parse(localStorage.getItem(manualCostsKey) || '{}');
+            
+            // Prednost ima baza, če obstaja, sicer localStorage
+            const savedManualCosts = dbManualCosts || {
+                monthlyFee: localStorageManualCosts.monthlyFee,
+                trainerCost: localStorageManualCosts.trainerCost,
+                managementCost: localStorageManualCosts.managementCost,
+                facilityCost: localStorageManualCosts.facilityCost,
+                membershipFee: localStorageManualCosts.membershipFee
+            };
             
             // Izračunane vrednosti (uporabijo se, če ni ročno vnesene vrednosti)
             const calculatedMonthlyFee = totalRevenue - olyContributions;
@@ -5233,12 +5252,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const managementCost = savedManualCosts.managementCost !== undefined ? savedManualCosts.managementCost : calculatedManagementCost;
             const facilityCost = savedManualCosts.facilityCost !== undefined ? savedManualCosts.facilityCost : calculatedFacilityCost;
             
-            // Članarina - vedno ročno vnesena (privzeto 0)
+            // Članarina - vedno ročno vnesena (privzeto 0) - je prihodek
             const membershipFee = savedManualCosts.membershipFee !== undefined ? savedManualCosts.membershipFee : 0;
             
             // Ponovno izračunaj skupne vrednosti z ročno vnesenimi vrednostmi
-            const manualTotalRevenue = monthlyFee + olyContributions;
-            const manualTotalCosts = trainerCost + managementCost + facilityCost + membershipFee;
+            const manualTotalRevenue = monthlyFee + olyContributions + membershipFee;
+            const manualTotalCosts = trainerCost + managementCost + facilityCost;
             const manualProfit = manualTotalRevenue - manualTotalCosts;
             
             // Prikaži podrobnosti stroškov z urejnimi polji
@@ -5266,6 +5285,20 @@ document.addEventListener('DOMContentLoaded', () => {
                                 ${monthlyFee !== calculatedMonthlyFee ? `<span style="color: #999; font-size: 11px; margin-left: 5px;">(izračunano: ${calculatedMonthlyFee.toFixed(2)}€)</span>` : ''}
                             </td>
                             <td>${activeSwimmers.length - Math.round(olyContributions / 40)} aktivnih plavalcev (individualne pristojbine)</td>
+                        </tr>
+                        <tr>
+                            <td>Članarina</td>
+                            <td>
+                                <input type="number" 
+                                       id="manual-membership-fee" 
+                                       value="${membershipFee.toFixed(2)}" 
+                                       min="0" 
+                                       step="0.01" 
+                                       style="width: 120px; text-align: right;"
+                                       onchange="saveManualCost('membershipFee', this.value, ${currentFinanceMonth}, ${currentFinanceYear})">
+                                <span> €</span>
+                            </td>
+                            <td>Ročno vnesena članarina</td>
                         </tr>
                         ${olyContributions > 0 ? `
                         <tr>
@@ -5324,20 +5357,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             </td>
                             <td>Stroški prog po terminih</td>
                         </tr>
-                        <tr>
-                            <td>Članarina</td>
-                            <td>
-                                <input type="number" 
-                                       id="manual-membership-fee" 
-                                       value="${membershipFee.toFixed(2)}" 
-                                       min="0" 
-                                       step="0.01" 
-                                       style="width: 120px; text-align: right;"
-                                       onchange="saveManualCost('membershipFee', this.value, ${currentFinanceMonth}, ${currentFinanceYear})">
-                                <span> €</span>
-                            </td>
-                            <td>Ročno vnesena članarina</td>
-                        </tr>
                         <tr class="total-row">
                             <td><strong>Skupaj stroški</strong></td>
                             <td><strong>${manualTotalCosts.toFixed(2)} €</strong></td>
@@ -5354,11 +5373,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     </tbody>
                 </table>
                 <div style="margin-top: 12px;">
-                    <button class="btn" onclick="resetManualCosts(${currentFinanceMonth}, ${currentFinanceYear})" style="background-color: #6c757d; color: white; padding: 6px 12px; font-size: 14px;">
-                        Ponastavi na izračunane vrednosti
-                    </button>
-                    <span style="margin-left: 12px; color: #666; font-size: 12px;">
-                        Ročno vnesene vrednosti se shranjujejo avtomatsko ob spremembi
+                    <span style="color: #666; font-size: 12px;">
+                        Ročno vnesene vrednosti se shranjujejo avtomatsko ob spremembi v SQL bazo
                     </span>
                 </div>
             `;
@@ -6324,16 +6340,112 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Funkcija za pridobivanje ročno vnesenih stroškov iz baze
+    async function getManualCostsFromDB(month, year) {
+        try {
+            const { data, error } = await supabase
+                .from('manual_costs')
+                .select('*')
+                .eq('month', month)
+                .eq('year', year)
+                .single();
+            
+            if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+                console.error('Napaka pri nalaganju ročnih stroškov:', error);
+                return null;
+            }
+            
+            if (data) {
+                return {
+                    monthlyFee: data.monthly_fee !== null ? data.monthly_fee : undefined,
+                    trainerCost: data.trainer_cost !== null ? data.trainer_cost : undefined,
+                    managementCost: data.management_cost !== null ? data.management_cost : undefined,
+                    facilityCost: data.facility_cost !== null ? data.facility_cost : undefined,
+                    membershipFee: data.membership_fee !== null ? data.membership_fee : 0
+                };
+            }
+            
+            return null;
+        } catch (error) {
+            console.error('Napaka pri pridobivanju ročnih stroškov:', error);
+            return null;
+        }
+    }
+    
     // Funkcija za shranjevanje ročno vnesene vrednosti stroška
-    function saveManualCost(costType, value, month, year) {
-        const key = `manualCosts_${year}_${month}`;
-        const saved = JSON.parse(localStorage.getItem(key) || '{}');
-        saved[costType] = parseFloat(value);
-        localStorage.setItem(key, JSON.stringify(saved));
-        
-        // Osveži prikaz
-        if (currentSection === 'finance') {
-            calculateFinanceData();
+    async function saveManualCost(costType, value, month, year) {
+        try {
+            // Mapiranje tipov stroškov na stolpce v bazi
+            const costTypeMap = {
+                'monthlyFee': 'monthly_fee',
+                'trainerCost': 'trainer_cost',
+                'managementCost': 'management_cost',
+                'facilityCost': 'facility_cost',
+                'membershipFee': 'membership_fee'
+            };
+            
+            const columnName = costTypeMap[costType];
+            if (!columnName) {
+                console.error('Neznan tip stroška:', costType);
+                return;
+            }
+            
+            const costValue = value === '' || value === null || value === undefined ? null : parseFloat(value);
+            
+            // Najprej preberi obstoječi zapis, da ohranimo druge vrednosti
+            const { data: existing } = await supabase
+                .from('manual_costs')
+                .select('*')
+                .eq('month', month)
+                .eq('year', year)
+                .single();
+            
+            // Pripravi podatke za upsert
+            const upsertData = {
+                month: month,
+                year: year,
+                [columnName]: costValue
+            };
+            
+            // Če zapis že obstaja, ohrani druge vrednosti
+            if (existing) {
+                upsertData.monthly_fee = existing.monthly_fee;
+                upsertData.trainer_cost = existing.trainer_cost;
+                upsertData.management_cost = existing.management_cost;
+                upsertData.facility_cost = existing.facility_cost;
+                upsertData.membership_fee = existing.membership_fee;
+                // Prepiši le posodobljeno polje
+                upsertData[columnName] = costValue;
+            }
+            
+            // Upsert (insert ali update)
+            const { error: upsertError } = await supabase
+                .from('manual_costs')
+                .upsert(upsertData, { 
+                    onConflict: 'month,year',
+                    ignoreDuplicates: false 
+                });
+            
+            if (upsertError) {
+                console.error('Napaka pri shranjevanju ročnih stroškov:', upsertError);
+                // Fallback na localStorage
+                const key = `manualCosts_${year}_${month}`;
+                const saved = JSON.parse(localStorage.getItem(key) || '{}');
+                saved[costType] = costValue;
+                localStorage.setItem(key, JSON.stringify(saved));
+            }
+            
+            // Osveži prikaz
+            if (currentSection === 'finance') {
+                calculateFinanceData();
+            }
+        } catch (error) {
+            console.error('Napaka pri shranjevanju ročnih stroškov:', error);
+            // Fallback na localStorage
+            const key = `manualCosts_${year}_${month}`;
+            const saved = JSON.parse(localStorage.getItem(key) || '{}');
+            saved[costType] = parseFloat(value);
+            localStorage.setItem(key, JSON.stringify(saved));
         }
     }
     
