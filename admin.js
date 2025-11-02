@@ -3659,6 +3659,67 @@ document.addEventListener('DOMContentLoaded', () => {
             saveTrainerRates();
         });
     }
+    
+    // Event listenerji za ponastavitev stroškov
+    const elResetManagementCostsBtn = document.getElementById("resetManagementCostsBtn");
+    const elResetTermCostsBtn = document.getElementById("resetTermCostsBtn");
+    const elResetTrainerRatesBtn = document.getElementById("resetTrainerRatesBtn");
+    
+    if (elResetManagementCostsBtn) {
+        elResetManagementCostsBtn.addEventListener('click', () => {
+            if (elManagementCostPerMonth) {
+                elManagementCostPerMonth.value = 500;
+                saveCostSettings();
+                showMessage('Stroški vodenja so bili ponastavljeni na 500€/mesec', 'success');
+            }
+        });
+    }
+    
+    if (elResetTermCostsBtn) {
+        elResetTermCostsBtn.addEventListener('click', async () => {
+            if (confirm('Ali ste prepričani, da želite ponastaviti vse stroške prog na 50€/uro? To bo prepisalo vse trenutne nastavitve.')) {
+                const termCosts = {};
+                TERMS.forEach(term => {
+                    termCosts[term.id] = 50; // Privzeta vrednost
+                });
+                
+                const success = await saveTermCostsToDB(termCosts);
+                if (success) {
+                    await renderTermCostsSettings(); // Osveži prikaz
+                    showMessage('Stroški prog so bili ponastavljeni na 50€/uro', 'success');
+                    if (currentSection === 'finance') {
+                        calculateFinanceData();
+                    }
+                } else {
+                    showMessage('Napaka pri ponastavitvi stroškov prog!', 'error');
+                }
+            }
+        });
+    }
+    
+    if (elResetTrainerRatesBtn) {
+        elResetTrainerRatesBtn.addEventListener('click', async () => {
+            if (confirm('Ali ste prepričani, da želite ponastaviti vse postavke trenerjev na 25€/termin? To bo prepisalo vse trenutne nastavitve.')) {
+                const trainerRates = {};
+                trainers.forEach(trainer => {
+                    if (!trainer.is_deleted) {
+                        trainerRates[trainer.id] = 25; // Privzeta vrednost
+                    }
+                });
+                
+                const success = await saveTrainerRatesToDB(trainerRates);
+                if (success) {
+                    await renderTrainerRatesSettings(); // Osveži prikaz
+                    showMessage('Postavke trenerjev so bile ponastavljene na 25€/termin', 'success');
+                    if (currentSection === 'finance') {
+                        calculateFinanceData();
+                    }
+                } else {
+                    showMessage('Napaka pri ponastavitvi postavk trenerjev!', 'error');
+                }
+            }
+        });
+    }
 
     // Opomba: elRefreshSwimmerFeesBtn je bil zamenjan z navigacijskimi gumbi
     // Funkcionalnost je sedaj vključena v navigateSwimmerFeesMonth() funkciji
