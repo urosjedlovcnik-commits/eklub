@@ -2198,12 +2198,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         );
                         
                         if (existingSwimmer) {
-                            // Posodobi obstoječega plavalca z novimi termini, email naslovom in telefonsko številko
+                            // Pri posodabljanju obstoječega plavalca:
+                            // - Če CSV vsebuje termine, jih uporabi
+                            // - Če CSV ne vsebuje terminov ali so prazni, ohrani obstoječe termine
+                            // - Email in telefon se vedno posodobijo, če so navedeni v CSV
+                            const newTerms = swimmer.terms && swimmer.terms.length > 0 
+                                ? swimmer.terms 
+                                : (existingSwimmer.terms || []);
+                            
                             existingSwimmersToUpdate.push({
                                 id: existingSwimmer.id,
-                                terms: swimmer.terms,
-                                email: swimmer.email,
-                                phone: swimmer.phone
+                                terms: newTerms,
+                                email: swimmer.email !== null && swimmer.email !== '' ? swimmer.email : existingSwimmer.email,
+                                phone: swimmer.phone !== null && swimmer.phone !== '' ? swimmer.phone : existingSwimmer.phone,
+                                address: swimmer.address !== null && swimmer.address !== '' ? swimmer.address : existingSwimmer.address,
+                                postal_code: swimmer.postal_code !== null && swimmer.postal_code !== '' ? swimmer.postal_code : existingSwimmer.postal_code
                             });
                         } else {
                             // Dodaj novega plavalca
@@ -2247,7 +2256,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                 .update({ 
                                     terms: updateData.terms,
                                     email: updateData.email,
-                                    phone: updateData.phone
+                                    phone: updateData.phone,
+                                    address: updateData.address,
+                                    postal_code: updateData.postal_code
                                 })
                                 .eq('id', updateData.id)
                                 .select();
@@ -2270,6 +2281,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 localSwimmer.terms = updateData.terms;
                                 localSwimmer.email = updateData.email;
                                 localSwimmer.phone = updateData.phone;
+                                localSwimmer.address = updateData.address;
+                                localSwimmer.postal_code = updateData.postal_code;
 // console.log(`Updated local swimmer ${localSwimmer.first_name} ${localSwimmer.last_name} with terms: [${localSwimmer.terms.join(', ')}], email: ${localSwimmer.email || 'none'}, phone: ${localSwimmer.phone || 'none'}`);
                             }
 
