@@ -4954,14 +4954,25 @@ document.addEventListener('DOMContentLoaded', () => {
             let totalRevenue = 0;
 // console.log('🔍 calculateFinanceData - začenjam izračun prihodkov...');
             
+            // Preštej OLY plavalce in dodaj njihove prispevke
+            let olyContributions = 0;
             activeSwimmers.forEach(swimmer => {
-                const feeData = swimmerFees[swimmer.id] || { fee: 80, discount: 0 };
-                const finalFee = Math.max(0, feeData.fee - feeData.discount);
-                totalRevenue += finalFee;
-                //// console.log('🔍 calculateFinanceData - plavalec:', swimmer.first_name, swimmer.last_name, 'fee:', feeData.fee, 'discount:', feeData.discount, 'finalFee:', finalFee);
+                const feeData = swimmerFees[swimmer.id] || { fee: 80, discount: 0, is_oly: false };
                 
+                // Če je OLY plavalec, dodaj 40€ prispevek
+                if (feeData.is_oly) {
+                    olyContributions += 40;
+                } else {
+                    // Če ni OLY, upoštevaj normalno vadnino
+                    const finalFee = Math.max(0, feeData.fee - (feeData.discount || 0));
+                    totalRevenue += finalFee;
+                }
+                //// console.log('🔍 calculateFinanceData - plavalec:', swimmer.first_name, swimmer.last_name, 'fee:', feeData.fee, 'discount:', feeData.discount, 'is_oly:', feeData.is_oly);
 
             });
+            
+            // Dodaj OLY prispevke skupnim prihodkom
+            totalRevenue += olyContributions;
             
 
             
@@ -5164,7 +5175,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="finance-card revenue">
                         <h4>Prihodki</h4>
                         <div class="amount">${totalRevenue.toFixed(2)} €</div>
-                        <div class="details">${activeSwimmers.length} plavalcev (individualne pristojbine)</div>
+                        <div class="details">${activeSwimmers.length} plavalcev (individualne pristojbine${olyContributions > 0 ? ` + ${olyContributions}€ OLY prispevkov` : ''})</div>
                     </div>
                     <div class="finance-card costs">
                         <h4>Stroški</h4>
@@ -5198,8 +5209,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     <tbody>
                         <tr>
                             <td>Mesečna vadnina</td>
-                            <td>${totalRevenue.toFixed(2)} €</td>
-                            <td>${activeSwimmers.length} aktivnih plavalcev (individualne pristojbine)</td>
+                            <td>${(totalRevenue - olyContributions).toFixed(2)} €</td>
+                            <td>${activeSwimmers.length - Math.round(olyContributions / 40)} aktivnih plavalcev (individualne pristojbine)</td>
+                        </tr>
+                        ${olyContributions > 0 ? `
+                        <tr>
+                            <td>OLY prispevki</td>
+                            <td>${olyContributions.toFixed(2)} €</td>
+                            <td>${Math.round(olyContributions / 40)} OLY plavalcev (40€ na plavalca)</td>
+                        </tr>
+                        ` : ''}
+                        <tr>
+                            <td><strong>Skupaj prihodki</strong></td>
+                            <td><strong>${totalRevenue.toFixed(2)} €</strong></td>
+                            <td></td>
                         </tr>
                         <tr>
                             <td>Stroški trenerjev</td>
@@ -5220,6 +5243,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             <td><strong>Skupaj stroški</strong></td>
                             <td><strong>${totalCosts.toFixed(2)} €</strong></td>
                             <td></td>
+                        </tr>
+                        <tr style="background: #f0f0f0;">
+                            <td colspan="3"></td>
                         </tr>
                         <tr class="profit-row ${profit >= 0 ? 'positive' : 'negative'}">
                             <td><strong>${profit >= 0 ? 'Dobiček' : 'Izguba'}</strong></td>
@@ -5288,6 +5314,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <th>Dodeljeni termini</th>
                             <th>Mesečna pristojbina (€)</th>
                             <th>Dodatni popust za ${new Date(year, month - 1, 1).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' })} (€)</th>
+                            <th>OLY</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -5298,6 +5325,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const aName = `${a.last_name} ${a.first_name}`;
             const bName = `${b.last_name} ${b.first_name}`;
             return aName.localeCompare(bName, 'sl');
+        });
+        
+        // Preštej trenutno število OLY plavalcev za ta mesec
+        let olyCount = 0;
+        sortedActiveSwimmers.forEach(swimmer => {
+            const feeData = swimmerFees[swimmer.id];
+            if (feeData && feeData.is_oly) {
+                olyCount++;
+            }
         });
         
         sortedActiveSwimmers.forEach(swimmer => {
@@ -5331,15 +5367,23 @@ document.addEventListener('DOMContentLoaded', () => {
             const feeData = swimmerFees[swimmer.id];
             let currentFee;
             let discount = 0;
+            let isOly = false;
             
             if (feeData && feeData.fee !== undefined) {
                 // Vadnina že obstaja - pusti pri miru
                 currentFee = feeData.fee;
                 discount = feeData.discount || 0;
+                isOly = feeData.is_oly || false;
             } else {
                 // Vadnina še ne obstaja - uporabi default
                 currentFee = defaultFee;
                 discount = 0;
+                isOly = false;
+            }
+            
+            // Če je OLY obkljukljeno, nastavi znesek vadnine na 0
+            if (isOly) {
+                currentFee = 0;
             }
             
             // Formatiraj termine - odstrani vejico na začetku, če obstaja
@@ -5355,15 +5399,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 termsDisplay = 'Brez terminov';
             }
             
+            // Preveri, ali je checkbox OLY omogočen (maksimalno 15, ali če je že obkljukljen)
+            const canCheckOly = olyCount < 15 || isOly;
+            
             html += `
                 <tr>
                     <td>${swimmer.first_name} ${swimmer.last_name}</td>
                     <td>${termsDisplay}</td>
                     <td>
-                        <input type="number" id="fee-${swimmer.id}" value="${currentFee}" min="0" step="0.01" style="width: 80px;" onchange="updateSwimmerFee('${swimmer.id}', this.value, ${month}, ${year})">
+                        <input type="number" id="fee-${swimmer.id}" value="${currentFee}" min="0" step="0.01" style="width: 80px;" onchange="updateSwimmerFee('${swimmer.id}', this.value, ${month}, ${year})" ${isOly ? 'disabled' : ''}>
                     </td>
                     <td>
-                        <input type="number" id="discount-${swimmer.id}" value="${discount}" min="0" step="0.01" style="width: 80px;" onchange="updateSwimmerDiscount('${swimmer.id}', this.value, ${month}, ${year})">
+                        <input type="number" id="discount-${swimmer.id}" value="${discount}" min="0" step="0.01" style="width: 80px;" onchange="updateSwimmerDiscount('${swimmer.id}', this.value, ${month}, ${year})" ${isOly ? 'disabled' : ''}>
+                    </td>
+                    <td style="text-align: center;">
+                        <input type="checkbox" id="oly-${swimmer.id}" ${isOly ? 'checked' : ''} ${canCheckOly ? '' : 'disabled'} onchange="updateSwimmerOly('${swimmer.id}', this.checked, ${month}, ${year})" style="cursor: pointer;">
+                        ${!canCheckOly && !isOly ? '<span style="font-size: 10px; color: #999; display: block;">Max 15</span>' : ''}
                     </td>
                 </tr>
             `;
@@ -5372,6 +5423,11 @@ document.addEventListener('DOMContentLoaded', () => {
         html += `
                     </tbody>
                 </table>
+            </div>
+            <div style="margin-top: 10px; padding: 10px; background: #f0f0f0; border-radius: 6px;">
+                <strong>OLY opcija:</strong> Maksimalno 15 plavalcev lahko ima obkljukljeno OLY opcijo. 
+                Plavalci z OLY imajo znesek vadnine 0€, vendar mesečno prispevajo 40€. 
+                Trenutno: <strong>${olyCount}/15</strong> OLY plavalcev.
             </div>
         `;
         
@@ -5469,9 +5525,58 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
+    // Funkcija za posodobitev OLY statusa plavalca
+    async function updateSwimmerOly(swimmerId, isOly, month, year) {
+        try {
+            // Če je OLY obkljukljeno, nastavi znesek vadnine na 0
+            if (isOly) {
+                const { error: feeError } = await supabase
+                    .from('swimmer_monthly_fees')
+                    .upsert({
+                        swimmer_id: swimmerId,
+                        month: month,
+                        year: year,
+                        monthly_fee: 0,
+                        is_oly: true
+                    }, { onConflict: 'swimmer_id,month,year' });
+                
+                if (feeError) throw feeError;
+            } else {
+                // Če je OLY odkljukljeno, nastavi is_oly na false, vendar ohrani znesek vadnine
+                const { error: olyError } = await supabase
+                    .from('swimmer_monthly_fees')
+                    .upsert({
+                        swimmer_id: swimmerId,
+                        month: month,
+                        year: year,
+                        is_oly: false
+                    }, { onConflict: 'swimmer_id,month,year' });
+                
+                if (olyError) throw olyError;
+                
+                // Osveži znesek vadnine (uporabi default ali obstoječo vrednost)
+                await refreshSwimmerFees();
+                return;
+            }
+            
+            // Osveži prikaz
+            if (currentSection === 'finance') {
+                calculateFinanceData();
+            }
+            refreshSwimmerFees();
+            
+        } catch (error) {
+            console.error('Napaka pri posodobitvi OLY statusa:', error);
+            showMessage('Napaka pri posodobitvi OLY statusa!', 'error');
+            // Osveži, da se checkbox vrne na prejšnje stanje
+            refreshSwimmerFees();
+        }
+    }
+    
     // Globalne funkcije za onchange evente
     window.updateSwimmerFee = updateSwimmerFee;
     window.updateSwimmerDiscount = updateSwimmerDiscount;
+    window.updateSwimmerOly = updateSwimmerOly;
 
     // ===== SUPABASE FUNKCIJE ZA FINANCE =====
 
@@ -5596,7 +5701,8 @@ document.addEventListener('DOMContentLoaded', () => {
             data.forEach(item => {
                 swimmerFees[item.swimmer_id] = {
                     fee: item.monthly_fee,
-                    discount: item.discount
+                    discount: item.discount || 0,
+                    is_oly: item.is_oly || false
                 };
             });
             
