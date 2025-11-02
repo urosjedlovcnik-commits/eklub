@@ -2861,7 +2861,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const summaryData = calculateSwimmerSummaryData(year, month);
             
             // Ustvari CSV vsebino v obliki povzetka udeležbe plavalcev
-            let csv = 'Plavalec,Email,Obiskani treningi,Možni treningi,Delež (%),Znesek vadnine (€),Naslov,Pošta\n';
+            let csv = 'Plavalec,Email,Naslov,Pošta,Obiskani treningi,Možni treningi,Delež (%),Znesek vadnine (€)\n';
             
             // Filtriraj plavalce, ki nimajo nobenega možnega obiska in jih sortiraj
             const rows = Object.values(summaryData)
@@ -2889,7 +2889,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         postalCode = swimmer.postal_code || '';
                     }
                     
-                    csv += `${r.first} ${r.last},${email},${r.att},${r.pos},${pct},${feeAmount},${address},${postalCode}\n`;
+                    csv += `${r.first} ${r.last},${email},${address},${postalCode},${r.att},${r.pos},${pct},${feeAmount}\n`;
             });
         }
         
