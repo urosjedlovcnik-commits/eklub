@@ -3204,20 +3204,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         let startMonth0Based, startYear;
                         const month0Based = month - 1; // Pretvori v 0-based za primerjavo
                         
-                        console.log('🔍 Debug uvoz vadnin:', {
-                            selectedMonth: month,
-                            selectedYear: year,
-                            month0Based: month0Based,
-                            currentMonth: currentMonth,
-                            currentYear: currentYear,
-                            monthName: ['Januar', 'Februar', 'Marec', 'April', 'Maj', 'Junij', 'Julij', 'Avgust', 'September', 'Oktober', 'November', 'December'][month0Based]
-                        });
-                        
                         // Vedno uporabi izbrani mesec in leto iz dropdown-a (ne glede na to, ali je v preteklosti)
                         startMonth0Based = month0Based; // 0-based za zanko
                         startYear = year;
-                        
-                        console.log('🔍 Ustvarjam vadnine od meseca:', startMonth0Based + 1, '(', ['Januar', 'Februar', 'Marec', 'April', 'Maj', 'Junij', 'Julij', 'Avgust', 'September', 'Oktober', 'November', 'December'][startMonth0Based], ') leta', startYear);
                         
                         // Ustvari vadnine za vse mesece od startMonth do konca leta
 // console.log(`Creating fees for months ${startMonth0Based} to ${11} (${startMonth0Based + 1} to ${12} in human-readable) in year ${startYear}`);
@@ -3237,9 +3226,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 return;
                             }
                             
-                            const monthName = ['Januar', 'Februar', 'Marec', 'April', 'Maj', 'Junij', 'Julij', 'Avgust', 'September', 'Oktober', 'November', 'December'][m];
-                            console.log(`📅 Ustvarjam vadnine za mesec ${m + 1} (${monthName}) v letu ${startYear}`);
-                            
                             for (const fee of importedFees) {
                                 // m je 0-based (0=Januar, 11=December)
                                 // Baza pričakuje 1-based (1=Januar, 12=December)
@@ -3251,8 +3237,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                     monthly_fee: fee.monthly_fee,
                                     discount: m === startMonth0Based ? fee.discount : 0 // Popust samo za začetni mesec
                                 };
-                                
-                                console.log(`  → Plavalec ${fee.swimmer_id}: mesec=${dbMonth} (${['Januar', 'Februar', 'Marec', 'April', 'Maj', 'Junij', 'Julij', 'Avgust', 'September', 'Oktober', 'November', 'December'][m]})`);
                                 
 // console.log(`🔍 Loop validation - m: ${m}, newFee.month: ${newFee.month}, type: ${typeof newFee.month}`);
                                 
@@ -3318,10 +3302,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         
                         // Uvozi vadnine v bazo za vse prihodnje mesece
-                        console.log(`📦 Pripravljenih vadnin za uvoz: ${futureFees.length} (${validFees.length} veljavnih)`);
                         
                         // Dodatna validacija pred upsert - preveri vsako vadnino posebej
-                        console.log('🔍 Končna validacija pred upsert...');
                         let hasInvalidFees = false;
                         validFees.forEach((fee, index) => {
                             // Mesec je 1-based (1-12), ne 0-based (0-11)
@@ -3345,21 +3327,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             return;
                         }
                         
-                        console.log(`✅ Validacija uspešna. Pripravljenih ${validFees.length} vadnin za shranjevanje.`);
-                        
                         // Pošlji vadnine v bazo
                         const feesWithExplicitTypes = validFees.map(fee => ({
                             ...fee,
                             month: parseInt(fee.month, 10),
                             year: parseInt(fee.year, 10)
                         }));
-                        
-                        console.log(`📤 Shranjujem ${feesWithExplicitTypes.length} vadnin v bazo. Prva vadnina:`, feesWithExplicitTypes[0] ? {
-                            swimmer_id: feesWithExplicitTypes[0].swimmer_id,
-                            month: feesWithExplicitTypes[0].month,
-                            year: feesWithExplicitTypes[0].year,
-                            monthly_fee: feesWithExplicitTypes[0].monthly_fee
-                        } : 'ni vadnin');
                         
                         // Poskusi z raw SQL insert
                         let data, error;
@@ -3370,23 +3343,19 @@ document.addEventListener('DOMContentLoaded', () => {
                             
                             if (rawInsertResult.error) {
                                 // Če SQL ne gre, poskusi z običajnim insert
-                                console.warn('⚠️ SQL funkcija insert_monthly_fees ni uspela, poskušam z običajnim insert...');
                                 console.error('❌ SQL napaka:', rawInsertResult.error);
                                 // Ne nastavi data in error tukaj, pusti, da se izvede običajni insert
                             } else {
                                 data = rawInsertResult.data;
                                 error = null;
-                                console.log('📊 Raw SQL rezultat:', data);
                                 
                                 // Preveri, ali je bilo vstavljenih vseh vadnin
                                 if (data && data.success !== undefined) {
-                                    console.log(`✅ Raw SQL: ${data.success}/${data.total} vadnin uspešno vstavljenih`);
                                     if (data.errors > 0) {
                                         console.warn(`⚠️ Raw SQL: ${data.errors} napak pri vstavljanju`);
                                         
                                         // Če so VSE vadnine neuspešne, poskusi z običajnim insert
                                         if (data.errors === data.total || data.success === 0) {
-                                            console.warn('⚠️ SQL funkcija ni vstavila nobene vadnine, poskušam z običajnim insert...');
                                             data = null; // Resetiraj data, da se izvede običajni insert
                                         } else {
                                             // Nekatere vadnine so bile vstavljene - prikaži rezultat
@@ -3415,19 +3384,12 @@ document.addEventListener('DOMContentLoaded', () => {
                                         return;
                                     } else {
                                         // Ni podatkov - poskusi z običajnim insert
-                                        console.warn('⚠️ SQL funkcija ni vrnila podatkov, poskušam z običajnim insert...');
                                         data = null;
                                     }
                                 }
                             }
                         } catch (rawError) {
-                            console.warn('⚠️ Raw SQL insert ni na voljo ali ima napako, poskušam z običajnim insert...');
                             console.error('❌ Raw SQL izjema:', rawError);
-                        }
-                        
-                        // Če SQL funkcija ni uspela ali je vrnila napake, poskusi z običajnim insert
-                        if (!data || (data && data.errors > 0 && data.errors === data.total)) {
-                            console.log('🔄 SQL funkcija ni uspela, poskušam z običajnim Supabase insert...');
                         }
                         
                         // Poskusi z batch processing, če je preveč vadnin
@@ -3505,14 +3467,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             data = upsertResult.data;
                             error = upsertResult.error;
                             
-                            if (data && data.length > 0) {
-                                console.log(`✅ Upsert uspešen: ${data.length} vadnin shranjenih. Prva vadnina:`, {
-                                    swimmer_id: data[0].swimmer_id,
-                                    month: data[0].month,
-                                    year: data[0].year,
-                                    monthly_fee: data[0].monthly_fee
-                                });
-                            }
                         }
 
                         if (error) {
@@ -3546,18 +3500,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (data && data.length > 0) {
                             // Poišči različne mesece/leta
                             const uniqueMonths = new Set();
-                            const monthDetails = [];
                             data.forEach(fee => {
                                 const key = `${fee.month}/${fee.year}`;
                                 uniqueMonths.add(key);
-                                if (monthDetails.length < 10) {
-                                    monthDetails.push(`${fee.month}/${fee.year}`);
-                                }
                             });
                             totalMonths = uniqueMonths.size;
-                            
-                            console.log(`✅ Shranjenih vadnin: ${data.length}, za ${totalMonths} različnih mesecev/let`);
-                            console.log(`✅ Prvih 10 vadnin (mesec/leto):`, monthDetails);
                         }
                         
                         const startMonthDisplay = startMonth0Based + 1;
@@ -5765,7 +5712,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Funkcija za pridobivanje mesečnih pristojbin plavalcev iz baze
     async function getSwimmerFeesFromDB(month, year) {
         try {
-            console.log(`🔍 getSwimmerFeesFromDB: Iščem vadnine za mesec ${month} (${['Januar', 'Februar', 'Marec', 'April', 'Maj', 'Junij', 'Julij', 'Avgust', 'September', 'Oktober', 'November', 'December'][month - 1]}) leta ${year}...`);
             // Najprej poskusi najti pristojbine za točen mesec in leto
             let { data, error } = await supabase
                 .from('swimmer_monthly_fees')
@@ -5777,8 +5723,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('❌ Napaka pri nalaganju vadnin:', error);
                 throw error;
             }
-            
-            console.log(`✅ getSwimmerFeesFromDB: Najdenih ${data.length} vadnin za mesec ${month}/${year}`);
             
             // Pretvori v obliko, ki jo pričakuje aplikacija
             const swimmerFees = {};
@@ -5802,13 +5746,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const isPastMonth = requestedDate < currentDate;
                 
                 if (isPastMonth) {
-                    console.log(`⚠️ getSwimmerFeesFromDB: Ni vadnin za pretelek mesec ${month}/${year}. Ne uporabljam najnovejših vadnin (plavalec verjetno še ni bil dodan ali ni obiskoval vadbe).`);
                     // Za pretekle mesece ne uporabljamo najnovejših vadnin
                     // Če ni vadnine za pretelek mesec, plavalec verjetno takrat še ni bil dodan ali ni obiskoval vadbe
                     return swimmerFees; // Vrni prazen objekt - ne prikaži vadnine
                 }
-                
-                console.log(`⚠️ getSwimmerFeesFromDB: Ni vadnin za sedanji/prihodnji mesec ${month}/${year}, iščem najnovejše vadnine...`);
                 
                 // Pridobi vse plavalce, ki nimajo pristojbin za ta mesec
                 const activeSwimmers = swimmers.filter(s => !s.is_deleted);
@@ -6091,9 +6032,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        console.log('🔍 refreshSwimmerFees - iščem vadnine za mesec:', month, '(', ['Januar', 'Februar', 'Marec', 'April', 'Maj', 'Junij', 'Julij', 'Avgust', 'September', 'Oktober', 'November', 'December'][month - 1], ') leta', year);
         const swimmerFees = await getSwimmerFeesFromDB(month, year);
-        console.log('🔍 refreshSwimmerFees - najdenih vadnin:', Object.keys(swimmerFees).length, 'plavalcev');
         
         // Preštej trenutno število OLY plavalcev za ta mesec
         const activeSwimmers = swimmers.filter(s => !s.is_deleted);
@@ -6162,8 +6101,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Preveri OLY limit
                 const canCheckOly = olyCount < 15;
                 
+                // Obarvaj vrstice z 0€ vadnino z nežno pastelno rdečo barvo
+                const rowStyle = finalFee === 0 ? 'style="background-color: #ffe0e0;"' : '';
+                
                 html += `
-                    <tr>
+                    <tr ${rowStyle}>
                         <td>${swimmer.first_name} ${swimmer.last_name}</td>
                         <td>${termsDisplay}</td>
                         <td>
@@ -6196,8 +6138,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // Preveri, ali je checkbox OLY omogočen (maksimalno 15, ali če je že obkljukljen)
             const canCheckOly = olyCount < 15 || isOly;
             
+            // Obarvaj vrstice z 0€ vadnino z nežno pastelno rdečo barvo
+            const rowStyle = finalFee === 0 ? 'style="background-color: #ffe0e0;"' : '';
+            
             html += `
-                <tr>
+                <tr ${rowStyle}>
                     <td>${swimmer.first_name} ${swimmer.last_name}</td>
                     <td>${termLabels || 'Brez terminov'}</td>
                     <td>
