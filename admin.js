@@ -501,6 +501,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const elEditTermModal = document.getElementById("editTermModal");
     const elEditTermDateFrom = document.getElementById("editTermDateFrom");
     const elEditTermDateTo = document.getElementById("editTermDateTo");
+    const elEditTermStart = document.getElementById("editTermStart");
+    const elEditTermEnd = document.getElementById("editTermEnd");
     const elSaveEditTermBtn = document.getElementById("saveEditTermBtn");
     const elCloseEditTermModalBtn = document.getElementById("closeEditTermModalBtn");
 
@@ -1868,6 +1870,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (term) {
             elEditTermDateFrom.value = formatDate(term.date_from);
             elEditTermDateTo.value = formatDate(term.date_to);
+            elEditTermStart.value = term.start_time || '';
+            elEditTermEnd.value = term.end_time || '';
             elEditTermModal.style.display = 'flex';
             
             // Shrani ID termina za shranjevanje
@@ -1879,39 +1883,129 @@ document.addEventListener('DOMContentLoaded', () => {
         const termId = elEditTermModal.getAttribute('data-term-id');
         const dateFrom = parseDate(elEditTermDateFrom.value);
         const dateTo = parseDate(elEditTermDateTo.value);
+        const startTime = elEditTermStart.value;
+        const endTime = elEditTermEnd.value;
         
         if (!dateFrom || !dateTo) {
             alert('Prosim vnesite veljavna datuma');
             return;
         }
 
+        if (!startTime || !endTime) {
+            alert('Prosim vnesite veljavni začetni in končni čas');
+            return;
+        }
+
         const term = TERMS.find(t => t.id === termId);
         if (term) {
             try {
-                const { error } = await supabase
-                    .from('terms')
-                    .update({ 
-                        date_from: dateFrom, 
-                        date_to: dateTo 
-                    })
-                    .eq('id', termId);
+                // Generiraj nov ID, če se je spremenil dan ali ura
+                const day = term.day; // Dan ostane enak
+                const newId = `${DAY_SHORT_NAME[day].toLowerCase().replace('.', '')}-${startTime}-${endTime}`;
+                const idChanged = newId !== termId;
+                
+                // Posodobi podatke v bazi
+                const updateData = { 
+                    date_from: dateFrom, 
+                    date_to: dateTo,
+                    start_time: startTime,
+                    end_time: endTime
+                };
+                
+                // Če se je ID spremenil, dodaj novi ID
+                if (idChanged) {
+                    updateData.id = newId;
+                }
+                
+                // Najprej posodobi termin (ali ustvari nov, če se je ID spremenil)
+                if (idChanged) {
+                    // Ustvari nov termin z novim ID-jem
+                    const { data: newTerm, error: insertError } = await supabase
+                        .from('terms')
+                        .insert({
+                            id: newId,
+                            day: day,
+                            start_time: startTime,
+                            end_time: endTime,
+                            date_from: dateFrom,
+                            date_to: dateTo
+                        })
+                        .select()
+                        .single();
+                    
+                    if (insertError) {
+                        console.error('Napaka pri ustvarjanju novega termina:', insertError);
+                        alert('Napaka pri shranjevanju termina. Preverite konzolo.');
+                        return;
+                    }
+                    
+                    // Posodobi vse plavalce, ki so imeli stari termin, da imajo novega
+                    const swimmersWithTerm = swimmers.filter(s => s.terms && s.terms.includes(termId));
+                    for (const swimmer of swimmersWithTerm) {
+                        const updatedTerms = swimmer.terms.map(t => t === termId ? newId : t);
+                        await supabase
+                            .from('swimmers')
+                            .update({ terms: updatedTerms })
+                            .eq('id', swimmer.id);
+                    }
+                    
+                    // Posodobi tudi trenerje
+                    const trainersWithTerm = trainers.filter(t => t.terms && t.terms.includes(termId));
+                    for (const trainer of trainersWithTerm) {
+                        const updatedTerms = trainer.terms.map(t => t === termId ? newId : t);
+                        await supabase
+                            .from('trainers')
+                            .update({ terms: updatedTerms })
+                            .eq('id', trainer.id);
+                    }
+                    
+                    // Izbriši stari termin
+                    await supabase
+                        .from('terms')
+                        .delete()
+                        .eq('id', termId);
+                    
+                    // Posodobi lokalno stanje
+                    TERMS = TERMS.filter(t => t.id !== termId);
+                    TERMS.push(newTerm);
+                    
+                    // Posodobi lokalno stanje plavalcev in trenerjev
+                    swimmersWithTerm.forEach(swimmer => {
+                        swimmer.terms = swimmer.terms.map(t => t === termId ? newId : t);
+                    });
+                    trainersWithTerm.forEach(trainer => {
+                        trainer.terms = trainer.terms.map(t => t === termId ? newId : t);
+                    });
+                } else {
+                    // Samo posodobi obstoječi termin
+                    const { error } = await supabase
+                        .from('terms')
+                        .update(updateData)
+                        .eq('id', termId);
 
-                if (error) {
-                    console.error('Napaka pri shranjevanju termina:', error);
-                    alert('Napaka pri shranjevanju termina. Preverite konzolo.');
-                    return;
+                    if (error) {
+                        console.error('Napaka pri shranjevanju termina:', error);
+                        alert('Napaka pri shranjevanju termina. Preverite konzolo.');
+                        return;
+                    }
+
+                    // Posodobi lokalno stanje
+                    term.date_from = dateFrom;
+                    term.date_to = dateTo;
+                    term.start_time = startTime;
+                    term.end_time = endTime;
                 }
 
-                // Posodobi lokalno stanje
-                term.date_from = dateFrom;
-                term.date_to = dateTo;
+                // Osveži UI
                 updateTermList();
                 updateSwimmersList();
+                updateTermSelects();
+                updateTrainerSelects();
 
                 elEditTermModal.style.display = 'none';
             } catch (error) {
                 console.error('Napaka pri shranjevanju termina:', error);
-                alert('Napaka pri shranjevanju termina.');
+                alert('Napaka pri shranjevanju termina: ' + error.message);
             }
         }
     });
