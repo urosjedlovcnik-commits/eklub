@@ -3512,16 +3512,15 @@ document.addEventListener('DOMContentLoaded', () => {
             // Ustvari CSV vsebino v obliki povzetka udeležbe plavalcev
             let csv = 'Plavalec,Email,Naslov,Pošta,Obiskani treningi,Možni treningi,Delež (%),Znesek vadnine (€)\n';
             
-            // Filtriraj plavalce - izključi izbrisane in plavalce brez terminov
+            // Filtriraj plavalce - izključi izbrisane, vključi tiste z prisotnostjo
             const rows = Object.entries(summaryData)
                 .filter(([swimmerId, r]) => {
                     const swimmer = swimmers.find(s => s.id === swimmerId);
                     // Izključi izbrisane plavalce
                     if (swimmer && swimmer.is_deleted) return false;
-                    // Izključi plavalce brez terminov
-                    if (swimmer && (!swimmer.terms || swimmer.terms.length === 0)) return false;
-                    // Izključi plavalce brez možnih obiskov
-                    return r.pos > 0;
+                    // DODANO: Prikaži tudi plavalce brez dodeljenih terminov, če imajo prisotnost (r.att > 0)
+                    // Izključi le plavalce brez možnih obiskov IN brez prisotnosti
+                    return r.pos > 0 || r.att > 0;
                 })
                 .map(([swimmerId, r]) => r)
                 .sort((a, b) => (a.last + a.first).localeCompare(b.last + b.first));
@@ -4634,15 +4633,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const today = new Date();
         today.setHours(0,0,0,0);
 
-        // Inicializacija podatkov samo za aktivne plavalce z dodeljenimi termini
+        // Inicializacija podatkov za aktivne plavalce z dodeljenimi termini
+        // PLUS plavalci z prisotnostjo, tudi če niso več dodeljeni terminu
         swimmers.forEach(s => {
-            // Izključi izbrisane plavalce
+            // Izključi izbrisane plavalce (is_deleted)
             if (s.is_deleted) return;
             
-            // Izključi plavalce brez terminov
-            if (!s.terms || s.terms.length === 0) return;
-            
-            res[s.id] = { first: s.first_name, last: s.last_name, att: 0, pos: 0 };
+            // Dodaj plavalca v rezultate, če ima dodeljene termine
+            if (s.terms && s.terms.length > 0) {
+                res[s.id] = { first: s.first_name, last: s.last_name, att: 0, pos: 0 };
+            }
         });
 
         // Zanka za izračun prisotnosti (att)
@@ -4653,12 +4653,18 @@ document.addEventListener('DOMContentLoaded', () => {
             if (d >= monthStart && d <= monthEnd) {
                 for (const termId in termData) {
                     for (const swimmerId in termData[termId]) {
-                        // Preverimo, ali je bil ta termin aktiven, ko je bila prisotnost vnesena
-                        // Tudi preverimo, ali je plavalec v rezultatih (aktivne in z termini)
-                        const swimmer = swimmers.find(s => s.id === swimmerId);
-                        if (termData[termId][swimmerId] === true && res[swimmerId] && 
-                            swimmer && !swimmer.is_deleted && swimmer.terms && swimmer.terms.length > 0) {
-                            res[swimmerId].att += 1;
+                        // Preverimo, ali je prisotnost vnesena (status === true)
+                        if (termData[termId][swimmerId] === true) {
+                            const swimmer = swimmers.find(s => s.id === swimmerId);
+                            // DODANO: Vključi plavalce z prisotnostjo, tudi če niso več dodeljeni terminu
+                            // Izključi le izbrisane plavalce
+                            if (swimmer && !swimmer.is_deleted) {
+                                // Če plavalec še ni v rezultatih (nima več dodeljenih terminov), ga dodaj
+                                if (!res[swimmerId]) {
+                                    res[swimmerId] = { first: swimmer.first_name, last: swimmer.last_name, att: 0, pos: 0 };
+                                }
+                                res[swimmerId].att += 1;
+                            }
                         }
                     }
                 }
@@ -4666,6 +4672,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Zanka za izračun možnih obiskov (pos)
+        // DODANO: Preverimo tudi prisotnost za plavalce, ki niso več dodeljeni terminu
         const currentDate = new Date(monthStart);
         while (currentDate <= monthEnd) {
             const ymd = iso(currentDate);
@@ -4679,12 +4686,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Izključi izbrisane plavalce
                         if (s.is_deleted) return;
                         
-                        // Izključi plavalce brez terminov
-                        if (!s.terms || s.terms.length === 0) return;
-                        
                         // Preveri, ali plavalec ima ta termin dodeljen in ali je v rezultatih
-                        if (res[s.id] && s.terms.includes(term.id)) {
+                        if (res[s.id] && s.terms && s.terms.includes(term.id)) {
                             res[s.id].pos += 1;
+                        }
+                        
+                        // DODANO: Preveri tudi, ali je plavalec v rezultatih (z prisotnostjo) in ali ima prisotnost za ta termin
+                        // Če plavalec nima več dodeljenega termina, vendar ima prisotnost, dodaj možni obisk
+                        if (res[s.id] && (!s.terms || !s.terms.includes(term.id))) {
+                            const termAtt = attendance[ymd]?.[term.id] || {};
+                            // Če plavalec ima prisotnost za ta termin, dodaj možni obisk
+                            if (termAtt[s.id] !== undefined) {
+                                res[s.id].pos += 1;
+                            }
                         }
                     });
                 }
@@ -4707,10 +4721,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const swimmer = swimmers.find(s => s.id === swimmerId);
                 // Izključi izbrisane plavalce
                 if (swimmer && swimmer.is_deleted) return false;
-                // Izključi plavalce brez terminov
-                if (swimmer && (!swimmer.terms || swimmer.terms.length === 0)) return false;
-                // Izključi plavalce brez možnih obiskov
-                return r.pos > 0;
+                // DODANO: Prikaži tudi plavalce brez dodeljenih terminov, če imajo prisotnost (r.att > 0)
+                // Izključi le plavalce brez možnih obiskov IN brez prisotnosti
+                return r.pos > 0 || r.att > 0;
             })
             .map(([swimmerId, r]) => r)
             .sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first));

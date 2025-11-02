@@ -589,11 +589,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const assignedSwimmers = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted);
       const assignedSwimmerIds = assignedSwimmers.map(s => s.id);
       
-      // Plavalci z vneseno prisotnostjo, ki NISO redno dodeljeni temu terminu (nadomeščanje)
+      // Plavalci z vneseno prisotnostjo, ki NISO redno dodeljeni temu terminu (nadomeščanje ali odstranjeni iz termina)
+      // DODANO: Tudi plavalci z prisotnostjo, ki so izbrisani iz termina, vendar imajo vneseno prisotnost
       const substitutionSwimmers = swimmersWithAttendance.filter(s => !assignedSwimmerIds.includes(s.id));
       
       // Redno dodeljeni plavalci z vneseno prisotnostjo ali brez
       const regularSwimmers = assignedSwimmers.filter(s => termAtt[s.id] !== undefined || !s.is_deleted);
+      
+      // DODANO: Prikaži tudi plavalce z prisotnostjo, ki so bili odstranjeni iz termina
+      // Združimo regularSwimmers in substitutionSwimmers za prikaz vse prisotnosti
+      const allSwimmersToShow = [...regularSwimmers, ...substitutionSwimmers.filter(s => termAtt[s.id] !== undefined)];
       
              // Skrij prostor za opombe ob odprtju modala
        hideTrainerNotesSection();
@@ -701,16 +706,36 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       }
 
-      // Prikaži redno dodeljene plavalce
+      // Prikaži redno dodeljene plavalce IN plavalce z prisotnostjo, ki niso več dodeljeni
       elAttendanceTable.innerHTML = "";
-      if(regularSwimmers.length===0){
+      
+      // Združimo vse plavalce za prikaz: redno dodeljene in tiste z prisotnostjo (tudi če niso več dodeljeni)
+      const allSwimmersWithData = [...assignedSwimmers];
+      
+      // Dodaj plavalce z prisotnostjo, ki niso več dodeljeni (tudi če so izbrisani iz termina)
+      substitutionSwimmers.forEach(s => {
+        if (termAtt[s.id] !== undefined && !allSwimmersWithData.find(sw => sw.id === s.id)) {
+          allSwimmersWithData.push(s);
+        }
+      });
+      
+      if(allSwimmersWithData.length===0){
         const tr=document.createElement("tr");
         const td=document.createElement("td"); td.colSpan=2; td.className="muted"; td.textContent="Ni dodeljenih plavalcev za ta termin.";
         tr.appendChild(td); elAttendanceTable.appendChild(tr);
       } else {
-        regularSwimmers.sort((a,b)=> (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name)).forEach(s=>{
+        allSwimmersWithData.sort((a,b)=> (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name)).forEach(s=>{
           const tr=document.createElement("tr");
-          const td1=document.createElement("td"); td1.textContent = `${s.first_name} ${s.last_name}`;
+          const td1=document.createElement("td");
+          
+          // Preveri, ali je plavalec še vedno dodeljen terminu
+          const isCurrentlyAssigned = assignedSwimmerIds.includes(s.id);
+          if (!isCurrentlyAssigned && termAtt[s.id] !== undefined) {
+            // Če ni več dodeljen, vendar ima prisotnost, prikaži oznako
+            td1.innerHTML = `${s.first_name} ${s.last_name} <span class="muted" style="font-size: 11px; font-style: italic;">(odstranjen iz termina)</span>`;
+          } else {
+            td1.textContent = `${s.first_name} ${s.last_name}`;
+          }
           
           const td2=document.createElement("td");
           td2.style.display = "flex"; td2.style.gap = "4px";
