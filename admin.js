@@ -2063,6 +2063,27 @@ document.addEventListener('DOMContentLoaded', () => {
         elExportYearSelect.value = currentYear;
     }
 
+    // Funkcija za prepoznavanje separatorja (vejica ali podpičje)
+    function detectSeparator(csvLine) {
+        // Preštej pojavitve vejic in podpičij (izven narekovajev)
+        let commaCount = 0;
+        let semicolonCount = 0;
+        let inQuotes = false;
+        
+        for (let i = 0; i < csvLine.length; i++) {
+            const char = csvLine[i];
+            if (char === '"') {
+                inQuotes = !inQuotes;
+            } else if (!inQuotes) {
+                if (char === ',') commaCount++;
+                if (char === ';') semicolonCount++;
+            }
+        }
+        
+        // Uporabi separator, ki se pojavi večkrat
+        return semicolonCount > commaCount ? ';' : ',';
+    }
+
     // CSV uvoz plavalcev
     elCsvInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
@@ -2074,7 +2095,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const csv = e.target.result;
                 
                 // Funkcija za pravilno razčlenjevanje CSV vrstic z upoštevanjem narekovajev
-                function parseCSVLine(line) {
+                function parseCSVLine(line, separator) {
                     const result = [];
                     let current = '';
                     let inQuotes = false;
@@ -2084,7 +2105,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         if (char === '"') {
                             inQuotes = !inQuotes;
-                        } else if (char === ',' && !inQuotes) {
+                        } else if (char === separator && !inQuotes) {
                             result.push(current.trim());
                             current = '';
                         } else {
@@ -2097,7 +2118,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 const lines = csv.split('\n');
-                const headers = parseCSVLine(lines[0]);
+                // Prepoznaj separator iz prve vrstice
+                const separator = detectSeparator(lines[0]);
+                const headers = parseCSVLine(lines[0], separator);
                 
                 if (!headers.includes('first_name') || !headers.includes('last_name') || !headers.includes('terms')) {
                     alert('CSV mora vsebovati stolpce: first_name, last_name, terms (email, phone, address, postal_code so opcijski)');
@@ -2107,7 +2130,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const newSwimmers = [];
                 for (let i = 1; i < lines.length; i++) {
                     if (lines[i].trim()) {
-                        const values = parseCSVLine(lines[i]);
+                        const values = parseCSVLine(lines[i], separator);
                         const first = values[headers.indexOf('first_name')];
                         const last = values[headers.indexOf('last_name')];
                         const termsStr = values[headers.indexOf('terms')];
@@ -2322,7 +2345,31 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const csv = e.target.result;
                 const lines = csv.split('\n');
-                const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+                // Prepoznaj separator iz prve vrstice
+                const separator = detectSeparator(lines[0]);
+                
+                // Funkcija za razčlenjevanje z upoštevanjem narekovajev
+                function parseCSVLine(line, sep) {
+                    const result = [];
+                    let current = '';
+                    let inQuotes = false;
+                    
+                    for (let i = 0; i < line.length; i++) {
+                        const char = line[i];
+                        if (char === '"') {
+                            inQuotes = !inQuotes;
+                        } else if (char === sep && !inQuotes) {
+                            result.push(current.trim());
+                            current = '';
+                        } else {
+                            current += char;
+                        }
+                    }
+                    result.push(current.trim());
+                    return result.map(field => field.replace(/^"|"$/g, ''));
+                }
+                
+                const headers = parseCSVLine(lines[0], separator);
                 
                 const requiredHeaders = ['id', 'day', 'start_time', 'end_time', 'date_from', 'date_to'];
                 if (!requiredHeaders.every(h => headers.includes(h))) {
@@ -2333,7 +2380,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const newTerms = [];
                 for (let i = 1; i < lines.length; i++) {
                     if (lines[i].trim()) {
-                        const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+                        const values = parseCSVLine(lines[i], separator);
                         const id = values[headers.indexOf('id')];
                         const day = parseInt(values[headers.indexOf('day')]);
                         const start = values[headers.indexOf('start_time')];
@@ -2406,7 +2453,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     const csv = e.target.result;
                     const lines = csv.split('\n');
-                    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+                    // Prepoznaj separator iz prve vrstice
+                    const separator = detectSeparator(lines[0]);
+                    
+                    // Funkcija za razčlenjevanje z upoštevanjem narekovajev
+                    function parseCSVLine(line, sep) {
+                        const result = [];
+                        let current = '';
+                        let inQuotes = false;
+                        
+                        for (let i = 0; i < line.length; i++) {
+                            const char = line[i];
+                            if (char === '"') {
+                                inQuotes = !inQuotes;
+                            } else if (char === sep && !inQuotes) {
+                                result.push(current.trim());
+                                current = '';
+                            } else {
+                                current += char;
+                            }
+                        }
+                        result.push(current.trim());
+                        return result.map(field => field.replace(/^"|"$/g, ''));
+                    }
+                    
+                    const headers = parseCSVLine(lines[0], separator);
                     
                     const requiredHeaders = ['first_name', 'last_name', 'monthly_fee'];
                     if (!requiredHeaders.every(h => headers.includes(h))) {
@@ -2443,7 +2514,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const importedFees = [];
                     for (let i = 1; i < lines.length; i++) {
                         if (lines[i].trim()) {
-                            const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+                            const values = parseCSVLine(lines[i], separator);
                             const firstName = values[headers.indexOf('first_name')];
                             const lastName = values[headers.indexOf('last_name')];
                             const amount = parseFloat(values[headers.indexOf('monthly_fee')]);
