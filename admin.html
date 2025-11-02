@@ -672,17 +672,40 @@ Maja,Kovač,maja.kovac@email.com,+386 41 234 567,75.00,5.00
         <h4>Uvoz plavalcev</h4>
         <p class="muted">
           Uvožena CSV datoteka mora v glavi vsebovati stolpce <code>first_name</code>, <code>last_name</code> in <code>terms</code>.
-          V stolpec <code>terms</code> lahko vpišete več terminov, ločenih z vejico (npr. <code>pon-17:00-18:00,sre-18:00-19:00</code>).
+          <br><br>
+          <strong>Format terminov:</strong>
+          <br>
+          Sistem podpira dva formata terminov:
+          <br>
+          <strong>1. Format ID (priporočeno):</strong> <code>pon-17:00-18:00</code>
+          <br>
+          - Dan: <code>pon</code>, <code>tor</code>, <code>sre</code>, <code>čet</code>, <code>pet</code>, <code>sob</code>, <code>ned</code> (majhne črke, brez pike)
+          <br>
+          - Ura: <code>HH:MM</code> (brez sekund)
+          <br>
+          - Primer: <code>pon-17:00-18:00</code>, <code>sre-20:00-21:00</code>
+          <br><br>
+          <strong>2. Format z vejico (avtomatska pretvorba):</strong> <code>Pon.-20:00:00-21:00:00</code>
+          <br>
+          - Dan: <code>Pon.</code>, <code>Tor.</code>, <code>Sre.</code>, <code>Čet.</code>, <code>Pet.</code>, <code>Sob.</code>, <code>Ned.</code> (s piko)
+          <br>
+          - Ura: <code>HH:MM:SS</code> (s sekundami) - sistem avtomatsko odstrani sekunde
+          <br>
+          - Primer: <code>Pon.-20:00:00-21:00:00</code>
+          <br><br>
+          <strong>Več terminov:</strong> Ločite z vejico in celoten seznam zaprite v narekovaje: <code>"pon-17:00-18:00,sre-18:00-19:00"</code>
           <br><br>
           <strong>Opcijski stolpci:</strong> <code>email</code>, <code>phone</code>, <code>address</code> in <code>postal_code</code> - za dodajanje kontaktnih podatkov in naslova.
           <br><br>
-          <strong>Opomba:</strong> Uvožena datoteka mora uporabljati vejico (`,`) kot ločilo med stolpci.
+          <strong>Separator:</strong> Podprti so vejica (`,`) ali podpičje (`;`) - sistem avtomatsko prepozna.
           <br>
           <strong>Primer:</strong>
           <pre style="background:#f1f5f9; padding:8px; border-radius:6px; overflow-x:auto;">
 first_name,last_name,email,phone,address,postal_code,terms
-Janez,Novak,janez.novak@email.com,+386 40 123 456,Trg svobode 1,1000 Ljubljana,"pon-17:00-18:00,sre-18:00-19:00,pet-19:00-20:00"
+Janez,Novak,janez.novak@email.com,+386 40 123 456,Trg svobode 1,1000 Ljubljana,"pon-17:00-18:00,sre-18:00-19:00"
+Maja,Kovač,maja@example.com,041234567,Cesta 15,4000 Kranj,"Pon.-20:00:00-21:00:00,Čet.-20:00:00-21:00:00"
           </pre>
+          <strong>Pomembno:</strong> Termini morajo že obstajati v bazi. Preverite ID termine v sekciji "Termini" → "Upravljanje terminov".
         </p>
         <div class="row" style="margin-top:0">
           <label class="btn">
