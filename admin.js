@@ -1963,7 +1963,52 @@ document.addEventListener('DOMContentLoaded', () => {
                             .eq('id', trainer.id);
                     }
                     
-                    // Izbriši stari termin
+                    // POSODOBI VSE ZAPISE PRISOTNOSTI - ohrani prisotnost!
+                    // Posodobi attendance zapise, da kažejo na nov termin ID
+                    const { error: attendanceUpdateError } = await supabase
+                        .from('attendance')
+                        .update({ term_id: newId })
+                        .eq('term_id', termId);
+                    
+                    if (attendanceUpdateError) {
+                        console.error('Napaka pri posodabljanju zapisov prisotnosti:', attendanceUpdateError);
+                        // Ne prekini - nadaljuj z drugimi posodobitvami
+                    }
+                    
+                    // POSODOBI TUDI TRENER PRISOTNOST
+                    const { error: trainerAttendanceUpdateError } = await supabase
+                        .from('trainer_attendance')
+                        .update({ term_id: newId })
+                        .eq('term_id', termId);
+                    
+                    if (trainerAttendanceUpdateError) {
+                        console.error('Napaka pri posodabljanju zapisov prisotnosti trenerjev:', trainerAttendanceUpdateError);
+                        // Ne prekini - nadaljuj z drugimi posodobitvami
+                    }
+                    
+                    // POSODOBI STATUS TERMINOV (term_status)
+                    const { error: termStatusUpdateError } = await supabase
+                        .from('term_status')
+                        .update({ term_id: newId })
+                        .eq('term_id', termId);
+                    
+                    if (termStatusUpdateError) {
+                        console.error('Napaka pri posodabljanju statusa terminov:', termStatusUpdateError);
+                        // Ne prekini - nadaljuj z drugimi posodobitvami
+                    }
+                    
+                    // POSODOBI NADOMEŠČANJA (substitute_trainers)
+                    const { error: substituteUpdateError } = await supabase
+                        .from('substitute_trainers')
+                        .update({ term_id: newId })
+                        .eq('term_id', termId);
+                    
+                    if (substituteUpdateError) {
+                        console.error('Napaka pri posodabljanju nadomeščanj:', substituteUpdateError);
+                        // Ne prekini - nadaljuj z drugimi posodobitvami
+                    }
+                    
+                    // Izbriši stari termin (PO posodobitvi vseh povezav)
                     await supabase
                         .from('terms')
                         .delete()
@@ -1979,6 +2024,38 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     trainersWithTerm.forEach(trainer => {
                         trainer.terms = trainer.terms.map(t => t === termId ? newId : t);
+                    });
+                    
+                    // POSODOBI LOKALNO STANJE PRISOTNOSTI - preslikaj term_id v attendance objektu
+                    // Posodobi attendance objekt: premakni vse zapise iz starega term_id v novega
+                    const attendanceDates = Object.keys(attendance);
+                    attendanceDates.forEach(date => {
+                        if (attendance[date][termId]) {
+                            // Premakni zapise iz starega term_id v novega
+                            attendance[date][newId] = attendance[date][newId] || {};
+                            Object.assign(attendance[date][newId], attendance[date][termId]);
+                            // Izbriši stare zapise
+                            delete attendance[date][termId];
+                        }
+                    });
+                    
+                    // Posodobi tudi trainerAttendance
+                    const trainerAttendanceDates = Object.keys(trainerAttendance);
+                    trainerAttendanceDates.forEach(date => {
+                        if (trainerAttendance[date][termId]) {
+                            trainerAttendance[date][newId] = trainerAttendance[date][newId] || {};
+                            Object.assign(trainerAttendance[date][newId], trainerAttendance[date][termId]);
+                            delete trainerAttendance[date][termId];
+                        }
+                    });
+                    
+                    // Posodobi termStatus
+                    const termStatusDates = Object.keys(termStatus);
+                    termStatusDates.forEach(date => {
+                        if (termStatus[date][termId]) {
+                            termStatus[date][newId] = termStatus[date][termId];
+                            delete termStatus[date][termId];
+                        }
                     });
                 } else {
                     // Samo posodobi obstoječi termin
