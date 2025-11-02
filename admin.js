@@ -2140,23 +2140,92 @@ document.addEventListener('DOMContentLoaded', () => {
                         const postalCode = headers.includes('postal_code') ? values[headers.indexOf('postal_code')] : '';
                         
                         if (first && last) {
+                            // Funkcija za pretvorbo CSV formata termina v ID format baze
+                            // CSV format: "Pon.-20:00:00-21:00:00" -> ID format: "pon-20:00-21:00"
+                            function convertCSVTermToID(csvTerm) {
+                                if (!csvTerm || csvTerm.trim() === '' || csvTerm === '""') return null;
+                                
+                                // Odstrani narekovaje, če so prisotni
+                                let term = csvTerm.trim().replace(/^"|"$/g, '');
+                                if (!term) return null;
+                                
+                                // Preslikava slovenskih dni (z vejico ali brez)
+                                const dayMap = {
+                                    'pon': 'pon', 'pon.': 'pon', 'Pon': 'pon', 'Pon.': 'pon',
+                                    'tor': 'tor', 'tor.': 'tor', 'Tor': 'tor', 'Tor.': 'tor',
+                                    'sre': 'sre', 'sre.': 'sre', 'Sre': 'sre', 'Sre.': 'sre',
+                                    'čet': 'čet', 'čet.': 'čet', 'Čet': 'čet', 'Čet.': 'čet',
+                                    'pet': 'pet', 'pet.': 'pet', 'Pet': 'pet', 'Pet.': 'pet',
+                                    'sob': 'sob', 'sob.': 'sob', 'Sob': 'sob', 'Sob.': 'sob',
+                                    'ned': 'ned', 'ned.': 'ned', 'Ned': 'ned', 'Ned.': 'ned'
+                                };
+                                
+                                // Razčleni format: "Dan-Cas-Cas" ali "Dan.Cas-Cas"
+                                const parts = term.split('-');
+                                if (parts.length !== 3) return null;
+                                
+                                let day = parts[0].trim();
+                                const start = parts[1].trim();
+                                const end = parts[2].trim();
+                                
+                                // Preslikaj dan
+                                day = dayMap[day] || day.toLowerCase().replace('.', '');
+                                
+                                // Odstrani sekunde iz časa (20:00:00 -> 20:00)
+                                const formatTime = (time) => {
+                                    if (time.includes(':')) {
+                                        const timeParts = time.split(':');
+                                        return `${timeParts[0]}:${timeParts[1]}`;
+                                    }
+                                    return time;
+                                };
+                                
+                                const startFormatted = formatTime(start);
+                                const endFormatted = formatTime(end);
+                                
+                                // Vrne format: "pon-20:00-21:00"
+                                return `${day}-${startFormatted}-${endFormatted}`;
+                            }
+                            
                             // Razčleni termine, ločene z vejico, vendar znotraj istega polja
-                            const terms = termsStr ? termsStr.split(',').map(t => t.trim()) : [];
+                            // Najprej odstrani narekovaje okoli celotnega seznama terminov, če obstajajo
+                            let cleanTermsStr = termsStr ? termsStr.trim().replace(/^"|"$/g, '') : '';
+                            const termsRaw = cleanTermsStr ? cleanTermsStr.split(',').map(t => t.trim()).filter(t => t && t !== '' && t !== '""') : [];
                             
                             // Preveri, ali vsi termini obstajajo v bazi
                             const validTerms = [];
                             const invalidTerms = [];
                             
-                            for (const term of terms) {
-                                if (TERMS.find(t => t.id === term)) {
-                                    validTerms.push(term);
+                            for (const termRaw of termsRaw) {
+                                // Poskusi najprej direktno iskanje
+                                let termId = termRaw;
+                                let foundTerm = TERMS.find(t => t.id === termId);
+                                
+                                // Če ne najde, poskusi pretvorbo iz CSV formata
+                                if (!foundTerm) {
+                                    termId = convertCSVTermToID(termRaw);
+                                    if (termId) {
+                                        foundTerm = TERMS.find(t => t.id === termId);
+                                    }
+                                }
+                                
+                                if (foundTerm) {
+                                    validTerms.push(foundTerm.id);
                                 } else {
-                                    invalidTerms.push(term);
+                                    invalidTerms.push(termRaw);
                                 }
                             }
                             
                             if (invalidTerms.length > 0) {
-                                console.warn(`Invalid terms for ${first} ${last}: [${invalidTerms.join(', ')}]`);
+                                console.warn(`⚠️ Neveljavni termini za ${first} ${last}: [${invalidTerms.join(', ')}]`);
+                                console.log(`   Poskusitev pretvorbe za:`, invalidTerms.map(t => convertCSVTermToID(t)));
+                            }
+                            
+                            // Debug izpis
+                            if (validTerms.length > 0) {
+                                console.log(`✅ ${first} ${last}: ${validTerms.length} veljavnih terminov: [${validTerms.join(', ')}]`);
+                            } else if (termsRaw.length > 0) {
+                                console.warn(`⚠️ ${first} ${last}: Ni veljavnih terminov. CSV termini: [${termsRaw.join(', ')}]`);
                             }
                             
                             // Validacija email naslova (če je vnesen)
@@ -2334,7 +2403,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Dodaj informacijo o validaciji terminov
                     const totalSwimmers = newSwimmers.length;
                     const totalTerms = newSwimmers.reduce((sum, swimmer) => sum + swimmer.terms.length, 0);
+                    const totalInvalidTerms = newSwimmers.reduce((sum, swimmer) => {
+                        // Preštej neveljavne termine
+                        const termsRaw = (swimmer.terms || []);
+                        const invalidCount = termsRaw.length - (swimmer.terms || []).length;
+                        return sum + invalidCount;
+                    }, 0);
+                    
                     message += `\n\nSkupaj uvoženih ${totalTerms} terminov za ${totalSwimmers} plavalcev.`;
+                    
+                    if (totalSwimmers === 0) {
+                        message = 'Ni bilo plavalcev za uvoz. Preverite:\n' +
+                                 '1. Ali CSV vsebuje stolpce first_name, last_name, terms\n' +
+                                 '2. Ali so podatki pravilno oblikovani\n' +
+                                 '3. Preverite konzolo za več podrobnosti';
+                        console.error('Ni plavalcev za uvoz. Preveri CSV format.');
+                    }
                     
                     alert(message || 'Ni bilo nič za uvoz.');
                 }
