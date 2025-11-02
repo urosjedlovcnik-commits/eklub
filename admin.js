@@ -2356,11 +2356,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                 if (dayMap[day]) {
                                     day = dayMap[day];
                                 } else {
-                                    // Če ni v mapi, pretvori v lowercase in odstrani piko
-                                    day = day.toLowerCase().replace(/\./g, '');
-                                    // Če še vedno ni v mapi po tem, poskusi še brez dvopičja
-                                    if (!dayMap[day]) {
-                                        day = day.replace(/:/g, '');
+                                    // Če ni v mapi, odstrani piko in pretvori v lowercase
+                                    let cleanDay = day.replace(/\./g, '').toLowerCase();
+                                    // Preveri, ali je sedaj v mapi
+                                    if (dayMap[cleanDay]) {
+                                        day = dayMap[cleanDay];
+                                    } else {
+                                        // Če še vedno ni, uporabi cleanDay direktno
+                                        day = cleanDay;
                                     }
                                 }
                                 
@@ -2455,13 +2458,20 @@ document.addEventListener('DOMContentLoaded', () => {
                             
 // console.log(`Parsed swimmer: ${first} ${last}, email: ${email || 'none'}, phone: ${phone || 'none'}, valid terms: [${validTerms.join(', ')}]`);
                             
+                            // Debug: preveri, kaj se shranjuje
+                            console.log(`💾 Shranjevanje za ${first} ${last}:`, {
+                                postal_code: postalCode || '(prazno)',
+                                terms_count: validTerms.length,
+                                terms: validTerms
+                            });
+                            
                             newSwimmers.push({
                                 first_name: first,
                                 last_name: last,
                                 email: email && isValidEmail(email) ? email : null,
                                 phone: phone && isValidPhone(phone) ? phone : null,
                                 address: address || null,
-                                postal_code: postalCode || null,
+                                postal_code: postalCode && postalCode.trim() ? postalCode.trim() : null,
                                 terms: validTerms,
                                 is_deleted: false
                             });
