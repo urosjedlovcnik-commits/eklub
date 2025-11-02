@@ -20,6 +20,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const elActiveSwimmers = document.getElementById('activeSwimmers');
     const elTotalTerms = document.getElementById('totalTerms');
     
+    // Elementi za modal urejanja plavalca
+    const elEditSwimmerModal = document.getElementById('editSwimmerModal');
+    const elEditSwimmerFirst = document.getElementById('editSwimmerFirst');
+    const elEditSwimmerLast = document.getElementById('editSwimmerLast');
+    const elEditSwimmerEmail = document.getElementById('editSwimmerEmail');
+    const elEditSwimmerPhone = document.getElementById('editSwimmerPhone');
+    const elEditSwimmerAddress = document.getElementById('editSwimmerAddress');
+    const elEditSwimmerPostalCode = document.getElementById('editSwimmerPostalCode');
+    const elSaveEditSwimmerBtn = document.getElementById('saveEditSwimmerBtn');
+    const elCloseEditSwimmerModalBtn = document.getElementById('closeEditSwimmerModalBtn');
+    const elEditSwimmerInfo = document.getElementById('editSwimmerInfo');
+    
     // Dnevi v tednu
     const DAY_SHORT_NAME = ["", "Pon.", "Tor.", "Sre.", "Čet.", "Pet.", "Sob.", "Ned."];
     
@@ -39,6 +51,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const today = new Date();
         const todayStr = today.toISOString().split('T')[0];
         return term.date_to >= todayStr;
+    }
+    
+    function isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
     }
     
     // ===== Nalaganje podatkov =====
@@ -137,8 +154,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             ${swimmer.address ? `<div class="swimmer-contact">🏠 ${swimmer.address}</div>` : ''}
                             ${swimmer.postal_code ? `<div class="swimmer-contact">📮 ${swimmer.postal_code}</div>` : ''}
                         </div>
-                        <div class="swimmer-contact">
-                            ${assignedTerms.length} termin${assignedTerms.length === 1 ? '' : assignedTerms.length === 2 ? 'a' : 'ov'}
+                        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+                            <div class="swimmer-contact">
+                                ${assignedTerms.length} termin${assignedTerms.length === 1 ? '' : assignedTerms.length === 2 ? 'a' : 'ov'}
+                            </div>
+                            <button class="btn pri" onclick="editSwimmer('${swimmer.id}')" style="font-size: 12px; padding: 6px 12px;">
+                                Uredi
+                            </button>
                         </div>
                     </div>
                     
@@ -206,6 +228,124 @@ document.addEventListener('DOMContentLoaded', () => {
         renderSwimmers();
     }
     
+    // ===== Funkcionalnost urejanja plavalcev =====
+    
+    window.editSwimmer = function(swimmerId) {
+        const swimmer = swimmers.find(s => s.id === swimmerId);
+        if (!swimmer) {
+            alert('Plavalec ne obstaja.');
+            return;
+        }
+
+        // Polni polja v modalu s trenutnimi podatki
+        elEditSwimmerFirst.value = swimmer.first_name || '';
+        elEditSwimmerLast.value = swimmer.last_name || '';
+        elEditSwimmerEmail.value = swimmer.email || '';
+        elEditSwimmerPhone.value = swimmer.phone || '';
+        elEditSwimmerAddress.value = swimmer.address || '';
+        elEditSwimmerPostalCode.value = swimmer.postal_code || '';
+        elEditSwimmerInfo.textContent = '';
+        
+        // Prikaži modal
+        elEditSwimmerModal.style.display = 'flex';
+        
+        // Shrani ID plavalca za shranjevanje
+        elEditSwimmerModal.setAttribute('data-swimmer-id', swimmerId);
+    };
+
+    elSaveEditSwimmerBtn.addEventListener('click', async () => {
+        const swimmerId = elEditSwimmerModal.getAttribute('data-swimmer-id');
+        if (!swimmerId) {
+            alert('Napaka: ID plavalca ni najden.');
+            return;
+        }
+
+        // Preberi vrednosti iz polj
+        const first = elEditSwimmerFirst.value.trim();
+        const last = elEditSwimmerLast.value.trim();
+        const email = elEditSwimmerEmail.value.trim() || null;
+        const phone = elEditSwimmerPhone.value.trim() || null;
+        const address = elEditSwimmerAddress.value.trim() || null;
+        const postalCode = elEditSwimmerPostalCode.value.trim() || null;
+
+        // Validacija
+        if (!first || !last) {
+            elEditSwimmerInfo.textContent = 'Ime in priimek sta obvezna polja.';
+            elEditSwimmerInfo.style.color = '#dc3545';
+            return;
+        }
+
+        if (email && !isValidEmail(email)) {
+            elEditSwimmerInfo.textContent = 'Vnesite veljaven email naslov.';
+            elEditSwimmerInfo.style.color = '#dc3545';
+            return;
+        }
+
+        elEditSwimmerInfo.textContent = 'Shranjevanje...';
+        elEditSwimmerInfo.style.color = '#666';
+
+        try {
+            // Posodobi v bazi
+            const updateData = {
+                first_name: first,
+                last_name: last,
+                email: email,
+                phone: phone,
+                address: address,
+                postal_code: postalCode
+            };
+
+            const { error } = await supabase
+                .from('swimmers')
+                .update(updateData)
+                .eq('id', swimmerId);
+
+            if (error) {
+                console.error('Napaka pri shranjevanju plavalca:', error);
+                elEditSwimmerInfo.textContent = 'Napaka pri shranjevanju: ' + error.message;
+                elEditSwimmerInfo.style.color = '#dc3545';
+                return;
+            }
+
+            // Posodobi lokalno stanje
+            const swimmer = swimmers.find(s => s.id === swimmerId);
+            if (swimmer) {
+                swimmer.first_name = first;
+                swimmer.last_name = last;
+                swimmer.email = email;
+                swimmer.phone = phone;
+                swimmer.address = address;
+                swimmer.postal_code = postalCode;
+            }
+
+            // Osveži seznam
+            filteredSwimmers = [...swimmers];
+            renderSwimmers();
+
+            // Zapri modal
+            elEditSwimmerModal.style.display = 'none';
+            elEditSwimmerInfo.textContent = '';
+
+        } catch (error) {
+            console.error('Napaka pri shranjevanju plavalca:', error);
+            elEditSwimmerInfo.textContent = 'Napaka pri shranjevanju: ' + error.message;
+            elEditSwimmerInfo.style.color = '#dc3545';
+        }
+    });
+
+    elCloseEditSwimmerModalBtn.addEventListener('click', () => {
+        elEditSwimmerModal.style.display = 'none';
+        elEditSwimmerInfo.textContent = '';
+    });
+
+    // Zapri modal ob kliku zunaj
+    window.addEventListener('click', (e) => {
+        if (e.target === elEditSwimmerModal) {
+            elEditSwimmerModal.style.display = 'none';
+            elEditSwimmerInfo.textContent = '';
+        }
+    });
+
     // ===== Event listenerji =====
     
     elSearchInput.addEventListener('input', (e) => {

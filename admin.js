@@ -504,6 +504,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const elSaveEditTermBtn = document.getElementById("saveEditTermBtn");
     const elCloseEditTermModalBtn = document.getElementById("closeEditTermModalBtn");
 
+    // Elementi za modal urejanja plavalca
+    const elEditSwimmerModal = document.getElementById("editSwimmerModal");
+    const elEditSwimmerFirst = document.getElementById("editSwimmerFirst");
+    const elEditSwimmerLast = document.getElementById("editSwimmerLast");
+    const elEditSwimmerEmail = document.getElementById("editSwimmerEmail");
+    const elEditSwimmerPhone = document.getElementById("editSwimmerPhone");
+    const elEditSwimmerAddress = document.getElementById("editSwimmerAddress");
+    const elEditSwimmerPostalCode = document.getElementById("editSwimmerPostalCode");
+    const elSaveEditSwimmerBtn = document.getElementById("saveEditSwimmerBtn");
+    const elCloseEditSwimmerModalBtn = document.getElementById("closeEditSwimmerModalBtn");
+    const elEditSwimmerInfo = document.getElementById("editSwimmerInfo");
+
     // ===== Pomožne funkcije =====
     function mkSwimmer(first,last,terms=[]){ return { first_name:first, last_name:last, terms:[...new Set(terms)] }; }
     function iso(d){ 
@@ -1042,7 +1054,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         `<button class="btn success" onclick="restoreSwimmer('${swimmer.id}')" style="font-size: 12px; padding: 4px 8px;">
                             Obnovi plavalca
                         </button>` :
-                        `<button class="btn warn" onclick="deleteSwimmer('${swimmer.id}')" style="font-size: 12px; padding: 4px 8px;">
+                        `<button class="btn pri" onclick="editSwimmer('${swimmer.id}')" style="font-size: 12px; padding: 4px 8px; margin-right: 4px;">
+                            Uredi
+                        </button>
+                        <button class="btn warn" onclick="deleteSwimmer('${swimmer.id}')" style="font-size: 12px; padding: 4px 8px;">
                             Zbriši plavalca
                         </button>`
                     }
@@ -1885,8 +1900,120 @@ document.addEventListener('DOMContentLoaded', () => {
         elEditTermModal.style.display = 'none';
     });
 
+    // ===== Funkcionalnost urejanja plavalcev =====
+    window.editSwimmer = function(swimmerId) {
+        const swimmer = swimmers.find(s => s.id === swimmerId);
+        if (!swimmer) {
+            alert('Plavalec ne obstaja.');
+            return;
+        }
+
+        // Polni polja v modalu s trenutnimi podatki
+        elEditSwimmerFirst.value = swimmer.first_name || '';
+        elEditSwimmerLast.value = swimmer.last_name || '';
+        elEditSwimmerEmail.value = swimmer.email || '';
+        elEditSwimmerPhone.value = swimmer.phone || '';
+        elEditSwimmerAddress.value = swimmer.address || '';
+        elEditSwimmerPostalCode.value = swimmer.postal_code || '';
+        elEditSwimmerInfo.textContent = '';
+        
+        // Prikaži modal
+        elEditSwimmerModal.style.display = 'flex';
+        
+        // Shrani ID plavalca za shranjevanje
+        elEditSwimmerModal.setAttribute('data-swimmer-id', swimmerId);
+    };
+
+    elSaveEditSwimmerBtn.addEventListener('click', async () => {
+        const swimmerId = elEditSwimmerModal.getAttribute('data-swimmer-id');
+        if (!swimmerId) {
+            alert('Napaka: ID plavalca ni najden.');
+            return;
+        }
+
+        // Preberi vrednosti iz polj
+        const first = elEditSwimmerFirst.value.trim();
+        const last = elEditSwimmerLast.value.trim();
+        const email = elEditSwimmerEmail.value.trim() || null;
+        const phone = elEditSwimmerPhone.value.trim() || null;
+        const address = elEditSwimmerAddress.value.trim() || null;
+        const postalCode = elEditSwimmerPostalCode.value.trim() || null;
+
+        // Validacija
+        if (!first || !last) {
+            elEditSwimmerInfo.textContent = 'Ime in priimek sta obvezna polja.';
+            elEditSwimmerInfo.style.color = '#dc3545';
+            return;
+        }
+
+        if (email && !isValidEmail(email)) {
+            elEditSwimmerInfo.textContent = 'Vnesite veljaven email naslov.';
+            elEditSwimmerInfo.style.color = '#dc3545';
+            return;
+        }
+
+        elEditSwimmerInfo.textContent = 'Shranjevanje...';
+        elEditSwimmerInfo.style.color = '#666';
+
+        try {
+            // Posodobi v bazi
+            const updateData = {
+                first_name: first,
+                last_name: last,
+                email: email,
+                phone: phone,
+                address: address,
+                postal_code: postalCode
+            };
+
+            const { error } = await supabase
+                .from('swimmers')
+                .update(updateData)
+                .eq('id', swimmerId);
+
+            if (error) {
+                console.error('Napaka pri shranjevanju plavalca:', error);
+                elEditSwimmerInfo.textContent = 'Napaka pri shranjevanju: ' + error.message;
+                elEditSwimmerInfo.style.color = '#dc3545';
+                return;
+            }
+
+            // Posodobi lokalno stanje
+            const swimmer = swimmers.find(s => s.id === swimmerId);
+            if (swimmer) {
+                swimmer.first_name = first;
+                swimmer.last_name = last;
+                swimmer.email = email;
+                swimmer.phone = phone;
+                swimmer.address = address;
+                swimmer.postal_code = postalCode;
+            }
+
+            // Osveži seznam
+            updateSwimmersList();
+
+            // Zapri modal
+            elEditSwimmerModal.style.display = 'none';
+            elEditSwimmerInfo.textContent = '';
+
+        } catch (error) {
+            console.error('Napaka pri shranjevanju plavalca:', error);
+            elEditSwimmerInfo.textContent = 'Napaka pri shranjevanju: ' + error.message;
+            elEditSwimmerInfo.style.color = '#dc3545';
+        }
+    });
+
+    elCloseEditSwimmerModalBtn.addEventListener('click', () => {
+        elEditSwimmerModal.style.display = 'none';
+        elEditSwimmerInfo.textContent = '';
+    });
+
     // Zapri modal ob kliku zunaj
     window.addEventListener('click', (e) => {
+        if (e.target === elEditSwimmerModal) {
+            elEditSwimmerModal.style.display = 'none';
+            elEditSwimmerInfo.textContent = '';
+        }
         if (e.target === elEditTermModal) {
             elEditTermModal.style.display = 'none';
         }

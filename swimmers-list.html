@@ -235,6 +235,44 @@
     </div>
   </div>
 
+  <!-- Modal za urejanje plavalca -->
+  <div class="modal" id="editSwimmerModal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="box">
+      <div class="box-header">
+        <strong id="editSwimmerModalTitle">Uredi plavalca</strong>
+        <button class="btn" id="closeEditSwimmerModalBtn">Zapri</button>
+      </div>
+      <div class="box-body">
+        <div class="row">
+          <label for="editSwimmerFirst">Ime:</label>
+          <input type="text" id="editSwimmerFirst" placeholder="Ime" required>
+        </div>
+        <div class="row">
+          <label for="editSwimmerLast">Priimek:</label>
+          <input type="text" id="editSwimmerLast" placeholder="Priimek" required>
+        </div>
+        <div class="row">
+          <label for="editSwimmerEmail">Email:</label>
+          <input type="email" id="editSwimmerEmail" placeholder="Email (opcijsko)">
+        </div>
+        <div class="row">
+          <label for="editSwimmerPhone">Telefon:</label>
+          <input type="tel" id="editSwimmerPhone" placeholder="Telefon (opcijsko)">
+        </div>
+        <div class="row">
+          <label for="editSwimmerAddress">Naslov:</label>
+          <input type="text" id="editSwimmerAddress" placeholder="Naslov (opcijsko)">
+        </div>
+        <div class="row">
+          <label for="editSwimmerPostalCode">Pošta:</label>
+          <input type="text" id="editSwimmerPostalCode" placeholder="Pošta (opcijsko)">
+        </div>
+        <div id="editSwimmerInfo" class="muted" style="margin-top: 10px;"></div>
+        <button class="btn pri" id="saveEditSwimmerBtn">Shrani spremembe</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./config.js"></script>
   <script src="./swimmers-list.js"></script>
