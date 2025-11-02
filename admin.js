@@ -3309,11 +3309,12 @@ document.addEventListener('DOMContentLoaded', () => {
 // console.log('🔍 Končna validacija pred upsert:');
                         let hasInvalidFees = false;
                         validFees.forEach((fee, index) => {
-                            if (fee.month < 0 || fee.month > 11) {
+                            // Mesec je 1-based (1-12), ne 0-based (0-11)
+                            if (fee.month < 1 || fee.month > 12) {
                                 console.error(`❌ KRITIČNA NAPAKA: Vadnina ${index} ima neveljaven mesec ${fee.month}:`, fee);
                                 hasInvalidFees = true;
                             } else {
-// console.log(`✅ Vadnina ${index}: mesec ${fee.month} (${fee.month + 1} v človeškem formatu) za plavalca ${fee.swimmer_id}`);
+// console.log(`✅ Vadnina ${index}: mesec ${fee.month} za plavalca ${fee.swimmer_id}`);
                             }
                         });
                         
