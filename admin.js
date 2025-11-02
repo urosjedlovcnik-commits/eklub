@@ -6129,9 +6129,59 @@ document.addEventListener('DOMContentLoaded', () => {
                 return aName.localeCompare(bName, 'sl');
             });
         
+        // Preveri, ali je iskan mesec v preteklosti
+        const requestedDate = new Date(year, month - 1, 1);
+        const currentDate = new Date();
+        currentDate.setDate(1);
+        currentDate.setHours(0, 0, 0, 0);
+        const isPastMonth = requestedDate < currentDate;
+        
         for (const swimmer of sortedSwimmers) {
             
-            const feeData = swimmerFees[swimmer.id] || { fee: 80, discount: 0, is_oly: false };
+            const feeData = swimmerFees[swimmer.id];
+            
+            // Če ni vadnine za tega plavalca
+            if (!feeData) {
+                // Za pretekle mesece: če ni vadnine, plavalec verjetno še ni bil dodan - ne prikaži
+                if (isPastMonth) {
+                    continue; // Preskoči tega plavalca - ne prikaži ga v tabeli
+                }
+                // Za sedanji/prihodnji mesec: uporabi privzeto vadnino
+                const defaultFeeData = { fee: 80, discount: 0, is_oly: false };
+                const effectiveFee = defaultFeeData.fee;
+                const finalFee = Math.max(0, effectiveFee - defaultFeeData.discount);
+                
+                // Uporabi defaultFeeData za prikaz...
+                const termLabels = (swimmer.terms || []).map(termId => {
+                    const term = TERMS.find(t => t.id === termId);
+                    return term ? term.label : termId;
+                }).join(', ');
+                
+                const termsDisplay = termLabels.trim() || 'Brez terminov';
+                
+                // Preveri OLY limit
+                const canCheckOly = olyCount < 15;
+                
+                html += `
+                    <tr>
+                        <td>${swimmer.first_name} ${swimmer.last_name}</td>
+                        <td>${termsDisplay}</td>
+                        <td>
+                            <input type="number" id="fee-${swimmer.id}" value="${effectiveFee}" min="0" step="0.01" style="width: 80px;" onchange="updateSwimmerFee('${swimmer.id}', this.value, ${month}, ${year})">
+                        </td>
+                        <td>
+                            <input type="number" id="discount-${swimmer.id}" value="${defaultFeeData.discount}" min="0" step="0.01" style="width: 80px;" onchange="updateSwimmerDiscount('${swimmer.id}', this.value, ${month}, ${year})">
+                        </td>
+                        <td><strong>${finalFee.toFixed(2)}€</strong></td>
+                        <td style="text-align: center;">
+                            <input type="checkbox" id="oly-${swimmer.id}" ${canCheckOly ? '' : 'disabled'} onchange="updateSwimmerOly('${swimmer.id}', this.checked, ${month}, ${year})" style="cursor: pointer; width: 20px; height: 20px;">
+                            ${!canCheckOly ? '<span style="font-size: 10px; color: #999; display: block;">Max 15</span>' : ''}
+                        </td>
+                    </tr>
+                `;
+                continue;
+            }
+            
             const isOly = feeData.is_oly || false;
             
             // Če je OLY obkljukljeno, nastavi znesek vadnine na 0
