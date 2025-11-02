@@ -5791,8 +5791,24 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             
             // Če nismo našli pristojbin za točen mesec/leto, poišči najnovejše pristojbine za vsakega plavalca
+            // VENDAR: Ne uporabi najnovejše vadnine za pretekle mesece - če plavalec ni imel vadnine za pretelek mesec,
+            // to pomeni, da takrat še ni bil plavalec ali ni obiskoval vadbe
             if (data.length === 0) {
-                console.log(`⚠️ getSwimmerFeesFromDB: Ni vadnin za mesec ${month}/${year}, iščem najnovejše vadnine...`);
+                const requestedDate = new Date(year, month - 1, 1); // Mesec za katerega iščemo vadnine (1-based)
+                const currentDate = new Date();
+                currentDate.setDate(1); // Nastavi na prvi dan meseca
+                currentDate.setHours(0, 0, 0, 0);
+                
+                const isPastMonth = requestedDate < currentDate;
+                
+                if (isPastMonth) {
+                    console.log(`⚠️ getSwimmerFeesFromDB: Ni vadnin za pretelek mesec ${month}/${year}. Ne uporabljam najnovejših vadnin (plavalec verjetno še ni bil dodan ali ni obiskoval vadbe).`);
+                    // Za pretekle mesece ne uporabljamo najnovejših vadnin
+                    // Če ni vadnine za pretelek mesec, plavalec verjetno takrat še ni bil dodan ali ni obiskoval vadbe
+                    return swimmerFees; // Vrni prazen objekt - ne prikaži vadnine
+                }
+                
+                console.log(`⚠️ getSwimmerFeesFromDB: Ni vadnin za sedanji/prihodnji mesec ${month}/${year}, iščem najnovejše vadnine...`);
                 
                 // Pridobi vse plavalce, ki nimajo pristojbin za ta mesec
                 const activeSwimmers = swimmers.filter(s => !s.is_deleted);
@@ -5802,6 +5818,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // console.log(`Looking for recent fees for ${swimmersWithoutFees.length} swimmers...`);
                     
                     // Za vsakega plavalca poišči najnovejšo pristojbino
+                    // SAMO za sedanji ali prihodnji mesec (ne za pretekle!)
                     for (const swimmer of swimmersWithoutFees) {
                         const { data: recentData, error: recentError } = await supabase
                             .from('swimmer_monthly_fees')
@@ -5815,15 +5832,14 @@ document.addEventListener('DOMContentLoaded', () => {
                             const recentFee = recentData[0];
                             // Uporabi najnovejšo pristojbino samo če je iz preteklosti ali sedanjosti
                             const feeDate = new Date(recentFee.year, recentFee.month - 1, 1);
-                            const currentDate = new Date(year, month - 1, 1);
                             
-                            if (feeDate <= currentDate) {
+                            if (feeDate <= requestedDate) {
                                 swimmerFees[swimmer.id] = {
                                     fee: recentFee.monthly_fee,
                                     discount: 0, // Popusti se ne prenašajo na prihodnje mesece
                                     is_oly: recentFee.is_oly || false
                                 };
-// console.log(`Using recent fee for ${swimmer.first_name} ${swimmer.last_name}: ${recentFee.monthly_fee}€ (from ${recentFee.month + 1}/${recentFee.year})`);
+// console.log(`Using recent fee for ${swimmer.first_name} ${swimmer.last_name}: ${recentFee.monthly_fee}€ (from ${recentFee.month}/${recentFee.year})`);
                             }
                         }
                     }
