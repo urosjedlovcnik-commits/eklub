@@ -5545,20 +5545,23 @@ document.addEventListener('DOMContentLoaded', () => {
         
         let html = '<div class="term-costs-grid">';
         
-        // Filtriraj samo aktivne termine za prikaz v nastavitvah
-        const activeTermsForSettings = TERMS.filter(term => {
-            const termEndDate = new Date(term.date_to);
-            const today = new Date();
-            return termEndDate >= today;
+        // Prikaži vse termine, sortirane po dnevu in času
+        // Ne filtriramo po datumu, ker lahko želimo nastaviti stroške tudi za pretekle termine
+        const sortedTerms = [...TERMS].sort((a, b) => {
+            if (a.day !== b.day) {
+                return a.day - b.day;
+            }
+            return a.start_time.localeCompare(b.start_time);
         });
         
-// console.log(`Term costs settings: showing ${activeTermsForSettings.length} active terms out of ${TERMS.length} total terms`);
+// console.log(`Term costs settings: showing ${sortedTerms.length} terms out of ${TERMS.length} total terms`);
         
-        for (const term of activeTermsForSettings) {
+        for (const term of sortedTerms) {
             const cost = termCosts[term.id] || 50; // Default to 50€/uro
+            const termLabel = `${DAY_SHORT_NAME[term.day]} ${term.start_time}-${term.end_time}`;
             html += `
                 <div class="term-cost-row">
-                    <label for="term-cost-${term.id}">${term.label}:</label>
+                    <label for="term-cost-${term.id}">${termLabel}:</label>
                     <input type="number" 
                            id="term-cost-${term.id}" 
                            value="${cost}" 
