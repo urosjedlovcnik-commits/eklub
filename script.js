@@ -503,13 +503,13 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         }
         
-        // Mobilni indikator
-        if (isMobile && todays.length > 3) {
-          const more = document.createElement("div");
-          more.className = "more-events-indicator";
-          more.textContent = `+ ${todays.length - 3} več...`;
-          day.appendChild(more);
-        }
+        // Mobilni indikator - odstranjen, ker prikazujemo vse termine
+        // if (isMobile && todays.length > 3) {
+        //   const more = document.createElement("div");
+        //   more.className = "more-events-indicator";
+        //   more.textContent = `+ ${todays.length - 3} več...`;
+        //   day.appendChild(more);
+        // }
         
         fragment.appendChild(day);
       }

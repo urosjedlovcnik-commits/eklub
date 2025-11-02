@@ -286,9 +286,9 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   .grid { grid-template-columns: 1fr; }
   .calendar-head { font-size: 12px; }
   .day { 
-    min-height: 90px;
+    min-height: 140px; /* Povečano za prikaz več terminov */
     padding: 4px;
-    overflow: hidden;
+    overflow: visible; /* Spremenjeno iz hidden, da se termini prikažejo */
   }
   .day .num { font-size: 14px; }
   .event { 
@@ -301,9 +301,10 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   .event .end-time {
     display: none; /* Skrije čas konca termina na mobilnih napravah */
   }
-  .day:not(.disabled) .event:nth-child(n+4) {
+  /* POPRAVEK: Prikaži vse termine (ne skrivaj od četrtega naprej) */
+  /* .day:not(.disabled) .event:nth-child(n+4) {
     display: none;
-  }
+  } */
   .more-events-indicator {
     font-size: 12px;
     text-align: center;
