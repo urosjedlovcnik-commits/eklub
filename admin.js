@@ -466,7 +466,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const elNewTermDateFrom = document.getElementById("newTermDateFrom");
     const elNewTermDateTo = document.getElementById("newTermDateTo");
     const elAddTermBtn = document.getElementById("addTermBtn");
-    const elAddTermFromManageBtn = document.getElementById("addTermFromManageBtn");
     const elTermList = document.getElementById("termList");
 
     // UI elementi za trenerje
@@ -1417,23 +1416,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Gumb za dodajanje termina iz sekcije Upravljanje terminov
-    if (elAddTermFromManageBtn) {
-        elAddTermFromManageBtn.addEventListener('click', () => {
-            // Preklopi na sekcijo Termini
-            const termsBtn = document.querySelector('button[data-section="terms"]');
-            if (termsBtn) {
-                termsBtn.click();
-                // Scrollaj na formo za dodajanje termina
-                setTimeout(() => {
-                    const addTermCard = document.querySelector('#terms-section .card:first-child');
-                    if (addTermCard) {
-                        addTermCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
-                }, 100);
-            }
-        });
-    }
+    // Gumb za dodajanje termina iz sekcije Upravljanje terminov (odstranjen - forma je sedaj pod upravljanjem terminov)
 
     // ===== Upravljanje terminov =====
     window.editTerm = async function(termId) {
@@ -1745,13 +1728,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const termCard = document.createElement('div');
                 termCard.className = 'term-card';
                 
-                // Poišči plavalce za ta termin in jih sortiraj po abecedi
+                // Poišči plavalce za ta termin in jih sortiraj po priimku (abecedno)
                 const assignedSwimmers = swimmers
                     .filter(s => s.terms && s.terms.includes(term.id) && !s.is_deleted)
                     .sort((a, b) => {
-                        const aName = `${a.last_name} ${a.first_name}`;
-                        const bName = `${b.last_name} ${b.first_name}`;
-                        return aName.localeCompare(bName, 'sl');
+                        // Sortiraj najprej po priimku, nato po imenu
+                        const lastNameCompare = a.last_name.localeCompare(b.last_name, 'sl');
+                        if (lastNameCompare !== 0) {
+                            return lastNameCompare;
+                        }
+                        return a.first_name.localeCompare(b.first_name, 'sl');
                     });
                 
                 let swimmersList = '';

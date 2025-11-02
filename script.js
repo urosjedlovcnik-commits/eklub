@@ -401,12 +401,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const statusCacheKey = `${iso(date)}-${t.id}`;
             let status = attendanceStatusCache.get(statusCacheKey);
             if (!status) {
-              const ymd = iso(date);
-              const termAtt = attendance[ymd]?.[t.id] || {};
-              if (Object.keys(termAtt).length > 0) {
-                status = getAttendanceStatus(date, t.id);
-                attendanceStatusCache.set(statusCacheKey, status);
-              }
+              // POPRAVEK: Vedno preverimo status za pretekle termine, tudi če ni vnesene prisotnosti
+              // Da bi pretekli termini brez prisotnosti bili rdeči (unfilled)
+              status = getAttendanceStatus(date, t.id);
+              attendanceStatusCache.set(statusCacheKey, status);
             }
             if (status) {
               e.classList.add(status);
@@ -466,14 +464,12 @@ document.addEventListener('DOMContentLoaded', () => {
           
           // NOV POPRAVEK: Enako preverjanje za barvno kodiranje tudi v tem modalnem oknu
           if (!isPast(date) && !isToday(date)) {
-              // Ne delamo nič
+              // Ne delamo nič za prihodnje termine
           } else {
-            const ymd = iso(date);
-            const termAtt = attendance[ymd]?.[t.id] || {};
-            if (Object.keys(termAtt).length > 0) {
-                const status = getAttendanceStatus(date, t.id);
-                e.classList.add(status);
-            }
+            // POPRAVEK: Vedno preverimo status za pretekle/današnje termine, tudi če ni vnesene prisotnosti
+            // Da bi pretekli termini brez prisotnosti bili rdeči (unfilled)
+            const status = getAttendanceStatus(date, t.id);
+            e.classList.add(status);
           }
 
           if (isInactive(date, t.id)) {
