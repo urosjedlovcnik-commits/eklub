@@ -399,11 +399,11 @@
           </div>
           <div class="row">
             <label for="newTermStart">Začetna ura:</label>
-            <input type="time" id="newTermStart">
+            <input type="time" id="newTermStart" step="60">
           </div>
           <div class="row">
             <label for="newTermEnd">Končna ura:</label>
-            <input type="time" id="newTermEnd">
+            <input type="time" id="newTermEnd" step="60">
           </div>
           <div class="row">
             <label for="newTermDateFrom">Datum trajanja od:</label>
@@ -420,6 +420,7 @@
       <div class="card">
         <h3>Upravljanje terminov</h3>
         <div class="inner">
+          <button class="btn pri" id="addTermFromManageBtn" style="margin-bottom: 16px;">+ Dodaj nov termin</button>
           <div class="term-list" id="termList"></div>
         </div>
       </div>
@@ -798,11 +799,11 @@ date,term_id,swimmer_id,status
         </div>
         <div class="row">
           <label for="editTermStart">Začetna ura:</label>
-          <input type="time" id="editTermStart">
+          <input type="time" id="editTermStart" step="60">
         </div>
         <div class="row">
           <label for="editTermEnd">Končna ura:</label>
-          <input type="time" id="editTermEnd">
+          <input type="time" id="editTermEnd" step="60">
         </div>
         <button class="btn pri" id="saveEditTermBtn">Shrani</button>
       </div>

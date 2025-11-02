@@ -466,6 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const elNewTermDateFrom = document.getElementById("newTermDateFrom");
     const elNewTermDateTo = document.getElementById("newTermDateTo");
     const elAddTermBtn = document.getElementById("addTermBtn");
+    const elAddTermFromManageBtn = document.getElementById("addTermFromManageBtn");
     const elTermList = document.getElementById("termList");
 
     // UI elementi za trenerje
@@ -1416,6 +1417,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Gumb za dodajanje termina iz sekcije Upravljanje terminov
+    if (elAddTermFromManageBtn) {
+        elAddTermFromManageBtn.addEventListener('click', () => {
+            // Preklopi na sekcijo Termini
+            const termsBtn = document.querySelector('button[data-section="terms"]');
+            if (termsBtn) {
+                termsBtn.click();
+                // Scrollaj na formo za dodajanje termina
+                setTimeout(() => {
+                    const addTermCard = document.querySelector('#terms-section .card:first-child');
+                    if (addTermCard) {
+                        addTermCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }, 100);
+            }
+        });
+    }
+
     // ===== Upravljanje terminov =====
     window.editTerm = async function(termId) {
         const term = TERMS.find(t => t.id === termId);
@@ -1423,6 +1442,20 @@ document.addEventListener('DOMContentLoaded', () => {
             // Popolni modal za urejanje
             elEditTermDateFrom.value = term.date_from;
             elEditTermDateTo.value = term.date_to;
+            
+            // Pretvori čas v format brez sekund (HH:MM) za time input
+            const formatTimeForInput = (timeStr) => {
+                if (!timeStr) return '';
+                // Če čas že vsebuje sekunde, jih odstrani
+                if (timeStr.includes(':') && timeStr.split(':').length === 3) {
+                    const parts = timeStr.split(':');
+                    return `${parts[0]}:${parts[1]}`;
+                }
+                return timeStr;
+            };
+            
+            elEditTermStart.value = formatTimeForInput(term.start_time);
+            elEditTermEnd.value = formatTimeForInput(term.end_time);
             
             // Shrani ID termina za kasnejšo uporabo
             elEditTermModal.setAttribute('data-term-id', termId);
@@ -1692,7 +1725,23 @@ document.addEventListener('DOMContentLoaded', () => {
             daySection.className = 'day-section';
             daySection.innerHTML = `<h4>${dayName}</h4>`;
             
-            dayTerms.forEach(term => {
+            // Sortiraj termine - jutranji (do 12:00) pred večernimi (od 12:00 naprej)
+            const sortedDayTerms = dayTerms.sort((a, b) => {
+                const aHour = parseInt(a.start_time.split(':')[0]);
+                const bHour = parseInt(b.start_time.split(':')[0]);
+                const aIsMorning = aHour < 12;
+                const bIsMorning = bHour < 12;
+                
+                // Najprej sortiraj po jutro/večer
+                if (aIsMorning !== bIsMorning) {
+                    return aIsMorning ? -1 : 1; // Jutranji pred večernimi
+                }
+                
+                // Če sta oba jutranji ali oba večerni, sortiraj po času
+                return a.start_time.localeCompare(b.start_time);
+            });
+            
+            sortedDayTerms.forEach(term => {
                 const termCard = document.createElement('div');
                 termCard.className = 'term-card';
                 
@@ -1717,9 +1766,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     swimmersList = '<span class="muted">Brez dodeljenih plavalcev</span>';
                 }
                 
+                // Format čas brez sekund
+                const formatTimeDisplay = (timeStr) => {
+                    if (!timeStr) return '';
+                    // Če čas vsebuje sekunde, jih odstrani
+                    if (timeStr.includes(':') && timeStr.split(':').length === 3) {
+                        const parts = timeStr.split(':');
+                        return `${parts[0]}:${parts[1]}`;
+                    }
+                    return timeStr;
+                };
+                
                 termCard.innerHTML = `
                     <div class="term-header">
-                        <span class="term-time">${term.start_time} - ${term.end_time}</span>
+                        <span class="term-time">${formatTimeDisplay(term.start_time)} - ${formatTimeDisplay(term.end_time)}</span>
                         <span class="term-period">${formatDate(term.date_from)} - ${formatDate(term.date_to)}</span>
                         <div class="term-actions">
                             <button class="btn small" onclick="editTerm('${term.id}')" style="font-size: 12px; padding: 4px 8px; margin-right: 4px;">
