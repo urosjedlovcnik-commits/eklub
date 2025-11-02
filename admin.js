@@ -3318,10 +3318,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         
                         // Uvozi vadnine v bazo za vse prihodnje mesece
-// console.log('Importing future fees:', validFees);
+                        console.log(`📦 Pripravljenih vadnin za uvoz: ${futureFees.length} (${validFees.length} veljavnih)`);
                         
                         // Dodatna validacija pred upsert - preveri vsako vadnino posebej
-// console.log('🔍 Končna validacija pred upsert:');
+                        console.log('🔍 Končna validacija pred upsert...');
                         let hasInvalidFees = false;
                         validFees.forEach((fee, index) => {
                             // Mesec je 1-based (1-12), ne 0-based (0-11)
@@ -3339,7 +3339,15 @@ document.addEventListener('DOMContentLoaded', () => {
                             return;
                         }
                         
-                                            // Pošlji vadnine v bazo
+                        if (validFees.length === 0) {
+                            console.error('❌ NAPAKA: Ni vadnin za uvoz!');
+                            alert('Napaka: Ni vadnin za uvoz!');
+                            return;
+                        }
+                        
+                        console.log(`✅ Validacija uspešna. Pripravljenih ${validFees.length} vadnin za shranjevanje.`);
+                        
+                        // Pošlji vadnine v bazo
                         const feesWithExplicitTypes = validFees.map(fee => ({
                             ...fee,
                             month: parseInt(fee.month, 10),
