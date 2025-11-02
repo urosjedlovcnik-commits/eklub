@@ -428,6 +428,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const elCsvInput = document.getElementById("csvInput");
     const elCsvTermsInput = document.getElementById("csvTermsInput");
     const elCsvFeesInput = document.getElementById("csvFeesInput");
+    const elCsvAttendanceInput = document.getElementById("csvAttendanceInput");
+    const elRestoreAttendanceBtn = document.getElementById("restoreAttendanceBtn");
+    const elRestoreAttendanceInfo = document.getElementById("restoreAttendanceInfo");
     const elExportMonthSelect = document.getElementById("exportMonthSelect");
     const elExportYearSelect = document.getElementById("exportYearSelect");
     const elExportCsvBtn = document.getElementById("exportCsvBtn");
@@ -2713,6 +2716,206 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.readAsText(file);
         e.target.value = '';
     });
+
+    // CSV uvoz prisotnosti
+    if (elCsvAttendanceInput) {
+        elCsvAttendanceInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const csv = e.target.result;
+                    const lines = csv.split('\n').filter(line => line.trim() !== '');
+                    
+                    if (lines.length < 2) {
+                        alert('CSV datoteka mora vsebovati vsaj glavo in eno vrstico podatkov.');
+                        return;
+                    }
+                    
+                    const separator = detectSeparator(lines[0]);
+                    
+                    // Funkcija za razčlenjevanje CSV vrstic z upoštevanjem narekovajev
+                    function parseCSVLine(line, sep) {
+                        const result = [];
+                        let current = '';
+                        let inQuotes = false;
+                        
+                        for (let i = 0; i < line.length; i++) {
+                            const char = line[i];
+                            if (char === '"') {
+                                inQuotes = !inQuotes;
+                            } else if (char === sep && !inQuotes) {
+                                result.push(current.trim());
+                                current = '';
+                            } else {
+                                current += char;
+                            }
+                        }
+                        result.push(current.trim());
+                        return result.map(field => field.replace(/^"|"$/g, ''));
+                    }
+                    
+                    const headers = parseCSVLine(lines[0], separator);
+                    
+                    const requiredHeaders = ['date', 'term_id', 'swimmer_id', 'status'];
+                    if (!requiredHeaders.every(h => headers.includes(h))) {
+                        alert('CSV mora vsebovati stolpce: date, term_id, swimmer_id, status');
+                        return;
+                    }
+                    
+                    let imported = 0;
+                    let updated = 0;
+                    let errors = 0;
+                    
+                    for (let i = 1; i < lines.length; i++) {
+                        const values = parseCSVLine(lines[i], separator);
+                        if (values.length < 4) continue;
+                        
+                        const date = values[headers.indexOf('date')].trim();
+                        const termId = values[headers.indexOf('term_id')].trim();
+                        const swimmerId = values[headers.indexOf('swimmer_id')].trim();
+                        const status = values[headers.indexOf('status')].trim();
+                        
+                        if (!date || !termId || !swimmerId || !status) continue;
+                        
+                        // Validiraj status
+                        if (!['present', 'absent', 'excused'].includes(status)) {
+                            console.warn(`Neveljaven status '${status}' za datum ${date}, preskočeno.`);
+                            errors++;
+                            continue;
+                        }
+                        
+                        // Preveri, ali zapis že obstaja
+                        const { data: existing } = await supabase
+                            .from('attendance')
+                            .select('id')
+                            .eq('date', date)
+                            .eq('term_id', termId)
+                            .eq('swimmer_id', swimmerId)
+                            .single();
+                        
+                        if (existing) {
+                            // Posodobi obstoječi zapis
+                            const { error } = await supabase
+                                .from('attendance')
+                                .update({ 
+                                    status: status,
+                                    updated_at: new Date().toISOString()
+                                })
+                                .eq('id', existing.id);
+                            
+                            if (error) {
+                                console.error(`Napaka pri posodabljanju prisotnosti za ${date}:`, error);
+                                errors++;
+                            } else {
+                                updated++;
+                            }
+                        } else {
+                            // Dodaj nov zapis
+                            const { error } = await supabase
+                                .from('attendance')
+                                .insert({
+                                    date: date,
+                                    term_id: termId,
+                                    swimmer_id: swimmerId,
+                                    status: status,
+                                    created_at: new Date().toISOString(),
+                                    updated_at: new Date().toISOString()
+                                });
+                            
+                            if (error) {
+                                console.error(`Napaka pri dodajanju prisotnosti za ${date}:`, error);
+                                errors++;
+                            } else {
+                                imported++;
+                            }
+                        }
+                    }
+                    
+                    // Osveži lokalno stanje
+                    await loadData();
+                    
+                    alert(`Uvoz prisotnosti končan:\n- Dodanih zapisov: ${imported}\n- Posodobljenih zapisov: ${updated}\n- Napak: ${errors}`);
+                    
+                    // Ponastavi input
+                    elCsvAttendanceInput.value = '';
+                } catch (error) {
+                    console.error('Napaka pri uvozu prisotnosti:', error);
+                    alert('Napaka pri uvozu prisotnosti: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        });
+    }
+
+    // Funkcija za obnovitev prisotnosti iz prejšnjega meseca
+    async function restoreAttendanceFromPreviousMonth() {
+        if (!elRestoreAttendanceInfo) return;
+        
+        elRestoreAttendanceInfo.textContent = 'Obnavljanje prisotnosti...';
+        
+        try {
+            // Določi prejšnji mesec
+            const now = new Date();
+            const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const previousMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+            
+            const monthStart = previousMonth.toISOString().split('T')[0];
+            const monthEnd = previousMonthEnd.toISOString().split('T')[0];
+            
+            // Poišči termin "tor-06:15-07:30"
+            const termId = 'tor-06:15-07:30';
+            const term = TERMS.find(t => t.id === termId);
+            
+            if (!term) {
+                elRestoreAttendanceInfo.textContent = `Napaka: Termin ${termId} ne obstaja v bazi.`;
+                return;
+            }
+            
+            // Poišči vse zapise prisotnosti za ta termin in mesec
+            const { data: attendanceRecords, error } = await supabase
+                .from('attendance')
+                .select('*')
+                .eq('term_id', termId)
+                .gte('date', monthStart)
+                .lte('date', monthEnd);
+            
+            if (error) {
+                throw error;
+            }
+            
+            if (!attendanceRecords || attendanceRecords.length === 0) {
+                elRestoreAttendanceInfo.innerHTML = `
+                    <strong>Ni najdenih zapisov prisotnosti</strong> za termin ${termId} v mesecu ${previousMonth.toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' })}.
+                    <br><br>
+                    <strong>Možnosti za obnovitev:</strong>
+                    <br>1. Uporabite Supabase Point-in-Time Recovery v Supabase Dashboardu
+                    <br>2. Uvozite prisotnost iz CSV datoteke (če imate backup)
+                    <br>3. Preverite SQL skripto: <code>SQL/restore_attendance_tor_06_15.sql</code>
+                `;
+                return;
+            }
+            
+            // Zapisi že obstajajo - osveži lokalno stanje
+            await loadData();
+            
+            elRestoreAttendanceInfo.innerHTML = `
+                <strong>✅ Najdenih zapisov: ${attendanceRecords.length}</strong>
+                <br>Prisotnost za termin ${termId} v mesecu ${previousMonth.toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' })} je že v bazi.
+                <br>Podatki so bili osveženi.
+            `;
+            
+        } catch (error) {
+            console.error('Napaka pri obnavljanju prisotnosti:', error);
+            elRestoreAttendanceInfo.textContent = 'Napaka pri obnavljanju prisotnosti: ' + error.message;
+        }
+    }
+
+    if (elRestoreAttendanceBtn) {
+        elRestoreAttendanceBtn.addEventListener('click', restoreAttendanceFromPreviousMonth);
+    }
 
     // CSV uvoz vadnin
     if (elCsvFeesInput) {
