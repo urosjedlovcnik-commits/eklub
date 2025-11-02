@@ -5392,8 +5392,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const swimmerFees = await getSwimmerFees(month, year);
             const activeSwimmers = swimmers.filter(s => !s.is_deleted);
             
-            // Ustvari CSV vsebino z vsemi podatki
-            let csv = 'first_name,last_name,email,phone,address,postal_code,monthly_fee,discount\n';
+            // Ustvari CSV vsebino samo z imenom, priimkom in zneskom vadnine
+            let csv = 'first_name,last_name,monthly_fee\n';
             
             // Sortiraj plavalce po abecedi po priimku, nato po imenu
             const sortedActiveSwimmers = activeSwimmers.sort((a, b) => {
@@ -5405,7 +5405,6 @@ document.addEventListener('DOMContentLoaded', () => {
             sortedActiveSwimmers.forEach(swimmer => {
                 const feeData = swimmerFees[swimmer.id];
                 const fee = feeData && feeData.fee !== undefined ? feeData.fee : 0;
-                const discount = feeData && feeData.discount !== undefined ? feeData.discount : 0;
                 
                 // Formatiraj podatke - uporabi narekovaje za polja, ki lahko vsebujejo vejice
                 const formatCSVField = (value) => {
@@ -5417,7 +5416,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return value;
                 };
                 
-                csv += `${formatCSVField(swimmer.first_name)},${formatCSVField(swimmer.last_name)},${formatCSVField(swimmer.email || '')},${formatCSVField(swimmer.phone || '')},${formatCSVField(swimmer.address || '')},${formatCSVField(swimmer.postal_code || '')},${fee.toFixed(2)},${discount.toFixed(2)}\n`;
+                csv += `${formatCSVField(swimmer.first_name)},${formatCSVField(swimmer.last_name)},${fee.toFixed(2)}\n`;
             });
             
             // Prenesi CSV datoteko z BOM za pravilno podporo šumnikov
