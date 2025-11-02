@@ -1928,15 +1928,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (idChanged) {
                     // Ustvari nov termin z novim ID-jem
                     const { data: newTerm, error: insertError } = await supabase
-                        .from('terms')
+                    .from('terms')
                         .insert({
                             id: newId,
                             day: day,
                             start_time: startTime,
                             end_time: endTime,
-                            date_from: dateFrom,
-                            date_to: dateTo
-                        })
+                        date_from: dateFrom, 
+                        date_to: dateTo 
+                    })
                         .select()
                         .single();
                     
@@ -2065,17 +2065,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     const { error } = await supabase
                         .from('terms')
                         .update(updateData)
-                        .eq('id', termId);
+                    .eq('id', termId);
 
-                    if (error) {
-                        console.error('Napaka pri shranjevanju termina:', error);
-                        alert('Napaka pri shranjevanju termina. Preverite konzolo.');
-                        return;
-                    }
+                if (error) {
+                    console.error('Napaka pri shranjevanju termina:', error);
+                    alert('Napaka pri shranjevanju termina. Preverite konzolo.');
+                    return;
+                }
 
-                    // Posodobi lokalno stanje
-                    term.date_from = dateFrom;
-                    term.date_to = dateTo;
+                // Posodobi lokalno stanje
+                term.date_from = dateFrom;
+                term.date_to = dateTo;
                     term.start_time = startTime;
                     term.end_time = endTime;
                 }
@@ -2315,7 +2315,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         const email = headers.includes('email') ? values[headers.indexOf('email')] : '';
                         const phone = headers.includes('phone') ? values[headers.indexOf('phone')] : '';
                         const address = headers.includes('address') ? values[headers.indexOf('address')] : '';
-                        const postalCode = headers.includes('postal_code') ? values[headers.indexOf('postal_code')] : '';
+                        const postalCode = headers.includes('postal_code') ? (values[headers.indexOf('postal_code')] || '').trim() : '';
+                        
+                        // Debug: preveri, ali se postal_code pravilno prebere
+                        if (postalCode) {
+                            console.log(`📮 Postal code za ${first} ${last}: "${postalCode}"`);
+                        }
                         
                         if (first && last) {
                             // Funkcija za pretvorbo CSV formata termina v ID format baze
@@ -2327,15 +2332,15 @@ document.addEventListener('DOMContentLoaded', () => {
                                 let term = csvTerm.trim().replace(/^"|"$/g, '');
                                 if (!term) return null;
                                 
-                                // Preslikava slovenskih dni (z vejico ali brez)
+                                // Preslikava slovenskih dni (z vejico ali brez, velike/male črke)
                                 const dayMap = {
-                                    'pon': 'pon', 'pon.': 'pon', 'Pon': 'pon', 'Pon.': 'pon',
-                                    'tor': 'tor', 'tor.': 'tor', 'Tor': 'tor', 'Tor.': 'tor',
-                                    'sre': 'sre', 'sre.': 'sre', 'Sre': 'sre', 'Sre.': 'sre',
-                                    'čet': 'čet', 'čet.': 'čet', 'Čet': 'čet', 'Čet.': 'čet',
-                                    'pet': 'pet', 'pet.': 'pet', 'Pet': 'pet', 'Pet.': 'pet',
-                                    'sob': 'sob', 'sob.': 'sob', 'Sob': 'sob', 'Sob.': 'sob',
-                                    'ned': 'ned', 'ned.': 'ned', 'Ned': 'ned', 'Ned.': 'ned'
+                                    'pon': 'pon', 'pon.': 'pon', 'Pon': 'pon', 'Pon.': 'pon', 'PON': 'pon', 'PON.': 'pon',
+                                    'tor': 'tor', 'tor.': 'tor', 'Tor': 'tor', 'Tor.': 'tor', 'TOR': 'tor', 'TOR.': 'tor',
+                                    'sre': 'sre', 'sre.': 'sre', 'Sre': 'sre', 'Sre.': 'sre', 'SRE': 'sre', 'SRE.': 'sre',
+                                    'čet': 'čet', 'čet.': 'čet', 'Čet': 'čet', 'Čet.': 'čet', 'ČET': 'čet', 'ČET.': 'čet',
+                                    'pet': 'pet', 'pet.': 'pet', 'Pet': 'pet', 'Pet.': 'pet', 'PET': 'pet', 'PET.': 'pet',
+                                    'sob': 'sob', 'sob.': 'sob', 'Sob': 'sob', 'Sob.': 'sob', 'SOB': 'sob', 'SOB.': 'sob',
+                                    'ned': 'ned', 'ned.': 'ned', 'Ned': 'ned', 'Ned.': 'ned', 'NED': 'ned', 'NED.': 'ned'
                                 };
                                 
                                 // Razčleni format: "Dan-Cas-Cas" ali "Dan.Cas-Cas"
@@ -2346,8 +2351,18 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const start = parts[1].trim();
                                 const end = parts[2].trim();
                                 
-                                // Preslikaj dan
-                                day = dayMap[day] || day.toLowerCase().replace('.', '');
+                                // Preslikaj dan - podpira velike/male črke in z/brez piko
+                                // Najprej poskusi direktno preslikavo
+                                if (dayMap[day]) {
+                                    day = dayMap[day];
+                                } else {
+                                    // Če ni v mapi, pretvori v lowercase in odstrani piko
+                                    day = day.toLowerCase().replace(/\./g, '');
+                                    // Če še vedno ni v mapi po tem, poskusi še brez dvopičja
+                                    if (!dayMap[day]) {
+                                        day = day.replace(/:/g, '');
+                                    }
+                                }
                                 
                                 // Odstrani sekunde iz časa (20:00:00 -> 20:00)
                                 const formatTime = (time) => {
@@ -2365,10 +2380,32 @@ document.addEventListener('DOMContentLoaded', () => {
                                 return `${day}-${startFormatted}-${endFormatted}`;
                             }
                             
-                            // Razčleni termine, ločene z vejico, vendar znotraj istega polja
+                            // Razčleni termine, ločene z vejico, podpičjem ali " in "
                             // Najprej odstrani narekovaje okoli celotnega seznama terminov, če obstajajo
                             let cleanTermsStr = termsStr ? termsStr.trim().replace(/^"|"$/g, '') : '';
-                            const termsRaw = cleanTermsStr ? cleanTermsStr.split(',').map(t => t.trim()).filter(t => t && t !== '' && t !== '""') : [];
+                            
+                            // Debug: izpiši originalni terms string
+                            if (cleanTermsStr) {
+                                console.log(`📋 Terms string za ${first} ${last}: "${cleanTermsStr}"`);
+                            }
+                            
+                            // Podpira več separatorjev: vejica, podpičje, " in " (različne oblike)
+                            // Najprej zamenjaj " in " z vejico, nato split z vejico ali podpičjem
+                            // Regex za " in " z različnimi presledki (case insensitive)
+                            // Podpira: " in ", " in", "in ", "IN"
+                            cleanTermsStr = cleanTermsStr.replace(/\s+in\s+/gi, ','); // " in " -> vejica (case insensitive)
+                            cleanTermsStr = cleanTermsStr.replace(/\s+in\s+/gi, ','); // Ponovno za večkratne pojavitve (npr. "A in B in C")
+                            cleanTermsStr = cleanTermsStr.replace(/,\s*,/g, ','); // Čisti večkratne vejice
+                            
+                            // Split z vejico ali podpičjem
+                            const termsRaw = cleanTermsStr 
+                                ? cleanTermsStr.split(/[,;]/).map(t => t.trim()).filter(t => t && t !== '' && t !== '""') 
+                                : [];
+                            
+                            // Debug: izpiši razčlenjene termine
+                            if (termsRaw.length > 0) {
+                                console.log(`🔍 Razčlenjeni termini za ${first} ${last}:`, termsRaw);
+                            }
                             
                             // Preveri, ali vsi termini obstajajo v bazi
                             const validTerms = [];
