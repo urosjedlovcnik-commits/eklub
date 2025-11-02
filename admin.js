@@ -3203,15 +3203,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         // month je 1-based (1=Januar, 12=December), currentMonth je 0-based (0=Januar, 11=December)
                         let startMonth0Based, startYear;
                         const month0Based = month - 1; // Pretvori v 0-based za primerjavo
-                        if (year > currentYear || (year === currentYear && month0Based >= currentMonth)) {
-                            // Če je izbran mesec v prihodnosti ali sedanjosti, začni od tam
-                            startMonth0Based = month0Based; // 0-based za zanko
-                            startYear = year;
-                        } else {
-                            // Če je izbran mesec v preteklosti, začni od trenutnega meseca
-                            startMonth0Based = currentMonth; // Že 0-based
-                            startYear = currentYear;
-                        }
+                        
+                        console.log('🔍 Debug uvoz vadnin:', {
+                            selectedMonth: month,
+                            selectedYear: year,
+                            month0Based: month0Based,
+                            currentMonth: currentMonth,
+                            currentYear: currentYear,
+                            monthName: ['Januar', 'Februar', 'Marec', 'April', 'Maj', 'Junij', 'Julij', 'Avgust', 'September', 'Oktober', 'November', 'December'][month0Based]
+                        });
+                        
+                        // Vedno uporabi izbrani mesec in leto iz dropdown-a (ne glede na to, ali je v preteklosti)
+                        startMonth0Based = month0Based; // 0-based za zanko
+                        startYear = year;
+                        
+                        console.log('🔍 Ustvarjam vadnine od meseca:', startMonth0Based + 1, '(', ['Januar', 'Februar', 'Marec', 'April', 'Maj', 'Junij', 'Julij', 'Avgust', 'September', 'Oktober', 'November', 'December'][startMonth0Based], ') leta', startYear);
                         
                         // Ustvari vadnine za vse mesece od startMonth do konca leta
 // console.log(`Creating fees for months ${startMonth0Based} to ${11} (${startMonth0Based + 1} to ${12} in human-readable) in year ${startYear}`);
@@ -3231,7 +3237,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 return;
                             }
                             
-// console.log(`📅 Ustvarjam vadnine za mesec ${m} (${m + 1} v človeškem formatu) v letu ${startYear}`);
+                            const monthName = ['Januar', 'Februar', 'Marec', 'April', 'Maj', 'Junij', 'Julij', 'Avgust', 'September', 'Oktober', 'November', 'December'][m];
+                            console.log(`📅 Ustvarjam vadnine za mesec ${m + 1} (${monthName}) v letu ${startYear}`);
                             
                             for (const fee of importedFees) {
                                 const newFee = {
@@ -6003,7 +6010,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
+        console.log('🔍 refreshSwimmerFees - iščem vadnine za mesec:', month, 'leta', year);
         const swimmerFees = await getSwimmerFeesFromDB(month, year);
+        console.log('🔍 refreshSwimmerFees - najdenih vadnin:', Object.keys(swimmerFees).length);
         
         // Preštej trenutno število OLY plavalcev za ta mesec
         const activeSwimmers = swimmers.filter(s => !s.is_deleted);
