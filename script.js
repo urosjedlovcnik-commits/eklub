@@ -321,41 +321,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (cached !== undefined) return cached;
         
         const ymd = iso(date);
-        const isPastDate = isPast(date);
-        const isTodayDate = isToday(date);
         
         // Vse vnesene prisotnosti za ta datum in termin
         const termAtt = attendance[ymd]?.[termId] || {};
         
-        // Za pretekle termine: uporabimo plavalce z vneseno prisotnostjo kot osnovo
-        // Ti plavalci so bili dodeljeni terminu na dan treninga
-        // Za prihodnje termine: uporabimo trenutno dodeljene plavalce
+        // Vedno uporabimo trenutno dodeljene plavalce (ne glede na to, ali imajo vneseno prisotnost ali ne)
+        // To zagotovi, da lahko pravilno določimo partial status (delno izpolnjene treninge)
         let assignedSwimmers;
         let assignedSwimmerIds;
+        assignedSwimmers = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted);
+        assignedSwimmerIds = assignedSwimmers.map(s => s.id);
         
-        if (isPastDate || isTodayDate) {
-            // Za pretekle/današnje termine: plavalci z vneseno prisotnostjo so tisti, ki so bili dodeljeni na ta dan
-            const swimmersWithAttendance = Object.keys(termAtt)
-                .map(swimmerId => swimmers.find(s => s.id === swimmerId))
-                .filter(Boolean)
-                .filter(s => !s.is_deleted);
-            
-            assignedSwimmers = swimmersWithAttendance;
-            assignedSwimmerIds = assignedSwimmers.map(s => s.id);
-            
-            // Če nihče nima vnesene prisotnosti, preverimo trenutno dodeljene plavalce
-            // (za primere, ko trenutno ni nobene prisotnosti vnesene)
-            if (assignedSwimmers.length === 0) {
-                assignedSwimmers = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted);
-                assignedSwimmerIds = assignedSwimmers.map(s => s.id);
-            }
-        } else {
-            // Za prihodnje termine: uporabimo trenutno dodeljene plavalce
-            assignedSwimmers = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted);
-            assignedSwimmerIds = assignedSwimmers.map(s => s.id);
-        }
-        
-        // Preštejemo, koliko dodeljenih plavalcev ima vneseno prisotnost
+        // Preštejemo, koliko trenutno dodeljenih plavalcev ima vneseno prisotnost
         const markedAssignedSwimmersCount = assignedSwimmerIds.filter(id => termAtt.hasOwnProperty(id)).length;
         const totalAssignedCount = assignedSwimmers.length;
 
