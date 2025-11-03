@@ -87,6 +87,27 @@ document.addEventListener('DOMContentLoaded', () => {
     function daysInMonth(y,m){ return new Date(y,m+1,0).getDate(); }
     function isToday(d){ const t=new Date(); return d.getFullYear()==t.getFullYear() && d.getMonth()==t.getMonth() && d.getDate()==t.getDate(); }
     function isPast(d){ const t=new Date(); t.setHours(0,0,0,0); return d.getTime() < t.getTime(); }
+    
+    // Preveri, ali je trening že potekel (glede na datum IN čas)
+    function isTrainingPast(date, startTime) {
+        const now = new Date();
+        const trainingDate = new Date(date);
+        
+        // Če je datum v preteklosti, je trening že potekel
+        if (trainingDate < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+            return true;
+        }
+        
+        // Če je danes, preveri čas
+        if (isToday(trainingDate)) {
+            const [hours, minutes] = startTime.split(':').map(Number);
+            const trainingDateTime = new Date(trainingDate);
+            trainingDateTime.setHours(hours, minutes, 0, 0);
+            return now >= trainingDateTime;
+        }
+        
+        return false;
+    }
     function startWeekday(y,m){ let w=new Date(y,m,1).getDay(); return w===0?7:w; } // pon=1
 
     function parseDate(dateStr) {
@@ -410,9 +431,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Počisti stare razrede
                 eventEl.classList.remove('unfilled', 'partial', 'complete');
                 
-                // Dodaj nov status (samo za pretekle/današnje termine)
-                const isPastOrToday = isPast(dayDate) || isToday(dayDate);
-                if (isPastOrToday) {
+                // Dodaj nov status (samo za pretekle/današnje termine, ki so že potekli)
+                const isTrainingFinished = isTrainingPast(dayDate, t.start_time);
+                if (isTrainingFinished) {
                   const status = getAttendanceStatus(dayDate, termId);
                   if (status) {
                     eventEl.classList.add(status);
@@ -466,8 +487,9 @@ document.addEventListener('DOMContentLoaded', () => {
           e.className = "event";
 
           // Optimizirano barvno kodiranje
-          const isPastOrToday = isPast(date) || isToday(date);
-          if (isPastOrToday) {
+          // Preveri, ali je trening že potekel (glede na datum IN čas za današnje treninge)
+          const isTrainingFinished = isTrainingPast(date, t.start_time);
+          if (isTrainingFinished) {
             const statusCacheKey = `${iso(date)}-${t.id}`;
             let status = attendanceStatusCache.get(statusCacheKey);
             if (!status) {
@@ -533,9 +555,9 @@ document.addEventListener('DOMContentLoaded', () => {
           e.className = "event";
           
           // NOV POPRAVEK: Enako preverjanje za barvno kodiranje tudi v tem modalnem oknu
-          if (!isPast(date) && !isToday(date)) {
-              // Ne delamo nič za prihodnje termine
-          } else {
+          // Preveri, ali je trening že potekel (glede na datum IN čas za današnje treninge)
+          const isTrainingFinished = isTrainingPast(date, t.start_time);
+          if (isTrainingFinished) {
             // POPRAVEK: Vedno preverimo status za pretekle/današnje termine, tudi če ni vnesene prisotnosti
             // Da bi pretekli termini brez prisotnosti bili rdeči (unfilled)
             const status = getAttendanceStatus(date, t.id);
