@@ -120,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function renderSwimmers() {
         if (filteredSwimmers.length === 0) {
-            elSwimmersList.innerHTML = '<div class="no-terms">Ni plavalcev, ki ustrezajo iskalnemu kriteriju.</div>';
+            elSwimmersList.innerHTML = '<div class="no-terms" style="grid-column: 1 / -1; padding: 30px; text-align: center;">Ni plavalcev, ki ustrezajo iskalnemu kriteriju.</div>';
             return;
         }
         
@@ -147,18 +147,17 @@ document.addEventListener('DOMContentLoaded', () => {
             html += `
                 <div class="swimmer-card">
                     <div class="swimmer-header">
-                        <div>
+                        <div class="swimmer-info">
                             <h3 class="swimmer-name">${swimmer.first_name} ${swimmer.last_name}</h3>
-                            ${swimmer.email ? `<div class="swimmer-contact">📧 ${swimmer.email}</div>` : ''}
-                            ${swimmer.phone ? `<div class="swimmer-contact">📞 ${swimmer.phone}</div>` : ''}
-                            ${swimmer.address ? `<div class="swimmer-contact">🏠 ${swimmer.address}</div>` : ''}
-                            ${swimmer.postal_code ? `<div class="swimmer-contact">📮 ${swimmer.postal_code}</div>` : ''}
+                            ${swimmer.email ? `<div class="swimmer-contact"><span class="swimmer-contact-icon">📧</span> ${swimmer.email}</div>` : ''}
+                            ${swimmer.phone ? `<div class="swimmer-contact"><span class="swimmer-contact-icon">📞</span> ${swimmer.phone}</div>` : ''}
+                            ${swimmer.address || swimmer.postal_code ? `<div class="swimmer-contact"><span class="swimmer-contact-icon">🏠</span> ${[swimmer.address, swimmer.postal_code].filter(Boolean).join(', ')}</div>` : ''}
                         </div>
-                        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
-                            <div class="swimmer-contact">
+                        <div class="swimmer-actions">
+                            <div class="swimmer-term-count">
                                 ${assignedTerms.length} termin${assignedTerms.length === 1 ? '' : assignedTerms.length === 2 ? 'a' : 'ov'}
                             </div>
-                            <button class="btn pri" onclick="editSwimmer('${swimmer.id}')" style="font-size: 12px; padding: 6px 12px;">
+                            <button class="btn pri" onclick="editSwimmer('${swimmer.id}')" style="font-size: 11px; padding: 5px 10px;">
                                 Uredi
                             </button>
                         </div>
@@ -166,13 +165,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     ${activeTerms.length > 0 ? `
                         <div class="terms-section">
-                            <div class="terms-title">Aktivni termini:</div>
+                            <div class="terms-title">Aktivni termini</div>
                             <div class="terms-grid">
                                 ${activeTerms.map(term => `
                                     <div class="term-chip">
                                         ${formatTermTime(term)}
-                                        <br>
-                                        <small style="color: #6b7280;">${formatDate(term.date_from)} - ${formatDate(term.date_to)}</small>
+                                        <small>${formatDate(term.date_from)} - ${formatDate(term.date_to)}</small>
                                     </div>
                                 `).join('')}
                             </div>
@@ -181,13 +179,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     ${inactiveTerms.length > 0 ? `
                         <div class="terms-section">
-                            <div class="terms-title" style="color: #9ca3af;">Zaključeni termini:</div>
+                            <div class="terms-title" style="color: #9ca3af;">Zaključeni termini</div>
                             <div class="terms-grid">
                                 ${inactiveTerms.map(term => `
                                     <div class="term-chip" style="background: #f9fafb; color: #9ca3af; border-color: #e5e7eb;">
                                         ${formatTermTime(term)}
-                                        <br>
-                                        <small style="color: #9ca3af;">${formatDate(term.date_from)} - ${formatDate(term.date_to)}</small>
+                                        <small>${formatDate(term.date_from)} - ${formatDate(term.date_to)}</small>
                                     </div>
                                 `).join('')}
                             </div>
@@ -196,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     ${assignedTerms.length === 0 ? `
                         <div class="terms-section">
-                            <div class="no-terms">
+                            <div class="no-terms" style="padding: 12px; font-size: 12px;">
                                 Ni dodeljenih terminov
                             </div>
                         </div>
