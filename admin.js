@@ -1828,6 +1828,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="term-header">
                         <span class="term-time">${formatTimeDisplay(term.start_time)} - ${formatTimeDisplay(term.end_time)}</span>
                         <span class="term-period">${formatDate(term.date_from)} - ${formatDate(term.date_to)}</span>
+                        <span class="term-swimmer-count" style="background: #2563eb; color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: bold; white-space: nowrap;">
+                            ${assignedSwimmers.length} plaval${assignedSwimmers.length === 1 ? 'ec' : assignedSwimmers.length === 2 ? 'ca' : 'cev'}
+                        </span>
                         <div class="term-actions">
                             <button class="btn small" onclick="editTerm('${term.id}')" style="font-size: 12px; padding: 4px 8px; margin-right: 4px;">
                                 Uredi
