@@ -158,15 +158,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function updateTrainerRatesMonthDisplay() {
-        if (elTrainerRatesMonthYearContainer) {
-            const monthNames = ["Januar", "Februar", "Marec", "April", "Maj", "Junij", 
-                              "Julij", "Avgust", "September", "Oktober", "November", "December"];
-            const monthIndex = currentTrainerRatesMonth - 1; // Convert 1-based to 0-based
-            elTrainerRatesMonthYearContainer.textContent = `${monthNames[monthIndex]} ${currentTrainerRatesYear}`;
+        const monthNames = ["Januar", "Februar", "Marec", "April", "Maj", "Junij", 
+                          "Julij", "Avgust", "September", "Oktober", "November", "December"];
+        const monthIndex = currentTrainerRatesMonth - 1; // Convert 1-based to 0-based
+        
+        const elCurrentTrainerRatesMonthYear = document.getElementById("currentTrainerRatesMonthYear");
+        if (elCurrentTrainerRatesMonthYear) {
+            elCurrentTrainerRatesMonthYear.textContent = `${monthNames[monthIndex]} ${currentTrainerRatesYear}`;
         }
+        
         if (elTrainerRatesMonthYearInput) {
             elTrainerRatesMonthYearInput.value = `${currentTrainerRatesYear}-${currentTrainerRatesMonth.toString().padStart(2, '0')}`;
         }
+    }
+    
+    function navigateTrainerRatesMonth(direction) {
+        if (direction === 'prev') {
+            currentTrainerRatesMonth--;
+            if (currentTrainerRatesMonth < 1) {
+                currentTrainerRatesMonth = 12;
+                currentTrainerRatesYear--;
+            }
+        } else if (direction === 'next') {
+            currentTrainerRatesMonth++;
+            if (currentTrainerRatesMonth > 12) {
+                currentTrainerRatesMonth = 1;
+                currentTrainerRatesYear++;
+            }
+        }
+        updateTrainerRatesMonthDisplay();
+        renderTrainerRatesSettings();
+    }
+    
+    function goToCurrentTrainerRatesMonth() {
+        const now = new Date();
+        currentTrainerRatesMonth = now.getMonth() + 1;
+        currentTrainerRatesYear = now.getFullYear();
+        updateTrainerRatesMonthDisplay();
+        renderTrainerRatesSettings();
     }
     
     function navigateFinanceMonth(direction) {
@@ -565,7 +594,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const elTrainerRatesSettings = document.getElementById("trainerRatesSettings");
     const elSaveTrainerRatesBtn = document.getElementById("saveTrainerRatesBtn");
     const elTrainerRatesMonthYearInput = document.getElementById("trainerRatesMonthYearInput");
-    const elTrainerRatesMonthYearContainer = document.getElementById("trainerRatesMonthYearContainer");
     
     // UI elementi za upravljanje pristojbin plavalcev
     // Opomba: Stari elementi so bili zamenjani z navigacijskimi gumbi
@@ -3774,6 +3802,39 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
+    // Event listenerji za navigacijo meseca pri postavkah trenerjev
+    const elPrevTrainerRatesMonthBtn = document.getElementById("prevTrainerRatesMonthBtn");
+    const elNextTrainerRatesMonthBtn = document.getElementById("nextTrainerRatesMonthBtn");
+    const elCurrentTrainerRatesMonthBtn = document.getElementById("currentTrainerRatesMonthBtn");
+    const elTrainerRatesMonthYearContainer = document.getElementById("trainerRatesMonthYearContainer");
+    
+    if (elPrevTrainerRatesMonthBtn) {
+        elPrevTrainerRatesMonthBtn.addEventListener('click', () => {
+            navigateTrainerRatesMonth('prev');
+        });
+    }
+    
+    if (elNextTrainerRatesMonthBtn) {
+        elNextTrainerRatesMonthBtn.addEventListener('click', () => {
+            navigateTrainerRatesMonth('next');
+        });
+    }
+    
+    if (elCurrentTrainerRatesMonthBtn) {
+        elCurrentTrainerRatesMonthBtn.addEventListener('click', () => {
+            goToCurrentTrainerRatesMonth();
+        });
+    }
+    
+    // Event listener za klik na container (odpre izbiro datuma)
+    if (elTrainerRatesMonthYearContainer) {
+        elTrainerRatesMonthYearContainer.addEventListener('click', () => {
+            if (elTrainerRatesMonthYearInput) {
+                elTrainerRatesMonthYearInput.showPicker();
+            }
+        });
+    }
+    
     // Event listener za spremembo meseca in leta pri postavkah trenerjev
     if (elTrainerRatesMonthYearInput) {
         elTrainerRatesMonthYearInput.addEventListener('change', async (e) => {
@@ -6618,9 +6679,87 @@ document.addEventListener('DOMContentLoaded', () => {
         elTermCostsSettings.innerHTML = html;
     }
 
+    // Funkcija za kopiranje postavk trenerjev iz prejšnjega meseca
+    async function copyPreviousMonthTrainerRates(targetMonth, targetYear) {
+        try {
+            // Izračunaj prejšnji mesec
+            let previousMonth = targetMonth - 1;
+            let previousYear = targetYear;
+            if (previousMonth < 1) {
+                previousMonth = 12;
+                previousYear = targetYear - 1;
+            }
+            
+// console.log(`🔄 Preverjam, ali je potrebno kopirati postavke trenerjev iz ${previousMonth}/${previousYear} v ${targetMonth}/${targetYear}...`);
+            
+            // Preveri, če za trenutni mesec že obstajajo postavke
+            const { data: currentMonthRates, error: currentError } = await supabase
+                .from('trainer_rates')
+                .select('*')
+                .eq('month', targetMonth)
+                .eq('year', targetYear);
+            
+            if (currentError) {
+                console.error('Napaka pri preverjanju postavk trenerjev:', currentError);
+                return false;
+            }
+            
+            // Če že obstajajo postavke za trenutni mesec, ni potrebno kopirati
+            if (currentMonthRates && currentMonthRates.length > 0) {
+// console.log(`✅ Postavke trenerjev za ${targetMonth}/${targetYear} že obstajajo (${currentMonthRates.length} zapisov)`);
+                return false;
+            }
+            
+            // Pridobi postavke iz prejšnjega meseca
+            const { data: previousMonthRates, error: fetchError } = await supabase
+                .from('trainer_rates')
+                .select('*')
+                .eq('month', previousMonth)
+                .eq('year', previousYear);
+            
+            if (fetchError) {
+                console.error('Napaka pri pridobivanju postavk trenerjev iz prejšnjega meseca:', fetchError);
+                return false;
+            }
+            
+            if (!previousMonthRates || previousMonthRates.length === 0) {
+// console.log(`ℹ️ Ni postavk trenerjev za prejšnji mesec ${previousMonth}/${previousYear}`);
+                return false;
+            }
+            
+// console.log(`📋 Kopiram ${previousMonthRates.length} postavk trenerjev iz ${previousMonth}/${previousYear} v ${targetMonth}/${targetYear}...`);
+            
+            // Kopiraj postavke za trenutni mesec
+            const newRates = previousMonthRates.map(rate => ({
+                trainer_id: rate.trainer_id,
+                rate_per_session: rate.rate_per_session,
+                month: targetMonth,
+                year: targetYear
+            }));
+            
+            const { error: insertError } = await supabase
+                .from('trainer_rates')
+                .upsert(newRates, { onConflict: 'trainer_id,month,year' });
+            
+            if (insertError) {
+                console.error('Napaka pri kopiranju postavk trenerjev:', insertError);
+                return false;
+            }
+            
+// console.log(`✅ Uspešno kopirane postavke trenerjev iz ${previousMonth}/${previousYear} v ${targetMonth}/${targetYear}`);
+            return true;
+        } catch (error) {
+            console.error('Napaka pri kopiranju postavk trenerjev:', error);
+            return false;
+        }
+    }
+    
     // Posodobljena funkcija za renderiranje nastavitev urnih postavk
     async function renderTrainerRatesSettings() {
         if (!elTrainerRatesSettings) return;
+        
+        // Avtomatično kopiraj postavke iz prejšnjega meseca, če za trenutni mesec še ne obstajajo
+        await copyPreviousMonthTrainerRates(currentTrainerRatesMonth, currentTrainerRatesYear);
         
         const trainerRates = await getTrainerRatesFromDB(currentTrainerRatesMonth, currentTrainerRatesYear);
         
