@@ -996,14 +996,23 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateTrainerSelects() {
         // Posodobi select za trenerje
         elTrainerSelect.innerHTML = '<option value="">Izberi trenerja</option>';
-        trainers.forEach(t => {
-            // Prikaži samo trenerje, ki niso označeni kot izbrisani (lokalno)
-            if (!t.is_deleted) {
-                const option = document.createElement('option');
-                option.value = t.id;
-                option.textContent = `${t.first_name} ${t.last_name}`;
-                elTrainerSelect.appendChild(option);
+        
+        // Sortiraj trenerje po priimku (in nato po imenu, če so priimki enaki)
+        const sortedTrainers = [...trainers].filter(t => !t.is_deleted).sort((a, b) => {
+            // Najprej sortiraj po priimku
+            const lastNameCompare = (a.last_name || '').localeCompare(b.last_name || '', 'sl');
+            if (lastNameCompare !== 0) {
+                return lastNameCompare;
             }
+            // Če so priimki enaki, sortiraj po imenu
+            return (a.first_name || '').localeCompare(b.first_name || '', 'sl');
+        });
+        
+        sortedTrainers.forEach(t => {
+            const option = document.createElement('option');
+            option.value = t.id;
+            option.textContent = `${t.first_name} ${t.last_name}`;
+            elTrainerSelect.appendChild(option);
         });
 
         // Počisti select za termine pri trenerjih in prikaži nedodeljene termine
@@ -1180,9 +1189,19 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         const tbody = table.querySelector('tbody');
-        trainers.forEach(trainer => {
-            // Prikaži samo trenerje, ki niso označeni kot izbrisani (lokalno)
-            if (!trainer.is_deleted) {
+        
+        // Sortiraj trenerje po priimku (in nato po imenu, če so priimki enaki)
+        const sortedTrainers = [...trainers].filter(trainer => !trainer.is_deleted).sort((a, b) => {
+            // Najprej sortiraj po priimku
+            const lastNameCompare = (a.last_name || '').localeCompare(b.last_name || '', 'sl');
+            if (lastNameCompare !== 0) {
+                return lastNameCompare;
+            }
+            // Če so priimki enaki, sortiraj po imenu
+            return (a.first_name || '').localeCompare(b.first_name || '', 'sl');
+        });
+        
+        sortedTrainers.forEach(trainer => {
                 const row = document.createElement('tr');
                 
                 // Ustvari termine kot "chips" z možnostjo brisanja
@@ -1212,7 +1231,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     </td>
                 `;
                 tbody.appendChild(row);
-            }
         });
 
         elTrainersList.appendChild(table);
@@ -4196,8 +4214,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        // Prikaži rezultate
+        // Prikaži rezultate (samo aktivni trenerji)
         Object.values(trainerStats).forEach(stat => {
+            // Preveri, ali je trener deaktivirán
+            if (stat.trainer.is_deleted) {
+                return; // Preskoči deaktivirane trenerje
+            }
+            
             summary += `
                 <tr>
                     <td>${stat.trainer.first_name} ${stat.trainer.last_name}</td>

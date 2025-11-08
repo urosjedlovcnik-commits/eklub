@@ -229,13 +229,25 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Napolni dropdown z vsemi trenerji (razen trenutnega)
       trainerNotesInput.innerHTML = '<option value="">Izberi trenerja...</option>';
-      trainers.forEach(trainer => {
-        if (trainer.id !== trainerId && !trainer.is_deleted) {
-          const option = document.createElement('option');
-          option.value = trainer.id;
-          option.textContent = `${trainer.first_name} ${trainer.last_name}`;
-          trainerNotesInput.appendChild(option);
-        }
+      
+      // Sortiraj trenerje po priimku (in nato po imenu, če so priimki enaki)
+      const sortedTrainers = [...trainers]
+        .filter(trainer => trainer.id !== trainerId && !trainer.is_deleted)
+        .sort((a, b) => {
+          // Najprej sortiraj po priimku
+          const lastNameCompare = (a.last_name || '').localeCompare(b.last_name || '', 'sl');
+          if (lastNameCompare !== 0) {
+            return lastNameCompare;
+          }
+          // Če so priimki enaki, sortiraj po imenu
+          return (a.first_name || '').localeCompare(b.first_name || '', 'sl');
+        });
+      
+      sortedTrainers.forEach(trainer => {
+        const option = document.createElement('option');
+        option.value = trainer.id;
+        option.textContent = `${trainer.first_name} ${trainer.last_name}`;
+        trainerNotesInput.appendChild(option);
       });
       
       // Prikaži obstoječo opombo, če je že vnešena
