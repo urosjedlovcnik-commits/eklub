@@ -4141,7 +4141,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     
                     // Dodaj nadomestne trenerje iz trainer_attendance (ki niso redno dodeljeni)
-                    if (trainerAttendance[isoDate]?.[term.id]) {
+                    // SAMO če je termin aktiven
+                    if (activeTermIds.has(term.id) && trainerAttendance[isoDate]?.[term.id]) {
                         Object.keys(trainerAttendance[isoDate][term.id]).forEach(trainerId => {
                             // Preveri, če trener ni že vključen kot redno dodeljen
                             const isRegularlyAssigned = trainersForTerm.some(t => t.id === trainerId);
@@ -4183,11 +4184,17 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Dodatno: preveri vse trenerje iz trainer_attendance za ta mesec
         // in dodaj tiste, ki morda niso bili vključeni v zgornji logiki
+        // SAMO za aktivne termine
         
         Object.keys(trainerAttendance).forEach(date => {
             const currentDate = new Date(date);
             if (currentDate >= startDate && currentDate <= endDate) {
                 Object.keys(trainerAttendance[date]).forEach(termId => {
+                    // Preveri, ali je termin aktiven (ne potekel)
+                    if (!activeTermIds.has(termId)) {
+                        return; // Preskoči deaktivirane termine
+                    }
+                    
                     Object.keys(trainerAttendance[date][termId]).forEach(trainerId => {
                         // Preveri, ali trener ni že bil obravnavan v prvi zanki
                         if (!processedTrainers.has(trainerId)) {
@@ -4361,7 +4368,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     
                     // Dodaj nadomestne trenerje iz trainer_attendance (ki niso redno dodeljeni)
-                    if (trainerAttendance[isoDate]?.[term.id]) {
+                    // SAMO če je termin aktiven
+                    if (activeTermIds.has(term.id) && trainerAttendance[isoDate]?.[term.id]) {
                         Object.keys(trainerAttendance[isoDate][term.id]).forEach(trainerId => {
                             // Preveri, če trener ni že vključen kot redno dodeljen
                             const isRegularlyAssigned = trainersForTerm.some(t => t.id === trainerId);
