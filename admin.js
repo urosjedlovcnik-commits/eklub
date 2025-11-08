@@ -4455,12 +4455,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 const dateStr = formatDate(note.date);
                 const timeStr = `${DAY_SHORT_NAME[note.term.day]} ${note.term.start_time}-${note.term.end_time}`;
                 
+                // Odstrani ID trenerja iz opombe (format: "Nadomešča: Ime Priimek (uuid)")
+                let displayNote = note.note || '';
+                if (displayNote) {
+                    // Odstrani UUID v oklepajih (format: (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx))
+                    displayNote = displayNote.replace(/\s*\([a-f0-9-]{36}\)\s*$/i, '');
+                }
+                
                 notes += `
                     <tr>
                         <td>${dateStr}</td>
                         <td>${timeStr}</td>
                         <td>${note.trainer.first_name} ${note.trainer.last_name}</td>
-                        <td>${note.note}</td>
+                        <td>${displayNote}</td>
                     </tr>
                 `;
             });

@@ -184,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
               present,
               note
             }, { 
-              onConflict: ['date', 'term_id', 'trainer_id'] 
+              onConflict: ['trainer_id', 'date', 'term_id']
             });
           
           if (error) {
@@ -1582,8 +1582,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const substituteTrainer = trainers.find(t => t.id === substituteTrainerId);
             
             if (substituteTrainer) {
-              // Shrani opombo o nadomestnem trenerju pri originalnem trenerju
-              await updateTrainerAttendance(date, termId, trainerId, false, `Nadomešča: ${substituteTrainer.first_name} ${substituteTrainer.last_name} (${substituteTrainerId})`);
+              // Shrani opombo o nadomestnem trenerju pri originalnem trenerju (brez ID-ja)
+              await updateTrainerAttendance(date, termId, trainerId, false, `Nadomešča: ${substituteTrainer.first_name} ${substituteTrainer.last_name}`);
             }
           } else {
             // Če je vneseno ime novega trenerja - shrani kot opombo
