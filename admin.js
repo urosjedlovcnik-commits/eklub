@@ -6579,23 +6579,46 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const trainerRates = await getTrainerRatesFromDB();
         
-        let html = '<div class="trainer-rates-grid">';
+        // Sortiraj trenerje po priimku (in nato po imenu, če so priimki enaki)
+        const sortedTrainers = [...trainers]
+            .filter(trainer => !trainer.is_deleted)
+            .sort((a, b) => {
+                const lastNameCompare = (a.last_name || '').localeCompare(b.last_name || '', 'sl');
+                if (lastNameCompare !== 0) {
+                    return lastNameCompare;
+                }
+                return (a.first_name || '').localeCompare(b.first_name || '', 'sl');
+            });
         
-        for (const trainer of trainers) {
-            if (trainer.is_deleted) continue;
-            
+        let html = '<div class="trainer-rates-list" style="display: flex; flex-direction: column; gap: 12px;">';
+        
+        for (const trainer of sortedTrainers) {
             const rate = trainerRates[trainer.id] || 25; // Default to 25€/termin
+            
+            // Preštej število terminov, ki jih ima trener na teden
+            const trainerTerms = trainer.terms || [];
+            const termCount = trainerTerms.length;
+            
             html += `
-                <div class="trainer-rate-row">
-                    <label for="trainer-rate-${trainer.id}">${trainer.first_name} ${trainer.last_name}:</label>
-                    <input type="number" 
-                           id="trainer-rate-${trainer.id}" 
-                           value="${rate}" 
-                           min="0" 
-                           step="0.01" 
-                           style="width: 120px;"
-                           onchange="updateTrainerRate('${trainer.id}', this.value)">
-                    <span>€/termin</span>
+                <div class="trainer-rate-row" style="display: flex; align-items: center; gap: 15px; padding: 12px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
+                    <div style="flex: 1; min-width: 200px;">
+                        <label for="trainer-rate-${trainer.id}" style="font-weight: 500; display: block; margin-bottom: 4px;">
+                            ${trainer.first_name} ${trainer.last_name}
+                        </label>
+                        <span style="font-size: 12px; color: #6c757d;">
+                            ${termCount} termin${termCount === 1 ? '' : termCount === 2 ? 'a' : 'ov'} na teden
+                        </span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="number" 
+                               id="trainer-rate-${trainer.id}" 
+                               value="${rate}" 
+                               min="0" 
+                               step="0.01" 
+                               style="width: 120px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px;"
+                               onchange="updateTrainerRate('${trainer.id}', this.value)">
+                        <span style="color: #6c757d;">€/termin</span>
+                    </div>
                 </div>
             `;
         }
