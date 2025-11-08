@@ -2330,6 +2330,25 @@ document.addEventListener('DOMContentLoaded', () => {
         elEditSwimmerInfo.textContent = '';
     });
 
+    // Event listenerji za modal z detajli ur
+    const elHoursDetailsModal = document.getElementById('hoursDetailsModal');
+    const elCloseHoursDetailsModalBtn = document.getElementById('closeHoursDetailsModalBtn');
+    
+    if (elCloseHoursDetailsModalBtn && elHoursDetailsModal) {
+        elCloseHoursDetailsModalBtn.addEventListener('click', () => {
+            elHoursDetailsModal.style.display = 'none';
+            elHoursDetailsModal.setAttribute('aria-hidden', 'true');
+        });
+        
+        // Zapri modal ob kliku zunaj
+        elHoursDetailsModal.addEventListener('click', (e) => {
+            if (e.target === elHoursDetailsModal) {
+                elHoursDetailsModal.style.display = 'none';
+                elHoursDetailsModal.setAttribute('aria-hidden', 'true');
+            }
+        });
+    }
+
     // Zapri modal ob kliku zunaj
     window.addEventListener('click', (e) => {
         if (e.target === elEditSwimmerModal) {
@@ -4292,6 +4311,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const trainerStats = {};
         const processedTrainers = new Set();
+        const hoursDetails = []; // Zbiraj detajle ur za modal
         
         // Pridobi samo aktivne termine (ne potekle)
         const activeTerms = getActiveTerms();
@@ -4338,6 +4358,15 @@ document.addEventListener('DOMContentLoaded', () => {
                             trainerStats[key].sessions += 1;
                             trainerStats[key].totalHours += durationHours;
                             processedTrainers.add(trainer.id);
+                            
+                            // Dodaj detajl
+                            hoursDetails.push({
+                                date: isoDate,
+                                trainer: trainer,
+                                term: term,
+                                durationHours: durationHours,
+                                isSubstitute: false
+                            });
                         } else if (trainerAtt.present === false) {
                             // Trener je odsoten, preveri nadomestnega trenerja
                             if (trainerAtt.note) {
@@ -4361,6 +4390,16 @@ document.addEventListener('DOMContentLoaded', () => {
                                         trainerStats[substituteKey].sessions += 1;
                                         trainerStats[substituteKey].totalHours += durationHours;
                                         processedTrainers.add(substituteTrainer.id);
+                                        
+                                        // Dodaj detajl za nadomestnega trenerja
+                                        hoursDetails.push({
+                                            date: isoDate,
+                                            trainer: substituteTrainer,
+                                            term: term,
+                                            durationHours: durationHours,
+                                            isSubstitute: true,
+                                            originalTrainer: trainer
+                                        });
                                     }
                                 }
                             }
@@ -4391,6 +4430,15 @@ document.addEventListener('DOMContentLoaded', () => {
                                         trainerStats[key].sessions += 1;
                                         trainerStats[key].totalHours += durationHours;
                                         processedTrainers.add(trainer.id);
+                                        
+                                        // Dodaj detajl
+                                        hoursDetails.push({
+                                            date: isoDate,
+                                            trainer: trainer,
+                                            term: term,
+                                            durationHours: durationHours,
+                                            isSubstitute: true
+                                        });
                                     }
                                 }
                             }
@@ -4445,7 +4493,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <tr class="trainer-hours-total">
                 <td><strong>SKUPAJ</strong></td>
                 <td class="trainer-hours-hours"><strong>${totalSessions}</strong></td>
-                <td class="trainer-hours-hours"><strong>${totalHours.toFixed(2)}h</strong></td>
+                <td class="trainer-hours-hours"><strong id="totalHoursClickable" style="cursor: pointer; text-decoration: underline; color: #007bff;" title="Klikni za prikaz detajlov">${totalHours.toFixed(2)}h</strong></td>
                 <td><strong>-</strong></td>
                 <td class="trainer-hours-cost"><strong>${totalCost.toFixed(2)}€</strong></td>
             </tr>
@@ -4458,7 +4506,109 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         elTrainerHoursCostsBox.innerHTML = summary;
+        
+        // Shrani detajle ur za modal
+        window.currentHoursDetails = hoursDetails;
+        window.currentHoursDetailsMonth = month;
+        window.currentHoursDetailsYear = year;
+        
+        // Dodaj event listener za klik na skupno število ur
+        const totalHoursElement = document.getElementById('totalHoursClickable');
+        if (totalHoursElement) {
+            totalHoursElement.addEventListener('click', () => {
+                showHoursDetailsModal();
+            });
+        }
     }
+
+    // ===== Funkcija za prikaz modala z detajli ur =====
+    function showHoursDetailsModal() {
+        const hoursDetails = window.currentHoursDetails || [];
+        const month = window.currentHoursDetailsMonth || 1;
+        const year = window.currentHoursDetailsYear || new Date().getFullYear();
+        
+        const monthNames = ["Januar", "Februar", "Marec", "April", "Maj", "Junij", 
+                          "Julij", "Avgust", "September", "Oktober", "November", "December"];
+        const monthIndex = month - 1;
+        
+        const elModal = document.getElementById('hoursDetailsModal');
+        const elTitle = document.getElementById('hoursDetailsModalTitle');
+        const elContent = document.getElementById('hoursDetailsContent');
+        
+        if (!elModal || !elTitle || !elContent) {
+            console.error('Modal elementi niso najdeni');
+            return;
+        }
+        
+        elTitle.textContent = `Detajli ur - ${monthNames[monthIndex]} ${year}`;
+        
+        if (hoursDetails.length === 0) {
+            elContent.innerHTML = '<p class="muted">Ni podatkov o urah za izbrani mesec</p>';
+        } else {
+            // Sortiraj po datumu in trenerju
+            const sortedDetails = [...hoursDetails].sort((a, b) => {
+                const dateCompare = a.date.localeCompare(b.date);
+                if (dateCompare !== 0) return dateCompare;
+                const trainerCompare = (a.trainer.last_name || '').localeCompare(b.trainer.last_name || '', 'sl');
+                if (trainerCompare !== 0) return trainerCompare;
+                return (a.trainer.first_name || '').localeCompare(b.trainer.first_name || '', 'sl');
+            });
+            
+            let html = '<table style="width: 100%; border-collapse: collapse; margin-top: 10px;"><thead><tr>';
+            html += '<th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Datum</th>';
+            html += '<th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Trener</th>';
+            html += '<th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Termin</th>';
+            html += '<th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Čas</th>';
+            html += '<th style="padding: 10px; text-align: right; border-bottom: 2px solid #ddd;">Trajanje</th>';
+            html += '<th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Opomba</th>';
+            html += '</tr></thead><tbody>';
+            
+            sortedDetails.forEach(detail => {
+                const dateObj = new Date(detail.date);
+                const dayNames = ["Nedelja", "Ponedeljek", "Torek", "Sreda", "Četrtek", "Petek", "Sobota"];
+                const dayName = dayNames[dateObj.getDay()];
+                const dateStr = `${dayName}, ${dateObj.getDate()}. ${monthNames[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+                
+                const trainerName = `${detail.trainer.first_name} ${detail.trainer.last_name}`;
+                const termName = detail.term.name || `Termin ${detail.term.start_time} - ${detail.term.end_time}`;
+                const timeStr = `${detail.term.start_time} - ${detail.term.end_time}`;
+                const durationStr = `${detail.durationHours.toFixed(2)}h`;
+                
+                let noteStr = '';
+                if (detail.isSubstitute) {
+                    if (detail.originalTrainer) {
+                        noteStr = `<span style="color: #ff9800;">Nadomešča: ${detail.originalTrainer.first_name} ${detail.originalTrainer.last_name}</span>`;
+                    } else {
+                        noteStr = '<span style="color: #ff9800;">Nadomestni trener</span>';
+                    }
+                }
+                
+                html += '<tr style="border-bottom: 1px solid #eee;">';
+                html += `<td style="padding: 8px;">${dateStr}</td>`;
+                html += `<td style="padding: 8px;">${trainerName}</td>`;
+                html += `<td style="padding: 8px;">${termName}</td>`;
+                html += `<td style="padding: 8px;">${timeStr}</td>`;
+                html += `<td style="padding: 8px; text-align: right;">${durationStr}</td>`;
+                html += `<td style="padding: 8px;">${noteStr}</td>`;
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table>';
+            
+            // Dodaj skupno vrstico
+            const totalHours = hoursDetails.reduce((sum, d) => sum + d.durationHours, 0);
+            html += `<div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #ddd; text-align: right;">`;
+            html += `<strong>Skupaj: ${hoursDetails.length} terminov, ${totalHours.toFixed(2)} ur</strong>`;
+            html += `</div>`;
+            
+            elContent.innerHTML = html;
+        }
+        
+        // Prikaži modal
+        elModal.style.display = 'flex';
+        elModal.setAttribute('aria-hidden', 'false');
+    }
+    
 
     // ===== Funkcije za opombe trenerjev =====
     function calculateTrainerNotesData() {
