@@ -4481,7 +4481,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <tr>
                     <td>${stat.trainer.first_name} ${stat.trainer.last_name}</td>
                     <td class="trainer-hours-hours">${stat.sessions}</td>
-                    <td class="trainer-hours-hours">${stat.totalHours.toFixed(2)}h</td>
+                    <td class="trainer-hours-hours"><span class="trainer-hours-clickable" data-trainer-id="${stat.trainer.id}" style="cursor: pointer; text-decoration: underline; color: #007bff;" title="Klikni za prikaz detajlov">${stat.totalHours.toFixed(2)}h</span></td>
                     <td>${trainerHourlyRate.toFixed(2)}€/h</td>
                     <td class="trainer-hours-cost">${stat.cost.toFixed(2)}€</td>
                 </tr>
@@ -4512,17 +4512,26 @@ document.addEventListener('DOMContentLoaded', () => {
         window.currentHoursDetailsMonth = month;
         window.currentHoursDetailsYear = year;
         
-        // Dodaj event listener za klik na skupno število ur
+        // Dodaj event listenerje za klik na skupno število ur za vsakega trenerja
+        const trainerHoursClickableElements = document.querySelectorAll('.trainer-hours-clickable');
+        trainerHoursClickableElements.forEach(element => {
+            element.addEventListener('click', () => {
+                const trainerId = element.getAttribute('data-trainer-id');
+                showHoursDetailsModal(trainerId);
+            });
+        });
+        
+        // Dodaj event listener za klik na skupno število ur (za vse trenerje)
         const totalHoursElement = document.getElementById('totalHoursClickable');
         if (totalHoursElement) {
             totalHoursElement.addEventListener('click', () => {
-                showHoursDetailsModal();
+                showHoursDetailsModal(null); // null pomeni vse trenerje
             });
         }
     }
 
     // ===== Funkcija za prikaz modala z detajli ur =====
-    function showHoursDetailsModal() {
+    function showHoursDetailsModal(trainerId = null) {
         const hoursDetails = window.currentHoursDetails || [];
         const month = window.currentHoursDetailsMonth || 1;
         const year = window.currentHoursDetailsYear || new Date().getFullYear();
@@ -4540,13 +4549,23 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        elTitle.textContent = `Detajli ur - ${monthNames[monthIndex]} ${year}`;
+        // Filtriraj po trenerju, če je določen
+        let filteredDetails = hoursDetails;
+        let trainerName = '';
+        if (trainerId) {
+            filteredDetails = hoursDetails.filter(d => d.trainer.id === trainerId);
+            if (filteredDetails.length > 0) {
+                trainerName = `${filteredDetails[0].trainer.first_name} ${filteredDetails[0].trainer.last_name} - `;
+            }
+        }
         
-        if (hoursDetails.length === 0) {
-            elContent.innerHTML = '<p class="muted">Ni podatkov o urah za izbrani mesec</p>';
+        elTitle.textContent = `${trainerName}Detajli ur - ${monthNames[monthIndex]} ${year}`;
+        
+        if (filteredDetails.length === 0) {
+            elContent.innerHTML = '<p class="muted">Ni podatkov o urah za izbrani mesec' + (trainerId ? ' in trenerja' : '') + '</p>';
         } else {
             // Sortiraj po datumu in trenerju
-            const sortedDetails = [...hoursDetails].sort((a, b) => {
+            const sortedDetails = [...filteredDetails].sort((a, b) => {
                 const dateCompare = a.date.localeCompare(b.date);
                 if (dateCompare !== 0) return dateCompare;
                 const trainerCompare = (a.trainer.last_name || '').localeCompare(b.trainer.last_name || '', 'sl');
@@ -4556,7 +4575,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             let html = '<table style="width: 100%; border-collapse: collapse; margin-top: 10px;"><thead><tr>';
             html += '<th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Datum</th>';
-            html += '<th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Trener</th>';
+            if (!trainerId) {
+                html += '<th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Trener</th>';
+            }
             html += '<th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Termin</th>';
             html += '<th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Čas</th>';
             html += '<th style="padding: 10px; text-align: right; border-bottom: 2px solid #ddd;">Trajanje</th>';
@@ -4585,7 +4606,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 html += '<tr style="border-bottom: 1px solid #eee;">';
                 html += `<td style="padding: 8px;">${dateStr}</td>`;
-                html += `<td style="padding: 8px;">${trainerName}</td>`;
+                if (!trainerId) {
+                    html += `<td style="padding: 8px;">${trainerName}</td>`;
+                }
                 html += `<td style="padding: 8px;">${termName}</td>`;
                 html += `<td style="padding: 8px;">${timeStr}</td>`;
                 html += `<td style="padding: 8px; text-align: right;">${durationStr}</td>`;
@@ -4596,9 +4619,9 @@ document.addEventListener('DOMContentLoaded', () => {
             html += '</tbody></table>';
             
             // Dodaj skupno vrstico
-            const totalHours = hoursDetails.reduce((sum, d) => sum + d.durationHours, 0);
+            const totalHours = filteredDetails.reduce((sum, d) => sum + d.durationHours, 0);
             html += `<div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #ddd; text-align: right;">`;
-            html += `<strong>Skupaj: ${hoursDetails.length} terminov, ${totalHours.toFixed(2)} ur</strong>`;
+            html += `<strong>Skupaj: ${filteredDetails.length} terminov, ${totalHours.toFixed(2)} ur</strong>`;
             html += `</div>`;
             
             elContent.innerHTML = html;
