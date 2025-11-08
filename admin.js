@@ -4214,13 +4214,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
+        // Sortiraj trenerje po priimku (in nato po imenu, če so priimki enaki)
+        const sortedTrainerStats = Object.values(trainerStats)
+            .filter(stat => !stat.trainer.is_deleted)
+            .sort((a, b) => {
+                // Najprej sortiraj po priimku
+                const lastNameCompare = (a.trainer.last_name || '').localeCompare(b.trainer.last_name || '', 'sl');
+                if (lastNameCompare !== 0) {
+                    return lastNameCompare;
+                }
+                // Če so priimki enaki, sortiraj po imenu
+                return (a.trainer.first_name || '').localeCompare(b.trainer.first_name || '', 'sl');
+            });
+        
         // Prikaži rezultate (samo aktivni trenerji)
-        Object.values(trainerStats).forEach(stat => {
-            // Preveri, ali je trener deaktivirán
-            if (stat.trainer.is_deleted) {
-                return; // Preskoči deaktivirane trenerje
-            }
-            
+        sortedTrainerStats.forEach(stat => {
             summary += `
                 <tr>
                     <td>${stat.trainer.first_name} ${stat.trainer.last_name}</td>
@@ -4373,8 +4381,21 @@ document.addEventListener('DOMContentLoaded', () => {
             totalHours += stat.totalHours;
         });
         
+        // Sortiraj trenerje po priimku (in nato po imenu, če so priimki enaki)
+        const sortedTrainerStats = Object.values(trainerStats)
+            .filter(stat => !stat.trainer.is_deleted)
+            .sort((a, b) => {
+                // Najprej sortiraj po priimku
+                const lastNameCompare = (a.trainer.last_name || '').localeCompare(b.trainer.last_name || '', 'sl');
+                if (lastNameCompare !== 0) {
+                    return lastNameCompare;
+                }
+                // Če so priimki enaki, sortiraj po imenu
+                return (a.trainer.first_name || '').localeCompare(b.trainer.first_name || '', 'sl');
+            });
+        
         // Prikaži rezultate
-        Object.values(trainerStats).forEach(stat => {
+        sortedTrainerStats.forEach(stat => {
             const trainerHourlyRate = trainerRates[stat.trainer.id] || 25;
             summary += `
                 <tr>
