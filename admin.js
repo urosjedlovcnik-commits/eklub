@@ -4134,16 +4134,31 @@ document.addEventListener('DOMContentLoaded', () => {
                             } else if (trainerAtt.present === false) {
                                 trainerStats[key].absent++;
                                 
-                                // Preveri, če je v opombi omenjen nadomestni trener (ID v oklepajih)
-                                if (trainerAtt.note) {
-                                    const substituteIdMatch = trainerAtt.note.match(/\(([a-f0-9-]{36})\)/);
-                                    if (substituteIdMatch) {
-                                        const substituteTrainerId = substituteIdMatch[1];
-                                        const substituteTrainer = trainers.find(t => t.id === substituteTrainerId && !t.is_deleted);
+                                // Preveri, če je v opombi omenjen nadomestni trener
+                                if (trainerAtt.note && trainerAtt.note.trim()) {
+                                    // Preveri format z ID-jem v oklepajih ali brez (format: "Nadomešča: Ime Priimek")
+                                    const substituteNoteMatch = trainerAtt.note.match(/Nadomešča:\s*(.+)/i);
+                                    if (substituteNoteMatch) {
+                                        const substituteName = substituteNoteMatch[1].trim();
+                                        
+                                        // Poskusi najti trenerja po ID-ju (če je v opombi)
+                                        const substituteIdMatch = substituteName.match(/\(([a-f0-9-]{36})\)/);
+                                        let substituteTrainer = null;
+                                        
+                                        if (substituteIdMatch) {
+                                            // Format z ID-jem
+                                            const substituteTrainerId = substituteIdMatch[1];
+                                            substituteTrainer = trainers.find(t => t.id === substituteTrainerId && !t.is_deleted);
+                                        } else {
+                                            // Format brez ID-ja - poišči po imenu in priimku
+                                            substituteTrainer = trainers.find(t => {
+                                                const fullName = `${t.first_name} ${t.last_name}`;
+                                                return fullName === substituteName && !t.is_deleted;
+                                            });
+                                        }
                                         
                                         if (substituteTrainer) {
                                             const substituteKey = `${substituteTrainer.id}`;
-// console.log('🔍 DEBUG: Najden nadomestni trener v opombi:', substituteTrainer.first_name, substituteTrainer.last_name);
                                             
                                             if (!trainerStats[substituteKey]) {
                                                 trainerStats[substituteKey] = {
@@ -4168,6 +4183,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     // Dodaj nadomestne trenerje iz trainer_attendance (ki niso redno dodeljeni)
                     // SAMO če je termin aktiven (termStatusForDate je že preverjen zgoraj)
+                    // IN SAMO če so še vedno navedeni v opombi originalnega trenerja
                     if (activeTermIds.has(term.id) && trainerAttendance[isoDate]?.[term.id]) {
                         Object.keys(trainerAttendance[isoDate][term.id]).forEach(trainerId => {
                             // Preveri, če trener ni že vključen kot redno dodeljen
@@ -4175,25 +4191,49 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (!isRegularlyAssigned) {
                                 const trainer = trainers.find(t => t.id === trainerId && !t.is_deleted);
                                 if (trainer && !trainer.is_deleted) {
-                                    const key = `${trainer.id}`;
-                                    if (!trainerStats[key]) {
-                                        trainerStats[key] = {
-                                            trainer: trainer,
-                                            total: 0,
-                                            present: 0,
-                                            absent: 0
-                                        };
-                                    }
+                                    // Preveri, ali je trener še vedno naveden v opombi katerega koli originalnega trenerja
+                                    const isStillSubstitute = trainersForTerm.some(originalTrainer => {
+                                        const originalTrainerAtt = trainerAttendance[isoDate]?.[term.id]?.[originalTrainer.id];
+                                        if (originalTrainerAtt && originalTrainerAtt.present === false && originalTrainerAtt.note) {
+                                            const substituteNoteMatch = originalTrainerAtt.note.match(/Nadomešča:\s*(.+)/i);
+                                            if (substituteNoteMatch) {
+                                                const substituteName = substituteNoteMatch[1].trim();
+                                                // Preveri, ali se ime ujema (z ali brez ID-ja)
+                                                const fullName = `${trainer.first_name} ${trainer.last_name}`;
+                                                if (substituteName === fullName) {
+                                                    return true;
+                                                }
+                                                // Preveri tudi format z ID-jem
+                                                const substituteIdMatch = substituteName.match(/\(([a-f0-9-]{36})\)/);
+                                                if (substituteIdMatch && substituteIdMatch[1] === trainer.id) {
+                                                    return true;
+                                                }
+                                            }
+                                        }
+                                        return false;
+                                    });
                                     
-                                    trainerStats[key].total++;
-                                    processedTrainers.add(trainer.id); // Dodaj nadomestnega trenerja v processedTrainers
-                                    
-                                    const trainerAtt = trainerAttendance[isoDate][term.id][trainerId];
-                                    if (trainerAtt) {
-                                        if (trainerAtt.present === true) {
-                                            trainerStats[key].present++;
-                                        } else if (trainerAtt.present === false) {
-                                            trainerStats[key].absent++;
+                                    if (isStillSubstitute) {
+                                        const key = `${trainer.id}`;
+                                        if (!trainerStats[key]) {
+                                            trainerStats[key] = {
+                                                trainer: trainer,
+                                                total: 0,
+                                                present: 0,
+                                                absent: 0
+                                            };
+                                        }
+                                        
+                                        trainerStats[key].total++;
+                                        processedTrainers.add(trainer.id); // Dodaj nadomestnega trenerja v processedTrainers
+                                        
+                                        const trainerAtt = trainerAttendance[isoDate][term.id][trainerId];
+                                        if (trainerAtt) {
+                                            if (trainerAtt.present === true) {
+                                                trainerStats[key].present++;
+                                            } else if (trainerAtt.present === false) {
+                                                trainerStats[key].absent++;
+                                            }
                                         }
                                     }
                                 }
@@ -4226,16 +4266,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (!processedTrainers.has(trainerId)) {
                             const trainer = trainers.find(t => t.id === trainerId && !t.is_deleted);
                             if (trainer && !trainer.is_deleted) {
-                                const key = `${trainer.id}`;
-                                if (!trainerStats[key]) {
-                                    trainerStats[key] = {
-                                        trainer: trainer,
-                                        total: 0,
-                                        present: 0,
-                                        absent: 0
-                                    };
-                                }
-                                
                                 // Preveri, ali je ta termin veljaven in aktiven
                                 const term = TERMS.find(t => t.id === termId);
                                 if (term && activeTermIds.has(term.id)) {
@@ -4247,7 +4277,51 @@ document.addEventListener('DOMContentLoaded', () => {
                                             return; // Preskoči deaktivirane termine za ta datum
                                         }
                                         
+                                        // Preveri, ali je trener redno dodeljen temu terminu
+                                        const trainersForTerm = trainers.filter(t => 
+                                            t.terms && t.terms.includes(term.id) && !t.is_deleted
+                                        );
+                                        const isRegularlyAssigned = trainersForTerm.some(t => t.id === trainerId);
+                                        
+                                        // Če trener ni redno dodeljen, preveri, ali je še vedno naveden v opombi originalnega trenerja
+                                        if (!isRegularlyAssigned) {
+                                            const isStillSubstitute = trainersForTerm.some(originalTrainer => {
+                                                const originalTrainerAtt = trainerAttendance[date]?.[termId]?.[originalTrainer.id];
+                                                if (originalTrainerAtt && originalTrainerAtt.present === false && originalTrainerAtt.note) {
+                                                    const substituteNoteMatch = originalTrainerAtt.note.match(/Nadomešča:\s*(.+)/i);
+                                                    if (substituteNoteMatch) {
+                                                        const substituteName = substituteNoteMatch[1].trim();
+                                                        // Preveri, ali se ime ujema (z ali brez ID-ja)
+                                                        const fullName = `${trainer.first_name} ${trainer.last_name}`;
+                                                        if (substituteName === fullName) {
+                                                            return true;
+                                                        }
+                                                        // Preveri tudi format z ID-jem
+                                                        const substituteIdMatch = substituteName.match(/\(([a-f0-9-]{36})\)/);
+                                                        if (substituteIdMatch && substituteIdMatch[1] === trainer.id) {
+                                                            return true;
+                                                        }
+                                                    }
+                                                }
+                                                return false;
+                                            });
+                                            
+                                            if (!isStillSubstitute) {
+                                                return; // Preskoči trenerje, ki niso več navedeni v opombi
+                                            }
+                                        }
+                                        
                                         // Termin je veljaven in aktiven, dodaj prisotnost
+                                        const key = `${trainer.id}`;
+                                        if (!trainerStats[key]) {
+                                            trainerStats[key] = {
+                                                trainer: trainer,
+                                                total: 0,
+                                                present: 0,
+                                                absent: 0
+                                            };
+                                        }
+                                        
                                         trainerStats[key].total++;
                                         
                                         const trainerAtt = trainerAttendance[date][termId][trainerId];
@@ -4448,61 +4522,71 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Dodaj nadomestne trenerje iz trainer_attendance (ki niso redno dodeljeni)
                     // SAMO če je termin aktiven (termStatusForDate je že preverjen zgoraj)
                     // IN SAMO če so še vedno navedeni v opombi originalnega trenerja
+                    // IN SAMO če še niso bili dodani v hoursDetails
                     if (activeTermIds.has(term.id) && trainerAttendance[isoDate]?.[term.id]) {
                         Object.keys(trainerAttendance[isoDate][term.id]).forEach(trainerId => {
                             // Preveri, če trener ni že vključen kot redno dodeljen
                             const isRegularlyAssigned = trainersForTerm.some(t => t.id === trainerId);
                             if (!isRegularlyAssigned) {
-                                const trainer = trainers.find(t => t.id === trainerId && !t.is_deleted);
-                                if (trainer) {
-                                    // Preveri, ali je trener še vedno naveden v opombi katerega koli originalnega trenerja
-                                    const isStillSubstitute = trainersForTerm.some(originalTrainer => {
-                                        const originalTrainerAtt = trainerAttendance[isoDate]?.[term.id]?.[originalTrainer.id];
-                                        if (originalTrainerAtt && originalTrainerAtt.present === false && originalTrainerAtt.note) {
-                                            const substituteNoteMatch = originalTrainerAtt.note.match(/Nadomešča:\s*(.+)/i);
-                                            if (substituteNoteMatch) {
-                                                const substituteName = substituteNoteMatch[1].trim();
-                                                // Preveri, ali se ime ujema (z ali brez ID-ja)
-                                                const fullName = `${trainer.first_name} ${trainer.last_name}`;
-                                                if (substituteName === fullName) {
-                                                    return true;
-                                                }
-                                                // Preveri tudi format z ID-jem
-                                                const substituteIdMatch = substituteName.match(/\(([a-f0-9-]{36})\)/);
-                                                if (substituteIdMatch && substituteIdMatch[1] === trainer.id) {
-                                                    return true;
+                                // Preveri, ali je trener že dodan v hoursDetails za ta datum in termin
+                                const alreadyAdded = hoursDetails.some(detail => 
+                                    detail.date === isoDate && 
+                                    detail.term.id === term.id && 
+                                    detail.trainer.id === trainerId
+                                );
+                                
+                                if (!alreadyAdded) {
+                                    const trainer = trainers.find(t => t.id === trainerId && !t.is_deleted);
+                                    if (trainer) {
+                                        // Preveri, ali je trener še vedno naveden v opombi katerega koli originalnega trenerja
+                                        const isStillSubstitute = trainersForTerm.some(originalTrainer => {
+                                            const originalTrainerAtt = trainerAttendance[isoDate]?.[term.id]?.[originalTrainer.id];
+                                            if (originalTrainerAtt && originalTrainerAtt.present === false && originalTrainerAtt.note) {
+                                                const substituteNoteMatch = originalTrainerAtt.note.match(/Nadomešča:\s*(.+)/i);
+                                                if (substituteNoteMatch) {
+                                                    const substituteName = substituteNoteMatch[1].trim();
+                                                    // Preveri, ali se ime ujema (z ali brez ID-ja)
+                                                    const fullName = `${trainer.first_name} ${trainer.last_name}`;
+                                                    if (substituteName === fullName) {
+                                                        return true;
+                                                    }
+                                                    // Preveri tudi format z ID-jem
+                                                    const substituteIdMatch = substituteName.match(/\(([a-f0-9-]{36})\)/);
+                                                    if (substituteIdMatch && substituteIdMatch[1] === trainer.id) {
+                                                        return true;
+                                                    }
                                                 }
                                             }
-                                        }
-                                        return false;
-                                    });
-                                    
-                                    if (isStillSubstitute) {
-                                        const key = `${trainer.id}`;
-                                        if (!trainerStats[key]) {
-                                            trainerStats[key] = {
-                                                trainer: trainer,
-                                                sessions: 0,
-                                                totalHours: 0,
-                                                cost: 0
-                                            };
-                                        }
+                                            return false;
+                                        });
                                         
-                                        const trainerAtt = trainerAttendance[isoDate][term.id][trainerId];
-                                        if (trainerAtt && trainerAtt.present === true) {
-                                            trainerStats[key].sessions += 1;
-                                            trainerStats[key].totalHours += durationHours;
-                                            processedTrainers.add(trainer.id);
-                                            
-                                            // Dodaj detajl SAMO če je termin aktiven
-                                            if (activeTermIds.has(term.id)) {
-                                                hoursDetails.push({
-                                                    date: isoDate,
+                                        if (isStillSubstitute) {
+                                            const key = `${trainer.id}`;
+                                            if (!trainerStats[key]) {
+                                                trainerStats[key] = {
                                                     trainer: trainer,
-                                                    term: term,
-                                                    durationHours: durationHours,
-                                                    isSubstitute: true
-                                                });
+                                                    sessions: 0,
+                                                    totalHours: 0,
+                                                    cost: 0
+                                                };
+                                            }
+                                            
+                                            const trainerAtt = trainerAttendance[isoDate][term.id][trainerId];
+                                            if (trainerAtt && trainerAtt.present === true) {
+                                                trainerStats[key].sessions += 1;
+                                                trainerStats[key].totalHours += durationHours;
+                                                processedTrainers.add(trainer.id);
+                                                
+                                                // Dodaj detajl SAMO če je termin aktiven
+                                                if (activeTermIds.has(term.id)) {
+                                                    hoursDetails.push({
+                                                        date: isoDate,
+                                                        trainer: trainer,
+                                                        term: term,
+                                                        durationHours: durationHours,
+                                                        isSubstitute: true
+                                                    });
+                                                }
                                             }
                                         }
                                     }
