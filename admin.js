@@ -4060,20 +4060,34 @@ document.addEventListener('DOMContentLoaded', () => {
         const trainerStats = {};
         const processedTrainers = new Set(); // Set za sledenje trenerjem, ki so že bili obravnavani
         
+        // Pridobi samo aktivne termine (ne potekle)
+        const activeTerms = getActiveTerms();
+        const activeTermIds = new Set(activeTerms.map(t => t.id));
+        
         // Iteriraj po vseh dnevih v mesecu
         for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
             const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
             const isoDate = iso(d);
             
             TERMS.forEach(term => {
+                // Preveri, ali je termin aktiven (ne potekel)
+                if (!activeTermIds.has(term.id)) {
+                    return; // Preskoči deaktivirane termine
+                }
+                
                 if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
                     // Poišči trenerje za ta termin (redno dodeljeni)
                     const trainersForTerm = trainers.filter(t => 
                         t.terms && t.terms.includes(term.id) && !t.is_deleted
                     );
                     
-                    // Dodaj redno dodeljene trenerje
+                    // Dodaj redno dodeljene trenerje (samo aktivni)
                     trainersForTerm.forEach(trainer => {
+                        // Preveri, ali je trener deaktivirán
+                        if (trainer.is_deleted) {
+                            return; // Preskoči deaktivirane trenerje
+                        }
+                        
                         const key = `${trainer.id}`;
                         if (!trainerStats[key]) {
                             trainerStats[key] = {
@@ -4133,7 +4147,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             const isRegularlyAssigned = trainersForTerm.some(t => t.id === trainerId);
                             if (!isRegularlyAssigned) {
                                 const trainer = trainers.find(t => t.id === trainerId && !t.is_deleted);
-                                if (trainer) {
+                                if (trainer && !trainer.is_deleted) {
                                     const key = `${trainer.id}`;
                                     if (!trainerStats[key]) {
                                         trainerStats[key] = {
@@ -4178,7 +4192,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Preveri, ali trener ni že bil obravnavan v prvi zanki
                         if (!processedTrainers.has(trainerId)) {
                             const trainer = trainers.find(t => t.id === trainerId && !t.is_deleted);
-                            if (trainer) {
+                            if (trainer && !trainer.is_deleted) {
                                 const key = `${trainer.id}`;
                                 if (!trainerStats[key]) {
                                     trainerStats[key] = {
@@ -4189,12 +4203,12 @@ document.addEventListener('DOMContentLoaded', () => {
                                     };
                                 }
                                 
-                                // Preveri, ali je ta termin veljaven
+                                // Preveri, ali je ta termin veljaven in aktiven
                                 const term = TERMS.find(t => t.id === termId);
-                                if (term) {
+                                if (term && activeTermIds.has(term.id)) {
                                     const dayOfWeek = currentDate.getDay() === 0 ? 7 : currentDate.getDay();
                                     if (term.day === dayOfWeek && date >= term.date_from && date <= term.date_to) {
-                                        // Termin je veljaven, dodaj prisotnost
+                                        // Termin je veljaven in aktiven, dodaj prisotnost
                                         trainerStats[key].total++;
                                         
                                         const trainerAtt = trainerAttendance[date][termId][trainerId];
@@ -4241,7 +4255,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         summary += '</tbody></table>';
         
-        if (Object.keys(trainerStats).length === 0) {
+        // Preveri, ali so vsi trenerji deaktivirani
+        if (sortedTrainerStats.length === 0) {
             summary = '<p class="muted">Ni podatkov o prisotnosti trenerjev za izbrani mesec</p>';
         }
         
@@ -4271,12 +4286,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const trainerStats = {};
         const processedTrainers = new Set();
         
+        // Pridobi samo aktivne termine (ne potekle)
+        const activeTerms = getActiveTerms();
+        const activeTermIds = new Set(activeTerms.map(t => t.id));
+        
         // Iteriraj po vseh dnevih v mesecu
         for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
             const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
             const isoDate = iso(d);
             
             TERMS.forEach(term => {
+                // Preveri, ali je termin aktiven (ne potekel)
+                if (!activeTermIds.has(term.id)) {
+                    return; // Preskoči deaktivirane termine
+                }
+                
                 if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
                     // Poišči trenerje za ta termin (redno dodeljeni)
                     const trainersForTerm = trainers.filter(t => 
