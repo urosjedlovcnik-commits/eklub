@@ -692,6 +692,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
           const trainerStatus = trainerAttendance[ymd]?.[termId]?.[trainer.id];
           const isPresent = trainerStatus?.present;
+          const note = trainerStatus?.note || '';
           
           const btnPresent = document.createElement("button");
           btnPresent.textContent = "Prisoten";
@@ -723,51 +724,104 @@ document.addEventListener('DOMContentLoaded', () => {
           btnPresent.addEventListener("click", async () => {
             const newStatus = isPresent === true ? false : true;
             
-                         await updateTrainerAttendance(ymd, termId, trainer.id, newStatus);
-             // Posodobi lokalne podatke
-             if (!trainerAttendance[ymd]) trainerAttendance[ymd] = {};
-             if (!trainerAttendance[ymd][termId]) trainerAttendance[ymd][termId] = {};
-             trainerAttendance[ymd][termId][trainer.id] = { present: newStatus, note: trainerAttendance[ymd]?.[termId]?.[trainer.id]?.note || '' };
-             
-             // Skrij prostor za opombe, če je trener sedaj prisoten
-             if (newStatus === true) {
-               hideTrainerNotesSection();
-             }
-             
-             // Osveži podatke v trenutnem modalu
-             await refreshModalData(date, termId);
+                        await updateTrainerAttendance(ymd, termId, trainer.id, newStatus);
+            // Posodobi lokalne podatke
+            if (!trainerAttendance[ymd]) trainerAttendance[ymd] = {};
+            if (!trainerAttendance[ymd][termId]) trainerAttendance[ymd][termId] = {};
+            trainerAttendance[ymd][termId][trainer.id] = { present: newStatus, note: trainerAttendance[ymd]?.[termId]?.[trainer.id]?.note || '' };
+            
+            // Skrij prostor za opombe, če je trener sedaj prisoten
+            if (newStatus === true) {
+              hideTrainerNotesSection();
+            }
+            
+            // Osveži podatke v trenutnem modalu
+            await refreshModalData(date, termId);
           });
           
-                     btnAbsent.addEventListener("click", async () => {
-             if (isPresent === false) {
-               // Če je trener že odsoten, prikaži prostor za opombe
-               showTrainerNotesSection(ymd, termId, trainer.id, trainer.first_name + ' ' + trainer.last_name);
-             } else {
-               // Če je trener prisoten, ga označi kot odsotnega
-               await updateTrainerAttendance(ymd, termId, trainer.id, false);
-               // Posodobi lokalne podatke
-               if (!trainerAttendance[ymd]) trainerAttendance[ymd] = {};
-               if (!trainerAttendance[ymd][termId]) trainerAttendance[ymd][termId] = {};
-               trainerAttendance[ymd][termId][trainer.id] = { present: false, note: trainerAttendance[ymd]?.[termId]?.[trainer.id]?.note || '' };
-               
-               // Prikaži prostor za opombe po označitvi kot odsotnega
-               showTrainerNotesSection(ymd, termId, trainer.id, trainer.first_name + ' ' + trainer.last_name);
-               
-               // Osveži podatke v trenutnem modalu
-               await refreshModalData(date, termId);
-             }
-           });
+                    btnAbsent.addEventListener("click", async () => {
+            if (isPresent === false) {
+              // Če je trener že odsoten in nima nadomestnega trenerja, prikaži prostor za opombe
+              if (!note || !note.trim()) {
+                showTrainerNotesSection(ymd, termId, trainer.id, trainer.first_name + ' ' + trainer.last_name);
+              }
+            } else {
+              // Če je trener prisoten, ga označi kot odsotnega
+              await updateTrainerAttendance(ymd, termId, trainer.id, false);
+              // Posodobi lokalne podatke
+              if (!trainerAttendance[ymd]) trainerAttendance[ymd] = {};
+              if (!trainerAttendance[ymd][termId]) trainerAttendance[ymd][termId] = {};
+              trainerAttendance[ymd][termId][trainer.id] = { present: false, note: trainerAttendance[ymd]?.[termId]?.[trainer.id]?.note || '' };
+              
+              // Osveži podatke v trenutnem modalu
+              await refreshModalData(date, termId);
+            }
+          });
           
-                     td2.appendChild(btnPresent);
-           td2.appendChild(btnAbsent);
-           tr.appendChild(td1);
-           tr.appendChild(td2);
-           elTrainerAttendanceTable.appendChild(tr);
-           
-           // Prikaži prostor za opombe, če je trener odsoten
-           if (isPresent === false) {
-             showTrainerNotesSection(ymd, termId, trainer.id, trainer.first_name + ' ' + trainer.last_name);
-           }
+                    td2.appendChild(btnPresent);
+          td2.appendChild(btnAbsent);
+          tr.appendChild(td1);
+          tr.appendChild(td2);
+          elTrainerAttendanceTable.appendChild(tr);
+          
+          // Če je trener odsoten in ima nadomestnega trenerja, prikaži ga kot drugo vrstico
+          if (isPresent === false && note && note.trim()) {
+            // Poskusi najti nadomestnega trenerja po imenu iz opombe
+            let substituteTrainer = null;
+            
+            // Preveri, ali je v opombi omenjen trener iz sistema
+            // Format: "Nadomešča: Ime Priimek"
+            const noteMatch = note.match(/Nadomešča:\s*(.+)/i);
+            if (noteMatch) {
+              const substituteName = noteMatch[1].trim();
+              // Poišči trenerja po imenu in priimku
+              substituteTrainer = trainers.find(t => {
+                const fullName = `${t.first_name} ${t.last_name}`;
+                return fullName === substituteName && !t.is_deleted;
+              });
+            }
+            
+            // Če je nadomestni trener najden, ga prikaži kot drugo vrstico
+            if (substituteTrainer) {
+              const substituteTr = document.createElement("tr");
+              substituteTr.style.opacity = "0.7";
+              substituteTr.style.fontStyle = "italic";
+              
+              const substituteTd1 = document.createElement("td");
+              substituteTd1.textContent = `  → ${substituteTrainer.first_name} ${substituteTrainer.last_name}`;
+              substituteTd1.style.paddingLeft = "30px";
+              
+              const substituteTd2 = document.createElement("td");
+              substituteTd2.textContent = "Nadomešča";
+              substituteTd2.className = "muted";
+              substituteTd2.style.fontSize = "12px";
+              
+              substituteTr.appendChild(substituteTd1);
+              substituteTr.appendChild(substituteTd2);
+              elTrainerAttendanceTable.appendChild(substituteTr);
+            } else {
+              // Če ni najden trener iz sistema, prikaži besedilo iz opombe
+              const substituteTr = document.createElement("tr");
+              substituteTr.style.opacity = "0.7";
+              substituteTr.style.fontStyle = "italic";
+              
+              const substituteTd1 = document.createElement("td");
+              substituteTd1.textContent = `  → ${note}`;
+              substituteTd1.style.paddingLeft = "30px";
+              
+              const substituteTd2 = document.createElement("td");
+              substituteTd2.textContent = "Nadomešča";
+              substituteTd2.className = "muted";
+              substituteTd2.style.fontSize = "12px";
+              
+              substituteTr.appendChild(substituteTd1);
+              substituteTr.appendChild(substituteTd2);
+              elTrainerAttendanceTable.appendChild(substituteTr);
+            }
+          } else if (isPresent === false && (!note || !note.trim())) {
+            // Če je trener odsoten in nima nadomestnega trenerja, prikaži prostor za opombe
+            showTrainerNotesSection(ymd, termId, trainer.id, trainer.first_name + ' ' + trainer.last_name);
+          }
         });
       }
 
