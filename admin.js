@@ -4184,11 +4184,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Dodaj nadomestne trenerje iz trainer_attendance (ki niso redno dodeljeni)
                     // SAMO če je termin aktiven (termStatusForDate je že preverjen zgoraj)
                     // IN SAMO če so še vedno navedeni v opombi originalnega trenerja
+                    // IN SAMO če še niso bili obravnavani v prvi zanki (iz opombe originalnega trenerja)
                     if (activeTermIds.has(term.id) && trainerAttendance[isoDate]?.[term.id]) {
                         Object.keys(trainerAttendance[isoDate][term.id]).forEach(trainerId => {
                             // Preveri, če trener ni že vključen kot redno dodeljen
                             const isRegularlyAssigned = trainersForTerm.some(t => t.id === trainerId);
-                            if (!isRegularlyAssigned) {
+                            // Preveri, če trener ni že bil obravnavan v prvi zanki (iz opombe originalnega trenerja)
+                            const alreadyProcessed = processedTrainers.has(trainerId);
+                            
+                            if (!isRegularlyAssigned && !alreadyProcessed) {
                                 const trainer = trainers.find(t => t.id === trainerId && !t.is_deleted);
                                 if (trainer && !trainer.is_deleted) {
                                     // Preveri, ali je trener še vedno naveden v opombi katerega koli originalnega trenerja
