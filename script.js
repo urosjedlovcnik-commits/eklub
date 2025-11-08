@@ -797,7 +797,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const isCurrentlyAssigned = assignedSwimmerIds.includes(s.id);
           if (!isCurrentlyAssigned && termAtt[s.id] !== undefined) {
             // Če ni več dodeljen, vendar ima prisotnost, prikaži oznako
-            td1.innerHTML = `${s.first_name} ${s.last_name} <span class="muted" style="font-size: 11px; font-style: italic;">(odstranjen iz termina)</span>`;
+            td1.innerHTML = `${s.first_name} ${s.last_name} <span class="muted" style="font-size: 11px; font-style: italic;">(odstranjen/nadomeščanje)</span>`;
           } else {
             td1.textContent = `${s.first_name} ${s.last_name}`;
           }
