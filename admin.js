@@ -4096,6 +4096,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
+                    // Preveri, ali je termin deaktiviran za ta datum
+                    const termStatusForDate = getTermStatus(d, term.id);
+                    if (termStatusForDate.status === "inactive") {
+                        return; // Preskoči deaktivirane termine za ta datum
+                    }
+                    
                     // Poišči trenerje za ta termin (redno dodeljeni)
                     const trainersForTerm = trainers.filter(t => 
                         t.terms && t.terms.includes(term.id) && !t.is_deleted
@@ -4161,7 +4167,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     
                     // Dodaj nadomestne trenerje iz trainer_attendance (ki niso redno dodeljeni)
-                    // SAMO če je termin aktiven
+                    // SAMO če je termin aktiven (termStatusForDate je že preverjen zgoraj)
                     if (activeTermIds.has(term.id) && trainerAttendance[isoDate]?.[term.id]) {
                         Object.keys(trainerAttendance[isoDate][term.id]).forEach(trainerId => {
                             // Preveri, če trener ni že vključen kot redno dodeljen
@@ -4235,6 +4241,12 @@ document.addEventListener('DOMContentLoaded', () => {
                                 if (term && activeTermIds.has(term.id)) {
                                     const dayOfWeek = currentDate.getDay() === 0 ? 7 : currentDate.getDay();
                                     if (term.day === dayOfWeek && date >= term.date_from && date <= term.date_to) {
+                                        // Preveri, ali je termin deaktiviran za ta datum
+                                        const termStatusForDate = getTermStatus(currentDate, term.id);
+                                        if (termStatusForDate.status === "inactive") {
+                                            return; // Preskoči deaktivirane termine za ta datum
+                                        }
+                                        
                                         // Termin je veljaven in aktiven, dodaj prisotnost
                                         trainerStats[key].total++;
                                         
