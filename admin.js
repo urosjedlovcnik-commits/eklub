@@ -72,6 +72,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Trenutni mesec in leto za swimmer fees sekcijo
     let currentSwimmerFeesMonth = now.getMonth() + 1; // 1-12 (September = 9)
     let currentSwimmerFeesYear = now.getFullYear();
+    
+    // Trenutni mesec in leto za postavke trenerjev
+    let currentTrainerRatesMonth = now.getMonth() + 1; // 1-12
+    let currentTrainerRatesYear = now.getFullYear();
     //// console.log('🔍 Inicializacija swimmer fees - mesec:', currentSwimmerFeesMonth, 'leto:', currentSwimmerFeesYear);
     
     // Trenutni mesec in leto za trainer summary sekcijo
@@ -150,6 +154,18 @@ document.addEventListener('DOMContentLoaded', () => {
 // console.log('✅ Swimmer fees kalendar nastavljen na:', elSwimmerFeesMonthYearInput.value);
         } else {
             console.warn('⚠️ elSwimmerFeesMonthYearInput element ni najden');
+        }
+    }
+    
+    function updateTrainerRatesMonthDisplay() {
+        if (elTrainerRatesMonthYearContainer) {
+            const monthNames = ["Januar", "Februar", "Marec", "April", "Maj", "Junij", 
+                              "Julij", "Avgust", "September", "Oktober", "November", "December"];
+            const monthIndex = currentTrainerRatesMonth - 1; // Convert 1-based to 0-based
+            elTrainerRatesMonthYearContainer.textContent = `${monthNames[monthIndex]} ${currentTrainerRatesYear}`;
+        }
+        if (elTrainerRatesMonthYearInput) {
+            elTrainerRatesMonthYearInput.value = `${currentTrainerRatesYear}-${currentTrainerRatesMonth.toString().padStart(2, '0')}`;
         }
     }
     
@@ -548,6 +564,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const elSaveTermCostsBtn = document.getElementById("saveTermCostsBtn");
     const elTrainerRatesSettings = document.getElementById("trainerRatesSettings");
     const elSaveTrainerRatesBtn = document.getElementById("saveTrainerRatesBtn");
+    const elTrainerRatesMonthYearInput = document.getElementById("trainerRatesMonthYearInput");
+    const elTrainerRatesMonthYearContainer = document.getElementById("trainerRatesMonthYearContainer");
     
     // UI elementi za upravljanje pristojbin plavalcev
     // Opomba: Stari elementi so bili zamenjani z navigacijskimi gumbi
@@ -840,6 +858,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Prikaži nastavitve stroškov prog in urnih postavk trenerjev
             await renderTermCostsSettings();
             await renderTrainerRatesSettings();
+            updateTrainerRatesMonthDisplay();
             
             // Inicializiraj prikaz mesecev
 // console.log('🔄 Inicializiram prikaz mesecev...');
@@ -3755,6 +3774,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
+    // Event listener za spremembo meseca in leta pri postavkah trenerjev
+    if (elTrainerRatesMonthYearInput) {
+        elTrainerRatesMonthYearInput.addEventListener('change', async (e) => {
+            const [year, month] = e.target.value.split('-');
+            currentTrainerRatesMonth = parseInt(month, 10);
+            currentTrainerRatesYear = parseInt(year, 10);
+            updateTrainerRatesMonthDisplay();
+            await renderTrainerRatesSettings();
+        });
+    }
+    
 
     // Opomba: elRefreshSwimmerFeesBtn je bil zamenjan z navigacijskimi gumbi
     // Funkcionalnost je sedaj vključena v navigateSwimmerFeesMonth() funkciji
@@ -4395,8 +4425,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const startDate = new Date(year, month - 1, 1);
         const endDate = new Date(year, month, 0);
         
-        // Pridobi postavke trenerjev iz baze
-        const trainerRates = await getTrainerRatesFromDB();
+        // Pridobi postavke trenerjev iz baze za trenutni mesec in leto
+        const trainerRates = await getTrainerRatesFromDB(month, year);
         
         let summary = '<table class="trainer-hours-table"><thead><tr><th>Trener</th><th>Število terminov</th><th>Skupaj ur</th><th>Urna postavka</th><th>Skupni strošek</th></tr></thead><tbody>';
         
@@ -5465,8 +5495,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Funkcija za pridobivanje urne postavke trenerja
-    async function getTrainerRate(trainerId) {
-        const trainerRates = await getTrainerRatesFromDB();
+    async function getTrainerRate(trainerId, month = null, year = null) {
+        // Uporabi trenutni mesec in leto za finance, če nista podana
+        const targetMonth = month || currentFinanceMonth;
+        const targetYear = year || currentFinanceYear;
+        const trainerRates = await getTrainerRatesFromDB(targetMonth, targetYear);
         return trainerRates[trainerId] || 25;
     }
     
@@ -5540,8 +5573,8 @@ document.addEventListener('DOMContentLoaded', () => {
             let totalTrainerHours = 0;
             let trainerCosts = {};
             
-            // Pridobi postavke trenerjev iz baze
-            const trainerRates = await getTrainerRatesFromDB();
+            // Pridobi postavke trenerjev iz baze za trenutni mesec in leto
+            const trainerRates = await getTrainerRatesFromDB(currentFinanceMonth, currentFinanceYear);
 
             // Iteriraj po vseh dnevih v mesecu
             for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
@@ -6302,12 +6335,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Funkcija za pridobivanje postavk trenerjev iz baze
-    async function getTrainerRatesFromDB() {
+    async function getTrainerRatesFromDB(month = null, year = null) {
         try {
-// console.log('🔍 Nalagam urne postavke trenerjev iz baze...');
+            // Uporabi trenutni mesec in leto, če nista podana
+            const targetMonth = month || currentTrainerRatesMonth;
+            const targetYear = year || currentTrainerRatesYear;
+            
+// console.log('🔍 Nalagam urne postavke trenerjev iz baze za mesec', targetMonth, 'in leto', targetYear);
             const { data, error } = await supabase
                 .from('trainer_rates')
-                .select('*');
+                .select('*')
+                .eq('month', targetMonth)
+                .eq('year', targetYear);
             
             if (error) {
                 console.error('❌ Napaka pri nalaganju urnih postavk trenerjev:', error);
@@ -6330,16 +6369,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Funkcija za shranjevanje postavk trenerjev v bazo
-    async function saveTrainerRatesToDB(trainerRates) {
+    async function saveTrainerRatesToDB(trainerRates, month = null, year = null) {
         try {
+            // Uporabi trenutni mesec in leto, če nista podana
+            const targetMonth = month || currentTrainerRatesMonth;
+            const targetYear = year || currentTrainerRatesYear;
+            
             const updates = Object.entries(trainerRates).map(([trainerId, rate]) => ({
                 trainer_id: trainerId,
-                rate_per_session: parseFloat(rate)
+                rate_per_session: parseFloat(rate),
+                month: targetMonth,
+                year: targetYear
             }));
 
             const { error } = await supabase
                 .from('trainer_rates')
-                .upsert(updates, { onConflict: 'trainer_id' });
+                .upsert(updates, { onConflict: 'trainer_id,month,year' });
 
             if (error) throw error;
             
@@ -6577,7 +6622,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function renderTrainerRatesSettings() {
         if (!elTrainerRatesSettings) return;
         
-        const trainerRates = await getTrainerRatesFromDB();
+        const trainerRates = await getTrainerRatesFromDB(currentTrainerRatesMonth, currentTrainerRatesYear);
         
         // Sortiraj trenerje po priimku (in nato po imenu, če so priimki enaki)
         const sortedTrainers = [...trainers]
@@ -6892,10 +6937,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Funkcija za posodobitev urni postavki posameznega trenerja
     async function updateTrainerRate(trainerId, rate) {
-        const trainerRates = await getTrainerRatesFromDB();
+        const trainerRates = await getTrainerRatesFromDB(currentTrainerRatesMonth, currentTrainerRatesYear);
         trainerRates[trainerId] = parseFloat(rate);
         
-        const success = await saveTrainerRatesToDB(trainerRates);
+        const success = await saveTrainerRatesToDB(trainerRates, currentTrainerRatesMonth, currentTrainerRatesYear);
         if (success && currentSection === 'finance') {
             calculateFinanceData();
         }

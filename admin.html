@@ -601,6 +601,17 @@
         <div class="card">
           <h3>Nastavitve postavk trenerjev (na termin)</h3>
           <div class="inner">
+            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <label for="trainerRatesMonthYearInput" style="font-weight: 500;">Mesec in leto:</label>
+                <input type="month" 
+                       id="trainerRatesMonthYearInput" 
+                       style="padding: 8px; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px;">
+              </div>
+              <div id="trainerRatesMonthYearContainer" style="font-weight: 500; color: #495057;">
+                <!-- Prikaz trenutnega meseca in leta -->
+              </div>
+            </div>
             <div id="trainerRatesSettings">
               <p class="muted">Nalaganje trenerjev...</p>
             </div>
