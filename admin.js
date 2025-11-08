@@ -4752,7 +4752,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 let noteStr = '';
                 if (detail.isSubstitute) {
                     if (detail.originalTrainer) {
-                        noteStr = `<span style="color: #ff9800;">Nadomešča: ${detail.originalTrainer.first_name} ${detail.originalTrainer.last_name}</span>`;
+                        noteStr = `<span style="color: #ff9800;">${detail.originalTrainer.first_name} ${detail.originalTrainer.last_name}</span>`;
                     } else {
                         noteStr = '<span style="color: #ff9800;">Nadomestni trener</span>';
                     }
