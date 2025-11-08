@@ -588,6 +588,17 @@ document.addEventListener('DOMContentLoaded', () => {
       return isoString;
     }
     
+    // Formatira čas brez sekund (HH:MM:SS -> HH:MM)
+    function formatTimeWithoutSeconds(timeStr) {
+        if (!timeStr) return '';
+        // Če čas vsebuje sekunde, jih odstrani
+        if (timeStr.includes(':') && timeStr.split(':').length === 3) {
+            return timeStr.slice(0, 5); // Vzemi prve 5 znakov (HH:MM)
+        }
+        // Če je že v formatu HH:MM, ga vrni kot je
+        return timeStr;
+    }
+    
     function parseDate(dateStr) {
       const parts = dateStr.split(/[\s/.]/).filter(Boolean);
       if (parts.length !== 3) return null;
@@ -957,7 +968,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sortedTerms.forEach(t => {
             const option = document.createElement('option');
             option.value = t.id;
-            option.textContent = `${DAY_SHORT_NAME[t.day]} ${t.start_time}-${t.end_time}`;
+            option.textContent = `${DAY_SHORT_NAME[t.day]} ${formatTimeWithoutSeconds(t.start_time)}-${formatTimeWithoutSeconds(t.end_time)}`;
             elTermSelect.appendChild(option);
         });
     }
@@ -988,7 +999,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sortedTerms.forEach(t => {
             const option = document.createElement('option');
             option.value = t.id;
-            option.textContent = `${DAY_SHORT_NAME[t.day]} ${t.start_time}-${t.end_time}`;
+            option.textContent = `${DAY_SHORT_NAME[t.day]} ${formatTimeWithoutSeconds(t.start_time)}-${formatTimeWithoutSeconds(t.end_time)}`;
             elTermSelect.appendChild(option);
         });
     }
@@ -1056,7 +1067,7 @@ document.addEventListener('DOMContentLoaded', () => {
         unassignedTerms.forEach(t => {
             const option = document.createElement('option');
             option.value = t.id;
-            option.textContent = `${DAY_SHORT_NAME[t.day]} ${t.start_time}-${t.end_time}`;
+            option.textContent = `${DAY_SHORT_NAME[t.day]} ${formatTimeWithoutSeconds(t.start_time)}-${formatTimeWithoutSeconds(t.end_time)}`;
             elTrainerTermSelect.appendChild(option);
         });
         
@@ -1124,7 +1135,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (term) {
                         return `
                             <span class="chip" data-term-id="${termId}" data-swimmer-id="${swimmer.id}">
-                                ${DAY_SHORT_NAME[term.day]} ${term.start_time}-${term.end_time}
+                                ${DAY_SHORT_NAME[term.day]} ${formatTimeWithoutSeconds(term.start_time)}-${formatTimeWithoutSeconds(term.end_time)}
                                 <button class="remove-term-btn" onclick="removeTermFromSwimmer('${swimmer.id}', '${termId}')" title="Odstrani termin">✖</button>
                             </span>
                         `;
@@ -1210,7 +1221,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (term) {
                         return `
                             <span class="chip" data-term-id="${termId}" data-trainer-id="${trainer.id}">
-                                ${DAY_SHORT_NAME[term.day]} ${term.start_time}-${term.end_time}
+                                ${DAY_SHORT_NAME[term.day]} ${formatTimeWithoutSeconds(term.start_time)}-${formatTimeWithoutSeconds(term.end_time)}
                                 <button class="remove-term-btn" onclick="removeTermFromTrainer('${trainer.id}', '${termId}')" title="Odstrani termin">✖</button>
                             </span>
                         `;
@@ -1832,19 +1843,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 // Format čas brez sekund
-                const formatTimeDisplay = (timeStr) => {
-                    if (!timeStr) return '';
-                    // Če čas vsebuje sekunde, jih odstrani
-                    if (timeStr.includes(':') && timeStr.split(':').length === 3) {
-                        const parts = timeStr.split(':');
-                        return `${parts[0]}:${parts[1]}`;
-                    }
-                    return timeStr;
-                };
-                
                 termCard.innerHTML = `
                     <div class="term-header">
-                        <span class="term-time">${formatTimeDisplay(term.start_time)} - ${formatTimeDisplay(term.end_time)}</span>
+                        <span class="term-time">${formatTimeWithoutSeconds(term.start_time)} - ${formatTimeWithoutSeconds(term.end_time)}</span>
                         <span class="term-period">${formatDate(term.date_from)} - ${formatDate(term.date_to)}</span>
                         <span class="term-swimmer-count" style="background: #2563eb; color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: bold; white-space: nowrap;">
                             ${assignedSwimmers.length} plaval${assignedSwimmers.length === 1 ? 'ec' : assignedSwimmers.length === 2 ? 'ca' : 'cev'}
@@ -4591,8 +4592,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const dateStr = `${dayName}, ${dateObj.getDate()}. ${monthNames[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
                 
                 const trainerName = `${detail.trainer.first_name} ${detail.trainer.last_name}`;
-                const termName = detail.term.name || `Termin ${detail.term.start_time} - ${detail.term.end_time}`;
-                const timeStr = `${detail.term.start_time} - ${detail.term.end_time}`;
+                const formattedStartTime = formatTimeWithoutSeconds(detail.term.start_time);
+                const formattedEndTime = formatTimeWithoutSeconds(detail.term.end_time);
+                const termName = detail.term.name || `Termin ${formattedStartTime} - ${formattedEndTime}`;
+                const timeStr = `${formattedStartTime} - ${formattedEndTime}`;
                 const durationStr = `${detail.durationHours.toFixed(2)}h`;
                 
                 let noteStr = '';
@@ -4702,7 +4705,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             trainerNotes.forEach(note => {
                 const dateStr = formatDate(note.date);
-                const timeStr = `${DAY_SHORT_NAME[note.term.day]} ${note.term.start_time}-${note.term.end_time}`;
+                const timeStr = `${DAY_SHORT_NAME[note.term.day]} ${formatTimeWithoutSeconds(note.term.start_time)}-${formatTimeWithoutSeconds(note.term.end_time)}`;
                 
                 // Odstrani ID trenerja iz opombe (format: "Nadomešča: Ime Priimek (uuid)")
                 let displayNote = note.note || '';
@@ -6398,7 +6401,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         for (const term of sortedTerms) {
             const cost = termCosts[term.id] || 50; // Default to 50€/uro
-            const termLabel = `${DAY_SHORT_NAME[term.day]} ${term.start_time}-${term.end_time}`;
+            const termLabel = `${DAY_SHORT_NAME[term.day]} ${formatTimeWithoutSeconds(term.start_time)}-${formatTimeWithoutSeconds(term.end_time)}`;
             html += `
                 <div class="term-cost-row">
                     <label for="term-cost-${term.id}">${termLabel}:</label>
@@ -6872,7 +6875,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const termsStr = swimmer.terms && swimmer.terms.length > 0 
                     ? swimmer.terms.map(termId => {
                         const term = TERMS.find(t => t.id === termId);
-                        return term ? `${DAY_SHORT_NAME[term.day]}-${term.start_time}-${term.end_time}` : termId;
+                        return term ? `${DAY_SHORT_NAME[term.day]}-${formatTimeWithoutSeconds(term.start_time)}-${formatTimeWithoutSeconds(term.end_time)}` : termId;
                     }).join(',')
                     : '';
                 
