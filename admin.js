@@ -4579,7 +4579,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!trainerId) {
                 html += '<th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Trener</th>';
             }
-            html += '<th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Termin</th>';
             html += '<th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Čas</th>';
             html += '<th style="padding: 10px; text-align: right; border-bottom: 2px solid #ddd;">Trajanje</th>';
             html += '<th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Opomba</th>';
@@ -4594,7 +4593,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const trainerName = `${detail.trainer.first_name} ${detail.trainer.last_name}`;
                 const formattedStartTime = formatTimeWithoutSeconds(detail.term.start_time);
                 const formattedEndTime = formatTimeWithoutSeconds(detail.term.end_time);
-                const termName = detail.term.name || `Termin ${formattedStartTime} - ${formattedEndTime}`;
                 const timeStr = `${formattedStartTime} - ${formattedEndTime}`;
                 const durationStr = `${detail.durationHours.toFixed(2)}h`;
                 
@@ -4612,7 +4610,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!trainerId) {
                     html += `<td style="padding: 8px;">${trainerName}</td>`;
                 }
-                html += `<td style="padding: 8px;">${termName}</td>`;
                 html += `<td style="padding: 8px;">${timeStr}</td>`;
                 html += `<td style="padding: 8px; text-align: right;">${durationStr}</td>`;
                 html += `<td style="padding: 8px;">${noteStr}</td>`;
