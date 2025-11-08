@@ -4752,7 +4752,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 let noteStr = '';
                 if (detail.isSubstitute) {
                     if (detail.originalTrainer) {
-                        noteStr = `<span style="color: #ff9800;">${detail.originalTrainer.first_name} ${detail.originalTrainer.last_name}</span>`;
+                        noteStr = `<span style="color: #ff9800;">Nadomešča: ${detail.originalTrainer.first_name} ${detail.originalTrainer.last_name}</span>`;
                     } else {
                         noteStr = '<span style="color: #ff9800;">Nadomestni trener</span>';
                     }
@@ -4857,11 +4857,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const dateStr = formatDate(note.date);
                 const timeStr = `${DAY_SHORT_NAME[note.term.day]} ${formatTimeWithoutSeconds(note.term.start_time)}-${formatTimeWithoutSeconds(note.term.end_time)}`;
                 
-                // Odstrani ID trenerja iz opombe (format: "Nadomešča: Ime Priimek (uuid)")
+                // Odstrani ID trenerja in "Nadomešča:" iz opombe (format: "Nadomešča: Ime Priimek (uuid)")
                 let displayNote = note.note || '';
                 if (displayNote) {
                     // Odstrani UUID v oklepajih (format: (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx))
                     displayNote = displayNote.replace(/\s*\([a-f0-9-]{36}\)\s*$/i, '');
+                    // Odstrani "Nadomešča:" predpono
+                    displayNote = displayNote.replace(/^Nadomešča:\s*/i, '');
                 }
                 
                 notes += `
