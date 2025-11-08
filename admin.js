@@ -1020,10 +1020,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         sortedTrainers.forEach(t => {
-            const option = document.createElement('option');
-            option.value = t.id;
-            option.textContent = `${t.first_name} ${t.last_name}`;
-            elTrainerSelect.appendChild(option);
+                const option = document.createElement('option');
+                option.value = t.id;
+                option.textContent = `${t.first_name} ${t.last_name}`;
+                elTrainerSelect.appendChild(option);
         });
 
         // Počisti select za termine pri trenerjih in prikaži nedodeljene termine
@@ -4330,6 +4330,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
+                    // Preveri, ali je termin deaktiviran za ta datum
+                    const termStatusForDate = getTermStatus(d, term.id);
+                    if (termStatusForDate.status === "inactive") {
+                        return; // Preskoči deaktivirane termine za ta datum
+                    }
+                    
                     // Poišči trenerje za ta termin (redno dodeljeni)
                     const trainersForTerm = trainers.filter(t => 
                         t.terms && t.terms.includes(term.id) && !t.is_deleted
@@ -4412,7 +4418,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     
                     // Dodaj nadomestne trenerje iz trainer_attendance (ki niso redno dodeljeni)
-                    // SAMO če je termin aktiven
+                    // SAMO če je termin aktiven (termStatusForDate je že preverjen zgoraj)
                     if (activeTermIds.has(term.id) && trainerAttendance[isoDate]?.[term.id]) {
                         Object.keys(trainerAttendance[isoDate][term.id]).forEach(trainerId => {
                             // Preveri, če trener ni že vključen kot redno dodeljen
@@ -4479,7 +4485,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 // Če so priimki enaki, sortiraj po imenu
                 return (a.trainer.first_name || '').localeCompare(b.trainer.first_name || '', 'sl');
-            });
+        });
         
         // Prikaži rezultate
         sortedTrainerStats.forEach(stat => {
