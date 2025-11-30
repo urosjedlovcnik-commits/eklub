@@ -337,20 +337,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Preverimo, ali so podatki sploh naloženi
         if (!attendance || Object.keys(attendance).length === 0) {
           // Če podatki še niso naloženi, vrnimo 'unfilled' in ne cache-irajmo
-          console.warn(`[DEBUG getAttendanceStatus] Podatki še niso naloženi za ${ymd} ${termId}`);
           return 'unfilled';
         }
         
         // Vse vnesene prisotnosti za ta datum in termin
         const termAtt = attendance[ymd]?.[termId] || {};
-        
-        // Debug: preverimo, ali so podatki za 26/11 in 27/11
-        if (ymd === '2025-11-26' || ymd === '2025-11-27') {
-          console.log(`[DEBUG getAttendanceStatus] ${ymd} ${termId}:`);
-          console.log(`  - attendance[${ymd}] obstaja:`, !!attendance[ymd]);
-          console.log(`  - attendance[${ymd}][${termId}] obstaja:`, !!attendance[ymd]?.[termId]);
-          console.log(`  - termAtt ima ${Object.keys(termAtt).length} plavalcev:`, Object.keys(termAtt));
-        }
         
         // Vedno uporabimo trenutno dodeljene plavalce (ne glede na to, ali imajo vneseno prisotnost ali ne)
         // To zagotovi, da lahko pravilno določimo partial status (delno izpolnjene treninge)
@@ -654,11 +645,6 @@ document.addEventListener('DOMContentLoaded', () => {
         attendance[ymd][row.term_id][row.swimmer_id] = row.status;
       });
       
-      // Debug: preverimo, ali so podatki pravilno shranjeni za 26/11 in 27/11
-      if (ymd === '2025-11-26' || ymd === '2025-11-27') {
-        const termIds = Object.keys(attendance[ymd]);
-        console.log(`[DEBUG refreshDayData] ${ymd}: shranjeno ${attData.length} vnosov za ${termIds.length} terminov:`, termIds);
-      }
       
       // Osveži cache za vse termine tega dneva, da se spremembe takoj odražajo
       if (attData && attData.length > 0) {
@@ -717,11 +703,6 @@ document.addEventListener('DOMContentLoaded', () => {
       // Dopolnimo obstoječe podatke z novimi (ne prepišemo celotnega objekta)
       Object.assign(attendance[ymd][termId], termAtt);
       
-      // Debug: preverimo, ali so podatki pravilno shranjeni za 26/11 in 27/11
-      if (ymd === '2025-11-26' || ymd === '2025-11-27') {
-        console.log(`[DEBUG openEvent] ${ymd} ${termId}: shranjeno ${Object.keys(attendance[ymd][termId]).length} plavalcev`);
-        console.log(`[DEBUG openEvent] ${ymd} ima sedaj ${Object.keys(attendance[ymd]).length} terminov:`, Object.keys(attendance[ymd]));
-      }
       
       // Osveži cache za ta termin, da se spremembe takoj odražajo
       clearAttendanceCacheForTerm(date, termId);
@@ -1839,23 +1820,6 @@ document.addEventListener('DOMContentLoaded', () => {
               newAttendance[date][row.term_id][row.swimmer_id] = row.status;
             });
             
-            // Debug: preverimo, ali so podatki za 26/11 in 27/11 pravilno shranjeni
-            if (newAttendance['2025-11-26']) {
-              console.log(`[DEBUG loadAttendance] 2025-11-26 ima ${Object.keys(newAttendance['2025-11-26']).length} terminov:`, Object.keys(newAttendance['2025-11-26']));
-              // Preverimo, ali so podatki za sre-20:00-21:00 v bazi
-              const rowsForDate = data.filter(row => row.date === '2025-11-26');
-              console.log(`[DEBUG loadAttendance] V bazi je ${rowsForDate.length} vnosov za 2025-11-26`);
-              const termIds = [...new Set(rowsForDate.map(row => row.term_id))];
-              console.log(`[DEBUG loadAttendance] Termini v bazi za 2025-11-26:`, termIds);
-            }
-            if (newAttendance['2025-11-27']) {
-              console.log(`[DEBUG loadAttendance] 2025-11-27 ima ${Object.keys(newAttendance['2025-11-27']).length} terminov:`, Object.keys(newAttendance['2025-11-27']));
-              // Preverimo, ali so podatki za čet-07:15-08:15 v bazi
-              const rowsForDate = data.filter(row => row.date === '2025-11-27');
-              console.log(`[DEBUG loadAttendance] V bazi je ${rowsForDate.length} vnosov za 2025-11-27`);
-              const termIds = [...new Set(rowsForDate.map(row => row.term_id))];
-              console.log(`[DEBUG loadAttendance] Termini v bazi za 2025-11-27:`, termIds);
-            }
             
             // Nadomestimo celoten attendance objekt z novimi podatki
             attendance = newAttendance;
@@ -1977,17 +1941,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       
       // Renderaj mesec PO tem, ko so podatki naloženi in cache osvežen
-      // Preverimo, ali so podatki pravilno naloženi
-      console.log(`[DEBUG loadAllData] Po nalaganju: attendance ima ${Object.keys(attendance).length} dni`);
-      if (Object.keys(attendance).length > 0) {
-        const sampleDate = Object.keys(attendance)[0];
-        console.log(`[DEBUG loadAllData] Primer datum ${sampleDate} ima ${Object.keys(attendance[sampleDate]).length} terminov`);
-      }
-      
-      // Uporabimo setTimeout, da zagotovimo, da se podatki pravilno shranijo
-      setTimeout(() => {
-        renderMonth();
-      }, 100);
+      renderMonth();
     }
 
 
