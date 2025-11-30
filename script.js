@@ -463,18 +463,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const y=viewDate.getFullYear(), m=viewDate.getMonth();
       elMonthLabel.textContent = new Date(y,m,1).toLocaleDateString("sl-SI", {month:"long",year:"numeric"});
       
-      // Osveži cache za vse termine v tem mesecu, da se uporabljajo najnovejši podatki
-      // To zagotovi, da se barvno kodiranje pravilno osveži
-      const monthStart = new Date(y, m, 1);
-      const monthEnd = new Date(y, m + 1, 0);
-      for (let d = 1; d <= monthEnd.getDate(); d++) {
-        const date = new Date(y, m, d);
-        const todays = getTermsForDate(date);
-        todays.forEach(t => {
-          clearAttendanceCacheForTerm(date, t.id);
-        });
-      }
-      
       // Ustvari fragment za boljšo performanco
       const fragment = document.createDocumentFragment();
       
@@ -1789,6 +1777,10 @@ document.addEventListener('DOMContentLoaded', () => {
           const { data, error } = await supabase.from('attendance').select('*');
           if (error) console.error('Napaka pri nalaganju prisotnosti:', error);
           else {
+            // Pomembno: inicializiraj attendance kot prazen objekt, če še ni
+            if (!attendance) attendance = {};
+            
+            // Shranimo vse podatke iz baze
             attendance = data.reduce((acc, row) => {
               const date = row.date;
               if (!acc[date]) acc[date] = {};
@@ -1796,6 +1788,20 @@ document.addEventListener('DOMContentLoaded', () => {
               acc[date][row.term_id][row.swimmer_id] = row.status;
               return acc;
           }, {});
+          
+          // Debug: preverimo, koliko podatkov smo naložili
+          if (data && data.length > 0) {
+            const uniqueDates = [...new Set(data.map(row => row.date))];
+            const uniqueTerms = [...new Set(data.map(row => `${row.date}-${row.term_id}`))];
+            console.log(`[DEBUG loadAttendance] Naloženo ${data.length} vnosov za ${uniqueDates.length} dni, ${uniqueTerms.length} terminov`);
+            
+            // Preverimo, ali so podatki pravilno shranjeni
+            const sampleDate = uniqueDates[0];
+            if (sampleDate && attendance[sampleDate]) {
+              const termIds = Object.keys(attendance[sampleDate]);
+              console.log(`[DEBUG loadAttendance] Primer: ${sampleDate} ima ${termIds.length} terminov`);
+            }
+          }
           }
         } catch (error) {
           console.error('Napaka pri nalaganju prisotnosti:', error);
@@ -1891,6 +1897,23 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadAllData() {
       await Promise.all([loadTerms(), loadSwimmers(), loadTrainers(), loadAttendance(), loadTrainerAttendance(), loadTermStatus()]);
       clearCache(); // Počisti cache ob osvežitvi podatkov
+      
+      // Osveži cache za vse termine v trenutnem mesecu PO tem, ko so podatki naloženi
+      // To zagotovi, da se barvno kodiranje pravilno prikaže ob začetku
+      const currentMonth = viewDate.getMonth();
+      const currentYear = viewDate.getFullYear();
+      const monthStart = new Date(currentYear, currentMonth, 1);
+      const monthEnd = new Date(currentYear, currentMonth + 1, 0);
+      
+      for (let d = 1; d <= monthEnd.getDate(); d++) {
+        const date = new Date(currentYear, currentMonth, d);
+        const todays = getTermsForDate(date);
+        todays.forEach(t => {
+          clearAttendanceCacheForTerm(date, t.id);
+        });
+      }
+      
+      // Renderaj mesec PO tem, ko so podatki naloženi in cache osvežen
       renderMonth();
     }
 
