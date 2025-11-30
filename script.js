@@ -1797,7 +1797,11 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         // Uporaba Supabase (ko bo CORS problem rešen)
         try {
-          const { data, error } = await supabase.from('attendance').select('*');
+          // Naloži vse podatke iz baze - brez limita
+          const { data, error } = await supabase
+            .from('attendance')
+            .select('*')
+            .limit(10000); // Nastavimo visok limit, da zagotovimo, da se naložijo vsi podatki
           if (error) console.error('Napaka pri nalaganju prisotnosti:', error);
           else {
             // Pomembno: inicializiraj attendance kot prazen objekt, če še ni
