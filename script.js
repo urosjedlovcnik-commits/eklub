@@ -337,11 +337,18 @@ document.addEventListener('DOMContentLoaded', () => {
         // Vse vnesene prisotnosti za ta datum in termin
         const termAtt = attendance[ymd]?.[termId] || {};
         
-        // Debug: preverimo, ali so podatki v attendance objektu
-        if (!attendance[ymd] || !attendance[ymd][termId]) {
-          // Če ni podatkov, preverimo, ali sploh obstaja attendance objekt
+        // Debug: preverimo, ali so podatki v attendance objektu (samo za prve nekaj klicev)
+        if (attendanceStatusFunctionCache.size < 5) {
           if (!attendance || Object.keys(attendance).length === 0) {
-            console.warn(`[DEBUG getAttendanceStatus] attendance objekt je prazen za ${ymd} ${termId}`);
+            console.warn(`[DEBUG getAttendanceStatus] attendance objekt je prazen ali ne obstaja`);
+          } else if (!attendance[ymd]) {
+            console.warn(`[DEBUG getAttendanceStatus] Ni podatkov za datum ${ymd}, vendar ima attendance ${Object.keys(attendance).length} dni`);
+          } else if (!attendance[ymd][termId]) {
+            const termIds = Object.keys(attendance[ymd]);
+            console.warn(`[DEBUG getAttendanceStatus] Ni podatkov za termin ${termId} na ${ymd}, vendar ima ta dan ${termIds.length} terminov: ${termIds.join(', ')}`);
+          } else {
+            const swimmersInTerm = Object.keys(termAtt).length;
+            console.log(`[DEBUG getAttendanceStatus] ${ymd} ${termId}: ${swimmersInTerm} plavalcev v termAtt`);
           }
         }
         
