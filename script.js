@@ -337,27 +337,18 @@ document.addEventListener('DOMContentLoaded', () => {
         // Vse vnesene prisotnosti za ta datum in termin
         const termAtt = attendance[ymd]?.[termId] || {};
         
-        // Debug: preverimo, ali so podatki v attendance objektu (samo za prve nekaj klicev)
-        if (attendanceStatusFunctionCache.size < 5) {
-          if (!attendance || Object.keys(attendance).length === 0) {
-            console.warn(`[DEBUG getAttendanceStatus] attendance objekt je prazen ali ne obstaja`);
-          } else if (!attendance[ymd]) {
-            console.warn(`[DEBUG getAttendanceStatus] Ni podatkov za datum ${ymd}, vendar ima attendance ${Object.keys(attendance).length} dni`);
-          } else if (!attendance[ymd][termId]) {
-            const termIds = Object.keys(attendance[ymd]);
-            console.warn(`[DEBUG getAttendanceStatus] Ni podatkov za termin ${termId} na ${ymd}, vendar ima ta dan ${termIds.length} terminov: ${termIds.join(', ')}`);
-          } else {
-            const swimmersInTerm = Object.keys(termAtt).length;
-            console.log(`[DEBUG getAttendanceStatus] ${ymd} ${termId}: ${swimmersInTerm} plavalcev v termAtt`);
-          }
-        }
-        
         // Vedno uporabimo trenutno dodeljene plavalce (ne glede na to, ali imajo vneseno prisotnost ali ne)
         // To zagotovi, da lahko pravilno določimo partial status (delno izpolnjene treninge)
         let assignedSwimmers;
         let assignedSwimmerIds;
         assignedSwimmers = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted);
         assignedSwimmerIds = assignedSwimmers.map(s => s.id);
+        
+        // Debug: preverimo, ali so podatki v attendance objektu (samo za prve nekaj klicev)
+        if (attendanceStatusFunctionCache.size < 10) {
+          const swimmersInTerm = Object.keys(termAtt).length;
+          console.log(`[DEBUG getAttendanceStatus] ${ymd} ${termId}: ${swimmersInTerm} plavalcev v termAtt, ${assignedSwimmerIds.length} dodeljenih`);
+        }
         
         // Preštejemo, koliko trenutno dodeljenih plavalcev ima vneseno prisotnost
         // POPRAVEK: Preverimo tudi vrednost statusa, ne samo obstoj ključa
@@ -388,6 +379,10 @@ document.addEventListener('DOMContentLoaded', () => {
             result = 'partial'; // Vsaj ena, a ne vsa prisotnost je vnesena
         }
         
+        // Debug: preverimo, kakšen status se vrača (samo za prve nekaj klicev)
+        if (attendanceStatusFunctionCache.size < 10) {
+          console.log(`[DEBUG getAttendanceStatus] ${ymd} ${termId}: ${markedAssignedSwimmersCount}/${totalAssignedCount} -> ${result}`);
+        }
         
         attendanceStatusFunctionCache.set(cacheKey, result);
         return result;
