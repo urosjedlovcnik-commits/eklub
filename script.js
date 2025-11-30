@@ -337,12 +337,21 @@ document.addEventListener('DOMContentLoaded', () => {
         // Vse vnesene prisotnosti za ta datum in termin
         const termAtt = attendance[ymd]?.[termId] || {};
         
+        // Debug: preverimo, koliko podatkov je v termAtt
+        const termAttCount = Object.keys(termAtt).length;
+        
         // Vedno uporabimo trenutno dodeljene plavalce (ne glede na to, ali imajo vneseno prisotnost ali ne)
         // To zagotovi, da lahko pravilno določimo partial status (delno izpolnjene treninge)
         let assignedSwimmers;
         let assignedSwimmerIds;
         assignedSwimmers = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted);
         assignedSwimmerIds = assignedSwimmers.map(s => s.id);
+        
+        // Debug: preverimo, ali so podatki v attendance objektu
+        if (termAttCount === 0 && assignedSwimmerIds.length > 0) {
+            console.log(`[DEBUG getAttendanceStatus] ${ymd} ${termId}: termAtt je prazen, vendar je ${assignedSwimmerIds.length} dodeljenih plavalcev`);
+            console.log(`[DEBUG getAttendanceStatus] attendance[${ymd}]:`, attendance[ymd]);
+        }
         
         // Preštejemo, koliko trenutno dodeljenih plavalcev ima vneseno prisotnost
         // POPRAVEK: Preverimo tudi vrednost statusa, ne samo obstoj ključa
@@ -682,13 +691,14 @@ document.addEventListener('DOMContentLoaded', () => {
         attendance[ymd][row.term_id][row.swimmer_id] = row.status;
       });
       
-      // Debug: preverimo, koliko podatkov smo naložili
+      // Debug: preverimo, koliko podatkov smo naložili in shranili
       if (attData && attData.length > 0) {
         const uniqueTermIds = [...new Set(attData.map(row => row.term_id))];
         console.log(`[DEBUG refreshDayData] ${ymd}: Naloženo ${attData.length} vnosov za ${uniqueTermIds.length} terminov`);
         uniqueTermIds.forEach(termId => {
           const termData = attData.filter(row => row.term_id === termId);
-          console.log(`[DEBUG refreshDayData] ${ymd} ${termId}: ${termData.length} plavalcev`);
+          const savedCount = attendance[ymd]?.[termId] ? Object.keys(attendance[ymd][termId]).length : 0;
+          console.log(`[DEBUG refreshDayData] ${ymd} ${termId}: ${termData.length} plavalcev naloženih, ${savedCount} shranjenih v attendance`);
           clearAttendanceCacheForTerm(date, termId);
         });
       }
@@ -1632,7 +1642,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function openModal(modalEl){ modalEl.style.display = "flex"; modalEl.setAttribute("aria-hidden", "false"); }
     function closeModal(modalEl){ modalEl.style.display = "none"; modalEl.setAttribute("aria-hidden", "true"); }
 
-    elCloseModalBtn.addEventListener("click", ()=>{ 
+    elCloseModalBtn.addEventListener("click", async ()=>{ 
+      // Osveži podatke za dan, ko se zapre modal, da se barvno kodiranje posodobi
+      if (modalCtx.date && modalCtx.termId) {
+        await refreshDayData(modalCtx.date);
+        clearAttendanceCacheForTerm(modalCtx.date, modalCtx.termId);
+      }
       closeModal(elModal); 
       renderMonth();
     });
@@ -1701,8 +1716,13 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    elModal.addEventListener("click", (e)=>{
+    elModal.addEventListener("click", async (e)=>{
       if(e.target === elModal){
+        // Osveži podatke za dan, ko se zapre modal, da se barvno kodiranje posodobi
+        if (modalCtx.date && modalCtx.termId) {
+          await refreshDayData(modalCtx.date);
+          clearAttendanceCacheForTerm(modalCtx.date, modalCtx.termId);
+        }
         closeModal(elModal);
         renderMonth();
       }
