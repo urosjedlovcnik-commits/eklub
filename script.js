@@ -507,22 +507,17 @@ document.addEventListener('DOMContentLoaded', () => {
           const e = document.createElement("div");
           e.className = "event";
 
-          // Optimizirano barvno kodiranje
-          // Preveri, ali je trening že potekel (glede na datum IN čas za današnje treninge)
-          const isTrainingFinished = isTrainingPast(date, t.start_time);
-          if (isTrainingFinished) {
-            const statusCacheKey = `${iso(date)}-${t.id}`;
-            let status = attendanceStatusCache.get(statusCacheKey);
-            if (!status) {
-              // POPRAVEK: Vedno preverimo status za pretekle termine, tudi če ni vnesene prisotnosti
-              // Da bi pretekli termini brez prisotnosti bili rdeči (unfilled)
-              status = getAttendanceStatus(date, t.id);
-              attendanceStatusCache.set(statusCacheKey, status);
-            }
-            if (status) {
-              e.classList.add(status);
-            }
+        // Optimizirano barvno kodiranje
+        // Preveri, ali je trening že potekel (glede na datum IN čas za današnje treninge)
+        const isTrainingFinished = isTrainingPast(date, t.start_time);
+        if (isTrainingFinished) {
+          // Vedno uporabimo getAttendanceStatus, ki uporablja svoj lasten cache
+          // To zagotovi, da se uporabljajo najnovejši podatki
+          const status = getAttendanceStatus(date, t.id);
+          if (status) {
+            e.classList.add(status);
           }
+        }
           
           if (isInactive(date, t.id)) {
               e.classList.add("disabled");
