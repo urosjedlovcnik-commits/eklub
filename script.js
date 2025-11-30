@@ -344,11 +344,6 @@ document.addEventListener('DOMContentLoaded', () => {
         assignedSwimmers = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted);
         assignedSwimmerIds = assignedSwimmers.map(s => s.id);
         
-        // Debug: preverimo, ali so podatki v attendance objektu (samo za prve nekaj klicev)
-        if (attendanceStatusFunctionCache.size < 10) {
-          const swimmersInTerm = Object.keys(termAtt).length;
-          console.log(`[DEBUG getAttendanceStatus] ${ymd} ${termId}: ${swimmersInTerm} plavalcev v termAtt, ${assignedSwimmerIds.length} dodeljenih`);
-        }
         
         // Preštejemo, koliko trenutno dodeljenih plavalcev ima vneseno prisotnost
         // POPRAVEK: Preverimo tudi vrednost statusa, ne samo obstoj ključa
@@ -379,10 +374,6 @@ document.addEventListener('DOMContentLoaded', () => {
             result = 'partial'; // Vsaj ena, a ne vsa prisotnost je vnesena
         }
         
-        // Debug: preverimo, kakšen status se vrača (samo za prve nekaj klicev)
-        if (attendanceStatusFunctionCache.size < 10) {
-          console.log(`[DEBUG getAttendanceStatus] ${ymd} ${termId}: ${markedAssignedSwimmersCount}/${totalAssignedCount} -> ${result}`);
-        }
         
         attendanceStatusFunctionCache.set(cacheKey, result);
         return result;
@@ -518,17 +509,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const status = getAttendanceStatus(date, t.id);
             if (status) {
               e.classList.add(status);
-              // Debug: preverimo, ali se status pravilno doda (samo za 26/11 in 27/11)
-              const ymd = iso(date);
-              if (ymd === '2025-11-26' || ymd === '2025-11-27') {
-                console.log(`[DEBUG renderMonth] ${ymd} ${t.id}: dodan status ${status}, element ima razrede: ${e.className}`);
-              }
-            } else {
-              // Debug: preverimo, zakaj se status ne doda
-              const ymd = iso(date);
-              if (ymd === '2025-11-26' || ymd === '2025-11-27') {
-                console.warn(`[DEBUG renderMonth] ${ymd} ${t.id}: status je ${status}, zato se ne doda razred`);
-              }
             }
           }
           
@@ -1808,27 +1788,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // Nadomestimo celoten attendance objekt z novimi podatki
             attendance = newAttendance;
           
-          // Debug: preverimo, koliko podatkov smo naložili in shranili
-          if (data && data.length > 0) {
-            const uniqueDates = [...new Set(data.map(row => row.date))];
-            const uniqueTerms = [...new Set(data.map(row => `${row.date}-${row.term_id}`))];
-            console.log(`[DEBUG loadAttendance] Naloženo ${data.length} vnosov za ${uniqueDates.length} dni, ${uniqueTerms.length} terminov`);
-            
-            // Preverimo, ali so podatki pravilno shranjeni
-            const sampleDate = uniqueDates[0];
-            if (sampleDate && attendance[sampleDate]) {
-              const termIds = Object.keys(attendance[sampleDate]);
-              const totalSwimmers = Object.values(attendance[sampleDate]).reduce((sum, term) => sum + Object.keys(term).length, 0);
-              console.log(`[DEBUG loadAttendance] Primer: ${sampleDate} ima ${termIds.length} terminov, ${totalSwimmers} plavalcev`);
-              
-              // Preverimo, ali so podatki pravilno shranjeni za prvi termin
-              if (termIds.length > 0) {
-                const firstTermId = termIds[0];
-                const swimmersInTerm = Object.keys(attendance[sampleDate][firstTermId]).length;
-                console.log(`[DEBUG loadAttendance] Primer termin ${firstTermId}: ${swimmersInTerm} plavalcev`);
-              }
-            }
-          }
           }
         } catch (error) {
           console.error('Napaka pri nalaganju prisotnosti:', error);
@@ -1935,8 +1894,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const monthStart = new Date(currentYear, currentMonth, 1);
       const monthEnd = new Date(currentYear, currentMonth + 1, 0);
       
-      // Preverimo, ali so podatki pravilno naloženi
-      console.log(`[DEBUG loadAllData] attendance objekt ima ${Object.keys(attendance).length} dni`);
       
       for (let d = 1; d <= monthEnd.getDate(); d++) {
         const date = new Date(currentYear, currentMonth, d);
