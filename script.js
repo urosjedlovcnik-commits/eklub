@@ -337,6 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Preverimo, ali so podatki sploh naloženi
         if (!attendance || Object.keys(attendance).length === 0) {
           // Če podatki še niso naloženi, vrnimo 'unfilled' in ne cache-irajmo
+          console.warn(`[DEBUG getAttendanceStatus] Podatki še niso naloženi za ${ymd} ${termId}`);
           return 'unfilled';
         }
         
@@ -1911,10 +1912,17 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       
       // Renderaj mesec PO tem, ko so podatki naloženi in cache osvežen
+      // Preverimo, ali so podatki pravilno naloženi
+      console.log(`[DEBUG loadAllData] Po nalaganju: attendance ima ${Object.keys(attendance).length} dni`);
+      if (Object.keys(attendance).length > 0) {
+        const sampleDate = Object.keys(attendance)[0];
+        console.log(`[DEBUG loadAllData] Primer datum ${sampleDate} ima ${Object.keys(attendance[sampleDate]).length} terminov`);
+      }
+      
       // Uporabimo setTimeout, da zagotovimo, da se podatki pravilno shranijo
       setTimeout(() => {
         renderMonth();
-      }, 0);
+      }, 100);
     }
 
 
