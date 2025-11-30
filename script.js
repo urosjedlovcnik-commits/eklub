@@ -334,6 +334,12 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const ymd = iso(date);
         
+        // Preverimo, ali so podatki sploh naloženi
+        if (!attendance || Object.keys(attendance).length === 0) {
+          // Če podatki še niso naloženi, vrnimo 'unfilled' in ne cache-irajmo
+          return 'unfilled';
+        }
+        
         // Vse vnesene prisotnosti za ta datum in termin
         const termAtt = attendance[ymd]?.[termId] || {};
         
@@ -1894,7 +1900,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const monthStart = new Date(currentYear, currentMonth, 1);
       const monthEnd = new Date(currentYear, currentMonth + 1, 0);
       
-      
+      // Pomembno: počakajmo, da se podatki pravilno shranijo v attendance objekt
+      // Nato osvežimo cache za vse termine
       for (let d = 1; d <= monthEnd.getDate(); d++) {
         const date = new Date(currentYear, currentMonth, d);
         const todays = getTermsForDate(date);
@@ -1904,7 +1911,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       
       // Renderaj mesec PO tem, ko so podatki naloženi in cache osvežen
-      renderMonth();
+      // Uporabimo setTimeout, da zagotovimo, da se podatki pravilno shranijo
+      setTimeout(() => {
+        renderMonth();
+      }, 0);
     }
 
 
