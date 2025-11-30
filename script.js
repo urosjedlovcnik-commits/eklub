@@ -337,21 +337,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Vse vnesene prisotnosti za ta datum in termin
         const termAtt = attendance[ymd]?.[termId] || {};
         
-        // Debug: preverimo, koliko podatkov je v termAtt
-        const termAttCount = Object.keys(termAtt).length;
-        
         // Vedno uporabimo trenutno dodeljene plavalce (ne glede na to, ali imajo vneseno prisotnost ali ne)
         // To zagotovi, da lahko pravilno določimo partial status (delno izpolnjene treninge)
         let assignedSwimmers;
         let assignedSwimmerIds;
         assignedSwimmers = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted);
         assignedSwimmerIds = assignedSwimmers.map(s => s.id);
-        
-        // Debug: preverimo, ali so podatki v attendance objektu
-        if (termAttCount === 0 && assignedSwimmerIds.length > 0) {
-            console.log(`[DEBUG getAttendanceStatus] ${ymd} ${termId}: termAtt je prazen, vendar je ${assignedSwimmerIds.length} dodeljenih plavalcev`);
-            console.log(`[DEBUG getAttendanceStatus] attendance[${ymd}]:`, attendance[ymd]);
-        }
         
         // Preštejemo, koliko trenutno dodeljenih plavalcev ima vneseno prisotnost
         // POPRAVEK: Preverimo tudi vrednost statusa, ne samo obstoj ključa
@@ -382,33 +373,6 @@ document.addEventListener('DOMContentLoaded', () => {
             result = 'partial'; // Vsaj ena, a ne vsa prisotnost je vnesena
         }
         
-        // Debug logging (lahko odstranimo kasneje)
-        if (totalAssignedCount > 0 && markedAssignedSwimmersCount !== totalAssignedCount) {
-            console.log(`[DEBUG] ${ymd} ${termId}: ${markedAssignedSwimmersCount}/${totalAssignedCount} plavalcev ima vneseno prisotnost, status: ${result}`);
-            console.log(`[DEBUG] termAtt:`, termAtt);
-            console.log(`[DEBUG] assignedSwimmerIds:`, assignedSwimmerIds);
-            
-            // Poiščimo plavalce, ki nimajo vnesene prisotnosti
-            const missingSwimmers = assignedSwimmerIds.filter(id => {
-                const status = termAtt[id];
-                const isValidStatus = status !== null && 
-                                      status !== undefined && 
-                                      (status === true || status === false || 
-                                       status === 'true' || status === 'false' ||
-                                       status === 1 || status === 0);
-                return !isValidStatus;
-            });
-            
-            if (missingSwimmers.length > 0) {
-                console.log(`[DEBUG] Plavalci brez vnesene prisotnosti (${missingSwimmers.length}):`, missingSwimmers);
-                // Poiščimo imena plavalcev
-                const missingNames = missingSwimmers.map(id => {
-                    const swimmer = swimmers.find(s => s.id === id);
-                    return swimmer ? `${swimmer.first_name} ${swimmer.last_name}` : id;
-                });
-                console.log(`[DEBUG] Imena plavalcev brez prisotnosti:`, missingNames);
-            }
-        }
         
         attendanceStatusFunctionCache.set(cacheKey, result);
         return result;
@@ -691,14 +655,10 @@ document.addEventListener('DOMContentLoaded', () => {
         attendance[ymd][row.term_id][row.swimmer_id] = row.status;
       });
       
-      // Debug: preverimo, koliko podatkov smo naložili in shranili
+      // Osveži cache za vse termine tega dneva, da se spremembe takoj odražajo
       if (attData && attData.length > 0) {
         const uniqueTermIds = [...new Set(attData.map(row => row.term_id))];
-        console.log(`[DEBUG refreshDayData] ${ymd}: Naloženo ${attData.length} vnosov za ${uniqueTermIds.length} terminov`);
         uniqueTermIds.forEach(termId => {
-          const termData = attData.filter(row => row.term_id === termId);
-          const savedCount = attendance[ymd]?.[termId] ? Object.keys(attendance[ymd][termId]).length : 0;
-          console.log(`[DEBUG refreshDayData] ${ymd} ${termId}: ${termData.length} plavalcev naloženih, ${savedCount} shranjenih v attendance`);
           clearAttendanceCacheForTerm(date, termId);
         });
       }
