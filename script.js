@@ -344,6 +344,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // Vse vnesene prisotnosti za ta datum in termin
         const termAtt = attendance[ymd]?.[termId] || {};
         
+        // Debug: preverimo, ali so podatki za 26/11 in 27/11
+        if (ymd === '2025-11-26' || ymd === '2025-11-27') {
+          console.log(`[DEBUG getAttendanceStatus] ${ymd} ${termId}:`);
+          console.log(`  - attendance[${ymd}] obstaja:`, !!attendance[ymd]);
+          console.log(`  - attendance[${ymd}][${termId}] obstaja:`, !!attendance[ymd]?.[termId]);
+          console.log(`  - termAtt ima ${Object.keys(termAtt).length} plavalcev:`, Object.keys(termAtt));
+        }
+        
         // Vedno uporabimo trenutno dodeljene plavalce (ne glede na to, ali imajo vneseno prisotnost ali ne)
         // To zagotovi, da lahko pravilno določimo partial status (delno izpolnjene treninge)
         let assignedSwimmers;
