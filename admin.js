@@ -2396,6 +2396,79 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+    
+    // Event listenerji za modal odsotnosti trenerjev
+    const elTrainerAbsenceModal = document.getElementById('trainerAbsenceModal');
+    const elCloseTrainerAbsenceModalBtn = document.getElementById('closeTrainerAbsenceModalBtn');
+    
+    if (elCloseTrainerAbsenceModalBtn && elTrainerAbsenceModal) {
+        elCloseTrainerAbsenceModalBtn.addEventListener('click', () => {
+            elTrainerAbsenceModal.style.display = 'none';
+            elTrainerAbsenceModal.setAttribute('aria-hidden', 'true');
+        });
+        
+        // Zapri modal ob kliku zunaj
+        elTrainerAbsenceModal.addEventListener('click', (e) => {
+            if (e.target === elTrainerAbsenceModal) {
+                elTrainerAbsenceModal.style.display = 'none';
+                elTrainerAbsenceModal.setAttribute('aria-hidden', 'true');
+            }
+        });
+    }
+    
+    // Funkcija za prikaz modala z datumi odsotnosti
+    function showTrainerAbsenceModal(trainerId, trainerName) {
+        if (!window.currentTrainerStats || !window.currentTrainerStats[trainerId]) {
+            alert('Podatki o odsotnostih niso na voljo');
+            return;
+        }
+        
+        const trainerStat = window.currentTrainerStats[trainerId];
+        const absentDates = trainerStat.absentDates || [];
+        
+        // Sortiraj datume
+        absentDates.sort((a, b) => new Date(a) - new Date(b));
+        
+        // Formatiraj datume
+        const formatDate = (dateStr) => {
+            const date = new Date(dateStr);
+            const day = date.getDate();
+            const month = date.getMonth() + 1;
+            const year = date.getFullYear();
+            const dayNames = ['Nedelja', 'Ponedeljek', 'Torek', 'Sreda', 'Četrtek', 'Petek', 'Sobota'];
+            const dayName = dayNames[date.getDay()];
+            return `${day}. ${month}. ${year} (${dayName})`;
+        };
+        
+        // Ustvari vsebino modala
+        let content = `<h4>Odsotnosti: ${trainerName}</h4>`;
+        
+        if (absentDates.length === 0) {
+            content += '<p class="muted">Ni odsotnosti</p>';
+        } else {
+            content += '<ul style="list-style-type: none; padding: 0;">';
+            absentDates.forEach(date => {
+                content += `<li style="padding: 8px; border-bottom: 1px solid #eee;">${formatDate(date)}</li>`;
+            });
+            content += '</ul>';
+        }
+        
+        // Prikaži modal
+        const elTrainerAbsenceContent = document.getElementById('trainerAbsenceContent');
+        const elTrainerAbsenceModalTitle = document.getElementById('trainerAbsenceModalTitle');
+        
+        if (elTrainerAbsenceContent) {
+            elTrainerAbsenceContent.innerHTML = content;
+        }
+        if (elTrainerAbsenceModalTitle) {
+            elTrainerAbsenceModalTitle.textContent = `Datumi odsotnosti - ${trainerName}`;
+        }
+        
+        if (elTrainerAbsenceModal) {
+            elTrainerAbsenceModal.style.display = 'flex';
+            elTrainerAbsenceModal.setAttribute('aria-hidden', 'false');
+        }
+    }
 
     // Zapri modal ob kliku zunaj
     window.addEventListener('click', (e) => {
@@ -4211,7 +4284,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 trainer: trainer,
                                 total: 0,
                                 present: 0,
-                                absent: 0
+                                absent: 0,
+                                absentDates: [] // Shrani datume odsotnosti
                             };
                         }
                         
@@ -4224,6 +4298,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                 trainerStats[key].present++;
                             } else if (trainerAtt.present === false) {
                                 trainerStats[key].absent++;
+                                // Shrani datum odsotnosti
+                                if (!trainerStats[key].absentDates.includes(isoDate)) {
+                                    trainerStats[key].absentDates.push(isoDate);
+                                }
                                 
                                 // Preveri, če je v opombi omenjen nadomestni trener
                                 if (trainerAtt.note && trainerAtt.note.trim()) {
@@ -4256,7 +4334,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                                     trainer: substituteTrainer,
                                                     total: 0,
                                                     present: 0,
-                                                    absent: 0
+                                                    absent: 0,
+                                                    absentDates: [] // Shrani datume odsotnosti
                                                 };
                                             }
                                             
@@ -4315,7 +4394,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                                 trainer: trainer,
                                                 total: 0,
                                                 present: 0,
-                                                absent: 0
+                                                absent: 0,
+                                                absentDates: [] // Shrani datume odsotnosti
                                             };
                                         }
                                         
@@ -4328,6 +4408,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                                 trainerStats[key].present++;
                                             } else if (trainerAtt.present === false) {
                                                 trainerStats[key].absent++;
+                                                // Shrani datum odsotnosti
+                                                if (!trainerStats[key].absentDates.includes(isoDate)) {
+                                                    trainerStats[key].absentDates.push(isoDate);
+                                                }
                                             }
                                         }
                                     }
@@ -4413,7 +4497,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                                 trainer: trainer,
                                                 total: 0,
                                                 present: 0,
-                                                absent: 0
+                                                absent: 0,
+                                                absentDates: [] // Shrani datume odsotnosti
                                             };
                                         }
                                         
@@ -4425,6 +4510,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                                 trainerStats[key].present++;
                                             } else if (trainerAtt.present === false) {
                                                 trainerStats[key].absent++;
+                                                // Shrani datum odsotnosti
+                                                if (!trainerStats[key].absentDates.includes(date)) {
+                                                    trainerStats[key].absentDates.push(date);
+                                                }
                                             }
                                         }
                                     }
@@ -4449,14 +4538,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 return (a.trainer.first_name || '').localeCompare(b.trainer.first_name || '', 'sl');
             });
         
+        // Shrani trainerStats v globalno spremenljivko za dostop iz event listenerjev
+        window.currentTrainerStats = trainerStats;
+        
         // Prikaži rezultate (samo aktivni trenerji)
         sortedTrainerStats.forEach(stat => {
+            const absentClickable = stat.absent > 0 
+                ? `<td class="warn"><a href="#" class="absent-link" data-trainer-id="${stat.trainer.id}" data-trainer-name="${stat.trainer.first_name} ${stat.trainer.last_name}" style="color: inherit; text-decoration: underline; cursor: pointer;">${stat.absent}</a></td>`
+                : `<td class="warn">${stat.absent}</td>`;
             summary += `
                 <tr>
                     <td>${stat.trainer.first_name} ${stat.trainer.last_name}</td>
                     <td>${stat.total}</td>
                     <td class="ok">${stat.present}</td>
-                    <td class="warn">${stat.absent}</td>
+                    ${absentClickable}
                 </tr>
             `;
         });
@@ -4469,6 +4564,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         elTrainerSummaryBox.innerHTML = summary;
+        
+        // Dodaj event listenerje za klik na število odsotnosti
+        elTrainerSummaryBox.querySelectorAll('.absent-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const trainerId = link.getAttribute('data-trainer-id');
+                const trainerName = link.getAttribute('data-trainer-name');
+                showTrainerAbsenceModal(trainerId, trainerName);
+            });
+        });
     }
 
     // ===== Funkcije za izračun ur in stroškov trenerjev =====
