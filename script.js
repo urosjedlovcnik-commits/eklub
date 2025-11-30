@@ -654,6 +654,12 @@ document.addEventListener('DOMContentLoaded', () => {
         attendance[ymd][row.term_id][row.swimmer_id] = row.status;
       });
       
+      // Debug: preverimo, ali so podatki pravilno shranjeni za 26/11 in 27/11
+      if (ymd === '2025-11-26' || ymd === '2025-11-27') {
+        const termIds = Object.keys(attendance[ymd]);
+        console.log(`[DEBUG refreshDayData] ${ymd}: shranjeno ${attData.length} vnosov za ${termIds.length} terminov:`, termIds);
+      }
+      
       // Osveži cache za vse termine tega dneva, da se spremembe takoj odražajo
       if (attData && attData.length > 0) {
         const uniqueTermIds = [...new Set(attData.map(row => row.term_id))];
@@ -710,6 +716,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!attendance[ymd][termId]) attendance[ymd][termId] = {};
       // Dopolnimo obstoječe podatke z novimi (ne prepišemo celotnega objekta)
       Object.assign(attendance[ymd][termId], termAtt);
+      
+      // Debug: preverimo, ali so podatki pravilno shranjeni za 26/11 in 27/11
+      if (ymd === '2025-11-26' || ymd === '2025-11-27') {
+        console.log(`[DEBUG openEvent] ${ymd} ${termId}: shranjeno ${Object.keys(attendance[ymd][termId]).length} plavalcev`);
+        console.log(`[DEBUG openEvent] ${ymd} ima sedaj ${Object.keys(attendance[ymd]).length} terminov:`, Object.keys(attendance[ymd]));
+      }
       
       // Osveži cache za ta termin, da se spremembe takoj odražajo
       clearAttendanceCacheForTerm(date, termId);
