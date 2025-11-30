@@ -1800,6 +1800,14 @@ document.addEventListener('DOMContentLoaded', () => {
               newAttendance[date][row.term_id][row.swimmer_id] = row.status;
             });
             
+            // Debug: preverimo, ali so podatki za 26/11 in 27/11 pravilno shranjeni
+            if (newAttendance['2025-11-26']) {
+              console.log(`[DEBUG loadAttendance] 2025-11-26 ima ${Object.keys(newAttendance['2025-11-26']).length} terminov:`, Object.keys(newAttendance['2025-11-26']));
+            }
+            if (newAttendance['2025-11-27']) {
+              console.log(`[DEBUG loadAttendance] 2025-11-27 ima ${Object.keys(newAttendance['2025-11-27']).length} terminov:`, Object.keys(newAttendance['2025-11-27']));
+            }
+            
             // Nadomestimo celoten attendance objekt z novimi podatki
             attendance = newAttendance;
           
