@@ -1797,11 +1797,34 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         // Uporaba Supabase (ko bo CORS problem rešen)
         try {
-          // Naloži vse podatke iz baze - brez limita
-          const { data, error } = await supabase
-            .from('attendance')
-            .select('*')
-            .limit(10000); // Nastavimo visok limit, da zagotovimo, da se naložijo vsi podatki
+          // Naloži vse podatke iz baze - uporabimo paginacijo, da zagotovimo, da se naložijo vsi podatki
+          let allData = [];
+          let from = 0;
+          const pageSize = 1000;
+          let hasMore = true;
+          
+          while (hasMore) {
+            const { data: pageData, error: pageError } = await supabase
+              .from('attendance')
+              .select('*')
+              .range(from, from + pageSize - 1);
+            
+            if (pageError) {
+              console.error('Napaka pri nalaganju prisotnosti:', pageError);
+              hasMore = false;
+            } else {
+              if (pageData && pageData.length > 0) {
+                allData = allData.concat(pageData);
+                from += pageSize;
+                hasMore = pageData.length === pageSize;
+              } else {
+                hasMore = false;
+              }
+            }
+          }
+          
+          const data = allData;
+          const error = null;
           if (error) console.error('Napaka pri nalaganju prisotnosti:', error);
           else {
             // Pomembno: inicializiraj attendance kot prazen objekt, če še ni
