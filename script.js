@@ -509,17 +509,28 @@ document.addEventListener('DOMContentLoaded', () => {
           const e = document.createElement("div");
           e.className = "event";
 
-        // Optimizirano barvno kodiranje
-        // Preveri, ali je trening že potekel (glede na datum IN čas za današnje treninge)
-        const isTrainingFinished = isTrainingPast(date, t.start_time);
-        if (isTrainingFinished) {
-          // Vedno uporabimo getAttendanceStatus, ki uporablja svoj lasten cache
-          // To zagotovi, da se uporabljajo najnovejši podatki
-          const status = getAttendanceStatus(date, t.id);
-          if (status) {
-            e.classList.add(status);
+          // Optimizirano barvno kodiranje
+          // Preveri, ali je trening že potekel (glede na datum IN čas za današnje treninge)
+          const isTrainingFinished = isTrainingPast(date, t.start_time);
+          if (isTrainingFinished) {
+            // Vedno uporabimo getAttendanceStatus, ki uporablja svoj lasten cache
+            // To zagotovi, da se uporabljajo najnovejši podatki
+            const status = getAttendanceStatus(date, t.id);
+            if (status) {
+              e.classList.add(status);
+              // Debug: preverimo, ali se status pravilno doda (samo za 26/11 in 27/11)
+              const ymd = iso(date);
+              if (ymd === '2025-11-26' || ymd === '2025-11-27') {
+                console.log(`[DEBUG renderMonth] ${ymd} ${t.id}: dodan status ${status}, element ima razrede: ${e.className}`);
+              }
+            } else {
+              // Debug: preverimo, zakaj se status ne doda
+              const ymd = iso(date);
+              if (ymd === '2025-11-26' || ymd === '2025-11-27') {
+                console.warn(`[DEBUG renderMonth] ${ymd} ${t.id}: status je ${status}, zato se ne doda razred`);
+              }
+            }
           }
-        }
           
           if (isInactive(date, t.id)) {
               e.classList.add("disabled");
