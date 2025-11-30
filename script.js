@@ -673,24 +673,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }, {});
       }
       
-      attendance[ymd] = attData.reduce((acc, row) => {
-        acc[row.term_id] = acc[row.term_id] || {};
-        acc[row.term_id][row.swimmer_id] = row.status;
-        return acc;
-      }, {});
+      // Osveži podatke o prisotnosti - pomembno: uporabimo obstoječe podatke in jih dopolnimo
+      if (!attendance[ymd]) attendance[ymd] = {};
+      
+      // Shranimo vse podatke iz baze - to zagotovi, da imamo najnovejše podatke
+      attData.forEach(row => {
+        if (!attendance[ymd][row.term_id]) attendance[ymd][row.term_id] = {};
+        attendance[ymd][row.term_id][row.swimmer_id] = row.status;
+      });
+      
+      // Debug: preverimo, koliko podatkov smo naložili
+      if (attData && attData.length > 0) {
+        const uniqueTermIds = [...new Set(attData.map(row => row.term_id))];
+        console.log(`[DEBUG refreshDayData] ${ymd}: Naloženo ${attData.length} vnosov za ${uniqueTermIds.length} terminov`);
+        uniqueTermIds.forEach(termId => {
+          const termData = attData.filter(row => row.term_id === termId);
+          console.log(`[DEBUG refreshDayData] ${ymd} ${termId}: ${termData.length} plavalcev`);
+          clearAttendanceCacheForTerm(date, termId);
+        });
+      }
 
       termStatus[ymd] = statusData.reduce((acc, row) => {
         acc[row.term_id] = { status: row.status, note: row.note, notes: row.notes };
         return acc;
       }, {});
-      
-      // Osveži cache za vse termine tega dneva, da se spremembe takoj odražajo
-      if (attData && attData.length > 0) {
-        const uniqueTermIds = [...new Set(attData.map(row => row.term_id))];
-        uniqueTermIds.forEach(termId => {
-          clearAttendanceCacheForTerm(date, termId);
-        });
-      }
     }
 
 
@@ -730,8 +736,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }, {});
       
       // POSODOBITEV: Osvežimo lokalne podatke o prisotnosti
+      // Pomembno: shranimo vse podatke, ki so prišli iz baze
       if (!attendance[ymd]) attendance[ymd] = {};
-      attendance[ymd][termId] = termAtt;
+      if (!attendance[ymd][termId]) attendance[ymd][termId] = {};
+      // Dopolnimo obstoječe podatke z novimi (ne prepišemo celotnega objekta)
+      Object.assign(attendance[ymd][termId], termAtt);
+      
+      // Osveži cache za ta termin, da se spremembe takoj odražajo
+      clearAttendanceCacheForTerm(date, termId);
 
       // >>> POPRAVEK: tukaj je težava. Namesto da filtriramo, zgradimo seznam vseh, ki so relevantni.
       // Ločimo plavalce na redno dodeljene in nadomeščanje
