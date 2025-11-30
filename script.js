@@ -374,10 +374,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Debug logging (lahko odstranimo kasneje)
-        if (totalAssignedCount > 0 && markedAssignedSwimmersCount !== totalAssignedCount && markedAssignedSwimmersCount > 0) {
+        if (totalAssignedCount > 0 && markedAssignedSwimmersCount !== totalAssignedCount) {
             console.log(`[DEBUG] ${ymd} ${termId}: ${markedAssignedSwimmersCount}/${totalAssignedCount} plavalcev ima vneseno prisotnost, status: ${result}`);
             console.log(`[DEBUG] termAtt:`, termAtt);
             console.log(`[DEBUG] assignedSwimmerIds:`, assignedSwimmerIds);
+            
+            // Poiščimo plavalce, ki nimajo vnesene prisotnosti
+            const missingSwimmers = assignedSwimmerIds.filter(id => {
+                const status = termAtt[id];
+                const isValidStatus = status !== null && 
+                                      status !== undefined && 
+                                      (status === true || status === false || 
+                                       status === 'true' || status === 'false' ||
+                                       status === 1 || status === 0);
+                return !isValidStatus;
+            });
+            
+            if (missingSwimmers.length > 0) {
+                console.log(`[DEBUG] Plavalci brez vnesene prisotnosti (${missingSwimmers.length}):`, missingSwimmers);
+                // Poiščimo imena plavalcev
+                const missingNames = missingSwimmers.map(id => {
+                    const swimmer = swimmers.find(s => s.id === id);
+                    return swimmer ? `${swimmer.first_name} ${swimmer.last_name}` : id;
+                });
+                console.log(`[DEBUG] Imena plavalcev brez prisotnosti:`, missingNames);
+            }
         }
         
         attendanceStatusFunctionCache.set(cacheKey, result);
@@ -675,6 +696,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function openEvent(date, termId){
       modalCtx = { date:new Date(date), termId };
+      
+      // Osveži podatke za ta dan, da zagotovimo, da imamo najnovejše podatke iz baze
+      await refreshDayData(date);
+      
       const t = termById(termId);
       elModalTitle.textContent = `${t.label}`;
       elModalMeta.innerHTML = `
