@@ -6214,8 +6214,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const swimmerFees = await getSwimmerFees(month, year);
             const activeSwimmers = swimmers.filter(s => !s.is_deleted);
             
-            // Ustvari CSV vsebino samo z imenom, priimkom in zneskom vadnine
-            let csv = 'first_name,last_name,monthly_fee\n';
+            // Ustvari CSV vsebino z imenom, priimkom, emailom, naslovom, pošto in zneskom vadnine
+            let csv = 'first_name,last_name,email,address,postal_code,monthly_fee\n';
             
             // Sortiraj plavalce po abecedi po priimku, nato po imenu
             const sortedActiveSwimmers = activeSwimmers.sort((a, b) => {
@@ -6238,7 +6238,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return value;
                 };
                 
-                csv += `${formatCSVField(swimmer.first_name)},${formatCSVField(swimmer.last_name)},${fee.toFixed(2)}\n`;
+                csv += `${formatCSVField(swimmer.first_name)},${formatCSVField(swimmer.last_name)},${formatCSVField(swimmer.email || '')},${formatCSVField(swimmer.address || '')},${formatCSVField(swimmer.postal_code || '')},${fee.toFixed(2)}\n`;
             });
             
             // Prenesi CSV datoteko z BOM za pravilno podporo šumnikov
