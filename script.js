@@ -1803,9 +1803,19 @@ document.addEventListener('DOMContentLoaded', () => {
             // Debug: preverimo, ali so podatki za 26/11 in 27/11 pravilno shranjeni
             if (newAttendance['2025-11-26']) {
               console.log(`[DEBUG loadAttendance] 2025-11-26 ima ${Object.keys(newAttendance['2025-11-26']).length} terminov:`, Object.keys(newAttendance['2025-11-26']));
+              // Preverimo, ali so podatki za sre-20:00-21:00 v bazi
+              const rowsForDate = data.filter(row => row.date === '2025-11-26');
+              console.log(`[DEBUG loadAttendance] V bazi je ${rowsForDate.length} vnosov za 2025-11-26`);
+              const termIds = [...new Set(rowsForDate.map(row => row.term_id))];
+              console.log(`[DEBUG loadAttendance] Termini v bazi za 2025-11-26:`, termIds);
             }
             if (newAttendance['2025-11-27']) {
               console.log(`[DEBUG loadAttendance] 2025-11-27 ima ${Object.keys(newAttendance['2025-11-27']).length} terminov:`, Object.keys(newAttendance['2025-11-27']));
+              // Preverimo, ali so podatki za čet-07:15-08:15 v bazi
+              const rowsForDate = data.filter(row => row.date === '2025-11-27');
+              console.log(`[DEBUG loadAttendance] V bazi je ${rowsForDate.length} vnosov za 2025-11-27`);
+              const termIds = [...new Set(rowsForDate.map(row => row.term_id))];
+              console.log(`[DEBUG loadAttendance] Termini v bazi za 2025-11-27:`, termIds);
             }
             
             // Nadomestimo celoten attendance objekt z novimi podatki
