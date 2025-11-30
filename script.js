@@ -349,7 +349,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // Status mora biti boolean (true/false), ne null ali undefined
         const markedAssignedSwimmersCount = assignedSwimmerIds.filter(id => {
             const status = termAtt[id];
-            return status !== null && status !== undefined && (status === true || status === false);
+            // Preverimo, ali je status veljaven boolean (true ali false)
+            // Sprejemamo tudi string "true"/"false", če pride iz baze
+            const isValidStatus = status !== null && 
+                                  status !== undefined && 
+                                  (status === true || status === false || 
+                                   status === 'true' || status === 'false' ||
+                                   status === 1 || status === 0);
+            return isValidStatus;
         }).length;
         const totalAssignedCount = assignedSwimmers.length;
 
@@ -364,6 +371,13 @@ document.addEventListener('DOMContentLoaded', () => {
             result = 'complete'; // Vsi dodeljeni imajo vneseno prisotnost
         } else {
             result = 'partial'; // Vsaj ena, a ne vsa prisotnost je vnesena
+        }
+        
+        // Debug logging (lahko odstranimo kasneje)
+        if (totalAssignedCount > 0 && markedAssignedSwimmersCount !== totalAssignedCount && markedAssignedSwimmersCount > 0) {
+            console.log(`[DEBUG] ${ymd} ${termId}: ${markedAssignedSwimmersCount}/${totalAssignedCount} plavalcev ima vneseno prisotnost, status: ${result}`);
+            console.log(`[DEBUG] termAtt:`, termAtt);
+            console.log(`[DEBUG] assignedSwimmerIds:`, assignedSwimmerIds);
         }
         
         attendanceStatusFunctionCache.set(cacheKey, result);
@@ -454,6 +468,18 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderMonth(){
       const y=viewDate.getFullYear(), m=viewDate.getMonth();
       elMonthLabel.textContent = new Date(y,m,1).toLocaleDateString("sl-SI", {month:"long",year:"numeric"});
+      
+      // Osveži cache za vse termine v tem mesecu, da se uporabljajo najnovejši podatki
+      // To zagotovi, da se barvno kodiranje pravilno osveži
+      const monthStart = new Date(y, m, 1);
+      const monthEnd = new Date(y, m + 1, 0);
+      for (let d = 1; d <= monthEnd.getDate(); d++) {
+        const date = new Date(y, m, d);
+        const todays = getTermsForDate(date);
+        todays.forEach(t => {
+          clearAttendanceCacheForTerm(date, t.id);
+        });
+      }
       
       // Ustvari fragment za boljšo performanco
       const fragment = document.createDocumentFragment();
@@ -636,6 +662,14 @@ document.addEventListener('DOMContentLoaded', () => {
         acc[row.term_id] = { status: row.status, note: row.note, notes: row.notes };
         return acc;
       }, {});
+      
+      // Osveži cache za vse termine tega dneva, da se spremembe takoj odražajo
+      if (attData && attData.length > 0) {
+        const uniqueTermIds = [...new Set(attData.map(row => row.term_id))];
+        uniqueTermIds.forEach(termId => {
+          clearAttendanceCacheForTerm(date, termId);
+        });
+      }
     }
 
 
