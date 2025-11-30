@@ -337,6 +337,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // Vse vnesene prisotnosti za ta datum in termin
         const termAtt = attendance[ymd]?.[termId] || {};
         
+        // Debug: preverimo, ali so podatki v attendance objektu
+        if (!attendance[ymd] || !attendance[ymd][termId]) {
+          // Če ni podatkov, preverimo, ali sploh obstaja attendance objekt
+          if (!attendance || Object.keys(attendance).length === 0) {
+            console.warn(`[DEBUG getAttendanceStatus] attendance objekt je prazen za ${ymd} ${termId}`);
+          }
+        }
+        
         // Vedno uporabimo trenutno dodeljene plavalce (ne glede na to, ali imajo vneseno prisotnost ali ne)
         // To zagotovi, da lahko pravilno določimo partial status (delno izpolnjene treninge)
         let assignedSwimmers;
@@ -1780,16 +1788,19 @@ document.addEventListener('DOMContentLoaded', () => {
             // Pomembno: inicializiraj attendance kot prazen objekt, če še ni
             if (!attendance) attendance = {};
             
-            // Shranimo vse podatke iz baze
-            attendance = data.reduce((acc, row) => {
+            // Shranimo vse podatke iz baze - uporabimo reduce, da zgradimo strukturo
+            const newAttendance = {};
+            data.forEach(row => {
               const date = row.date;
-              if (!acc[date]) acc[date] = {};
-              if (!acc[date][row.term_id]) acc[date][row.term_id] = {};
-              acc[date][row.term_id][row.swimmer_id] = row.status;
-              return acc;
-          }, {});
+              if (!newAttendance[date]) newAttendance[date] = {};
+              if (!newAttendance[date][row.term_id]) newAttendance[date][row.term_id] = {};
+              newAttendance[date][row.term_id][row.swimmer_id] = row.status;
+            });
+            
+            // Nadomestimo celoten attendance objekt z novimi podatki
+            attendance = newAttendance;
           
-          // Debug: preverimo, koliko podatkov smo naložili
+          // Debug: preverimo, koliko podatkov smo naložili in shranili
           if (data && data.length > 0) {
             const uniqueDates = [...new Set(data.map(row => row.date))];
             const uniqueTerms = [...new Set(data.map(row => `${row.date}-${row.term_id}`))];
@@ -1799,7 +1810,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const sampleDate = uniqueDates[0];
             if (sampleDate && attendance[sampleDate]) {
               const termIds = Object.keys(attendance[sampleDate]);
-              console.log(`[DEBUG loadAttendance] Primer: ${sampleDate} ima ${termIds.length} terminov`);
+              const totalSwimmers = Object.values(attendance[sampleDate]).reduce((sum, term) => sum + Object.keys(term).length, 0);
+              console.log(`[DEBUG loadAttendance] Primer: ${sampleDate} ima ${termIds.length} terminov, ${totalSwimmers} plavalcev`);
+              
+              // Preverimo, ali so podatki pravilno shranjeni za prvi termin
+              if (termIds.length > 0) {
+                const firstTermId = termIds[0];
+                const swimmersInTerm = Object.keys(attendance[sampleDate][firstTermId]).length;
+                console.log(`[DEBUG loadAttendance] Primer termin ${firstTermId}: ${swimmersInTerm} plavalcev`);
+              }
             }
           }
           }
@@ -1895,8 +1914,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadAllData() {
+      // Naloži vse podatke
       await Promise.all([loadTerms(), loadSwimmers(), loadTrainers(), loadAttendance(), loadTrainerAttendance(), loadTermStatus()]);
-      clearCache(); // Počisti cache ob osvežitvi podatkov
+      
+      // Počisti cache ob osvežitvi podatkov
+      clearCache();
       
       // Osveži cache za vse termine v trenutnem mesecu PO tem, ko so podatki naloženi
       // To zagotovi, da se barvno kodiranje pravilno prikaže ob začetku
@@ -1904,6 +1926,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const currentYear = viewDate.getFullYear();
       const monthStart = new Date(currentYear, currentMonth, 1);
       const monthEnd = new Date(currentYear, currentMonth + 1, 0);
+      
+      // Preverimo, ali so podatki pravilno naloženi
+      console.log(`[DEBUG loadAllData] attendance objekt ima ${Object.keys(attendance).length} dni`);
       
       for (let d = 1; d <= monthEnd.getDate(); d++) {
         const date = new Date(currentYear, currentMonth, d);
