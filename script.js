@@ -345,7 +345,12 @@ document.addEventListener('DOMContentLoaded', () => {
         assignedSwimmerIds = assignedSwimmers.map(s => s.id);
         
         // Preštejemo, koliko trenutno dodeljenih plavalcev ima vneseno prisotnost
-        const markedAssignedSwimmersCount = assignedSwimmerIds.filter(id => termAtt.hasOwnProperty(id)).length;
+        // POPRAVEK: Preverimo tudi vrednost statusa, ne samo obstoj ključa
+        // Status mora biti boolean (true/false), ne null ali undefined
+        const markedAssignedSwimmersCount = assignedSwimmerIds.filter(id => {
+            const status = termAtt[id];
+            return status !== null && status !== undefined && (status === true || status === false);
+        }).length;
         const totalAssignedCount = assignedSwimmers.length;
 
         // Logika določitve statusa
@@ -390,8 +395,19 @@ document.addEventListener('DOMContentLoaded', () => {
       attendanceStatusFunctionCache.clear();
     }
     
+    // Funkcija za osvežitev cache-ja za določen termin
+    function clearAttendanceCacheForTerm(date, termId) {
+      const ymd = iso(date);
+      const statusCacheKey = `${ymd}-${termId}`;
+      attendanceStatusCache.delete(statusCacheKey);
+      attendanceStatusFunctionCache.delete(statusCacheKey);
+    }
+    
     // OPTIMIZACIJA: Funkcija za posodobitev barvnega kodiranja samo za določen dan (brez ponovnega renderiranja)
     function updateDayColor(date, termId) {
+      // Osveži cache za ta termin, da se spremembe takoj odražajo
+      clearAttendanceCacheForTerm(date, termId);
+      
       const ymd = iso(date);
       const dayElements = elCalendarGrid.querySelectorAll('.day');
       
