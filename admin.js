@@ -2455,17 +2455,26 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const swimmerStat = window.currentSwimmerStats[swimmerId];
         const attendanceDates = swimmerStat.attendanceDates || [];
+        const absentDates = swimmerStat.absentDates || [];
+        const missedDates = swimmerStat.missedDates || [];
         
-        // Sortiraj datume
-        attendanceDates.sort((a, b) => {
-            const dateA = new Date(a.date);
-            const dateB = new Date(b.date);
-            if (dateA.getTime() !== dateB.getTime()) {
-                return dateA - dateB;
-            }
-            // Če sta datuma enaka, sortiraj po terminu
-            return a.termId.localeCompare(b.termId);
-        });
+        // Funkcija za sortiranje datumov
+        const sortDates = (dates) => {
+            return dates.sort((a, b) => {
+                const dateA = new Date(a.date);
+                const dateB = new Date(b.date);
+                if (dateA.getTime() !== dateB.getTime()) {
+                    return dateA - dateB;
+                }
+                // Če sta datuma enaka, sortiraj po terminu
+                return a.termId.localeCompare(b.termId);
+            });
+        };
+        
+        // Sortiraj vse datume
+        const sortedAttendance = sortDates([...attendanceDates]);
+        const sortedAbsent = sortDates([...absentDates]);
+        const sortedMissed = sortDates([...missedDates]);
         
         // Formatiraj datume
         const formatDate = (dateStr) => {
@@ -2487,22 +2496,35 @@ document.addEventListener('DOMContentLoaded', () => {
             return termId;
         };
         
-        // Ustvari vsebino modala
-        let content = `<h4>Program prisotnosti: ${swimmerName}</h4>`;
-        content += `<p><strong>Obiskani treningi:</strong> ${swimmerStat.att} / <strong>Možni treningi:</strong> ${swimmerStat.pos}</p>`;
-        
-        if (attendanceDates.length === 0) {
-            content += '<p class="muted">Ni prisotnosti</p>';
-        } else {
-            content += '<table style="width: 100%; border-collapse: collapse; margin-top: 15px;"><thead><tr><th style="border: 1px solid #ddd; padding: 8px; background: #f8f9fa;">Datum</th><th style="border: 1px solid #ddd; padding: 8px; background: #f8f9fa;">Termin</th></tr></thead><tbody>';
-            attendanceDates.forEach(item => {
-                content += `<tr>
+        // Funkcija za prikaz tabele
+        const renderTable = (dates, title, colorClass) => {
+            if (dates.length === 0) {
+                return `<p class="muted">Ni ${title.toLowerCase()}</p>`;
+            }
+            let html = `<h5 style="margin-top: 20px; margin-bottom: 10px; color: ${colorClass === 'ok' ? '#28a745' : colorClass === 'warn' ? '#dc3545' : '#6c757d'};">${title} (${dates.length})</h5>`;
+            html += '<table style="width: 100%; border-collapse: collapse; margin-top: 10px;"><thead><tr><th style="border: 1px solid #ddd; padding: 8px; background: #f8f9fa;">Datum</th><th style="border: 1px solid #ddd; padding: 8px; background: #f8f9fa;">Termin</th></tr></thead><tbody>';
+            dates.forEach(item => {
+                html += `<tr>
                     <td style="border: 1px solid #ddd; padding: 8px;">${formatDate(item.date)}</td>
                     <td style="border: 1px solid #ddd; padding: 8px;">${formatTerm(item.termId)}</td>
                 </tr>`;
             });
-            content += '</tbody></table>';
-        }
+            html += '</tbody></table>';
+            return html;
+        };
+        
+        // Ustvari vsebino modala
+        let content = `<h4>Program prisotnosti: ${swimmerName}</h4>`;
+        content += `<p><strong>Obiskani treningi:</strong> ${swimmerStat.att} / <strong>Možni treningi:</strong> ${swimmerStat.pos}</p>`;
+        
+        // Prikaži prisotne treninge
+        content += renderTable(sortedAttendance, 'Prisotni treningi', 'ok');
+        
+        // Prikaži izpuščene treninge (odsotnosti)
+        content += renderTable(sortedAbsent, 'Izpuščeni treningi (odsotnosti)', 'warn');
+        
+        // Prikaži neobiskane treninge
+        content += renderTable(sortedMissed, 'Neobiskani treningi', 'muted');
         
         if (elSwimmerAttendanceContent) {
             elSwimmerAttendanceContent.innerHTML = content;
@@ -5497,11 +5519,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Dodaj plavalca v rezultate, če ima dodeljene termine
             if (s.terms && s.terms.length > 0) {
-            res[s.id] = { first: s.first_name, last: s.last_name, att: 0, pos: 0, attendanceDates: [] };
+            res[s.id] = { first: s.first_name, last: s.last_name, att: 0, pos: 0, attendanceDates: [], absentDates: [], missedDates: [] };
             }
         });
 
-        // Zanka za izračun prisotnosti (att)
+        // Zanka za izračun prisotnosti (att) in odsotnosti
         const allAttendance = Object.entries(attendance);
         for (const [date, termData] of allAttendance) {
             const d = new Date(date);
@@ -5509,22 +5531,30 @@ document.addEventListener('DOMContentLoaded', () => {
             if (d >= monthStart && d <= monthEnd) {
                 for (const termId in termData) {
                     for (const swimmerId in termData[termId]) {
-                        // Preverimo, ali je prisotnost vnesena (status === true)
-                        if (termData[termId][swimmerId] === true) {
-                            const swimmer = swimmers.find(s => s.id === swimmerId);
-                            // DODANO: Vključi plavalce z prisotnostjo, tudi če niso več dodeljeni terminu
-                            // Izključi le izbrisane plavalce
-                            if (swimmer && !swimmer.is_deleted) {
-                                // Če plavalec še ni v rezultatih (nima več dodeljenih terminov), ga dodaj
-                                if (!res[swimmerId]) {
-                                    res[swimmerId] = { first: swimmer.first_name, last: swimmer.last_name, att: 0, pos: 0, attendanceDates: [] };
-                                }
-                            res[swimmerId].att += 1;
-                            // Shrani podatke o prisotnosti
-                            if (!res[swimmerId].attendanceDates) {
-                                res[swimmerId].attendanceDates = [];
+                        const status = termData[termId][swimmerId];
+                        const swimmer = swimmers.find(s => s.id === swimmerId);
+                        // DODANO: Vključi plavalce z prisotnostjo, tudi če niso več dodeljeni terminu
+                        // Izključi le izbrisane plavalce
+                        if (swimmer && !swimmer.is_deleted) {
+                            // Če plavalec še ni v rezultatih (nima več dodeljenih terminov), ga dodaj
+                            if (!res[swimmerId]) {
+                                res[swimmerId] = { first: swimmer.first_name, last: swimmer.last_name, att: 0, pos: 0, attendanceDates: [], absentDates: [], missedDates: [] };
                             }
-                            res[swimmerId].attendanceDates.push({ date: date, termId: termId });
+                            
+                            // Preverimo status prisotnosti
+                            if (status === true || status === 'true' || status === 1) {
+                                // Prisoten
+                                res[swimmerId].att += 1;
+                                if (!res[swimmerId].attendanceDates) {
+                                    res[swimmerId].attendanceDates = [];
+                                }
+                                res[swimmerId].attendanceDates.push({ date: date, termId: termId });
+                            } else if (status === false || status === 'false' || status === 0) {
+                                // Odsoten
+                                if (!res[swimmerId].absentDates) {
+                                    res[swimmerId].absentDates = [];
+                                }
+                                res[swimmerId].absentDates.push({ date: date, termId: termId });
                             }
                         }
                     }
@@ -5549,8 +5579,20 @@ document.addEventListener('DOMContentLoaded', () => {
                             
                         // Preveri, ali plavalec ima ta termin dodeljen in ali je v rezultatih
                         if (res[s.id] && s.terms && s.terms.includes(term.id)) {
-                                    res[s.id].pos += 1;
+                            res[s.id].pos += 1;
+                            
+                            // Preveri, ali je prisotnost vnesena za ta termin
+                            const termAtt = attendance[ymd]?.[term.id] || {};
+                            const status = termAtt[s.id];
+                            
+                            // Če ni vnesene prisotnosti (ni true ali false), je to neobiskan trening
+                            if (status === undefined || status === null) {
+                                if (!res[s.id].missedDates) {
+                                    res[s.id].missedDates = [];
                                 }
+                                res[s.id].missedDates.push({ date: ymd, termId: term.id });
+                            }
+                        }
                         
                         // DODANO: Preveri tudi, ali je plavalec v rezultatih (z prisotnostjo) in ali ima prisotnost za ta termin
                         // Če plavalec nima več dodeljenega termina, vendar ima prisotnost, dodaj možni obisk
