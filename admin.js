@@ -528,6 +528,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const elExportMonthSelect = document.getElementById("exportMonthSelect");
     const elExportYearSelect = document.getElementById("exportYearSelect");
     const elExportCsvBtn = document.getElementById("exportCsvBtn");
+    
+    // UI elementi za mailing liste
+    const elMailingFilterType = document.getElementById("mailingFilterType");
+    const elMailingTermSelect = document.getElementById("mailingTermSelect");
+    const elMailingTermSelectRow = document.getElementById("mailingTermSelectRow");
+    const elLoadMailingListBtn = document.getElementById("loadMailingListBtn");
+    const elCopyMailingListBtn = document.getElementById("copyMailingListBtn");
+    const elMailingListBox = document.getElementById("mailingListBox");
 
     // UI elementi za povzetek udeležbe plavalcev
     // Opomba: Stari elementi so bili zamenjani z navigacijskimi gumbi
@@ -866,6 +874,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateSwimmerSelects();
             updateTermSelects();
             updateTrainerSelects();
+            updateMailingTermSelect();
 // console.log('🔄 Posodabljam UI elemente...');
             updateSwimmersList();
             updateTermList();
@@ -7892,6 +7901,184 @@ document.addEventListener('DOMContentLoaded', () => {
     // Naredimo funkcije globalno dostopne za uporabo v HTML onclick atributih
     window.clearInvalidFees = clearInvalidFees;
     window.checkDatabaseIntegrity = checkDatabaseIntegrity;
+    
+    // ===== Mailing liste =====
+    function updateMailingTermSelect() {
+        if (!elMailingTermSelect) return;
+        
+        elMailingTermSelect.innerHTML = '<option value="">Izberi termin</option>';
+        
+        // Prikaži samo aktivne termine
+        const activeTerms = getActiveTerms();
+        
+        // Razvrsti termine: najprej po dnevu (1-7), nato po času začetka
+        const sortedTerms = activeTerms.sort((a, b) => {
+            if (a.day !== b.day) {
+                return a.day - b.day;
+            }
+            return a.start_time.localeCompare(b.start_time);
+        });
+        
+        sortedTerms.forEach(t => {
+            const option = document.createElement('option');
+            option.value = t.id;
+            option.textContent = `${DAY_SHORT_NAME[t.day]} ${formatTimeWithoutSeconds(t.start_time)}-${formatTimeWithoutSeconds(t.end_time)}`;
+            elMailingTermSelect.appendChild(option);
+        });
+    }
+    
+    // Funkcija za pridobitev email naslovov glede na filtre
+    function getMailingListEmails() {
+        const filterType = elMailingFilterType ? elMailingFilterType.value : '';
+        const selectedTermId = elMailingTermSelect ? elMailingTermSelect.value : '';
+        
+        if (!filterType) {
+            return [];
+        }
+        
+        let targetTermIds = [];
+        
+        if (filterType === 'term') {
+            // Določen termin
+            if (!selectedTermId) {
+                return [];
+            }
+            targetTermIds = [selectedTermId];
+        } else if (filterType === 'afternoon') {
+            // Popoldanske skupine (pred 18:00)
+            const activeTerms = getActiveTerms();
+            targetTermIds = activeTerms
+                .filter(term => {
+                    const startHour = parseInt(term.start_time.split(':')[0]);
+                    return startHour < 18;
+                })
+                .map(term => term.id);
+        } else if (filterType === 'evening') {
+            // Večerne skupine (od 18:00 naprej)
+            const activeTerms = getActiveTerms();
+            targetTermIds = activeTerms
+                .filter(term => {
+                    const startHour = parseInt(term.start_time.split(':')[0]);
+                    return startHour >= 18;
+                })
+                .map(term => term.id);
+        }
+        
+        // Pridobi vse plavalce, ki imajo vsaj enega od ciljnih terminov
+        const targetSwimmers = swimmers.filter(swimmer => {
+            if (swimmer.is_deleted) return false;
+            if (!swimmer.terms || swimmer.terms.length === 0) return false;
+            return swimmer.terms.some(termId => targetTermIds.includes(termId));
+        });
+        
+        // Zberi vse email naslove (brez duplikatov)
+        const emailSet = new Set();
+        const emailList = [];
+        
+        targetSwimmers.forEach(swimmer => {
+            if (swimmer.email && swimmer.email.trim() && isValidEmail(swimmer.email.trim())) {
+                const email = swimmer.email.trim().toLowerCase();
+                if (!emailSet.has(email)) {
+                    emailSet.add(email);
+                    emailList.push({
+                        email: swimmer.email.trim(),
+                        name: `${swimmer.first_name} ${swimmer.last_name}`
+                    });
+                }
+            }
+        });
+        
+        return emailList;
+    }
+    
+    // Funkcija za prikaz email naslovov
+    function displayMailingList() {
+        if (!elMailingListBox) return;
+        
+        const filterType = elMailingFilterType ? elMailingFilterType.value : '';
+        
+        if (!filterType) {
+            elMailingListBox.innerHTML = '<p class="muted">Izberite tip filtra</p>';
+            elCopyMailingListBtn.style.display = 'none';
+            return;
+        }
+        
+        if (filterType === 'term' && (!elMailingTermSelect || !elMailingTermSelect.value)) {
+            elMailingListBox.innerHTML = '<p class="muted">Izberite termin</p>';
+            elCopyMailingListBtn.style.display = 'none';
+            return;
+        }
+        
+        const emailList = getMailingListEmails();
+        
+        if (emailList.length === 0) {
+            elMailingListBox.innerHTML = '<p class="muted">Ni email naslovov za prikazano skupino</p>';
+            elCopyMailingListBtn.style.display = 'none';
+            return;
+        }
+        
+        // Prikaži seznam email naslovov
+        let html = `<div style="margin-bottom: 15px;"><strong>Najdenih email naslovov: ${emailList.length}</strong></div>`;
+        html += '<div style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 6px; background: #f9f9f9;">';
+        
+        emailList.forEach((item, index) => {
+            html += `<div style="padding: 5px; border-bottom: 1px solid #eee;">
+                <strong>${item.name}</strong>: ${item.email}
+            </div>`;
+        });
+        
+        html += '</div>';
+        html += '<div style="margin-top: 15px; padding: 10px; background: #e3f2fd; border-radius: 6px;">';
+        html += '<strong>Email naslovi (ločeni z vejico):</strong><br>';
+        html += `<textarea readonly style="width: 100%; min-height: 80px; margin-top: 8px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace;" id="mailingEmailsTextarea">${emailList.map(item => item.email).join(', ')}</textarea>`;
+        html += '</div>';
+        
+        elMailingListBox.innerHTML = html;
+        elCopyMailingListBtn.style.display = 'inline-block';
+    }
+    
+    // Event listenerji za mailing liste
+    if (elMailingFilterType) {
+        elMailingFilterType.addEventListener('change', () => {
+            const filterType = elMailingFilterType.value;
+            if (elMailingTermSelectRow) {
+                elMailingTermSelectRow.style.display = filterType === 'term' ? 'flex' : 'none';
+            }
+            if (elMailingTermSelect) {
+                elMailingTermSelect.value = '';
+            }
+            displayMailingList();
+        });
+    }
+    
+    if (elMailingTermSelect) {
+        elMailingTermSelect.addEventListener('change', () => {
+            displayMailingList();
+        });
+    }
+    
+    if (elLoadMailingListBtn) {
+        elLoadMailingListBtn.addEventListener('click', () => {
+            displayMailingList();
+        });
+    }
+    
+    if (elCopyMailingListBtn) {
+        elCopyMailingListBtn.addEventListener('click', () => {
+            const textarea = document.getElementById('mailingEmailsTextarea');
+            if (textarea) {
+                textarea.select();
+                textarea.setSelectionRange(0, 99999); // Za mobilne naprave
+                try {
+                    document.execCommand('copy');
+                    showMessage('Email naslovi so bili kopirani v odložišče', 'success');
+                } catch (err) {
+                    console.error('Napaka pri kopiranju:', err);
+                    showMessage('Napaka pri kopiranju email naslovov', 'error');
+                }
+            }
+        });
+    }
     
     // ===== Inicializacija =====
     try {

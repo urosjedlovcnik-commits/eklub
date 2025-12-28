@@ -311,6 +311,7 @@
       <button class="btn" data-section="trainers">Trenerji</button>
       <button class="btn" data-section="finance">Finance</button>
       <button class="btn" data-section="csv">CSV uvoz/izvoz</button>
+      <button class="btn" data-section="mailing">Mailing liste</button>
     </div>
   </div>
 
@@ -711,6 +712,40 @@ Maja,Kovač,maja.kovac@email.com,+386 41 234 567,Prešernova 5,1000 Ljubljana,75
               <p class="muted">Nalaganje terminov...</p>
             </div>
             <button class="btn pri" id="saveTermCostsBtn">Shrani stroške prog</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sekcija za Mailing liste -->
+  <div class="admin-section" id="mailing-section">
+    <div class="grid">
+      <div class="card">
+        <h3>Mailing liste</h3>
+        <div class="inner">
+          <div class="flex-col">
+            <div class="row" style="width:100%;align-items:stretch;gap:4px;margin-bottom:15px">
+              <label for="mailingFilterType" style="min-width:150px;text-align:right;padding-top:8px">Tip filtra:</label>
+              <select id="mailingFilterType" style="flex:1">
+                <option value="term">Določen termin</option>
+                <option value="afternoon">Popoldanske skupine (pred 18:00)</option>
+                <option value="evening">Večerne skupine (od 18:00 naprej)</option>
+              </select>
+            </div>
+            <div class="row" style="width:100%;align-items:stretch;gap:4px;margin-bottom:15px" id="mailingTermSelectRow">
+              <label for="mailingTermSelect" style="min-width:150px;text-align:right;padding-top:8px">Izberi termin:</label>
+              <select id="mailingTermSelect" style="flex:1">
+                <option value="">Izberi termin</option>
+              </select>
+            </div>
+            <div class="row" style="width:100%;align-items:stretch;gap:4px;margin-bottom:15px">
+              <button class="btn pri" id="loadMailingListBtn" style="width:auto">Prikaži email naslove</button>
+              <button class="btn" id="copyMailingListBtn" style="width:auto;display:none">Kopiraj email naslove</button>
+            </div>
+          </div>
+          <div id="mailingListBox" style="margin-top:20px">
+            <p class="muted">Izberite tip filtra in kliknite "Prikaži email naslove"</p>
           </div>
         </div>
       </div>
