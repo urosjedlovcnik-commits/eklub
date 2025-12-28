@@ -531,7 +531,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // UI elementi za mailing liste
     const elMailingFilterType = document.getElementById("mailingFilterType");
-    const elMailingTermSelect = document.getElementById("mailingTermSelect");
+    const elMailingTermsCheckboxes = document.getElementById("mailingTermsCheckboxes");
     const elMailingTermSelectRow = document.getElementById("mailingTermSelectRow");
     const elLoadMailingListBtn = document.getElementById("loadMailingListBtn");
     const elCopyMailingListBtn = document.getElementById("copyMailingListBtn");
@@ -7904,12 +7904,17 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // ===== Mailing liste =====
     function updateMailingTermSelect() {
-        if (!elMailingTermSelect) return;
+        if (!elMailingTermsCheckboxes) return;
         
-        elMailingTermSelect.innerHTML = '<option value="">Izberi termin</option>';
+        elMailingTermsCheckboxes.innerHTML = '';
         
         // Prikaži samo aktivne termine
         const activeTerms = getActiveTerms();
+        
+        if (activeTerms.length === 0) {
+            elMailingTermsCheckboxes.innerHTML = '<p class="muted">Ni aktivnih terminov</p>';
+            return;
+        }
         
         // Razvrsti termine: najprej po dnevu (1-7), nato po času začetka
         const sortedTerms = activeTerms.sort((a, b) => {
@@ -7919,18 +7924,59 @@ document.addEventListener('DOMContentLoaded', () => {
             return a.start_time.localeCompare(b.start_time);
         });
         
+        // Dodaj checkbox za "Izberi vse"
+        const selectAllDiv = document.createElement('div');
+        selectAllDiv.style.marginBottom = '10px';
+        selectAllDiv.style.paddingBottom = '10px';
+        selectAllDiv.style.borderBottom = '1px solid #ddd';
+        const selectAllCheckbox = document.createElement('input');
+        selectAllCheckbox.type = 'checkbox';
+        selectAllCheckbox.id = 'mailingSelectAllTerms';
+        selectAllCheckbox.style.marginRight = '8px';
+        selectAllCheckbox.addEventListener('change', (e) => {
+            const checkboxes = elMailingTermsCheckboxes.querySelectorAll('input[type="checkbox"][data-term-id]');
+            checkboxes.forEach(cb => {
+                cb.checked = e.target.checked;
+            });
+            displayMailingList();
+        });
+        const selectAllLabel = document.createElement('label');
+        selectAllLabel.htmlFor = 'mailingSelectAllTerms';
+        selectAllLabel.textContent = 'Izberi vse';
+        selectAllLabel.style.fontWeight = 'bold';
+        selectAllLabel.style.cursor = 'pointer';
+        selectAllDiv.appendChild(selectAllCheckbox);
+        selectAllDiv.appendChild(selectAllLabel);
+        elMailingTermsCheckboxes.appendChild(selectAllDiv);
+        
         sortedTerms.forEach(t => {
-            const option = document.createElement('option');
-            option.value = t.id;
-            option.textContent = `${DAY_SHORT_NAME[t.day]} ${formatTimeWithoutSeconds(t.start_time)}-${formatTimeWithoutSeconds(t.end_time)}`;
-            elMailingTermSelect.appendChild(option);
+            const termDiv = document.createElement('div');
+            termDiv.style.marginBottom = '6px';
+            
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = `mailingTerm_${t.id}`;
+            checkbox.value = t.id;
+            checkbox.setAttribute('data-term-id', t.id);
+            checkbox.style.marginRight = '8px';
+            checkbox.addEventListener('change', () => {
+                displayMailingList();
+            });
+            
+            const label = document.createElement('label');
+            label.htmlFor = `mailingTerm_${t.id}`;
+            label.textContent = `${DAY_SHORT_NAME[t.day]} ${formatTimeWithoutSeconds(t.start_time)}-${formatTimeWithoutSeconds(t.end_time)}`;
+            label.style.cursor = 'pointer';
+            
+            termDiv.appendChild(checkbox);
+            termDiv.appendChild(label);
+            elMailingTermsCheckboxes.appendChild(termDiv);
         });
     }
     
     // Funkcija za pridobitev email naslovov glede na filtre
     function getMailingListEmails() {
         const filterType = elMailingFilterType ? elMailingFilterType.value : '';
-        const selectedTermId = elMailingTermSelect ? elMailingTermSelect.value : '';
         
         if (!filterType) {
             return [];
@@ -7939,11 +7985,15 @@ document.addEventListener('DOMContentLoaded', () => {
         let targetTermIds = [];
         
         if (filterType === 'term') {
-            // Določen termin
-            if (!selectedTermId) {
+            // Določeni termini (več izbranih)
+            if (!elMailingTermsCheckboxes) {
                 return [];
             }
-            targetTermIds = [selectedTermId];
+            const checkedCheckboxes = elMailingTermsCheckboxes.querySelectorAll('input[type="checkbox"][data-term-id]:checked');
+            if (checkedCheckboxes.length === 0) {
+                return [];
+            }
+            targetTermIds = Array.from(checkedCheckboxes).map(cb => cb.value);
         } else if (filterType === 'afternoon') {
             // Popoldanske skupine (pred 18:00)
             const activeTerms = getActiveTerms();
@@ -8003,10 +8053,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        if (filterType === 'term' && (!elMailingTermSelect || !elMailingTermSelect.value)) {
-            elMailingListBox.innerHTML = '<p class="muted">Izberite termin</p>';
-            elCopyMailingListBtn.style.display = 'none';
-            return;
+        if (filterType === 'term') {
+            const checkedCheckboxes = elMailingTermsCheckboxes ? elMailingTermsCheckboxes.querySelectorAll('input[type="checkbox"][data-term-id]:checked') : [];
+            if (checkedCheckboxes.length === 0) {
+                elMailingListBox.innerHTML = '<p class="muted">Izberite vsaj en termin</p>';
+                elCopyMailingListBtn.style.display = 'none';
+                return;
+            }
         }
         
         const emailList = getMailingListEmails();
@@ -8017,8 +8070,24 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
+        // Pridobi informacije o izbranih terminih za prikaz
+        let selectedTermsInfo = '';
+        if (filterType === 'term' && elMailingTermsCheckboxes) {
+            const checkedCheckboxes = elMailingTermsCheckboxes.querySelectorAll('input[type="checkbox"][data-term-id]:checked');
+            const selectedTermNames = Array.from(checkedCheckboxes).map(cb => {
+                const termId = cb.value;
+                const term = TERMS.find(t => t.id === termId);
+                if (term) {
+                    return `${DAY_SHORT_NAME[term.day]} ${formatTimeWithoutSeconds(term.start_time)}-${formatTimeWithoutSeconds(term.end_time)}`;
+                }
+                return termId;
+            });
+            selectedTermsInfo = `<div style="margin-bottom: 10px; padding: 8px; background: #e8f5e9; border-radius: 4px;"><strong>Izbrani termini:</strong> ${selectedTermNames.join(', ')}</div>`;
+        }
+        
         // Prikaži seznam email naslovov
-        let html = `<div style="margin-bottom: 15px;"><strong>Najdenih email naslovov: ${emailList.length}</strong></div>`;
+        let html = selectedTermsInfo;
+        html += `<div style="margin-bottom: 15px;"><strong>Najdenih email naslovov: ${emailList.length}</strong></div>`;
         html += '<div style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 6px; background: #f9f9f9;">';
         
         emailList.forEach((item, index) => {
@@ -8044,15 +8113,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (elMailingTermSelectRow) {
                 elMailingTermSelectRow.style.display = filterType === 'term' ? 'flex' : 'none';
             }
-            if (elMailingTermSelect) {
-                elMailingTermSelect.value = '';
+            // Počisti izbrane checkboxe
+            if (elMailingTermsCheckboxes) {
+                const checkboxes = elMailingTermsCheckboxes.querySelectorAll('input[type="checkbox"]');
+                checkboxes.forEach(cb => cb.checked = false);
             }
-            displayMailingList();
-        });
-    }
-    
-    if (elMailingTermSelect) {
-        elMailingTermSelect.addEventListener('change', () => {
             displayMailingList();
         });
     }

@@ -733,11 +733,11 @@ Maja,Kovač,maja.kovac@email.com,+386 41 234 567,Prešernova 5,1000 Ljubljana,75
                 <option value="evening">Večerne skupine (od 18:00 naprej)</option>
               </select>
             </div>
-            <div class="row" style="width:100%;align-items:stretch;gap:4px;margin-bottom:15px" id="mailingTermSelectRow">
-              <label for="mailingTermSelect" style="min-width:150px;text-align:right;padding-top:8px">Izberi termin:</label>
-              <select id="mailingTermSelect" style="flex:1">
-                <option value="">Izberi termin</option>
-              </select>
+            <div class="row" style="width:100%;align-items:flex-start;gap:4px;margin-bottom:15px" id="mailingTermSelectRow">
+              <label style="min-width:150px;text-align:right;padding-top:8px">Izberi termine:</label>
+              <div id="mailingTermsCheckboxes" style="flex:1;max-height:200px;overflow-y:auto;border:1px solid #ddd;padding:10px;border-radius:6px;background:#f9f9f9">
+                <p class="muted">Nalaganje terminov...</p>
+              </div>
             </div>
             <div class="row" style="width:100%;align-items:stretch;gap:4px;margin-bottom:15px">
               <button class="btn pri" id="loadMailingListBtn" style="width:auto">Prikaži email naslove</button>
