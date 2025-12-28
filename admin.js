@@ -2425,6 +2425,98 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
+    // UI elementi za modal prisotnosti plavalca
+    const elSwimmerAttendanceModal = document.getElementById('swimmerAttendanceModal');
+    const elCloseSwimmerAttendanceModalBtn = document.getElementById('closeSwimmerAttendanceModalBtn');
+    const elSwimmerAttendanceContent = document.getElementById('swimmerAttendanceContent');
+    const elSwimmerAttendanceModalTitle = document.getElementById('swimmerAttendanceModalTitle');
+    
+    if (elCloseSwimmerAttendanceModalBtn && elSwimmerAttendanceModal) {
+        elCloseSwimmerAttendanceModalBtn.addEventListener('click', () => {
+            elSwimmerAttendanceModal.style.display = 'none';
+            elSwimmerAttendanceModal.setAttribute('aria-hidden', 'true');
+        });
+        
+        // Zapri modal ob kliku zunaj
+        elSwimmerAttendanceModal.addEventListener('click', (e) => {
+            if (e.target === elSwimmerAttendanceModal) {
+                elSwimmerAttendanceModal.style.display = 'none';
+                elSwimmerAttendanceModal.setAttribute('aria-hidden', 'true');
+            }
+        });
+    }
+    
+    // Funkcija za prikaz modala z programom prisotnosti plavalca
+    function showSwimmerAttendanceModal(swimmerId, swimmerName) {
+        if (!window.currentSwimmerStats || !window.currentSwimmerStats[swimmerId]) {
+            alert('Podatki o prisotnosti niso na voljo');
+            return;
+        }
+        
+        const swimmerStat = window.currentSwimmerStats[swimmerId];
+        const attendanceDates = swimmerStat.attendanceDates || [];
+        
+        // Sortiraj datume
+        attendanceDates.sort((a, b) => {
+            const dateA = new Date(a.date);
+            const dateB = new Date(b.date);
+            if (dateA.getTime() !== dateB.getTime()) {
+                return dateA - dateB;
+            }
+            // Če sta datuma enaka, sortiraj po terminu
+            return a.termId.localeCompare(b.termId);
+        });
+        
+        // Formatiraj datume
+        const formatDate = (dateStr) => {
+            const date = new Date(dateStr);
+            const day = date.getDate();
+            const month = date.getMonth() + 1;
+            const year = date.getFullYear();
+            const dayNames = ['Nedelja', 'Ponedeljek', 'Torek', 'Sreda', 'Četrtek', 'Petek', 'Sobota'];
+            const dayName = dayNames[date.getDay()];
+            return `${day}. ${month}. ${year} (${dayName})`;
+        };
+        
+        // Formatiraj termin
+        const formatTerm = (termId) => {
+            const term = TERMS.find(t => t.id === termId);
+            if (term) {
+                return `${DAY_SHORT_NAME[term.day]} ${formatTimeWithoutSeconds(term.start_time)}-${formatTimeWithoutSeconds(term.end_time)}`;
+            }
+            return termId;
+        };
+        
+        // Ustvari vsebino modala
+        let content = `<h4>Program prisotnosti: ${swimmerName}</h4>`;
+        content += `<p><strong>Obiskani treningi:</strong> ${swimmerStat.att} / <strong>Možni treningi:</strong> ${swimmerStat.pos}</p>`;
+        
+        if (attendanceDates.length === 0) {
+            content += '<p class="muted">Ni prisotnosti</p>';
+        } else {
+            content += '<table style="width: 100%; border-collapse: collapse; margin-top: 15px;"><thead><tr><th style="border: 1px solid #ddd; padding: 8px; background: #f8f9fa;">Datum</th><th style="border: 1px solid #ddd; padding: 8px; background: #f8f9fa;">Termin</th></tr></thead><tbody>';
+            attendanceDates.forEach(item => {
+                content += `<tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">${formatDate(item.date)}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">${formatTerm(item.termId)}</td>
+                </tr>`;
+            });
+            content += '</tbody></table>';
+        }
+        
+        if (elSwimmerAttendanceContent) {
+            elSwimmerAttendanceContent.innerHTML = content;
+        }
+        if (elSwimmerAttendanceModalTitle) {
+            elSwimmerAttendanceModalTitle.textContent = `Program prisotnosti - ${swimmerName}`;
+        }
+        
+        if (elSwimmerAttendanceModal) {
+            elSwimmerAttendanceModal.style.display = 'flex';
+            elSwimmerAttendanceModal.setAttribute('aria-hidden', 'false');
+        }
+    }
+    
     // Funkcija za prikaz modala z datumi odsotnosti
     function showTrainerAbsenceModal(trainerId, trainerName) {
         if (!window.currentTrainerStats || !window.currentTrainerStats[trainerId]) {
@@ -5405,7 +5497,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Dodaj plavalca v rezultate, če ima dodeljene termine
             if (s.terms && s.terms.length > 0) {
-            res[s.id] = { first: s.first_name, last: s.last_name, att: 0, pos: 0 };
+            res[s.id] = { first: s.first_name, last: s.last_name, att: 0, pos: 0, attendanceDates: [] };
             }
         });
 
@@ -5425,9 +5517,14 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (swimmer && !swimmer.is_deleted) {
                                 // Če plavalec še ni v rezultatih (nima več dodeljenih terminov), ga dodaj
                                 if (!res[swimmerId]) {
-                                    res[swimmerId] = { first: swimmer.first_name, last: swimmer.last_name, att: 0, pos: 0 };
+                                    res[swimmerId] = { first: swimmer.first_name, last: swimmer.last_name, att: 0, pos: 0, attendanceDates: [] };
                                 }
                             res[swimmerId].att += 1;
+                            // Shrani podatke o prisotnosti
+                            if (!res[swimmerId].attendanceDates) {
+                                res[swimmerId].attendanceDates = [];
+                            }
+                            res[swimmerId].attendanceDates.push({ date: date, termId: termId });
                             }
                         }
                     }
@@ -5478,6 +5575,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Funkcija za prikaz povzetka udeležbe plavalcev
     function renderSwimmerSummary(summaryData) {
+        // Shrani podatke globalno za uporabo v modalu
+        window.currentSwimmerStats = {};
+        Object.entries(summaryData).forEach(([swimmerId, r]) => {
+            window.currentSwimmerStats[swimmerId] = r;
+        });
+        
         let html = `<table><thead><tr><th>Plavalec</th><th>Obiskani</th><th>Možni</th><th>Delež (%)</th></tr></thead><tbody>`;
         // Filtriramo plavalce, ki nimajo nobenega možnega obiska in dodajamo dodatno filtriranje
         const rows = Object.entries(summaryData)
@@ -5489,15 +5592,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Izključi le plavalce brez možnih obiskov IN brez prisotnosti
                 return r.pos > 0 || r.att > 0;
             })
-            .map(([swimmerId, r]) => r)
+            .map(([swimmerId, r]) => ({ ...r, swimmerId }))
             .sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first));
         if(rows.length===0) html += `<tr><td colspan="4" class="muted">Ni plavalcev.</td></tr>`;
         rows.forEach(r=>{
             const pct = r.pos > 0 ? (r.att / r.pos * 100).toFixed(1) : "0.0";
-            html += `<tr><td>${r.first} ${r.last}</td><td>${r.att}</td><td>${r.pos}</td><td>${pct}</td></tr>`;
+            const swimmerName = `${r.first} ${r.last}`;
+            // Naredi delež klikljiv
+            const pctClickable = r.att > 0 
+                ? `<td><a href="#" class="attendance-link" data-swimmer-id="${r.swimmerId}" data-swimmer-name="${swimmerName}" style="color: inherit; text-decoration: underline; cursor: pointer;">${pct}</a></td>`
+                : `<td>${pct}</td>`;
+            html += `<tr><td>${swimmerName}</td><td>${r.att}</td><td>${r.pos}</td>${pctClickable}</tr>`;
         });
         html += `</tbody></table>`;
         elSwimmerSummaryBox.innerHTML = html;
+        
+        // Dodaj event listenerje za klik na delež
+        elSwimmerSummaryBox.querySelectorAll('.attendance-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const swimmerId = link.getAttribute('data-swimmer-id');
+                const swimmerName = link.getAttribute('data-swimmer-name');
+                showSwimmerAttendanceModal(swimmerId, swimmerName);
+            });
+        });
     }
 
     // Funkcija za osvežitev povzetka udeležbe plavalcev
