@@ -3697,7 +3697,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                             data = null; // Resetiraj data, da se izvede običajni insert
                                         } else {
                                             // Nekatere vadnine so bile vstavljene - prikaži rezultat
-                                            if (currentSection === 'finance') {
+                                            if (currentSection === 'finance' && month === currentFinanceMonth && year === currentFinanceYear) {
                                                 calculateFinanceData();
                                             }
                                             alert(`Uvoženih ${data.success} vadnin za prihodnje mesece (${data.errors} napak)`);
@@ -3705,7 +3705,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         }
                                     } else {
                                         // Vse vadnine so bile uspešno vstavljene
-                                        if (currentSection === 'finance') {
+                                        if (currentSection === 'finance' && month === currentFinanceMonth && year === currentFinanceYear) {
                                             calculateFinanceData();
                                         }
                                         alert(`Uvoženih ${data.success} vadnin za prihodnje mesece`);
@@ -3715,7 +3715,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     // Data je vrnil podatke, vendar brez success/errors - morda je uspešno
                                     if (data && Array.isArray(data) && data.length > 0) {
                                         console.log(`✅ Raw SQL: Vstavljenih ${data.length} vadnin`);
-                                        if (currentSection === 'finance') {
+                                        if (currentSection === 'finance' && month === currentFinanceMonth && year === currentFinanceYear) {
                                             calculateFinanceData();
                                         }
                                         alert(`Uvoženih ${data.length} vadnin za prihodnje mesece`);
@@ -3848,8 +3848,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         const startMonthDisplay = startMonth0Based + 1;
                         alert(`Uvoženih ${data ? data.length : 0} vadnin za ${totalMonths} prihodnjih mesecev (od ${startMonthDisplay}/${startYear} naprej)`);
                         
-                        // Osveži finance sekcijo, če je prikazana
-                        if (currentSection === 'finance') {
+                        // Osveži finance sekcijo, če je prikazana in če se vadnine uvozi za isti mesec/leto kot prikazan finance summary
+                        if (currentSection === 'finance' && month === currentFinanceMonth && year === currentFinanceYear) {
                             calculateFinanceData();
                         }
                     } else {
@@ -6542,7 +6542,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const success = await updateSwimmerFeeInDB(swimmerId, fee, month, year);
         
         if (success) {
-            if (currentSection === 'finance') {
+            // Osveži finance summary, če se sprememba nanaša na isti mesec/leto kot prikazan finance summary
+            if (currentSection === 'finance' && currentFinanceMonth === month && currentFinanceYear === year) {
                 calculateFinanceData();
             }
             refreshSwimmerFees();
@@ -6556,7 +6557,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const success = await updateSwimmerDiscountInDB(swimmerId, discount, month, year);
         
         if (success) {
-            if (currentSection === 'finance') {
+            // Osveži finance summary, če se sprememba nanaša na isti mesec/leto kot prikazan finance summary
+            if (currentSection === 'finance' && currentFinanceMonth === month && currentFinanceYear === year) {
                 calculateFinanceData();
             }
             refreshSwimmerFees();
@@ -6596,11 +6598,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Osveži znesek vadnine (uporabi default ali obstoječo vrednost)
                 await refreshSwimmerFees();
+                // Osveži finance summary, če se sprememba nanaša na isti mesec/leto kot prikazan finance summary
+                if (currentSection === 'finance' && currentFinanceMonth === month && currentFinanceYear === year) {
+                    calculateFinanceData();
+                }
                 return;
             }
             
             // Osveži prikaz
-            if (currentSection === 'finance') {
+            // Osveži finance summary, če se sprememba nanaša na isti mesec/leto kot prikazan finance summary
+            if (currentSection === 'finance' && currentFinanceMonth === month && currentFinanceYear === year) {
                 calculateFinanceData();
             }
             refreshSwimmerFees();
@@ -7312,7 +7319,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const success = await updateSwimmerFeeInDB(swimmerId, fee, month, year);
         
         if (success) {
-            if (currentSection === 'finance') {
+            // Osveži finance summary, če se sprememba nanaša na isti mesec/leto kot prikazan finance summary
+            if (currentSection === 'finance' && currentFinanceMonth === month && currentFinanceYear === year) {
                 calculateFinanceData();
             }
             refreshSwimmerFees();
@@ -7326,7 +7334,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const success = await updateSwimmerDiscountInDB(swimmerId, discount, month, year);
         
         if (success) {
-            if (currentSection === 'finance') {
+            // Osveži finance summary, če se sprememba nanaša na isti mesec/leto kot prikazan finance summary
+            if (currentSection === 'finance' && currentFinanceMonth === month && currentFinanceYear === year) {
                 calculateFinanceData();
             }
             refreshSwimmerFees();
@@ -7824,8 +7833,8 @@ document.addEventListener('DOMContentLoaded', () => {
 // console.log('✅ Uspešno kopirane vadnine:', insertedFees);
             showMessage(`Uspešno kopiranih ${insertedFees.length} vadnin iz ${previousMonth + 1}/${previousYear} v ${currentMonth + 1}/${currentYear}!`, 'success');
             
-            // Osveži finance sekcijo, če je prikazana
-            if (currentSection === 'finance') {
+            // Osveži finance sekcijo, če je prikazana in če se vadnine kopirajo za isti mesec/leto kot prikazan finance summary
+            if (currentSection === 'finance' && (currentMonth + 1) === currentFinanceMonth && currentYear === currentFinanceYear) {
                 calculateFinanceData();
             }
             
