@@ -5868,7 +5868,8 @@ document.addEventListener('DOMContentLoaded', () => {
 // console.log('🔍 calculateFinanceData - managementCostPerMonth:', managementCostPerMonth);
             
             // Izračunaj prihodke - uporabi individualne pristojbine plavalcev
-            const activeSwimmers = swimmers.filter(s => !s.is_deleted);
+            // Filtrirati samo plavalce, ki imajo dodeljene termine
+            const activeSwimmers = swimmers.filter(s => !s.is_deleted && s.terms && s.terms.length > 0);
 // console.log('🔍 calculateFinanceData - activeSwimmers:', activeSwimmers.length);
 
             
@@ -6332,7 +6333,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         const swimmerFees = await getSwimmerFees(month, year);
-        const activeSwimmers = swimmers.filter(s => !s.is_deleted);
+        // Filtrirati samo plavalce, ki imajo dodeljene termine
+        const activeSwimmers = swimmers.filter(s => !s.is_deleted && s.terms && s.terms.length > 0);
         
         let html = `
             <div class="swimmer-fees-table">
@@ -6350,13 +6352,16 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         
         // Sortiraj plavalce po abecedi po priimku, nato po imenu
-        const sortedActiveSwimmers = activeSwimmers.sort((a, b) => {
-            const aName = `${a.last_name} ${a.first_name}`;
-            const bName = `${b.last_name} ${b.first_name}`;
-            return aName.localeCompare(bName, 'sl');
-        });
+        // Filtrirati samo plavalce, ki imajo dodeljene termine
+        const sortedActiveSwimmers = activeSwimmers
+            .filter(swimmer => swimmer.terms && swimmer.terms.length > 0)
+            .sort((a, b) => {
+                const aName = `${a.last_name} ${a.first_name}`;
+                const bName = `${b.last_name} ${b.first_name}`;
+                return aName.localeCompare(bName, 'sl');
+            });
         
-        // Preštej trenutno število OLY plavalcev za ta mesec
+        // Preštej trenutno število OLY plavalcev za ta mesec (samo za plavalce z termini)
         let olyCount = 0;
         sortedActiveSwimmers.forEach(swimmer => {
             const feeData = swimmerFees[swimmer.id];
@@ -7189,8 +7194,9 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         
         // Sortiraj plavalce po abecedi po priimku, nato po imenu
+        // Filtrirati samo plavalce, ki imajo dodeljene termine
         const sortedSwimmers = swimmers
-            .filter(swimmer => !swimmer.is_deleted)
+            .filter(swimmer => !swimmer.is_deleted && swimmer.terms && swimmer.terms.length > 0)
             .sort((a, b) => {
                 const aName = `${a.last_name} ${a.first_name}`;
                 const bName = `${b.last_name} ${b.first_name}`;
