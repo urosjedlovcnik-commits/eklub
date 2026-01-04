@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let attendance = {};
     let termStatus = {};
     let trainerAttendance = {};
+    let swimmerTermAssignments = {}; // Shranjuje dodelitve plavalcev terminom z datumi
 
     const DAYNAME = ["","Ponedeljek","Torek","Sreda","Četrtek","Petek","Sobota","Nedelja"];
     const DAY_SHORT_NAME = ["", "Pon.", "Tor.", "Sre.", "Čet.", "Pet.", "Sob.", "Ned."];
@@ -345,9 +346,14 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Vedno uporabimo trenutno dodeljene plavalce (ne glede na to, ali imajo vneseno prisotnost ali ne)
         // To zagotovi, da lahko pravilno določimo partial status (delno izpolnjene treninge)
+        // POPRAVEK: Preveri tudi, ali je plavalec bil dodeljen terminu pred ali na ta dan
         let assignedSwimmers;
         let assignedSwimmerIds;
-        assignedSwimmers = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted);
+        assignedSwimmers = swimmers.filter(s => {
+          if (!s.terms.includes(termId) || s.is_deleted) return false;
+          // Preveri, ali je plavalec bil dodeljen terminu pred ali na ta dan
+          return isSwimmerAssignedToTermOnDate(s.id, termId, date);
+        });
         assignedSwimmerIds = assignedSwimmers.map(s => s.id);
         
         
@@ -711,8 +717,12 @@ document.addEventListener('DOMContentLoaded', () => {
       // Ločimo plavalce na redno dodeljene in nadomeščanje
       const swimmersWithAttendance = Object.keys(termAtt).map(swimmerId => swimmers.find(s => s.id === swimmerId)).filter(Boolean);
       
-      // Redno dodeljeni plavalci (tisti, ki so dodeljeni temu terminu)
-      const assignedSwimmers = swimmers.filter(s => s.terms.includes(termId) && !s.is_deleted);
+      // Redno dodeljeni plavalci (tisti, ki so dodeljeni temu terminu IN so bili dodeljeni pred ali na ta dan)
+      const assignedSwimmers = swimmers.filter(s => {
+        if (!s.terms.includes(termId) || s.is_deleted) return false;
+        // Preveri, ali je plavalec bil dodeljen terminu pred ali na ta dan
+        return isSwimmerAssignedToTermOnDate(s.id, termId, date);
+      });
       const assignedSwimmerIds = assignedSwimmers.map(s => s.id);
       
       // Plavalci z vneseno prisotnostjo, ki NISO redno dodeljeni temu terminu (nadomeščanje ali odstranjeni iz termina)
@@ -1686,6 +1696,45 @@ document.addEventListener('DOMContentLoaded', () => {
       if(!swimmer) return;
 
       const ymd = iso(modalCtx.date);
+      
+      // Preveri, ali je plavalec že dodeljen terminu
+      if (!swimmer.terms.includes(modalCtx.termId)) {
+        // Dodeli plavalca terminu
+        const updatedTerms = [...swimmer.terms, modalCtx.termId];
+        const { error: swimmerError } = await supabase
+          .from('swimmers')
+          .update({ terms: updatedTerms })
+          .eq('id', swimmerId);
+        
+        if (swimmerError) {
+          console.error('Napaka pri dodeljevanju termina:', swimmerError);
+          alert('Napaka pri dodeljevanju termina. Preverite konzolo.');
+          return;
+        }
+        
+        // Shrani datum dodelitve v novo tabelo
+        const { error: assignmentError } = await supabase
+          .from('swimmer_term_assignments')
+          .upsert({
+            swimmer_id: swimmerId,
+            term_id: modalCtx.termId,
+            assigned_from_date: ymd,
+            assigned_to_date: null
+          }, { 
+            onConflict: 'swimmer_id,term_id,assigned_from_date',
+            ignoreDuplicates: false
+          });
+
+        if (assignmentError) {
+          console.error('Napaka pri shranjevanju datuma dodelitve:', assignmentError);
+        }
+        
+        // Posodobi lokalno stanje
+        swimmer.terms = updatedTerms;
+        await loadSwimmerTermAssignments(); // Osveži dodelitve
+      }
+      
+      // Dodaj prisotnost
       const { error } = await supabase
         .from('attendance')
         .upsert({ date: ymd, term_id: modalCtx.termId, swimmer_id: swimmer.id, status: true }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
@@ -1759,6 +1808,63 @@ document.addEventListener('DOMContentLoaded', () => {
           console.error('Napaka pri nalaganju plavalcev:', error);
         }
       }
+    }
+
+    // Funkcija za nalaganje dodelitev plavalcev terminom z datumi
+    async function loadSwimmerTermAssignments() {
+      if (useLocalStorage) {
+        // Uporaba localStorage (za kompatibilnost)
+        const assignmentsData = localStorage.getItem('swimmerTermAssignments');
+        if (assignmentsData) {
+          swimmerTermAssignments = JSON.parse(assignmentsData);
+        }
+      } else {
+        // Uporaba Supabase
+        try {
+          const { data, error } = await supabase
+            .from('swimmer_term_assignments')
+            .select('*');
+          
+          if (error) {
+            console.error('Napaka pri nalaganju dodelitev plavalcev terminom:', error);
+          } else {
+            // Organiziraj podatke po swimmer_id in term_id za hitrejše iskanje
+            swimmerTermAssignments = {};
+            (data || []).forEach(assignment => {
+              const key = `${assignment.swimmer_id}-${assignment.term_id}`;
+              if (!swimmerTermAssignments[key]) {
+                swimmerTermAssignments[key] = [];
+              }
+              swimmerTermAssignments[key].push({
+                assigned_from_date: assignment.assigned_from_date,
+                assigned_to_date: assignment.assigned_to_date
+              });
+            });
+          }
+        } catch (error) {
+          console.error('Napaka pri nalaganju dodelitev plavalcev terminom:', error);
+        }
+      }
+    }
+
+    // Funkcija za preverjanje, ali je plavalec dodeljen terminu na določen datum
+    function isSwimmerAssignedToTermOnDate(swimmerId, termId, date) {
+      const ymd = iso(date);
+      const key = `${swimmerId}-${termId}`;
+      const assignments = swimmerTermAssignments[key] || [];
+      
+      // Preveri, ali obstaja dodelitev, ki velja za ta datum
+      return assignments.some(assignment => {
+        const fromDate = assignment.assigned_from_date;
+        const toDate = assignment.assigned_to_date;
+        
+        // Če ni assigned_to_date, velja do neskončno
+        if (!toDate) {
+          return ymd >= fromDate;
+        }
+        // Če je assigned_to_date, mora biti datum med from in to
+        return ymd >= fromDate && ymd <= toDate;
+      });
     }
 
     async function loadAttendance() {
@@ -1918,7 +2024,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadAllData() {
       // Naloži vse podatke
-      await Promise.all([loadTerms(), loadSwimmers(), loadTrainers(), loadAttendance(), loadTrainerAttendance(), loadTermStatus()]);
+      await Promise.all([loadTerms(), loadSwimmers(), loadSwimmerTermAssignments(), loadTrainers(), loadAttendance(), loadTrainerAttendance(), loadTermStatus()]);
       
       // Počisti cache ob osvežitvi podatkov
       clearCache();
@@ -1999,8 +2105,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===== Event listener za osvežitev koledarja ob dodelitvi/odstranitvi plavalca terminu =====
     async function refreshCalendarForTerm(termId) {
-      // Osveži seznam plavalcev iz baze, da se pravilno izračuna getAttendanceStatus
+      // Osveži seznam plavalcev in dodelitve iz baze, da se pravilno izračuna getAttendanceStatus
       await loadSwimmers();
+      await loadSwimmerTermAssignments();
       
       // Osveži cache za vse datume, kjer se ta termin izvaja
       const currentMonth = viewDate.getMonth();

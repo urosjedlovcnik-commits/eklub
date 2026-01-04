@@ -1449,15 +1449,35 @@ document.addEventListener('DOMContentLoaded', () => {
         if (swimmer) {
             if (!swimmer.terms.includes(termId)) {
                 try {
-                    const { error } = await supabase
+                    // Shrani termin v swimmers tabelo (za kompatibilnost)
+                    const { error: swimmerError } = await supabase
                         .from('swimmers')
                         .update({ terms: [...swimmer.terms, termId] })
                         .eq('id', swimmerId);
 
-                    if (error) {
-                        console.error('Napaka pri dodeljevanju termina:', error);
+                    if (swimmerError) {
+                        console.error('Napaka pri dodeljevanju termina:', swimmerError);
                         alert('Napaka pri dodeljevanju termina. Preverite konzolo.');
                         return;
+                    }
+
+                    // Shrani datum dodelitve v novo tabelo
+                    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+                    const { error: assignmentError } = await supabase
+                        .from('swimmer_term_assignments')
+                        .upsert({
+                            swimmer_id: swimmerId,
+                            term_id: termId,
+                            assigned_from_date: today,
+                            assigned_to_date: null
+                        }, { 
+                            onConflict: 'swimmer_id,term_id,assigned_from_date',
+                            ignoreDuplicates: false
+                        });
+
+                    if (assignmentError) {
+                        console.error('Napaka pri shranjevanju datuma dodelitve:', assignmentError);
+                        // Ne prekini procesa, ker je termin že dodeljen
                     }
 
                     // Posodobi lokalno stanje
@@ -1513,6 +1533,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.error('Napaka pri odstranjevanju termina:', error);
                     alert('Napaka pri odstranjevanju termina. Preverite konzolo.');
                     return;
+                }
+
+                // Posodobi datum dodelitve - nastavi assigned_to_date na danes
+                const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+                const { error: assignmentError } = await supabase
+                    .from('swimmer_term_assignments')
+                    .update({ assigned_to_date: today })
+                    .eq('swimmer_id', swimmerId)
+                    .eq('term_id', termId)
+                    .is('assigned_to_date', null); // Posodobi samo aktivne dodelitve
+
+                if (assignmentError) {
+                    console.error('Napaka pri posodabljanju datuma odstranitve:', assignmentError);
+                    // Ne prekini procesa, ker je termin že odstranjen
                 }
 
                 // Posodobi lokalno stanje
@@ -2973,6 +3007,36 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (insertData) {
                             swimmers.push(...insertData);
                             insertedCount = insertData.length;
+                            
+                            // Shrani datume dodelitve za nove plavalce
+                            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+                            const assignmentsToInsert = [];
+                            
+                            insertData.forEach(swimmer => {
+                                if (swimmer.terms && swimmer.terms.length > 0) {
+                                    swimmer.terms.forEach(termId => {
+                                        assignmentsToInsert.push({
+                                            swimmer_id: swimmer.id,
+                                            term_id: termId,
+                                            assigned_from_date: today,
+                                            assigned_to_date: null
+                                        });
+                                    });
+                                }
+                            });
+                            
+                            if (assignmentsToInsert.length > 0) {
+                                const { error: assignmentError } = await supabase
+                                    .from('swimmer_term_assignments')
+                                    .upsert(assignmentsToInsert, { 
+                                        onConflict: 'swimmer_id,term_id,assigned_from_date',
+                                        ignoreDuplicates: false
+                                    });
+                                
+                                if (assignmentError) {
+                                    console.error('Napaka pri shranjevanju datumov dodelitve za nove plavalce:', assignmentError);
+                                }
+                            }
                         }
                     }
                     
@@ -3012,11 +3076,58 @@ document.addEventListener('DOMContentLoaded', () => {
                             // Posodobi lokalno stanje
                             const localSwimmer = swimmers.find(s => s.id === updateData.id);
                             if (localSwimmer) {
+                                const oldTerms = localSwimmer.terms || [];
+                                const newTerms = updateData.terms || [];
+                                
+                                // Poišči nove termine (ki jih prej ni bilo)
+                                const addedTerms = newTerms.filter(t => !oldTerms.includes(t));
+                                
                                 localSwimmer.terms = updateData.terms;
                                 localSwimmer.email = updateData.email;
                                 localSwimmer.phone = updateData.phone;
                                 localSwimmer.address = updateData.address;
                                 localSwimmer.postal_code = updateData.postal_code;
+                                
+                                // Shrani datume dodelitve za nove termine
+                                if (addedTerms.length > 0) {
+                                    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+                                    const assignmentsToInsert = addedTerms.map(termId => ({
+                                        swimmer_id: updateData.id,
+                                        term_id: termId,
+                                        assigned_from_date: today,
+                                        assigned_to_date: null
+                                    }));
+                                    
+                                    const { error: assignmentError } = await supabase
+                                        .from('swimmer_term_assignments')
+                                        .upsert(assignmentsToInsert, { 
+                                            onConflict: 'swimmer_id,term_id,assigned_from_date',
+                                            ignoreDuplicates: false
+                                        });
+                                    
+                                    if (assignmentError) {
+                                        console.error('Napaka pri shranjevanju datumov dodelitve:', assignmentError);
+                                    }
+                                }
+                                
+                                // Poišči odstranjene termine in nastavi assigned_to_date
+                                const removedTerms = oldTerms.filter(t => !newTerms.includes(t));
+                                if (removedTerms.length > 0) {
+                                    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+                                    for (const termId of removedTerms) {
+                                        const { error: assignmentError } = await supabase
+                                            .from('swimmer_term_assignments')
+                                            .update({ assigned_to_date: today })
+                                            .eq('swimmer_id', updateData.id)
+                                            .eq('term_id', termId)
+                                            .is('assigned_to_date', null); // Posodobi samo aktivne dodelitve
+                                        
+                                        if (assignmentError) {
+                                            console.error('Napaka pri posodabljanju datuma odstranitve:', assignmentError);
+                                        }
+                                    }
+                                }
+                                
 // console.log(`Updated local swimmer ${localSwimmer.first_name} ${localSwimmer.last_name} with terms: [${localSwimmer.terms.join(', ')}], email: ${localSwimmer.email || 'none'}, phone: ${localSwimmer.phone || 'none'}`);
                             }
 
@@ -6124,11 +6235,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const summaryLocalStorageCosts = JSON.parse(localStorage.getItem(summaryManualCostsKey) || '{}');
             const summaryMembershipFee = (summaryDbManualCosts?.membershipFee !== undefined ? summaryDbManualCosts.membershipFee : summaryLocalStorageCosts.membershipFee) || 0;
             
-            // Skupni stroški
-            const totalCosts = totalTrainerCost + managementCostPerMonth + totalFacilityCost;
+            // Uporabi ročno vnesene vrednosti za summary, če obstajajo
+            const summaryMonthlyFee = (summaryDbManualCosts?.monthlyFee !== undefined ? summaryDbManualCosts.monthlyFee : summaryLocalStorageCosts.monthlyFee);
+            const summaryTrainerCost = (summaryDbManualCosts?.trainerCost !== undefined ? summaryDbManualCosts.trainerCost : summaryLocalStorageCosts.trainerCost);
+            const summaryManagementCost = (summaryDbManualCosts?.managementCost !== undefined ? summaryDbManualCosts.managementCost : summaryLocalStorageCosts.managementCost);
+            const summaryFacilityCost = (summaryDbManualCosts?.facilityCost !== undefined ? summaryDbManualCosts.facilityCost : summaryLocalStorageCosts.facilityCost);
             
-            // Prihodki vključujejo članarino
-            const totalRevenueWithMembership = totalRevenue + summaryMembershipFee;
+            // Skupni stroški - uporabi ročno vnesene vrednosti, če obstajajo, sicer izračunane
+            const finalTrainerCost = summaryTrainerCost !== undefined ? summaryTrainerCost : totalTrainerCost;
+            const finalManagementCost = summaryManagementCost !== undefined ? summaryManagementCost : managementCostPerMonth;
+            const finalFacilityCost = summaryFacilityCost !== undefined ? summaryFacilityCost : totalFacilityCost;
+            const totalCosts = finalTrainerCost + finalManagementCost + finalFacilityCost;
+            
+            // Prihodki - uporabi ročno vneseno mesečno vadnino, če obstaja, sicer izračunano
+            const finalMonthlyFee = summaryMonthlyFee !== undefined ? summaryMonthlyFee : (totalRevenue - olyContributions);
+            const totalRevenueWithMembership = finalMonthlyFee + olyContributions + summaryMembershipFee;
             
             // Dobiček/izguba
             const profit = totalRevenueWithMembership - totalCosts;
@@ -6137,7 +6258,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
     
             
-            // Prikaži povzetek
+            // Prikaži povzetek - uporabi ročno vnesene vrednosti iz tabele
             let summary = `
                 <div class="finance-summary">
                     <div class="finance-card revenue">
@@ -6149,9 +6270,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         <h4>Stroški</h4>
                         <div class="amount">${totalCosts.toFixed(2)} €</div>
                         <div class="details">
-                            Trenerji: ${totalTrainerCost.toFixed(2)} €<br>
-                            Vodenje: ${managementCostPerMonth.toFixed(2)} €<br>
-                            Objekti: ${totalFacilityCost.toFixed(2)} €
+                            Trenerji: ${finalTrainerCost.toFixed(2)} €<br>
+                            Vodenje: ${finalManagementCost.toFixed(2)} €<br>
+                            Objekti: ${finalFacilityCost.toFixed(2)} €
                         </div>
                     </div>
                     <div class="finance-card ${profit >= 0 ? 'profit' : 'loss'}">
