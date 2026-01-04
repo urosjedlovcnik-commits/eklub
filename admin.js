@@ -7928,18 +7928,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             if (!previousMonthFees || previousMonthFees.length === 0) {
-// console.log(`Ni vadnin za prejšnji mesec ${previousMonth + 1}/${previousYear}`);
-                showMessage(`Ni vadnin za prejšnji mesec ${previousMonth + 1}/${previousYear}!`, 'info');
+// console.log(`Ni vadnin za prejšnji mesec ${previousMonth1Based}/${previousYear}`);
+                showMessage(`Ni vadnin za prejšnji mesec ${previousMonth1Based}/${previousYear}!`, 'info');
                 return false;
             }
             
 // console.log(`Najdenih ${previousMonthFees.length} vadnin iz prejšnega meseca za kopiranje`);
             
-            // Preveri, ali vadnine za trenutni mesec že obstajajo
+            // Preveri, ali vadnine za trenutni mesec že obstajajo (1-based za bazo)
             const { data: currentMonthFees, error: currentError } = await supabase
                 .from('swimmer_monthly_fees')
                 .select('*')
-                .eq('month', currentMonth)
+                .eq('month', currentMonth1Based)
                 .eq('year', currentYear);
             
             if (currentError) {
@@ -7958,7 +7958,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!existingSwimmerIds.includes(previousFee.swimmer_id)) {
                     newFees.push({
                         swimmer_id: previousFee.swimmer_id,
-                        month: currentMonth,
+                        month: currentMonth1Based, // 1-based za bazo
                         year: currentYear,
                         monthly_fee: previousFee.monthly_fee,
                         discount: 0 // Brez popusta za nov mesec
@@ -7989,10 +7989,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
 // console.log('✅ Uspešno kopirane vadnine:', insertedFees);
-            showMessage(`Uspešno kopiranih ${insertedFees.length} vadnin iz ${previousMonth + 1}/${previousYear} v ${currentMonth + 1}/${currentYear}!`, 'success');
+            showMessage(`Uspešno kopiranih ${insertedFees.length} vadnin iz ${previousMonth1Based}/${previousYear} v ${currentMonth1Based}/${currentYear}!`, 'success');
             
             // Osveži finance sekcijo, če je prikazana in če se vadnine kopirajo za isti mesec/leto kot prikazan finance summary
-            if (currentSection === 'finance' && (currentMonth + 1) === currentFinanceMonth && currentYear === currentFinanceYear) {
+            if (currentSection === 'finance' && currentMonth1Based === currentFinanceMonth && currentYear === currentFinanceYear) {
                 calculateFinanceData();
             }
             
@@ -8021,11 +8021,14 @@ document.addEventListener('DOMContentLoaded', () => {
             
 // console.log(`🔍 Preverjam vadnine za trenutni mesec: ${currentMonth + 1}/${currentYear}`);
             
+            // Pretvori mesec iz 0-based (JavaScript) v 1-based (SQL)
+            const currentMonth1Based = currentMonth + 1;
+            
             // Preveri, ali obstajajo vadnine za trenutni mesec
             const { data: currentMonthFees, error: fetchError } = await supabase
                 .from('swimmer_monthly_fees')
                 .select('*')
-                .eq('month', currentMonth)
+                .eq('month', currentMonth1Based)
                 .eq('year', currentYear);
             
             if (fetchError) {
@@ -8103,11 +8106,14 @@ document.addEventListener('DOMContentLoaded', () => {
             
 // console.log(`🔍 Preverjam stanje vadnin za trenutni mesec: ${currentMonth + 1}/${currentYear}...`);
             
+            // Pretvori mesec iz 0-based (JavaScript) v 1-based (SQL)
+            const currentMonth1Based = currentMonth + 1;
+            
             // Preveri vadnine za trenutni mesec
             const { data: currentMonthFees, error } = await supabase
                 .from('swimmer_monthly_fees')
                 .select('*')
-                .eq('month', currentMonth)
+                .eq('month', currentMonth1Based)
                 .eq('year', currentYear);
             
             if (error) {
