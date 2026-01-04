@@ -1465,6 +1465,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateSwimmersList();
                     elSwimmerInfo.textContent = `Termin dodeljen plavalcu ${swimmer.first_name} ${swimmer.last_name}`;
                     
+                    // Osveži prikaz koledarja - pošlji event preko localStorage (za druga okna)
+                    // in window.postMessage (za ista okna)
+                    const eventData = {
+                        swimmerId: swimmerId,
+                        termId: termId,
+                        timestamp: Date.now()
+                    };
+                    
+                    // Za druga okna (localStorage event)
+                    localStorage.setItem('swimmerTermAssigned', JSON.stringify(eventData));
+                    setTimeout(() => localStorage.removeItem('swimmerTermAssigned'), 100);
+                    
+                    // Za ista okna (window.postMessage)
+                    window.postMessage({ type: 'swimmerTermAssigned', data: eventData }, '*');
+                    
                     setTimeout(() => {
                         elSwimmerInfo.textContent = '';
                     }, 3000);
@@ -1503,6 +1518,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Posodobi lokalno stanje
                 swimmer.terms = updatedTerms;
                 updateSwimmersList();
+                
+                // Osveži prikaz koledarja - pošlji event preko localStorage (za druga okna)
+                // in window.postMessage (za ista okna)
+                const eventData = {
+                    swimmerId: swimmerId,
+                    termId: termId,
+                    timestamp: Date.now(),
+                    removed: true
+                };
+                
+                // Za druga okna (localStorage event)
+                localStorage.setItem('swimmerTermRemoved', JSON.stringify(eventData));
+                setTimeout(() => localStorage.removeItem('swimmerTermRemoved'), 100);
+                
+                // Za ista okna (window.postMessage)
+                window.postMessage({ type: 'swimmerTermRemoved', data: eventData }, '*');
                 alert('Termin uspešno odstranjen iz plavalca.');
             } catch (error) {
                 console.error('Napaka pri odstranjevanju termina:', error);

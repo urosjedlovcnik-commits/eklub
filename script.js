@@ -1997,6 +1997,57 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
+    // ===== Event listener za osvežitev koledarja ob dodelitvi/odstranitvi plavalca terminu =====
+    async function refreshCalendarForTerm(termId) {
+      // Osveži seznam plavalcev iz baze, da se pravilno izračuna getAttendanceStatus
+      await loadSwimmers();
+      
+      // Osveži cache za vse datume, kjer se ta termin izvaja
+      const currentMonth = viewDate.getMonth();
+      const currentYear = viewDate.getFullYear();
+      const monthStart = new Date(currentYear, currentMonth, 1);
+      const monthEnd = new Date(currentYear, currentMonth + 1, 0);
+      
+      for (let d = 1; d <= monthEnd.getDate(); d++) {
+        const date = new Date(currentYear, currentMonth, d);
+        const todays = getTermsForDate(date);
+        todays.forEach(t => {
+          if (t.id === termId) {
+            clearAttendanceCacheForTerm(date, termId);
+            updateDayColor(date, termId);
+          }
+        });
+      }
+    }
+    
+    // Event listener za localStorage (druga okna)
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'swimmerTermAssigned' && e.newValue) {
+        try {
+          const data = JSON.parse(e.newValue);
+          refreshCalendarForTerm(data.termId);
+        } catch (error) {
+          console.error('Napaka pri osvežitvi koledarja:', error);
+        }
+      } else if (e.key === 'swimmerTermRemoved' && e.newValue) {
+        try {
+          const data = JSON.parse(e.newValue);
+          refreshCalendarForTerm(data.termId);
+        } catch (error) {
+          console.error('Napaka pri osvežitvi koledarja:', error);
+        }
+      }
+    });
+    
+    // Event listener za window.postMessage (ista okna)
+    window.addEventListener('message', (e) => {
+      if (e.data && e.data.type === 'swimmerTermAssigned') {
+        refreshCalendarForTerm(e.data.data.termId);
+      } else if (e.data && e.data.type === 'swimmerTermRemoved') {
+        refreshCalendarForTerm(e.data.data.termId);
+      }
+    });
+
     // ===== Inicializacija =====
     loadAllData();
 });
