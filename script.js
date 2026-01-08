@@ -1697,44 +1697,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const ymd = iso(modalCtx.date);
       
-      // Preveri, ali je plavalec že dodeljen terminu
-      if (!swimmer.terms.includes(modalCtx.termId)) {
-        // Dodeli plavalca terminu
-        const updatedTerms = [...swimmer.terms, modalCtx.termId];
-        const { error: swimmerError } = await supabase
-          .from('swimmers')
-          .update({ terms: updatedTerms })
-          .eq('id', swimmerId);
-        
-        if (swimmerError) {
-          console.error('Napaka pri dodeljevanju termina:', swimmerError);
-          alert('Napaka pri dodeljevanju termina. Preverite konzolo.');
-          return;
-        }
-        
-        // Shrani datum dodelitve v novo tabelo
-        const { error: assignmentError } = await supabase
-          .from('swimmer_term_assignments')
-          .upsert({
-            swimmer_id: swimmerId,
-            term_id: modalCtx.termId,
-            assigned_from_date: ymd,
-            assigned_to_date: null
-          }, { 
-            onConflict: 'swimmer_id,term_id,assigned_from_date',
-            ignoreDuplicates: false
-          });
-
-        if (assignmentError) {
-          console.error('Napaka pri shranjevanju datuma dodelitve:', assignmentError);
-        }
-        
-        // Posodobi lokalno stanje
-        swimmer.terms = updatedTerms;
-        await loadSwimmerTermAssignments(); // Osveži dodelitve
-      }
+      // POPRAVEK: Ne dodelimo plavalca terminu, če ga dodajamo v trening
+      // To omogoča, da se plavalec prikaže kot nadomestni, ne pa kot stalni
+      // Če želite plavalca dodeliti terminu kot stalnega, uporabite admin stran
       
-      // Dodaj prisotnost
+      // Dodaj samo prisotnost (za stalne in nadomestne plavalce)
       const { error } = await supabase
         .from('attendance')
         .upsert({ date: ymd, term_id: modalCtx.termId, swimmer_id: swimmer.id, status: true }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
