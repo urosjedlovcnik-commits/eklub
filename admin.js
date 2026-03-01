@@ -4052,7 +4052,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 csv += 'Ni plavalcev za izbrani mesec\n';
             } else {
                 rows.forEach(r => {
-                    const pct = r.pos > 0 ? (r.att / r.pos * 100).toFixed(1) : "0.0";
+                    const rawPct = r.pos > 0 ? (r.att / r.pos * 100) : 0;
+                    const pct = r.pos > 0 ? Math.min(100, rawPct).toFixed(1) : "0.0";
                     
                     // Poišči znesek vadnine za plavalca
                     const swimmer = swimmers.find(s => s.first_name === r.first && s.last_name === r.last);
@@ -5720,6 +5721,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (s.is_deleted) return;
                             
                         // Preveri, ali plavalec ima ta termin dodeljen in ali je v rezultatih
+                        // Štejemo samo možne obiske pri redno dodeljenih terminih (ne pri nadomestnih)
                         if (res[s.id] && s.terms && s.terms.includes(term.id)) {
                             res[s.id].pos += 1;
                             
@@ -5735,21 +5737,20 @@ document.addEventListener('DOMContentLoaded', () => {
                                 res[s.id].missedDates.push({ date: ymd, termId: term.id });
                             }
                         }
-                        
-                        // DODANO: Preveri tudi, ali je plavalec v rezultatih (z prisotnostjo) in ali ima prisotnost za ta termin
-                        // Če plavalec nima več dodeljenega termina, vendar ima prisotnost, dodaj možni obisk
-                        if (res[s.id] && (!s.terms || !s.terms.includes(term.id))) {
-                            const termAtt = attendance[ymd]?.[term.id] || {};
-                            // Če plavalec ima prisotnost za ta termin, dodaj možni obisk
-                            if (termAtt[s.id] !== undefined) {
-                                res[s.id].pos += 1;
-                            }
-                        }
+                        // Nadomestni obiski se NE prištevajo v "možne" (pos), da delež ne preseže 100 %
                     });
                 }
             });
             currentDate.setDate(currentDate.getDate() + 1);
         }
+        
+        // Za plavalce samo z nadomestnimi obiski (brez redno dodeljenih terminov) nastavimo pos = att, da delež = 100 %
+        Object.keys(res).forEach(swimmerId => {
+            if (res[swimmerId].pos === 0 && res[swimmerId].att > 0) {
+                res[swimmerId].pos = res[swimmerId].att;
+            }
+        });
+        
         return res;
     }
 
@@ -5780,7 +5781,8 @@ document.addEventListener('DOMContentLoaded', () => {
             .sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first));
         if(rows.length===0) html += `<tr><td colspan="4" class="muted">Ni plavalcev.</td></tr>`;
         rows.forEach(r=>{
-            const pct = r.pos > 0 ? (r.att / r.pos * 100).toFixed(1) : "0.0";
+            const rawPct = r.pos > 0 ? (r.att / r.pos * 100) : 0;
+            const pct = r.pos > 0 ? Math.min(100, rawPct).toFixed(1) : "0.0";
             const swimmerName = `${r.first} ${r.last}`;
             // Naredi delež klikljiv
             const pctClickable = r.att > 0 
@@ -5863,7 +5865,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         rows.forEach(r => {
-            const pct = r.pos > 0 ? (r.att / r.pos * 100).toFixed(1) : "0.0";
+            const rawPct = r.pos > 0 ? (r.att / r.pos * 100) : 0;
+            const pct = r.pos > 0 ? Math.min(100, rawPct).toFixed(1) : "0.0";
             html += `<tr><td>${r.first} ${r.last}</td><td>${r.att}</td><td>${r.pos}</td><td>${pct}</td></tr>`;
         });
         
@@ -7912,13 +7915,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 return false;
             }
             
+            // Baza uporablja mesece 1–12
+            const currentMonth1Based = currentMonth + 1;
+            const previousMonth1Based = previousMonth + 1;
+            
 // console.log(`🔄 Začenjam kopiranje vadnin iz ${previousMonth + 1}/${previousYear} v ${currentMonth + 1}/${currentYear}...`);
             
-            // Pridobi vse vadnine iz prejšnega meseca
+            // Pridobi vse vadnine iz prejšnega meseca (month v bazi je 1-based)
             const { data: previousMonthFees, error: fetchError } = await supabase
                 .from('swimmer_monthly_fees')
                 .select('*')
-                .eq('month', previousMonth)
+                .eq('month', previousMonth1Based)
                 .eq('year', previousYear);
             
             if (fetchError) {
@@ -7961,7 +7968,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         month: currentMonth1Based, // 1-based za bazo
                         year: currentYear,
                         monthly_fee: previousFee.monthly_fee,
-                        discount: 0 // Brez popusta za nov mesec
+                        discount: 0, // Brez popusta za nov mesec
+                        is_oly: previousFee.is_oly || false
                     });
                 }
             });
