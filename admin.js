@@ -4052,8 +4052,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 csv += 'Ni plavalcev za izbrani mesec\n';
             } else {
                 rows.forEach(r => {
-                    const rawPct = r.pos > 0 ? (r.att / r.pos * 100) : 0;
-                    const pct = r.pos > 0 ? Math.min(100, rawPct).toFixed(1) : "0.0";
+                    const pct = r.pos > 0 ? (r.att / r.pos * 100).toFixed(1) : "0.0";
                     
                     // Poišči znesek vadnine za plavalca
                     const swimmer = swimmers.find(s => s.first_name === r.first && s.last_name === r.last);
@@ -5781,8 +5780,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first));
         if(rows.length===0) html += `<tr><td colspan="4" class="muted">Ni plavalcev.</td></tr>`;
         rows.forEach(r=>{
-            const rawPct = r.pos > 0 ? (r.att / r.pos * 100) : 0;
-            const pct = r.pos > 0 ? Math.min(100, rawPct).toFixed(1) : "0.0";
+            const pct = r.pos > 0 ? (r.att / r.pos * 100).toFixed(1) : "0.0";
             const swimmerName = `${r.first} ${r.last}`;
             // Naredi delež klikljiv
             const pctClickable = r.att > 0 
@@ -5865,8 +5863,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         rows.forEach(r => {
-            const rawPct = r.pos > 0 ? (r.att / r.pos * 100) : 0;
-            const pct = r.pos > 0 ? Math.min(100, rawPct).toFixed(1) : "0.0";
+            const pct = r.pos > 0 ? (r.att / r.pos * 100).toFixed(1) : "0.0";
             html += `<tr><td>${r.first} ${r.last}</td><td>${r.att}</td><td>${r.pos}</td><td>${pct}</td></tr>`;
         });
         
@@ -7942,47 +7939,18 @@ document.addEventListener('DOMContentLoaded', () => {
             
 // console.log(`Najdenih ${previousMonthFees.length} vadnin iz prejšnega meseca za kopiranje`);
             
-            // Preveri, ali vadnine za trenutni mesec že obstajajo (1-based za bazo)
-            const { data: currentMonthFees, error: currentError } = await supabase
-                .from('swimmer_monthly_fees')
-                .select('*')
-                .eq('month', currentMonth1Based)
-                .eq('year', currentYear);
+            // Povozimo vadnine tekočega meseca z vadninami iz prejšnjega meseca (upsert prepiše obstoječe)
+            const newFees = previousMonthFees.map(previousFee => ({
+                swimmer_id: previousFee.swimmer_id,
+                month: currentMonth1Based, // 1-based za bazo
+                year: currentYear,
+                monthly_fee: previousFee.monthly_fee,
+                discount: 0, // Brez popusta za nov mesec
+                is_oly: previousFee.is_oly || false
+            }));
             
-            if (currentError) {
-                console.error('Napaka pri preverjanju trenutnih vadnin:', currentError);
-                showMessage('Napaka pri preverjanju trenutnih vadnin!', 'error');
-                return false;
-            }
+// console.log(`Ustvarjam / posodabljam ${newFees.length} vadnin za trenutni mesec`);
             
-            // Ustvari seznam obstoječih vadnin za trenutni mesec
-            const existingFees = currentMonthFees || [];
-            const existingSwimmerIds = existingFees.map(fee => fee.swimmer_id);
-            
-            // Ustvari nove vadnine samo za plavalce, ki še nimajo vadnin za trenutni mesec
-            const newFees = [];
-            previousMonthFees.forEach(previousFee => {
-                if (!existingSwimmerIds.includes(previousFee.swimmer_id)) {
-                    newFees.push({
-                        swimmer_id: previousFee.swimmer_id,
-                        month: currentMonth1Based, // 1-based za bazo
-                        year: currentYear,
-                        monthly_fee: previousFee.monthly_fee,
-                        discount: 0, // Brez popusta za nov mesec
-                        is_oly: previousFee.is_oly || false
-                    });
-                }
-            });
-            
-            if (newFees.length === 0) {
-// console.log('Vse vadnine za trenutni mesec že obstajajo');
-                showMessage('Vse vadnine za trenutni mesec že obstajajo!', 'info');
-                return true;
-            }
-            
-// console.log(`Ustvarjam ${newFees.length} novih vadnin za trenutni mesec`);
-            
-            // Uvozi nove vadnine v bazo
             const { data: insertedFees, error: insertError } = await supabase
                 .from('swimmer_monthly_fees')
                 .upsert(newFees, { 
@@ -7997,7 +7965,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
 // console.log('✅ Uspešno kopirane vadnine:', insertedFees);
-            showMessage(`Uspešno kopiranih ${insertedFees.length} vadnin iz ${previousMonth1Based}/${previousYear} v ${currentMonth1Based}/${currentYear}!`, 'success');
+            showMessage(`Uspešno kopiranih ${insertedFees.length} vadnin iz ${previousMonth1Based}/${previousYear} v ${currentMonth1Based}/${currentYear} (obstoječe so bile prepisane).`, 'success');
             
             // Osveži finance sekcijo, če je prikazana in če se vadnine kopirajo za isti mesec/leto kot prikazan finance summary
             if (currentSection === 'finance' && currentMonth1Based === currentFinanceMonth && currentYear === currentFinanceYear) {
