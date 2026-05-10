@@ -740,6 +740,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (currentSection === 'seasons') {
                 renderSeasonsAdminList();
                 populateSeasonSelects();
+            }
+            if (currentSection === 'terms') {
+                populateSeasonSelects();
                 const browseSel = document.getElementById('seasonTermsBrowseSelect');
                 renderSeasonTermsForSeason(browseSel ? browseSel.value : '');
             }
@@ -2081,12 +2084,103 @@ document.addEventListener('DOMContentLoaded', () => {
                 await loadSeasons();
                 populateSeasonSelects();
                 renderSeasonsAdminList();
+                const browseSel = document.getElementById('seasonTermsBrowseSelect');
+                if (browseSel) renderSeasonTermsForSeason(browseSel.value || '');
             } catch (e) {
                 console.error(e);
                 alert('Napaka pri shranjevanju sezone: ' + (e.message || e));
             }
         });
     }
+
+    const elEditSeasonModal = document.getElementById('editSeasonModal');
+    function openEditSeasonModal(seasonId) {
+        const s = seasons.find(x => x.id === seasonId);
+        if (!s || !elEditSeasonModal) return;
+        document.getElementById('editSeasonName').value = s.name || '';
+        document.getElementById('editSeasonDateFrom').value = s.date_from || '';
+        document.getElementById('editSeasonDateTo').value = s.date_to || '';
+        document.getElementById('editSeasonIsActive').checked = !!s.is_active;
+        elEditSeasonModal.setAttribute('data-season-id', seasonId);
+        elEditSeasonModal.style.display = 'flex';
+        elEditSeasonModal.setAttribute('aria-hidden', 'false');
+    }
+    function closeEditSeasonModal() {
+        if (!elEditSeasonModal) return;
+        elEditSeasonModal.style.display = 'none';
+        elEditSeasonModal.setAttribute('aria-hidden', 'true');
+        elEditSeasonModal.removeAttribute('data-season-id');
+    }
+    document.getElementById('closeEditSeasonModalBtn')?.addEventListener('click', closeEditSeasonModal);
+    document.getElementById('cancelEditSeasonModalBtn')?.addEventListener('click', closeEditSeasonModal);
+    elEditSeasonModal?.addEventListener('click', e => {
+        if (e.target === elEditSeasonModal) closeEditSeasonModal();
+    });
+    document.getElementById('saveEditSeasonBtn')?.addEventListener('click', async () => {
+        const id = elEditSeasonModal?.getAttribute('data-season-id');
+        if (!id) return;
+        const name = document.getElementById('editSeasonName')?.value?.trim();
+        const df = document.getElementById('editSeasonDateFrom')?.value;
+        const dt = document.getElementById('editSeasonDateTo')?.value;
+        const active = document.getElementById('editSeasonIsActive')?.checked || false;
+        if (!name || !df || !dt) {
+            alert('Vnesite naziv in datuma od–do.');
+            return;
+        }
+        if (df > dt) {
+            alert('Datum »od« mora biti pred ali enak »do«.');
+            return;
+        }
+        try {
+            const { error } = await supabase
+                .from('seasons')
+                .update({ name, date_from: df, date_to: dt, is_active: active })
+                .eq('id', id);
+            if (error) throw error;
+            showMessage('Sezona je posodobljena.', 'success');
+            closeEditSeasonModal();
+            await loadSeasons();
+            populateSeasonSelects();
+            renderSeasonsAdminList();
+            const browseSel = document.getElementById('seasonTermsBrowseSelect');
+            if (browseSel) renderSeasonTermsForSeason(browseSel.value || '');
+        } catch (e) {
+            console.error(e);
+            alert('Napaka pri posodabljanju sezone: ' + (e.message || e));
+        }
+    });
+
+    document.getElementById('seasons-section')?.addEventListener('click', async e => {
+        const editBtn = e.target.closest('[data-edit-season]');
+        if (editBtn) {
+            openEditSeasonModal(editBtn.getAttribute('data-edit-season'));
+            return;
+        }
+        const delBtn = e.target.closest('[data-delete-season]');
+        if (!delBtn) return;
+        const seasonId = delBtn.getAttribute('data-delete-season');
+        const s = seasons.find(x => x.id === seasonId);
+        const nTerms = TERMS.filter(t => t.season_id === seasonId).length;
+        if (!s) return;
+        if (!confirm(`Izbrisati sezono «${s.name}»? ${nTerms} terminov bo imelo polje sezona izpraznjeno (termini ostanejo).`)) return;
+        try {
+            const { error } = await supabase.from('seasons').delete().eq('id', seasonId);
+            if (error) throw error;
+            TERMS = TERMS.map(t => (t.season_id === seasonId ? { ...t, season_id: null } : t));
+            showMessage('Sezona je izbrisana.', 'success');
+            await loadSeasons();
+            populateSeasonSelects();
+            renderSeasonsAdminList();
+            const browseSel = document.getElementById('seasonTermsBrowseSelect');
+            if (browseSel) {
+                if (browseSel.value === seasonId) browseSel.value = '';
+                renderSeasonTermsForSeason(browseSel.value || '');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Brisanje sezone ni uspelo: ' + (err.message || err));
+        }
+    });
 
     const elGenerateSeasonReportBtn = document.getElementById('generateSeasonReportBtn');
     if (elGenerateSeasonReportBtn) {
@@ -6092,24 +6186,22 @@ document.addEventListener('DOMContentLoaded', () => {
             box.innerHTML = '<p class="muted">Ni sezon. Dodajte prvo sezono zgoraj ali poženite migracijo v SQL.</p>';
             return;
         }
-        let html = '<table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Naziv</th><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Od</th><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Do</th><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Aktivna</th><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Terminov</th></tr></thead><tbody>';
+        let html = '<table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Naziv</th><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Od</th><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Do</th><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Aktivna</th><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Terminov</th><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Dejanja</th></tr></thead><tbody>';
         seasons.forEach(s => {
             const nTerms = TERMS.filter(t => t.season_id === s.id).length;
-            html += `<tr><td style="padding:8px;border-bottom:1px solid #eee">${escapeHtml(s.name)}</td><td style="padding:8px;border-bottom:1px solid #eee">${s.date_from}</td><td style="padding:8px;border-bottom:1px solid #eee">${s.date_to}</td><td style="padding:8px;border-bottom:1px solid #eee">${s.is_active ? 'Da' : 'Ne'}</td><td style="padding:8px;border-bottom:1px solid #eee">${nTerms}</td></tr>`;
+            html += `<tr><td style="padding:8px;border-bottom:1px solid #eee">${escapeHtml(s.name)}</td><td style="padding:8px;border-bottom:1px solid #eee">${s.date_from}</td><td style="padding:8px;border-bottom:1px solid #eee">${s.date_to}</td><td style="padding:8px;border-bottom:1px solid #eee">${s.is_active ? 'Da' : 'Ne'}</td><td style="padding:8px;border-bottom:1px solid #eee">${nTerms}</td><td style="padding:8px;border-bottom:1px solid #eee;white-space:nowrap"><button type="button" class="btn" data-edit-season="${s.id}">Uredi</button> <button type="button" class="btn warn" data-delete-season="${s.id}">Izbriši</button></td></tr>`;
         });
         html += '</tbody></table>';
         box.innerHTML = html;
     }
 
     /**
-     * Letna udeležba: ista logika kot mesečni povzetek (calculateSwimmerSummaryData).
-     * Možni obiski: samo plavalec z redno dodeljenim terminom (polje terms), aktivni termin.
-     * Prisotni: vsi označeni prisotni v obdobju sezone za termine te sezone (vklj. nadomestne obiske).
+     * Letno poročilo: prisotni in možni iz iste množice (dan, termin sezone, plavalec z dodeljenim terminom).
+     * Tako delež ustreza dejanskim obiskom na redno dodeljenih terminih (brez dviga zaradi nadomestnih).
      */
     function buildSeasonAttendanceStats(season) {
         const termsInSeason = getTermsForSeason(season);
         const termIds = new Set(termsInSeason.map(t => t.id));
-        const termById = Object.fromEntries(termsInSeason.map(t => [t.id, t]));
         const out = {
             posAll: 0, attAll: 0, posMorn: 0, attMorn: 0, posAfter: 0, attAfter: 0,
             termCount: termsInSeason.length
@@ -6118,34 +6210,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const end = new Date(season.date_to);
         const cur = new Date(start);
         while (cur <= end) {
+            const ymd = iso(cur);
             const todays = getTermsForDate(cur).filter(t => termIds.has(t.id));
             for (const term of todays) {
                 if (getTermStatus(cur, term.id).status !== 'active') continue;
                 const isMorning = isTermMorningSlot(term);
+                const termAtt = attendance[ymd]?.[term.id] || {};
                 for (const s of swimmers) {
                     if (s.is_deleted || !s.terms || !s.terms.includes(term.id)) continue;
                     out.posAll++;
                     if (isMorning) out.posMorn++; else out.posAfter++;
+                    const st = termAtt[s.id];
+                    if (st === true || st === 'true' || st === 1) {
+                        out.attAll++;
+                        if (isMorning) out.attMorn++; else out.attAfter++;
+                    }
                 }
             }
             cur.setDate(cur.getDate() + 1);
-        }
-        for (const [ymd, termData] of Object.entries(attendance)) {
-            if (ymd < season.date_from || ymd > season.date_to) continue;
-            if (!termData || typeof termData !== 'object') continue;
-            for (const [tid, swimMap] of Object.entries(termData)) {
-                if (!termIds.has(tid)) continue;
-                const term = termById[tid] || TERMS.find(t => t.id === tid);
-                if (!term) continue;
-                const isMorning = isTermMorningSlot(term);
-                for (const [swimmerId, status] of Object.entries(swimMap || {})) {
-                    if (status !== true && status !== 'true' && status !== 1) continue;
-                    const swimmer = swimmers.find(sw => sw.id === swimmerId);
-                    if (!swimmer || swimmer.is_deleted) continue;
-                    out.attAll++;
-                    if (isMorning) out.attMorn++; else out.attAfter++;
-                }
-            }
         }
         return out;
     }
@@ -6452,7 +6534,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
           </div>
           <p class="muted" style="font-size:13px;line-height:1.5;margin-top:16px">
-            <strong>Udeležba:</strong> možni obiski kot v mesečnem povzetku (redna dodelitev v polju <code>terms</code> pri plavalcu, aktivni termin). Prisotni so vsi zabeleženi obiski v obdobju sezone za termine te sezone (nadomestni se v možne ne prištevajo). Če prisotnosti presežejo možne, je prikazan delež kvečjemu 100 %.<br>
+            <strong>Udeležba:</strong> za vsak dan v obdobju sezone, vsak aktivni termin te sezone in vsakega plavalca z dodeljenim terminom: <strong>možni</strong> = vsi taki dnevi, <strong>prisotni</strong> = ko je prisotnost označena kot prisoten (enaka celica). Nadomestni obiski (brez dodelitve) se tu ne štejejo.<br>
             <strong>Prihodki:</strong> OLY zapisi v <code>swimmer_monthly_fees</code> štejejo <strong>${OLY_MONTHLY_CONTRIBUTION_EUR} €</strong> na zapis na mesec (ne znesek vadnine v tabeli).<br>
             <strong>Stroški:</strong> ročno v Finance ali izračun; preverite »Strošek vodenja na mesec«.
           </p>

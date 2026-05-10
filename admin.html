@@ -450,6 +450,22 @@
           <button class="btn pri" id="addTermBtn">Dodaj termin</button>
         </div>
       </div>
+      <div class="card">
+        <h3>Termini sezone in dodeljeni plavalci</h3>
+        <div class="inner">
+          <div class="row" style="flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:12px">
+            <label>Sezona:
+              <select id="seasonTermsBrowseSelect" style="min-width:280px">
+                <option value="">Izberite sezono</option>
+              </select>
+            </label>
+          </div>
+          <p class="muted" style="font-size:13px;margin-bottom:12px">Termini z izbrano sezono (<code>season_id</code>) in plavalci, ki imajo ta termin med dodeljenimi (<code>terms</code>).</p>
+          <div id="seasonTermsBrowseOutput">
+            <p class="muted">Izberite sezono zgoraj.</p>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -466,7 +482,7 @@
             <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="newSeasonIsActive"> Aktivna</label>
             <button type="button" class="btn pri" id="addSeasonBtn">Shrani sezono</button>
           </div>
-          <p class="muted" style="margin-top:12px;font-size:13px"><strong>Plavalci</strong> v bazi niso vezani na sezono (imajo splošen seznam terminov). <strong>Termini</strong> imajo <code>season_id</code>. Po kopiranju terminov plavalce znova dodelite ali posodobite <code>swimmer_term_assignments</code>.</p>
+          <p class="muted" style="margin-top:12px;font-size:13px"><strong>Plavalci</strong> imajo dodeljene termine v polju <code>terms</code>. <strong>Termini</strong> so lahko vezani na sezono (<code>season_id</code>). Brisanje sezone počisti to vezavo pri terminih (termini ostanejo).</p>
         </div>
       </div>
       <div class="card">
@@ -487,22 +503,6 @@
         </div>
       </div>
       <div class="card" style="grid-column: 1 / -1; max-width:100%">
-        <h3>Termini sezone in dodeljeni plavalci</h3>
-        <div class="inner">
-          <div class="row" style="flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:12px">
-            <label>Sezona:
-              <select id="seasonTermsBrowseSelect" style="min-width:280px">
-                <option value="">Izberite sezono</option>
-              </select>
-            </label>
-          </div>
-          <p class="muted" style="font-size:13px;margin-bottom:12px">Termini z izbrano sezono (<code>season_id</code>) in plavalci, ki imajo ta termin med dodeljenimi (<code>terms</code>).</p>
-          <div id="seasonTermsBrowseOutput">
-            <p class="muted">Izberite sezono zgoraj.</p>
-          </div>
-        </div>
-      </div>
-      <div class="card" style="grid-column: 1 / -1; max-width:100%">
         <h3>Letno poročilo (udeležba in bilanca vadnin)</h3>
         <div class="inner">
           <div class="row" style="flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:16px">
@@ -515,7 +515,7 @@
           </div>
           <p class="muted" style="font-size:13px;margin-bottom:12px">
             <strong>Jutranji treningi:</strong> začetek termina pred 12:00. <strong>Popoldanski:</strong> od 12:00 naprej.
-            Udeležba sledi mesečnemu povzetku: možni obiski samo pri redno dodeljenih terminih (polje <code>terms</code>); prisotni so vsi zabeleženi obiski v obdobju sezone za termine te sezone.
+            <strong>Udeležba:</strong> prisotni in možni se štejeta za iste kombinacije dan + termin sezone + plavalec z dodeljenim terminom (označena prisotnost).
           </p>
           <div id="seasonReportOutput"></div>
         </div>
@@ -974,6 +974,37 @@ date,term_id,swimmer_id,status
           <select id="editTermSeasonId" style="flex:1"></select>
         </div>
         <button class="btn pri" id="saveEditTermBtn">Shrani</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal za urejanje sezone -->
+  <div class="modal" id="editSeasonModal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="box">
+      <div class="box-header">
+        <strong>Uredi sezono</strong>
+        <button type="button" class="btn" id="closeEditSeasonModalBtn">Zapri</button>
+      </div>
+      <div class="box-body">
+        <div class="row">
+          <label for="editSeasonName">Naziv:</label>
+          <input type="text" id="editSeasonName" placeholder="npr. 2026/27" style="min-width:220px">
+        </div>
+        <div class="row">
+          <label for="editSeasonDateFrom">Od:</label>
+          <input type="date" id="editSeasonDateFrom">
+        </div>
+        <div class="row">
+          <label for="editSeasonDateTo">Do:</label>
+          <input type="date" id="editSeasonDateTo">
+        </div>
+        <div class="row">
+          <label for="editSeasonIsActive" style="min-width:auto"><input type="checkbox" id="editSeasonIsActive"> Aktivna</label>
+        </div>
+        <div class="row" style="gap:8px">
+          <button type="button" class="btn pri" id="saveEditSeasonBtn">Shrani</button>
+          <button type="button" class="btn" id="cancelEditSeasonModalBtn">Prekliči</button>
+        </div>
       </div>
     </div>
   </div>
