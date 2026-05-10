@@ -6164,6 +6164,82 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    const ATTENDANCE_PAGE_SIZE = 1000;
+
+    /**
+     * Naloži vso prisotnost za datumsko obdobje (več strani; Supabase privzeto omeji ~1000 vrstic).
+     * Za datume v obdobju najprej počisti obstoječe zapise v pomnilniku, nato zlijemo sveže iz baze.
+     */
+    async function loadAttendanceForDateRange(fromYmd, toYmd) {
+        if (!fromYmd || !toYmd || fromYmd > toYmd) return;
+        const collected = [];
+        let start = 0;
+        try {
+            for (;;) {
+                const { data, error } = await supabase
+                    .from('attendance')
+                    .select('*')
+                    .gte('date', fromYmd)
+                    .lte('date', toYmd)
+                    .order('date', { ascending: true })
+                    .range(start, start + ATTENDANCE_PAGE_SIZE - 1);
+                if (error) throw error;
+                if (!data || data.length === 0) break;
+                collected.push(...data);
+                if (data.length < ATTENDANCE_PAGE_SIZE) break;
+                start += ATTENDANCE_PAGE_SIZE;
+            }
+        } catch (e) {
+            console.error('Napaka pri nalaganju prisotnosti za obdobje:', e);
+            showMessage('Napaka pri nalaganju prisotnosti za poročilo. Preverite konzolo.', 'error');
+            return;
+        }
+        Object.keys(attendance).forEach(d => {
+            if (d >= fromYmd && d <= toYmd) delete attendance[d];
+        });
+        collected.forEach(row => {
+            if (!attendance[row.date]) attendance[row.date] = {};
+            if (!attendance[row.date][row.term_id]) attendance[row.date][row.term_id] = {};
+            attendance[row.date][row.term_id][row.swimmer_id] = row.status;
+        });
+    }
+
+    async function loadTermStatusForDateRange(fromYmd, toYmd) {
+        if (!fromYmd || !toYmd || fromYmd > toYmd) return;
+        const collected = [];
+        let start = 0;
+        try {
+            for (;;) {
+                const { data, error } = await supabase
+                    .from('term_status')
+                    .select('*')
+                    .gte('date', fromYmd)
+                    .lte('date', toYmd)
+                    .order('date', { ascending: true })
+                    .range(start, start + ATTENDANCE_PAGE_SIZE - 1);
+                if (error) throw error;
+                if (!data || data.length === 0) break;
+                collected.push(...data);
+                if (data.length < ATTENDANCE_PAGE_SIZE) break;
+                start += ATTENDANCE_PAGE_SIZE;
+            }
+        } catch (e) {
+            console.warn('Napaka pri nalaganju statusa terminov za obdobje:', e);
+            return;
+        }
+        Object.keys(termStatus).forEach(d => {
+            if (d >= fromYmd && d <= toYmd) delete termStatus[d];
+        });
+        collected.forEach(row => {
+            if (!termStatus[row.date]) termStatus[row.date] = {};
+            termStatus[row.date][row.term_id] = {
+                status: row.status,
+                note: row.note,
+                notes: row.notes
+            };
+        });
+    }
+
     async function loadSeasons() {
         try {
             const { data, error } = await supabase
@@ -6601,6 +6677,9 @@ document.addEventListener('DOMContentLoaded', () => {
             out.innerHTML = '<p class="muted">Sezona ni najdena.</p>';
             return;
         }
+        out.innerHTML = '<p class="muted">Nalagam prisotnost in statuse za celotno obdobje sezone …</p>';
+        await loadAttendanceForDateRange(season.date_from, season.date_to);
+        await loadTermStatusForDateRange(season.date_from, season.date_to);
         out.innerHTML = '<p class="muted">Računanje …</p>';
         const scopeEl = document.getElementById('seasonReportAttendanceScope');
         const scope = scopeEl?.value || 'all';
@@ -6677,6 +6756,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           <p class="muted" style="font-size:13px;line-height:1.5;margin-top:16px">
             <strong>Skupna prisotnost</strong> je <strong>vsota vseh zabeleženih prisotnosti / vsota vseh možnih obiskov</strong> v izbranem obdobju sezone (po vseh dnevih, vseh terminih sezone in vseh dodeljenih plavalcih). Jutro in popoldan sta isti račun, ločeno po uri začetka termina. Če je delež nad 100 %, je prikaz omejen na 100 % (preverite podvojene zapise ali nadomestne obiske).<br>
+            Ob izračunu poročila se iz baze za celotno obdobje sezone znova naložita prisotnost in statusi terminov (vsi zapisi, ne le prvih 1000).<br>
             <strong>Pravila:</strong> aktivni termini sezone; plavalec z dodeljenim terminom; nadomestni obiski brez dodelitve v možne niso všteti.<br>
             <strong>Prihodki:</strong> OLY zapisi v <code>swimmer_monthly_fees</code> štejejo <strong>${OLY_MONTHLY_CONTRIBUTION_EUR} €</strong> na zapis na mesec (ne znesek vadnine v tabeli).<br>
             <strong>Stroški:</strong> ročno v Finance ali izračun; preverite »Strošek vodenja na mesec«.
