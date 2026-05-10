@@ -59,7 +59,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let trainerAttendance = {};
     let currentSection = 'swimmers'; // Dodano: sledi trenutni sekciji
     let seasons = []; // Sezone (tabela seasons v bazi)
-    let swimmerTermAssignments = {}; // ključ swimmer_id-term_id → [{assigned_from_date, assigned_to_date}]
     /** Mesečni OLY prispevek na plavalca (enako kot v Finance / calculateFinanceData) */
     const OLY_MONTHLY_CONTRIBUTION_EUR = 40;
     
@@ -741,6 +740,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (currentSection === 'seasons') {
                 renderSeasonsAdminList();
                 populateSeasonSelects();
+                const browseSel = document.getElementById('seasonTermsBrowseSelect');
+                renderSeasonTermsForSeason(browseSel ? browseSel.value : '');
             }
 
             // Če je finance sekcija aktivna, avtomatsko osveži pristojbine plavalcev
@@ -906,7 +907,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             await loadSeasons();
-            await loadSwimmerTermAssignmentsForAdmin();
             populateSeasonSelects();
 
             // Posodobi UI
@@ -2092,6 +2092,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (elGenerateSeasonReportBtn) {
         elGenerateSeasonReportBtn.addEventListener('click', () => runSeasonReport());
     }
+    const elSeasonTermsBrowseSelect = document.getElementById('seasonTermsBrowseSelect');
+    if (elSeasonTermsBrowseSelect) {
+        elSeasonTermsBrowseSelect.addEventListener('change', e => {
+            renderSeasonTermsForSeason(e.target.value || '');
+        });
+    }
 
     const elCopyTermsBetweenSeasonsBtn = document.getElementById('copyTermsBetweenSeasonsBtn');
     if (elCopyTermsBetweenSeasonsBtn) {
@@ -2148,6 +2154,8 @@ document.addEventListener('DOMContentLoaded', () => {
             updateTermSelects();
             updateTermList();
             renderSeasonsAdminList();
+            const browseSel = document.getElementById('seasonTermsBrowseSelect');
+            if (browseSel) renderSeasonTermsForSeason(browseSel.value || '');
         });
     }
 
@@ -6041,39 +6049,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function loadSwimmerTermAssignmentsForAdmin() {
-        swimmerTermAssignments = {};
-        try {
-            const { data, error } = await supabase.from('swimmer_term_assignments').select('*');
-            if (error) throw error;
-            (data || []).forEach(assignment => {
-                const key = `${assignment.swimmer_id}-${assignment.term_id}`;
-                if (!swimmerTermAssignments[key]) swimmerTermAssignments[key] = [];
-                swimmerTermAssignments[key].push({
-                    assigned_from_date: assignment.assigned_from_date,
-                    assigned_to_date: assignment.assigned_to_date
-                });
-            });
-        } catch (e) {
-            console.warn('Dodelitve plavalcev terminom niso naložene:', e.message || e);
-        }
-    }
-
-    /** Ali naj se plavalec šteje k terminu na ta dan (terms[] + datirane dodelitve) */
-    function isSwimmerCountedForTermOnDate(swimmer, termId, date) {
-        if (!swimmer || swimmer.is_deleted || !swimmer.terms || !swimmer.terms.includes(termId)) return false;
-        const key = `${swimmer.id}-${termId}`;
-        const rows = swimmerTermAssignments[key];
-        if (!rows || rows.length === 0) return true;
-        const ymd = iso(date);
-        return rows.some(a => {
-            const fromDate = a.assigned_from_date;
-            const toDate = a.assigned_to_date;
-            if (!toDate) return ymd >= fromDate;
-            return ymd >= fromDate && ymd <= toDate;
-        });
-    }
-
     function populateSeasonSelects() {
         const newTermSel = document.getElementById('newTermSeasonId');
         const repSel = document.getElementById('seasonReportSelect');
@@ -6094,6 +6069,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const copyTgt = document.getElementById('copyTermsTargetSeason');
         if (copySrc) copySrc.innerHTML = '<option value="">Izberi izvorno sezono</option>' + optHtml;
         if (copyTgt) copyTgt.innerHTML = '<option value="">Izberi ciljno sezono</option>' + optHtml;
+        const browseSel = document.getElementById('seasonTermsBrowseSelect');
+        if (browseSel) {
+            const prev = browseSel.value;
+            browseSel.innerHTML = '<option value="">Izberite sezono</option>' + optHtml;
+            if (prev && seasons.some(s => s.id === prev)) browseSel.value = prev;
+            renderSeasonTermsForSeason(browseSel.value || '');
+        }
     }
 
     function escapeHtml(text) {
@@ -6119,9 +6101,15 @@ document.addEventListener('DOMContentLoaded', () => {
         box.innerHTML = html;
     }
 
+    /**
+     * Letna udeležba: ista logika kot mesečni povzetek (calculateSwimmerSummaryData).
+     * Možni obiski: samo plavalec z redno dodeljenim terminom (polje terms), aktivni termin.
+     * Prisotni: vsi označeni prisotni v obdobju sezone za termine te sezone (vklj. nadomestne obiske).
+     */
     function buildSeasonAttendanceStats(season) {
         const termsInSeason = getTermsForSeason(season);
         const termIds = new Set(termsInSeason.map(t => t.id));
+        const termById = Object.fromEntries(termsInSeason.map(t => [t.id, t]));
         const out = {
             posAll: 0, attAll: 0, posMorn: 0, attMorn: 0, posAfter: 0, attAfter: 0,
             termCount: termsInSeason.length
@@ -6130,64 +6118,66 @@ document.addEventListener('DOMContentLoaded', () => {
         const end = new Date(season.date_to);
         const cur = new Date(start);
         while (cur <= end) {
-            const ymd = iso(cur);
             const todays = getTermsForDate(cur).filter(t => termIds.has(t.id));
             for (const term of todays) {
                 if (getTermStatus(cur, term.id).status !== 'active') continue;
                 const isMorning = isTermMorningSlot(term);
-                const termAtt = attendance[ymd]?.[term.id] || {};
                 for (const s of swimmers) {
-                    if (!isSwimmerCountedForTermOnDate(s, term.id, cur)) continue;
+                    if (s.is_deleted || !s.terms || !s.terms.includes(term.id)) continue;
                     out.posAll++;
                     if (isMorning) out.posMorn++; else out.posAfter++;
-                    const st = termAtt[s.id];
-                    if (st === true || st === 'true' || st === 1) {
-                        out.attAll++;
-                        if (isMorning) out.attMorn++; else out.attAfter++;
-                    }
                 }
             }
             cur.setDate(cur.getDate() + 1);
+        }
+        for (const [ymd, termData] of Object.entries(attendance)) {
+            if (ymd < season.date_from || ymd > season.date_to) continue;
+            if (!termData || typeof termData !== 'object') continue;
+            for (const [tid, swimMap] of Object.entries(termData)) {
+                if (!termIds.has(tid)) continue;
+                const term = termById[tid] || TERMS.find(t => t.id === tid);
+                if (!term) continue;
+                const isMorning = isTermMorningSlot(term);
+                for (const [swimmerId, status] of Object.entries(swimMap || {})) {
+                    if (status !== true && status !== 'true' && status !== 1) continue;
+                    const swimmer = swimmers.find(sw => sw.id === swimmerId);
+                    if (!swimmer || swimmer.is_deleted) continue;
+                    out.attAll++;
+                    if (isMorning) out.attMorn++; else out.attAfter++;
+                }
+            }
         }
         return out;
     }
 
-    /** Za vsak izveden trening v sezoni: prisotni / možni vadeči (isti kriteriji kot zgoraj). */
-    function buildSeasonPerSessionAttendance(season) {
-        const termsInSeason = getTermsForSeason(season);
-        const termIds = new Set(termsInSeason.map(t => t.id));
-        const sessions = [];
-        const start = new Date(season.date_from);
-        const end = new Date(season.date_to);
-        const cur = new Date(start);
-        while (cur <= end) {
-            const ymd = iso(cur);
-            const todays = getTermsForDate(cur).filter(t => termIds.has(t.id));
-            for (const term of todays) {
-                if (getTermStatus(cur, term.id).status !== 'active') continue;
-                const termAtt = attendance[ymd]?.[term.id] || {};
-                let pos = 0;
-                let att = 0;
-                for (const s of swimmers) {
-                    if (!isSwimmerCountedForTermOnDate(s, term.id, cur)) continue;
-                    pos++;
-                    const st = termAtt[s.id];
-                    if (st === true || st === 'true' || st === 1) att++;
-                }
-                if (pos > 0) {
-                    const label = term.label || `${DAYNAME[term.day]} ${String(term.start_time).slice(0, 5)}`;
-                    sessions.push({
-                        ymd,
-                        label,
-                        pos,
-                        att,
-                        pctStr: pos > 0 ? ((att / pos) * 100).toFixed(1) + ' %' : '—'
-                    });
-                }
-            }
-            cur.setDate(cur.getDate() + 1);
+    function renderSeasonTermsForSeason(seasonId) {
+        const box = document.getElementById('seasonTermsBrowseOutput');
+        if (!box) return;
+        if (!seasonId) {
+            box.innerHTML = '<p class="muted">Izberite sezono zgoraj.</p>';
+            return;
         }
-        return sessions;
+        const termsList = TERMS.filter(t => t.season_id === seasonId)
+            .sort((a, b) => a.day - b.day || String(a.start_time).localeCompare(String(b.start_time), 'sl'));
+        if (termsList.length === 0) {
+            box.innerHTML = '<p class="muted">Za to sezono ni terminov.</p>';
+            return;
+        }
+        let html = '';
+        termsList.forEach(term => {
+            const assigned = swimmers.filter(s => !s.is_deleted && s.terms && s.terms.includes(term.id))
+                .sort((a, b) => `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`, 'sl'));
+            const names = assigned.length
+                ? assigned.map(s => `${escapeHtml(s.first_name)} ${escapeHtml(s.last_name)}`).join(', ')
+                : '<span class="muted">Brez dodeljenih plavalcev</span>';
+            const label = escapeHtml(term.label || term.id);
+            html += `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-bottom:10px;background:#fafafa">
+              <strong>${label}</strong>
+              <span class="muted" style="font-size:12px"> · ${escapeHtml(formatDate(term.date_from))} – ${escapeHtml(formatDate(term.date_to))}</span>
+              <div style="margin-top:8px;font-size:14px">${names}</div>
+            </div>`;
+        });
+        box.innerHTML = html;
     }
 
     async function getSeasonFeesTotals(season) {
@@ -6382,7 +6372,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function pct(att, pos) {
         if (pos <= 0) return '—';
-        return ((att / pos) * 100).toFixed(1) + ' %';
+        const p = Math.min(100, (att / pos) * 100);
+        return p.toFixed(1) + ' %';
     }
 
     async function runSeasonReport() {
@@ -6400,22 +6391,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         out.innerHTML = '<p class="muted">Računanje …</p>';
-        await loadSwimmerTermAssignmentsForAdmin();
         const stats = buildSeasonAttendanceStats(season);
-        const sessionList = buildSeasonPerSessionAttendance(season);
         const fees = await getSeasonFeesTotals(season);
         const fin = await computeSeasonFinanceRollup(season);
         const revenueTotal = fees.total + fin.membership;
         const costTotal = fin.facility + fin.trainer + fin.management;
         const net = revenueTotal - costTotal;
         const netClass = net >= 0 ? '#166534' : '#991b1b';
-        const sessionTableRows = sessionList.map(r =>
-            `<tr><td style="padding:6px 8px;border-bottom:1px solid #eee">${escapeHtml(r.ymd)}</td>` +
-            `<td style="padding:6px 8px;border-bottom:1px solid #eee">${escapeHtml(r.label)}</td>` +
-            `<td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right">${r.att}</td>` +
-            `<td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right">${r.pos}</td>` +
-            `<td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right">${r.pctStr}</td></tr>`
-        ).join('');
         const olyDetail = fees.olyRows > 0
             ? ` · OLY: ${fees.fromOly.toFixed(2)} € (${fees.olyRows} zap., po ${OLY_MONTHLY_CONTRIBUTION_EUR} €)`
             : '';
@@ -6469,22 +6451,8 @@ document.addEventListener('DOMContentLoaded', () => {
               <div style="font-size:13px;color:#444">Prihodki (${revenueTotal.toFixed(2)} €) − skupaj stroški (${costTotal.toFixed(2)} €)</div>
             </div>
           </div>
-          <h4 style="margin:24px 0 8px 0">Prisotnost po posameznih treningih</h4>
-          <p class="muted" style="font-size:13px;margin-bottom:10px">Za vsak aktivni termin na dan: <strong>prisotni</strong> vadeči (označeni prisotni) od <strong>vseh možnih</strong> (isti kriteriji kot zgoraj: dodelitev na ta dan).</p>
-          <div style="max-height:480px;overflow:auto;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:16px">
-            <table style="width:100%;border-collapse:collapse;font-size:13px">
-              <thead><tr style="background:#f8fafc;position:sticky;top:0">
-                <th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Datum</th>
-                <th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Termin</th>
-                <th style="text-align:right;padding:8px;border-bottom:1px solid #ddd">Prisotni</th>
-                <th style="text-align:right;padding:8px;border-bottom:1px solid #ddd">Možni</th>
-                <th style="text-align:right;padding:8px;border-bottom:1px solid #ddd">Delež</th>
-              </tr></thead>
-              <tbody>${sessionTableRows || '<tr><td colspan="5" class="muted" style="padding:12px">Ni treningov z dodeljenimi vadečimi.</td></tr>'}</tbody>
-            </table>
-          </div>
-          <p class="muted" style="font-size:13px;line-height:1.5">
-            <strong>Udeležba (povzetek):</strong> vsota prisotnih in možnih čez vse treninge v sezoni (ponder ni enak povprečju vrstic v tabeli).<br>
+          <p class="muted" style="font-size:13px;line-height:1.5;margin-top:16px">
+            <strong>Udeležba:</strong> možni obiski kot v mesečnem povzetku (redna dodelitev v polju <code>terms</code> pri plavalcu, aktivni termin). Prisotni so vsi zabeleženi obiski v obdobju sezone za termine te sezone (nadomestni se v možne ne prištevajo). Če prisotnosti presežejo možne, je prikazan delež kvečjemu 100 %.<br>
             <strong>Prihodki:</strong> OLY zapisi v <code>swimmer_monthly_fees</code> štejejo <strong>${OLY_MONTHLY_CONTRIBUTION_EUR} €</strong> na zapis na mesec (ne znesek vadnine v tabeli).<br>
             <strong>Stroški:</strong> ročno v Finance ali izračun; preverite »Strošek vodenja na mesec«.
           </p>

@@ -487,6 +487,22 @@
         </div>
       </div>
       <div class="card" style="grid-column: 1 / -1; max-width:100%">
+        <h3>Termini sezone in dodeljeni plavalci</h3>
+        <div class="inner">
+          <div class="row" style="flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:12px">
+            <label>Sezona:
+              <select id="seasonTermsBrowseSelect" style="min-width:280px">
+                <option value="">Izberite sezono</option>
+              </select>
+            </label>
+          </div>
+          <p class="muted" style="font-size:13px;margin-bottom:12px">Termini z izbrano sezono (<code>season_id</code>) in plavalci, ki imajo ta termin med dodeljenimi (<code>terms</code>).</p>
+          <div id="seasonTermsBrowseOutput">
+            <p class="muted">Izberite sezono zgoraj.</p>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="grid-column: 1 / -1; max-width:100%">
         <h3>Letno poročilo (udeležba in bilanca vadnin)</h3>
         <div class="inner">
           <div class="row" style="flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:16px">
@@ -499,7 +515,7 @@
           </div>
           <p class="muted" style="font-size:13px;margin-bottom:12px">
             <strong>Jutranji treningi:</strong> začetek termina pred 12:00. <strong>Popoldanski:</strong> od 12:00 naprej.
-            Udeležba šteje prisotne glede na možne obiske (upošteva datirane dodelitve, če so v bazi).
+            Udeležba sledi mesečnemu povzetku: možni obiski samo pri redno dodeljenih terminih (polje <code>terms</code>); prisotni so vsi zabeleženi obiski v obdobju sezone za termine te sezone.
           </p>
           <div id="seasonReportOutput"></div>
         </div>
