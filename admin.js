@@ -58,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let termStatus = {};
     let trainerAttendance = {};
     let currentSection = 'swimmers'; // Dodano: sledi trenutni sekciji
+    let seasons = []; // Sezone (tabela seasons v bazi)
     
     // Trenutni mesec in leto za finance sekcijo
     const now = new Date();
@@ -684,6 +685,32 @@ document.addEventListener('DOMContentLoaded', () => {
         return { status, note, notes };
     }
 
+    /** Začetek pred 12:00 = jutranji blok poročila */
+    function isTermMorningSlot(term) {
+        if (!term || !term.start_time) return false;
+        const h = parseInt(String(term.start_time).split(':')[0], 10);
+        return !Number.isNaN(h) && h < 12;
+    }
+
+    function getTermsForSeason(season) {
+        if (!season || !season.id) return [];
+        return TERMS.filter(t => {
+            if (t.season_id) return t.season_id === season.id;
+            const tf = t.date_from;
+            const tt = t.date_to;
+            return !(tt < season.date_from || tf > season.date_to);
+        });
+    }
+
+    function ymInSeasonRange(year, month, season) {
+        const d = new Date(year, month - 1, 1);
+        const s = new Date(season.date_from);
+        const e = new Date(season.date_to);
+        const startM = new Date(s.getFullYear(), s.getMonth(), 1);
+        const endM = new Date(e.getFullYear(), e.getMonth(), 1);
+        return d >= startM && d <= endM;
+    }
+
     // Funkcija za pridobitev aktivnih terminov (ki še niso potekli)
     function getActiveTerms() {
         const today = new Date();
@@ -708,6 +735,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // Posodobi trenutno sekcijo
             currentSection = btn.getAttribute('data-section');
             
+            if (currentSection === 'seasons') {
+                renderSeasonsAdminList();
+                populateSeasonSelects();
+            }
+
             // Če je finance sekcija aktivna, avtomatsko osveži pristojbine plavalcev
             if (currentSection === 'finance') {
                 // Nastavi trenutni mesec in leto za pristojbine
@@ -869,6 +901,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
             }
+
+            await loadSeasons();
+            populateSeasonSelects();
 
             // Posodobi UI
             updateSwimmerSelects();
@@ -1629,63 +1664,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Gumb za dodajanje termina iz sekcije Upravljanje terminov (odstranjen - forma je sedaj pod upravljanjem terminov)
 
-    // ===== Upravljanje terminov =====
-    window.editTerm = async function(termId) {
-        const term = TERMS.find(t => t.id === termId);
-        if (term) {
-            // Popolni modal za urejanje
-            elEditTermDateFrom.value = term.date_from;
-            elEditTermDateTo.value = term.date_to;
-            
-            // Pretvori čas v format brez sekund (HH:MM) za time input
-            const formatTimeForInput = (timeStr) => {
-                if (!timeStr) return '';
-                // Če čas že vsebuje sekunde, jih odstrani
-                if (timeStr.includes(':') && timeStr.split(':').length === 3) {
-                    const parts = timeStr.split(':');
-                    return `${parts[0]}:${parts[1]}`;
-                }
-                return timeStr;
-            };
-            
-            elEditTermStart.value = formatTimeForInput(term.start_time);
-            elEditTermEnd.value = formatTimeForInput(term.end_time);
-            
-            // Shrani ID termina za kasnejšo uporabo
-            elEditTermModal.setAttribute('data-term-id', termId);
-            
-            // Prikaži modal
-            elEditTermModal.style.display = 'block';
-        }
-    };
-
-    window.deleteTerm = async function(termId) {
-        const term = TERMS.find(t => t.id === termId);
-        if (term) {
-            try {
-                // Izbriši termin iz Supabase
-                const { error } = await supabase
-                    .from('terms')
-                    .delete()
-                    .eq('id', termId);
-
-                if (error) {
-                    console.error('Napaka pri brisanju termina:', error);
-                    alert('Napaka pri brisanju termina. Preverite konzolo.');
-                    return;
-                }
-
-                // Posodobi lokalno stanje
-                TERMS = TERMS.filter(t => t.id !== termId);
-                updateTermList();
-                alert('Termin uspešno izbrisan.');
-            } catch (error) {
-                console.error('Napaka pri brisanju termina:', error);
-                alert('Napaka pri brisanju termina.');
-            }
-        }
-    };
-
     // ===== Brisanje plavalcev s kaskadnim brisanjem =====
     window.deleteSwimmer = async function(swimmerId) {
         const swimmer = swimmers.find(s => s.id === swimmerId);
@@ -1963,10 +1941,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     swimmersList = '<span class="muted">Brez dodeljenih plavalcev</span>';
                 }
                 
+                const seasonLbl = term.season_id
+                    ? (seasons.find(se => se.id === term.season_id)?.name || '')
+                    : '';
+                const seasonChip = seasonLbl
+                    ? `<span class="chip" style="background:#e0e7ff;font-size:11px">${escapeHtml(seasonLbl)}</span>`
+                    : '';
                 // Format čas brez sekund
                 termCard.innerHTML = `
                     <div class="term-header">
                         <span class="term-time">${formatTimeWithoutSeconds(term.start_time)} - ${formatTimeWithoutSeconds(term.end_time)}</span>
+                        ${seasonChip}
                         <span class="term-period">${formatDate(term.date_from)} - ${formatDate(term.date_to)}</span>
                         <span class="term-swimmer-count" style="background: #2563eb; color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: bold; white-space: nowrap;">
                             ${assignedSwimmers.length} plaval${assignedSwimmers.length === 1 ? 'ec' : assignedSwimmers.length === 2 ? 'ca' : 'cev'}
@@ -2014,18 +1999,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const termId = `${DAY_SHORT_NAME[day].toLowerCase().replace('.', '')}-${start}-${end}`;
+        const elSeasonPick = document.getElementById('newTermSeasonId');
+        const seasonIdVal = elSeasonPick && elSeasonPick.value ? elSeasonPick.value : null;
         
         try {
+            const row = {
+                id: termId,
+                day: day,
+                start_time: start,
+                end_time: end,
+                date_from: dateFrom,
+                date_to: dateTo
+            };
+            if (seasonIdVal) row.season_id = seasonIdVal;
             const { data, error } = await supabase
                 .from('terms')
-                .insert([{
-                    id: termId,
-                    day: day,
-                    start_time: start,
-                    end_time: end,
-                    date_from: dateFrom,
-                    date_to: dateTo
-                }])
+                .insert([row])
                 .select();
 
             if (error) {
@@ -2036,7 +2025,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Dodaj v lokalno stanje
             if (data && data.length > 0) {
-                TERMS.push(data[0]);
+                const t = data[0];
+                TERMS.push({
+                    ...t,
+                    label: t.label || `${DAYNAME[t.day]} ${t.start_time.slice(0, 5)}–${t.end_time.slice(0, 5)}`
+                });
             }
             
             // Počisti polja
@@ -2049,11 +2042,52 @@ document.addEventListener('DOMContentLoaded', () => {
             updateTermSelects();
             updateTermList();
             updateSwimmersList();
+            renderSeasonsAdminList();
         } catch (error) {
             console.error('Napaka pri dodajanju termina:', error);
             alert('Napaka pri dodajanju termina.');
         }
     });
+
+    const elAddSeasonBtn = document.getElementById('addSeasonBtn');
+    if (elAddSeasonBtn) {
+        elAddSeasonBtn.addEventListener('click', async () => {
+            const name = document.getElementById('newSeasonName')?.value?.trim();
+            const df = document.getElementById('newSeasonDateFrom')?.value;
+            const dt = document.getElementById('newSeasonDateTo')?.value;
+            const active = document.getElementById('newSeasonIsActive')?.checked || false;
+            if (!name || !df || !dt) {
+                alert('Vnesite naziv in datuma od–do.');
+                return;
+            }
+            if (df > dt) {
+                alert('Datum »od« mora biti pred ali enak »do«.');
+                return;
+            }
+            try {
+                const { error } = await supabase
+                    .from('seasons')
+                    .insert([{ name, date_from: df, date_to: dt, is_active: active }]);
+                if (error) throw error;
+                showMessage('Sezona je shranjena.', 'success');
+                document.getElementById('newSeasonName').value = '';
+                document.getElementById('newSeasonDateFrom').value = '';
+                document.getElementById('newSeasonDateTo').value = '';
+                document.getElementById('newSeasonIsActive').checked = false;
+                await loadSeasons();
+                populateSeasonSelects();
+                renderSeasonsAdminList();
+            } catch (e) {
+                console.error(e);
+                alert('Napaka pri shranjevanju sezone: ' + (e.message || e));
+            }
+        });
+    }
+
+    const elGenerateSeasonReportBtn = document.getElementById('generateSeasonReportBtn');
+    if (elGenerateSeasonReportBtn) {
+        elGenerateSeasonReportBtn.addEventListener('click', () => runSeasonReport());
+    }
 
     // ===== Brisanje terminov =====
     window.deleteTerm = async function(termId) {
@@ -2125,6 +2159,9 @@ document.addEventListener('DOMContentLoaded', () => {
             elEditTermDateTo.value = formatDate(term.date_to);
             elEditTermStart.value = term.start_time || '';
             elEditTermEnd.value = term.end_time || '';
+            populateSeasonSelects();
+            const editSeas = document.getElementById('editTermSeasonId');
+            if (editSeas) editSeas.value = term.season_id || '';
             elEditTermModal.style.display = 'flex';
             
             // Shrani ID termina za shranjevanje
@@ -2150,6 +2187,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const term = TERMS.find(t => t.id === termId);
+        const elEditSeasonPick = document.getElementById('editTermSeasonId');
+        const seasonIdEdit = elEditSeasonPick && elEditSeasonPick.value ? elEditSeasonPick.value : null;
         if (term) {
             try {
                 // Generiraj nov ID, če se je spremenil dan ali ura
@@ -2162,7 +2201,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     date_from: dateFrom, 
                     date_to: dateTo,
                     start_time: startTime,
-                    end_time: endTime
+                    end_time: endTime,
+                    season_id: seasonIdEdit
                 };
                 
                 // Če se je ID spremenil, dodaj novi ID
@@ -2181,7 +2221,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             start_time: startTime,
                             end_time: endTime,
                         date_from: dateFrom, 
-                        date_to: dateTo 
+                        date_to: dateTo,
+                        season_id: seasonIdEdit
                     })
                         .select()
                         .single();
@@ -2265,7 +2306,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     // Posodobi lokalno stanje
                     TERMS = TERMS.filter(t => t.id !== termId);
-                    TERMS.push(newTerm);
+                    const nt = { ...newTerm, label: newTerm.label || `${DAYNAME[newTerm.day]} ${String(newTerm.start_time).slice(0, 5)}–${String(newTerm.end_time).slice(0, 5)}` };
+                    TERMS.push(nt);
                     
                     // Posodobi lokalno stanje plavalcev in trenerjev
                     swimmersWithTerm.forEach(swimmer => {
@@ -2324,6 +2366,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 term.date_to = dateTo;
                     term.start_time = startTime;
                     term.end_time = endTime;
+                    term.season_id = seasonIdEdit;
                 }
 
                 // Osveži UI
@@ -5920,6 +5963,172 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Napaka pri nalaganju prisotnosti za mesec:', error);
         }
+    }
+
+    async function loadSeasons() {
+        try {
+            const { data, error } = await supabase
+                .from('seasons')
+                .select('*')
+                .order('date_from', { ascending: false });
+            if (error) throw error;
+            seasons = data || [];
+        } catch (e) {
+            console.warn('Sezone: tabela morda še ne obstaja. Poženite SQL/create_seasons.sql.', e.message || e);
+            seasons = [];
+        }
+    }
+
+    function populateSeasonSelects() {
+        const newTermSel = document.getElementById('newTermSeasonId');
+        const repSel = document.getElementById('seasonReportSelect');
+        const optHtml = seasons.map(s =>
+            `<option value="${s.id}">${escapeHtml(s.name)} (${s.date_from} – ${s.date_to})</option>`
+        ).join('');
+        if (newTermSel) {
+            newTermSel.innerHTML = '<option value="">Brez sezone</option>' + optHtml;
+        }
+        const editTermSeasonEl = document.getElementById('editTermSeasonId');
+        if (editTermSeasonEl) {
+            editTermSeasonEl.innerHTML = '<option value="">Brez sezone</option>' + optHtml;
+        }
+        if (repSel) {
+            repSel.innerHTML = '<option value="">Izberi sezono</option>' + optHtml;
+        }
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const d = document.createElement('div');
+        d.textContent = text;
+        return d.innerHTML;
+    }
+
+    function renderSeasonsAdminList() {
+        const box = document.getElementById('seasonsListContainer');
+        if (!box) return;
+        if (seasons.length === 0) {
+            box.innerHTML = '<p class="muted">Ni sezon. Dodajte prvo sezono zgoraj ali poženite migracijo v SQL.</p>';
+            return;
+        }
+        let html = '<table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Naziv</th><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Od</th><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Do</th><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Aktivna</th><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Terminov</th></tr></thead><tbody>';
+        seasons.forEach(s => {
+            const nTerms = TERMS.filter(t => t.season_id === s.id).length;
+            html += `<tr><td style="padding:8px;border-bottom:1px solid #eee">${escapeHtml(s.name)}</td><td style="padding:8px;border-bottom:1px solid #eee">${s.date_from}</td><td style="padding:8px;border-bottom:1px solid #eee">${s.date_to}</td><td style="padding:8px;border-bottom:1px solid #eee">${s.is_active ? 'Da' : 'Ne'}</td><td style="padding:8px;border-bottom:1px solid #eee">${nTerms}</td></tr>`;
+        });
+        html += '</tbody></table>';
+        box.innerHTML = html;
+    }
+
+    function buildSeasonAttendanceStats(season) {
+        const termsInSeason = getTermsForSeason(season);
+        const termIds = new Set(termsInSeason.map(t => t.id));
+        const out = {
+            posAll: 0, attAll: 0, posMorn: 0, attMorn: 0, posAfter: 0, attAfter: 0,
+            termCount: termsInSeason.length
+        };
+        const start = new Date(season.date_from);
+        const end = new Date(season.date_to);
+        const cur = new Date(start);
+        while (cur <= end) {
+            const ymd = iso(cur);
+            const todays = getTermsForDate(cur).filter(t => termIds.has(t.id));
+            for (const term of todays) {
+                if (getTermStatus(cur, term.id).status !== 'active') continue;
+                const isMorning = isTermMorningSlot(term);
+                const termAtt = attendance[ymd]?.[term.id] || {};
+                for (const s of swimmers) {
+                    if (s.is_deleted || !s.terms || !s.terms.includes(term.id)) continue;
+                    out.posAll++;
+                    if (isMorning) out.posMorn++; else out.posAfter++;
+                    const st = termAtt[s.id];
+                    if (st === true || st === 'true' || st === 1) {
+                        out.attAll++;
+                        if (isMorning) out.attMorn++; else out.attAfter++;
+                    }
+                }
+            }
+            cur.setDate(cur.getDate() + 1);
+        }
+        return out;
+    }
+
+    async function getSeasonFeesTotals(season) {
+        const fromY = new Date(season.date_from).getFullYear();
+        const toY = new Date(season.date_to).getFullYear();
+        try {
+            const { data, error } = await supabase
+                .from('swimmer_monthly_fees')
+                .select('year, month, monthly_fee, discount')
+                .gte('year', fromY)
+                .lte('year', toY);
+            if (error) throw error;
+            let total = 0;
+            let rows = 0;
+            (data || []).forEach(row => {
+                if (!ymInSeasonRange(row.year, row.month, season)) return;
+                total += parseFloat(row.monthly_fee || 0) - parseFloat(row.discount || 0);
+                rows++;
+            });
+            return { total, rows };
+        } catch (e) {
+            console.error('Napaka pri seštevku vadnin za sezono:', e);
+            return { total: 0, rows: 0 };
+        }
+    }
+
+    function pct(att, pos) {
+        if (pos <= 0) return '—';
+        return ((att / pos) * 100).toFixed(1) + ' %';
+    }
+
+    async function runSeasonReport() {
+        const sel = document.getElementById('seasonReportSelect');
+        const out = document.getElementById('seasonReportOutput');
+        if (!sel || !out) return;
+        const id = sel.value;
+        if (!id) {
+            showMessage('Izberite sezono.', 'warning');
+            return;
+        }
+        const season = seasons.find(s => s.id === id);
+        if (!season) {
+            out.innerHTML = '<p class="muted">Sezona ni najdena.</p>';
+            return;
+        }
+        out.innerHTML = '<p class="muted">Računanje …</p>';
+        const stats = buildSeasonAttendanceStats(season);
+        const fees = await getSeasonFeesTotals(season);
+        const html = `
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-bottom:20px">
+            <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:14px">
+              <div style="font-size:12px;color:#0369a1">Terminov v sezoni</div>
+              <div style="font-size:22px;font-weight:700">${stats.termCount}</div>
+            </div>
+            <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:14px">
+              <div style="font-size:12px;color:#166534">Udeležba (vsi termini)</div>
+              <div style="font-size:22px;font-weight:700">${pct(stats.attAll, stats.posAll)}</div>
+              <div style="font-size:13px;color:#444">${stats.attAll} / ${stats.posAll} obiskov</div>
+            </div>
+            <div style="background:#fffbeb;border:1px solid #fde047;border-radius:8px;padding:14px">
+              <div style="font-size:12px;color:#854d0e">Jutranji (&lt; 12:00)</div>
+              <div style="font-size:22px;font-weight:700">${pct(stats.attMorn, stats.posMorn)}</div>
+              <div style="font-size:13px;color:#444">${stats.attMorn} / ${stats.posMorn}</div>
+            </div>
+            <div style="background:#faf5ff;border:1px solid #d8b4fe;border-radius:8px;padding:14px">
+              <div style="font-size:12px;color:#6b21a8">Popoldanski (≥ 12:00)</div>
+              <div style="font-size:22px;font-weight:700">${pct(stats.attAfter, stats.posAfter)}</div>
+              <div style="font-size:13px;color:#444">${stats.attAfter} / ${stats.posAfter}</div>
+            </div>
+            <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:14px">
+              <div style="font-size:12px;color:#991b1b">Bilanca vadnin (v obdobju)</div>
+              <div style="font-size:22px;font-weight:700">${fees.total.toFixed(2)} €</div>
+              <div style="font-size:13px;color:#444">${fees.rows} mesečnih zapisov</div>
+            </div>
+          </div>
+          <p class="muted" style="font-size:13px">Vadnine: vsota (mesečna vadnina − popust) za vse mesece, ki spadajo v obdobje sezone. Podatki o prisotnosti iz naloženega stanja aplikacije (celotna baza prisotnosti).</p>
+        `;
+        out.innerHTML = html;
     }
 
     // ===== FUNKCIJE ZA FINANCE SEKCIJO =====
