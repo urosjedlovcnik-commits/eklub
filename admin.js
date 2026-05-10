@@ -60,6 +60,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentSection = 'swimmers'; // Dodano: sledi trenutni sekciji
     let seasons = []; // Sezone (tabela seasons v bazi)
     let swimmerTermAssignments = {}; // ključ swimmer_id-term_id → [{assigned_from_date, assigned_to_date}]
+    /** Mesečni OLY prispevek na plavalca (enako kot v Finance / calculateFinanceData) */
+    const OLY_MONTHLY_CONTRIBUTION_EUR = 40;
     
     // Trenutni mesec in leto za finance sekcijo
     const now = new Date();
@@ -6150,27 +6152,76 @@ document.addEventListener('DOMContentLoaded', () => {
         return out;
     }
 
+    /** Za vsak izveden trening v sezoni: prisotni / možni vadeči (isti kriteriji kot zgoraj). */
+    function buildSeasonPerSessionAttendance(season) {
+        const termsInSeason = getTermsForSeason(season);
+        const termIds = new Set(termsInSeason.map(t => t.id));
+        const sessions = [];
+        const start = new Date(season.date_from);
+        const end = new Date(season.date_to);
+        const cur = new Date(start);
+        while (cur <= end) {
+            const ymd = iso(cur);
+            const todays = getTermsForDate(cur).filter(t => termIds.has(t.id));
+            for (const term of todays) {
+                if (getTermStatus(cur, term.id).status !== 'active') continue;
+                const termAtt = attendance[ymd]?.[term.id] || {};
+                let pos = 0;
+                let att = 0;
+                for (const s of swimmers) {
+                    if (!isSwimmerCountedForTermOnDate(s, term.id, cur)) continue;
+                    pos++;
+                    const st = termAtt[s.id];
+                    if (st === true || st === 'true' || st === 1) att++;
+                }
+                if (pos > 0) {
+                    const label = term.label || `${DAYNAME[term.day]} ${String(term.start_time).slice(0, 5)}`;
+                    sessions.push({
+                        ymd,
+                        label,
+                        pos,
+                        att,
+                        pctStr: pos > 0 ? ((att / pos) * 100).toFixed(1) + ' %' : '—'
+                    });
+                }
+            }
+            cur.setDate(cur.getDate() + 1);
+        }
+        return sessions;
+    }
+
     async function getSeasonFeesTotals(season) {
         const fromY = new Date(season.date_from).getFullYear();
         const toY = new Date(season.date_to).getFullYear();
         try {
             const { data, error } = await supabase
                 .from('swimmer_monthly_fees')
-                .select('year, month, monthly_fee, discount')
+                .select('year, month, monthly_fee, discount, is_oly')
                 .gte('year', fromY)
                 .lte('year', toY);
             if (error) throw error;
             let total = 0;
             let rows = 0;
+            let olyRows = 0;
+            let fromRegular = 0;
+            let fromOly = 0;
             (data || []).forEach(row => {
                 if (!ymInSeasonRange(row.year, row.month, season)) return;
-                total += parseFloat(row.monthly_fee || 0) - parseFloat(row.discount || 0);
                 rows++;
+                if (row.is_oly === true) {
+                    total += OLY_MONTHLY_CONTRIBUTION_EUR;
+                    fromOly += OLY_MONTHLY_CONTRIBUTION_EUR;
+                    olyRows++;
+                } else {
+                    const part = parseFloat(row.monthly_fee || 0) - parseFloat(row.discount || 0);
+                    total += part;
+                    fromRegular += part;
+                }
             });
-            return { total, rows };
+            return { total, rows, olyRows, fromRegular, fromOly };
         } catch (e) {
             console.error('Napaka pri seštevku vadnin za sezono:', e);
-            return { total: 0, rows: 0 };
+            return { total: 0, rows: 0, olyRows: 0, fromRegular: 0, fromOly: 0 };
         }
     }
 
@@ -6351,12 +6402,26 @@ document.addEventListener('DOMContentLoaded', () => {
         out.innerHTML = '<p class="muted">Računanje …</p>';
         await loadSwimmerTermAssignmentsForAdmin();
         const stats = buildSeasonAttendanceStats(season);
+        const sessionList = buildSeasonPerSessionAttendance(season);
         const fees = await getSeasonFeesTotals(season);
         const fin = await computeSeasonFinanceRollup(season);
         const revenueTotal = fees.total + fin.membership;
         const costTotal = fin.facility + fin.trainer + fin.management;
         const net = revenueTotal - costTotal;
         const netClass = net >= 0 ? '#166534' : '#991b1b';
+        const sessionTableRows = sessionList.map(r =>
+            `<tr><td style="padding:6px 8px;border-bottom:1px solid #eee">${escapeHtml(r.ymd)}</td>` +
+            `<td style="padding:6px 8px;border-bottom:1px solid #eee">${escapeHtml(r.label)}</td>` +
+            `<td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right">${r.att}</td>` +
+            `<td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right">${r.pos}</td>` +
+            `<td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right">${r.pctStr}</td></tr>`
+        ).join('');
+        const olyDetail = fees.olyRows > 0
+            ? ` · OLY: ${fees.fromOly.toFixed(2)} € (${fees.olyRows} zap., po ${OLY_MONTHLY_CONTRIBUTION_EUR} €)`
+            : '';
+        const regDetail = fees.fromRegular > 0 || fees.olyRows === 0
+            ? `Običajne vadnine: ${fees.fromRegular.toFixed(2)} €`
+            : '';
         const html = `
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-bottom:20px">
             <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:14px">
@@ -6381,7 +6446,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:14px">
               <div style="font-size:12px;color:#991b1b">Prihodki vadnin (+ članarine)</div>
               <div style="font-size:22px;font-weight:700">${revenueTotal.toFixed(2)} €</div>
-              <div style="font-size:13px;color:#444">Vadnine: ${fees.total.toFixed(2)} € (${fees.rows} zapisov)${fin.membership > 0 ? ` · Član.: ${fin.membership.toFixed(2)} €` : ''}</div>
+              <div style="font-size:13px;color:#444">${regDetail}${olyDetail} · Skupaj vadnine+OLY: ${fees.total.toFixed(2)} € (${fees.rows} zapisov)${fin.membership > 0 ? ` · Član.: ${fin.membership.toFixed(2)} €` : ''}</div>
             </div>
             <div style="background:#fff7ed;border:1px solid #fdba74;border-radius:8px;padding:14px">
               <div style="font-size:12px;color:#9a3412">Stroški objektov (seštevek mesecev)</div>
@@ -6404,11 +6469,24 @@ document.addEventListener('DOMContentLoaded', () => {
               <div style="font-size:13px;color:#444">Prihodki (${revenueTotal.toFixed(2)} €) − skupaj stroški (${costTotal.toFixed(2)} €)</div>
             </div>
           </div>
+          <h4 style="margin:24px 0 8px 0">Prisotnost po posameznih treningih</h4>
+          <p class="muted" style="font-size:13px;margin-bottom:10px">Za vsak aktivni termin na dan: <strong>prisotni</strong> vadeči (označeni prisotni) od <strong>vseh možnih</strong> (isti kriteriji kot zgoraj: dodelitev na ta dan).</p>
+          <div style="max-height:480px;overflow:auto;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:16px">
+            <table style="width:100%;border-collapse:collapse;font-size:13px">
+              <thead><tr style="background:#f8fafc;position:sticky;top:0">
+                <th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Datum</th>
+                <th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Termin</th>
+                <th style="text-align:right;padding:8px;border-bottom:1px solid #ddd">Prisotni</th>
+                <th style="text-align:right;padding:8px;border-bottom:1px solid #ddd">Možni</th>
+                <th style="text-align:right;padding:8px;border-bottom:1px solid #ddd">Delež</th>
+              </tr></thead>
+              <tbody>${sessionTableRows || '<tr><td colspan="5" class="muted" style="padding:12px">Ni treningov z dodeljenimi vadečimi.</td></tr>'}</tbody>
+            </table>
+          </div>
           <p class="muted" style="font-size:13px;line-height:1.5">
-            <strong>Udeležba:</strong> možni obiski upoštevajo <code>swimmer_term_assignments</code> (od–do), če obstajajo; sicer velja dodelitev iz tabele plavalcev.
-            Nizak delež pogosto pomeni manjkajoče vnos prisotnosti (ni »prisoten«).<br>
-            <strong>Stroški:</strong> za vsak mesec v obdobju sezone se uporabijo ročne vrednosti iz Finance (če so), sicer izračun kot pri mesečnem povzetku.
-            Preverite polje »Strošek vodenja na mesec« na strani Finance za privzeti znesek.
+            <strong>Udeležba (povzetek):</strong> vsota prisotnih in možnih čez vse treninge v sezoni (ponder ni enak povprečju vrstic v tabeli).<br>
+            <strong>Prihodki:</strong> OLY zapisi v <code>swimmer_monthly_fees</code> štejejo <strong>${OLY_MONTHLY_CONTRIBUTION_EUR} €</strong> na zapis na mesec (ne znesek vadnine v tabeli).<br>
+            <strong>Stroški:</strong> ročno v Finance ali izračun; preverite »Strošek vodenja na mesec«.
           </p>
         `;
         out.innerHTML = html;
@@ -6521,9 +6599,9 @@ document.addEventListener('DOMContentLoaded', () => {
             activeSwimmers.forEach(swimmer => {
                 const feeData = swimmerFees[swimmer.id] || { fee: 80, discount: 0, is_oly: false };
                 
-                // Če je OLY plavalec, dodaj 40€ prispevek
+                // Če je OLY plavalec, dodaj prispevek (enako kot letno poročilo)
                 if (feeData.is_oly) {
-                    olyContributions += 40;
+                    olyContributions += OLY_MONTHLY_CONTRIBUTION_EUR;
                 } else {
                     // Če ni OLY, upoštevaj normalno vadnino
                     const finalFee = Math.max(0, feeData.fee - (feeData.discount || 0));
@@ -6835,7 +6913,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <span> €</span>
                                 ${monthlyFee !== calculatedMonthlyFee ? `<span style="color: #999; font-size: 11px; margin-left: 5px;">(izračunano: ${calculatedMonthlyFee.toFixed(2)}€)</span>` : ''}
                             </td>
-                            <td>${activeSwimmers.length - Math.round(olyContributions / 40)} aktivnih plavalcev (individualne pristojbine)</td>
+                            <td>${activeSwimmers.length - Math.round(olyContributions / OLY_MONTHLY_CONTRIBUTION_EUR)} aktivnih plavalcev (individualne pristojbine)</td>
                         </tr>
                         <tr>
                             <td>Članarina</td>
@@ -6855,7 +6933,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <tr>
                             <td>OLY prispevki</td>
                             <td>${olyContributions.toFixed(2)} €</td>
-                            <td>${Math.round(olyContributions / 40)} OLY plavalcev (40€ na plavalca)</td>
+                            <td>${Math.round(olyContributions / OLY_MONTHLY_CONTRIBUTION_EUR)} OLY plavalcev (${OLY_MONTHLY_CONTRIBUTION_EUR}€ na plavalca)</td>
                         </tr>
                         ` : ''}
                         <tr>
