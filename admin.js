@@ -6247,9 +6247,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Letno poročilo: za vsako izvedbo treninga (dan + termin) povprečje prisotnosti dodeljenih.
-     * Glavni delež: povprečje (prisotni/dodeljeni) po treningih — ena vadba = ena enota v povprečju.
-     * Zraven: seštevki po plavalcih (att/pos) za primerjavo.
+     * Letno poročilo: seštevki prisotnih in možnih (dan × termin × dodeljen plavalec) za celo sezono.
+     * Skupni delež v UI: attAll/posAll (in ločeno jutro/popoldan). Dodatno: povpr. po treningih in po plavalcih.
      */
     function buildSeasonAttendanceStats(season, swimmerIdFilter = null) {
         const filter = swimmerIdFilter && swimmerIdFilter.size > 0 ? swimmerIdFilter : null;
@@ -6635,21 +6634,20 @@ document.addEventListener('DOMContentLoaded', () => {
               <div style="font-size:22px;font-weight:700">${stats.termCount}</div>
             </div>
             <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:14px">
-              <div style="font-size:12px;color:#166534">Udeležba (vsi termini) · ${attScopeLabel}</div>
-              <div style="font-size:22px;font-weight:700">${stats.sessAvgPctAll != null ? stats.sessAvgPctAll + ' %' : '—'} <span style="font-size:13px;font-weight:500">povpr. po treningih</span></div>
-              <div style="font-size:13px;color:#444">${stats.sessCountAll} izvedb (dan + termin), vsaka z enako težo</div>
-              <div style="font-size:12px;color:#444;margin-top:6px">Po plavalcih: ${stats.attAll} / ${stats.posAll} · ${pct(stats.attAll, stats.posAll)}</div>
-              <div style="font-size:12px;color:#166534;margin-top:8px;line-height:1.4"><strong>Povpr. individualno:</strong> ${stats.avgIndividualPctAll != null ? stats.avgIndividualPctAll + ' %' : '—'} <span class="muted">(${stats.swimmersCountedForAvg} plavalcev z obiski)</span></div>
+              <div style="font-size:12px;color:#166534">Skupna prisotnost (vsi termini) · ${attScopeLabel}</div>
+              <div style="font-size:22px;font-weight:700">${pct(stats.attAll, stats.posAll)}</div>
+              <div style="font-size:13px;color:#444">${stats.attAll} / ${stats.posAll} prisotnih / možnih (cela sezona, seštevek vseh plavalcev)</div>
+              <div style="font-size:12px;color:#444;margin-top:8px;line-height:1.4"><span class="muted">Dodatno — povpr. po treningih:</span> ${stats.sessAvgPctAll != null ? stats.sessAvgPctAll + ' %' : '—'} <span class="muted">(${stats.sessCountAll} izvedb)</span> · <span class="muted">povpr. individualno:</span> ${stats.avgIndividualPctAll != null ? stats.avgIndividualPctAll + ' %' : '—'}</div>
             </div>
             <div style="background:#fffbeb;border:1px solid #fde047;border-radius:8px;padding:14px">
               <div style="font-size:12px;color:#854d0e">Jutranji (&lt; 12:00)</div>
-              <div style="font-size:22px;font-weight:700">${stats.sessAvgPctMorn != null ? stats.sessAvgPctMorn + ' %' : '—'}</div>
-              <div style="font-size:13px;color:#444">${stats.sessCountMorn} treningov · po plavalcih: ${stats.attMorn} / ${stats.posMorn}</div>
+              <div style="font-size:22px;font-weight:700">${pct(stats.attMorn, stats.posMorn)}</div>
+              <div style="font-size:13px;color:#444">${stats.attMorn} / ${stats.posMorn} prisotnih / možnih</div>
             </div>
             <div style="background:#faf5ff;border:1px solid #d8b4fe;border-radius:8px;padding:14px">
               <div style="font-size:12px;color:#6b21a8">Popoldanski (≥ 12:00)</div>
-              <div style="font-size:22px;font-weight:700">${stats.sessAvgPctAfter != null ? stats.sessAvgPctAfter + ' %' : '—'}</div>
-              <div style="font-size:13px;color:#444">${stats.sessCountAfter} treningov · po plavalcih: ${stats.attAfter} / ${stats.posAfter}</div>
+              <div style="font-size:22px;font-weight:700">${pct(stats.attAfter, stats.posAfter)}</div>
+              <div style="font-size:13px;color:#444">${stats.attAfter} / ${stats.posAfter} prisotnih / možnih</div>
             </div>
             <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:14px">
               <div style="font-size:12px;color:#991b1b">Prihodki vadnin (+ članarine)</div>
@@ -6678,8 +6676,8 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
           </div>
           <p class="muted" style="font-size:13px;line-height:1.5;margin-top:16px">
-            <strong>Glavni odstotek (povpr. po treningih):</strong> za vsako izvedbo treninga (dan + termin) se izračuna delež prisotnih med dodeljenimi; nato se ti deleži povprečijo — <strong>ena vadba šteje enkrat</strong>, ne glede na število plavalcev. <strong>Po plavalcih</strong> je še vedno prikazan klasičen seštevek prisotnosti/možnih (vsota po vseh plavalcih). <strong>Povprečje individualno</strong> je povprečje deležev posameznih plavalcev.<br>
-            <strong>Pravila:</strong> samo aktivni termini sezone; samo plavalci z dodeljenim terminom; nadomestni obiski brez dodelitve se ne štejejo.<br>
+            <strong>Skupna prisotnost</strong> je <strong>vsota vseh zabeleženih prisotnosti / vsota vseh možnih obiskov</strong> v izbranem obdobju sezone (po vseh dnevih, vseh terminih sezone in vseh dodeljenih plavalcih). Jutro in popoldan sta isti račun, ločeno po uri začetka termina. Če je delež nad 100 %, je prikaz omejen na 100 % (preverite podvojene zapise ali nadomestne obiske).<br>
+            <strong>Pravila:</strong> aktivni termini sezone; plavalec z dodeljenim terminom; nadomestni obiski brez dodelitve v možne niso všteti.<br>
             <strong>Prihodki:</strong> OLY zapisi v <code>swimmer_monthly_fees</code> štejejo <strong>${OLY_MONTHLY_CONTRIBUTION_EUR} €</strong> na zapis na mesec (ne znesek vadnine v tabeli).<br>
             <strong>Stroški:</strong> ročno v Finance ali izračun; preverite »Strošek vodenja na mesec«.
           </p>
