@@ -745,6 +745,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 populateSeasonSelects();
                 const browseSel = document.getElementById('seasonTermsBrowseSelect');
                 renderSeasonTermsForSeason(browseSel ? browseSel.value : '');
+                updateTermList();
             }
 
             // Če je finance sekcija aktivna, avtomatsko osveži pristojbine plavalcev
@@ -1868,20 +1869,33 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Prikaži samo aktivne termine
-        const activeTerms = getActiveTerms();
-        const expiredCount = TERMS.length - activeTerms.length;
-        
+        const seasonFilt = document.getElementById('termListSeasonFilter')?.value || '';
+        let activeTerms = getActiveTerms();
+        if (seasonFilt) {
+            activeTerms = activeTerms.filter(t => t.season_id === seasonFilt);
+        }
+
+        const todayISO = iso(new Date());
+        let expiredCount = 0;
+        if (seasonFilt) {
+            expiredCount = TERMS.filter(t => t.season_id === seasonFilt && t.date_to < todayISO).length;
+        } else {
+            expiredCount = TERMS.length - getActiveTerms().length;
+        }
+
         if (activeTerms.length === 0) {
-            elTermList.innerHTML = '<p class="muted">Ni aktivnih terminov</p>';
+            elTermList.innerHTML = seasonFilt
+                ? '<p class="muted">Noben aktivni termin ni vezan na izbrano sezono (ali ta sezona nima terminov).</p>'
+                : '<p class="muted">Ni aktivnih terminov</p>';
             return;
         }
-        
-        // Dodaj informacijo o skritih terminih
+
         if (expiredCount > 0) {
             const infoDiv = document.createElement('div');
             infoDiv.style.cssText = 'background: #fef3c7; border: 1px solid #fcd34d; padding: 8px 12px; border-radius: 6px; margin-bottom: 16px; font-size: 14px;';
-            infoDiv.innerHTML = `<strong>ℹ️ Informacija:</strong> Skritih je ${expiredCount} poteklih terminov. Prikazani so samo aktivni termini.`;
+            infoDiv.innerHTML = seasonFilt
+                ? `<strong>ℹ️ Informacija:</strong> Za to sezono je še ${expiredCount} poteklih terminov (skritih). Prikazani so samo aktivni.`
+                : `<strong>ℹ️ Informacija:</strong> Skritih je ${expiredCount} poteklih terminov. Prikazani so samo aktivni termini.`;
             elTermList.appendChild(infoDiv);
         }
 
@@ -1986,6 +2000,8 @@ document.addEventListener('DOMContentLoaded', () => {
             elTermList.appendChild(daySection);
         });
     }
+
+    document.getElementById('termListSeasonFilter')?.addEventListener('change', () => updateTermList());
 
     // ===== Dodajanje terminov =====
     elAddTermBtn.addEventListener('click', async () => {
@@ -6163,6 +6179,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const copyTgt = document.getElementById('copyTermsTargetSeason');
         if (copySrc) copySrc.innerHTML = '<option value="">Izberi izvorno sezono</option>' + optHtml;
         if (copyTgt) copyTgt.innerHTML = '<option value="">Izberi ciljno sezono</option>' + optHtml;
+        const termListSf = document.getElementById('termListSeasonFilter');
+        if (termListSf) {
+            const prevSf = termListSf.value;
+            termListSf.innerHTML = '<option value="">Vse sezone (zmešano)</option>' + seasons.map(s =>
+                `<option value="${s.id}">${escapeHtml(s.name)}</option>`
+            ).join('');
+            if (prevSf && seasons.some(s => s.id === prevSf)) termListSf.value = prevSf;
+        }
         const browseSel = document.getElementById('seasonTermsBrowseSelect');
         if (browseSel) {
             const prev = browseSel.value;
@@ -6197,15 +6221,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * Letno poročilo: prisotni in možni iz iste množice (dan, termin sezone, plavalec z dodeljenim terminom).
-     * Tako delež ustreza dejanskim obiskom na redno dodeljenih terminih (brez dviga zaradi nadomestnih).
+     * swimmerIdFilter: če je Set z ID-ji, štejeta se samo ti plavalci (npr. samo OLY v sezoni).
+     * Povprečje individualnih deležev: aritmetično povprečje (att/pos) po plavalcih z vsaj 1 možnim – primerljivo z mesečno tabelo.
      */
-    function buildSeasonAttendanceStats(season) {
+    function buildSeasonAttendanceStats(season, swimmerIdFilter = null) {
+        const filter = swimmerIdFilter && swimmerIdFilter.size > 0 ? swimmerIdFilter : null;
         const termsInSeason = getTermsForSeason(season);
         const termIds = new Set(termsInSeason.map(t => t.id));
         const out = {
             posAll: 0, attAll: 0, posMorn: 0, attMorn: 0, posAfter: 0, attAfter: 0,
-            termCount: termsInSeason.length
+            termCount: termsInSeason.length,
+            avgIndividualPctAll: null,
+            swimmersCountedForAvg: 0
         };
+        const perSwimmer = new Map();
+        function bump(swId, isPresent) {
+            if (!perSwimmer.has(swId)) {
+                perSwimmer.set(swId, { pos: 0, att: 0 });
+            }
+            const p = perSwimmer.get(swId);
+            p.pos++;
+            if (isPresent) p.att++;
+        }
         const start = new Date(season.date_from);
         const end = new Date(season.date_to);
         const cur = new Date(start);
@@ -6218,18 +6255,54 @@ document.addEventListener('DOMContentLoaded', () => {
                 const termAtt = attendance[ymd]?.[term.id] || {};
                 for (const s of swimmers) {
                     if (s.is_deleted || !s.terms || !s.terms.includes(term.id)) continue;
+                    if (filter && !filter.has(s.id)) continue;
                     out.posAll++;
                     if (isMorning) out.posMorn++; else out.posAfter++;
                     const st = termAtt[s.id];
-                    if (st === true || st === 'true' || st === 1) {
+                    const pres = st === true || st === 'true' || st === 1;
+                    if (pres) {
                         out.attAll++;
                         if (isMorning) out.attMorn++; else out.attAfter++;
                     }
+                    bump(s.id, pres);
                 }
             }
             cur.setDate(cur.getDate() + 1);
         }
+        let sumInd = 0;
+        let nInd = 0;
+        for (const p of perSwimmer.values()) {
+            if (p.pos > 0) {
+                sumInd += Math.min(100, (p.att / p.pos) * 100);
+                nInd++;
+            }
+        }
+        out.avgIndividualPctAll = nInd > 0 ? (sumInd / nInd).toFixed(1) : null;
+        out.swimmersCountedForAvg = nInd;
         return out;
+    }
+
+    /** Plavalci z vsaj enim mesecem OLY vadnine znotraj obdobja sezone */
+    async function getOlySwimmerIdsForSeason(season) {
+        const fromY = new Date(season.date_from).getFullYear();
+        const toY = new Date(season.date_to).getFullYear();
+        try {
+            const { data, error } = await supabase
+                .from('swimmer_monthly_fees')
+                .select('swimmer_id, year, month')
+                .eq('is_oly', true)
+                .gte('year', fromY)
+                .lte('year', toY);
+            if (error) throw error;
+            const ids = new Set();
+            (data || []).forEach(row => {
+                if (ymInSeasonRange(row.year, row.month, season)) ids.add(row.swimmer_id);
+            });
+            return ids;
+        } catch (e) {
+            console.warn('OLY filtri za sezono:', e.message || e);
+            return new Set();
+        }
     }
 
     function renderSeasonTermsForSeason(seasonId) {
@@ -6473,7 +6546,19 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         out.innerHTML = '<p class="muted">Računanje …</p>';
-        const stats = buildSeasonAttendanceStats(season);
+        const scopeEl = document.getElementById('seasonReportAttendanceScope');
+        const scope = scopeEl?.value || 'all';
+        let stats;
+        if (scope === 'oly') {
+            const olyIds = await getOlySwimmerIdsForSeason(season);
+            if (olyIds.size === 0) {
+                showMessage('V obdobju te sezone ni OLY vadninskih zapisov (preverite Finance).', 'warning');
+            }
+            stats = buildSeasonAttendanceStats(season, olyIds);
+        } else {
+            stats = buildSeasonAttendanceStats(season, null);
+        }
+        const attScopeLabel = scope === 'oly' ? 'OLY (filtrirano)' : 'vsi dodeljeni';
         const fees = await getSeasonFeesTotals(season);
         const fin = await computeSeasonFinanceRollup(season);
         const revenueTotal = fees.total + fin.membership;
@@ -6493,9 +6578,10 @@ document.addEventListener('DOMContentLoaded', () => {
               <div style="font-size:22px;font-weight:700">${stats.termCount}</div>
             </div>
             <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:14px">
-              <div style="font-size:12px;color:#166534">Udeležba (vsi termini)</div>
-              <div style="font-size:22px;font-weight:700">${pct(stats.attAll, stats.posAll)}</div>
+              <div style="font-size:12px;color:#166534">Udeležba (vsi termini) · ${attScopeLabel}</div>
+              <div style="font-size:22px;font-weight:700">${pct(stats.attAll, stats.posAll)} <span style="font-size:13px;font-weight:500">skupni (uteženo)</span></div>
               <div style="font-size:13px;color:#444">${stats.attAll} / ${stats.posAll} prisotnih / možnih</div>
+              <div style="font-size:12px;color:#166534;margin-top:8px;line-height:1.4"><strong>Povpr. individualno:</strong> ${stats.avgIndividualPctAll != null ? stats.avgIndividualPctAll + ' %' : '—'} <span class="muted">(povprečje po ${stats.swimmersCountedForAvg} plavalcih z vsaj enim možnim obiskom – bližje mesečni OLY tabeli)</span></div>
             </div>
             <div style="background:#fffbeb;border:1px solid #fde047;border-radius:8px;padding:14px">
               <div style="font-size:12px;color:#854d0e">Jutranji (&lt; 12:00)</div>
@@ -6534,7 +6620,8 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
           </div>
           <p class="muted" style="font-size:13px;line-height:1.5;margin-top:16px">
-            <strong>Udeležba:</strong> za vsak dan v obdobju sezone, vsak aktivni termin te sezone in vsakega plavalca z dodeljenim terminom: <strong>možni</strong> = vsi taki dnevi, <strong>prisotni</strong> = ko je prisotnost označena kot prisoten (enaka celica). Nadomestni obiski (brez dodelitve) se tu ne štejejo.<br>
+            <strong>Skupni delež (%)</strong> je <strong>ne</strong> vsota ali povprečje vrstic iz mesečne tabele: to je <strong>vsota vseh prisotnih / vsota vseh možnih</strong> (veliki števec in imenovalec) za izbrano skupino. Zato ga ni smiselno primerjati s »seštetimi procenti« iz tabele. <strong>Povprečje individualno</strong> je aritmetično povprečje deležev po plavalcih (lažje primerjavo z OLY mesečnim povzetkom).<br>
+            <strong>Pravila štetja:</strong> za vsak dan v sezoni, aktivni termin te sezone in plavalec z dodeljenim terminom – enaka celica za možne in prisotne; nadomestni obiski brez dodelitve se ne štejejo.<br>
             <strong>Prihodki:</strong> OLY zapisi v <code>swimmer_monthly_fees</code> štejejo <strong>${OLY_MONTHLY_CONTRIBUTION_EUR} €</strong> na zapis na mesec (ne znesek vadnine v tabeli).<br>
             <strong>Stroški:</strong> ročno v Finance ali izračun; preverite »Strošek vodenja na mesec«.
           </p>

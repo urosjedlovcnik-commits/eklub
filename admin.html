@@ -406,6 +406,13 @@
       <div class="card">
         <h3>Upravljanje terminov</h3>
         <div class="inner">
+          <div class="row" style="margin-bottom:14px;flex-wrap:wrap;gap:10px;align-items:center;justify-content:flex-start;width:100%">
+            <label for="termListSeasonFilter" style="text-align:left">Prikaži sezono:</label>
+            <select id="termListSeasonFilter" style="min-width:260px">
+              <option value="">Vse sezone (zmešano)</option>
+            </select>
+          </div>
+          <p class="muted" style="font-size:13px;margin-bottom:10px">Izberite sezono, da pod vsakim dnem vidite samo termine te sezone (npr. samo 2026/27).</p>
           <div class="term-list" id="termList"></div>
         </div>
       </div>
@@ -509,6 +516,12 @@
             <label>Sezona:
               <select id="seasonReportSelect" style="min-width:280px">
                 <option value="">Izberi sezono</option>
+              </select>
+            </label>
+            <label>Udeležba šteje:
+              <select id="seasonReportAttendanceScope" style="min-width:320px" title="Skupni delež je vedno vsota prisotnih / vsota možnih (uteženo). Za primerjavo z OLY mesečno tabelo izberite Samo OLY.">
+                <option value="all">Vsi plavalci (dodeljeni terminom sezone)</option>
+                <option value="oly">Samo OLY (vadninski zapisi z OLY v obdobju sezone)</option>
               </select>
             </label>
             <button type="button" class="btn ok" id="generateSeasonReportBtn">Izračunaj poročilo</button>
