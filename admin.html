@@ -466,7 +466,18 @@
             <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="newSeasonIsActive"> Aktivna</label>
             <button type="button" class="btn pri" id="addSeasonBtn">Shrani sezono</button>
           </div>
-          <p class="muted" style="margin-top:12px;font-size:13px">Pri dodajanju terminov izberite sezono v spustnem seznamu. Stari termini ostanejo povezani s sezono iz migracije.</p>
+          <p class="muted" style="margin-top:12px;font-size:13px"><strong>Plavalci</strong> v bazi niso vezani na sezono (imajo splošen seznam terminov). <strong>Termini</strong> imajo <code>season_id</code>. Po kopiranju terminov plavalce znova dodelite ali posodobite <code>swimmer_term_assignments</code>.</p>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Kopiraj termine v drugo sezono</h3>
+        <div class="inner">
+          <p class="muted" style="font-size:13px;margin-bottom:12px">Ustvari nove termine z novimi ID-ji, enakim dnem in uro, datuma od/do iz <strong>ciljne</strong> sezone. Plavalci in trenerji <strong>se ne</strong> prenesejo.</p>
+          <div class="row" style="flex-wrap:wrap;gap:12px;align-items:center">
+            <label>Izvorno: <select id="copyTermsSourceSeason" style="min-width:220px"></select></label>
+            <label>Ciljno: <select id="copyTermsTargetSeason" style="min-width:220px"></select></label>
+            <button type="button" class="btn ok" id="copyTermsBetweenSeasonsBtn">Kopiraj termine</button>
+          </div>
         </div>
       </div>
       <div class="card">
@@ -488,7 +499,7 @@
           </div>
           <p class="muted" style="font-size:13px;margin-bottom:12px">
             <strong>Jutranji treningi:</strong> začetek termina pred 12:00. <strong>Popoldanski:</strong> od 12:00 naprej.
-            Udeležba: delež vnesenih prisotnosti (prisoten) glede na vse možne obiske za redno dodeljene plavalce v terminih izbrane sezone v njenem obdobju.
+            Udeležba šteje prisotne glede na možne obiske (upošteva datirane dodelitve, če so v bazi).
           </p>
           <div id="seasonReportOutput"></div>
         </div>

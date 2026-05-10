@@ -59,6 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let trainerAttendance = {};
     let currentSection = 'swimmers'; // Dodano: sledi trenutni sekciji
     let seasons = []; // Sezone (tabela seasons v bazi)
+    let swimmerTermAssignments = {}; // ključ swimmer_id-term_id → [{assigned_from_date, assigned_to_date}]
     
     // Trenutni mesec in leto za finance sekcijo
     const now = new Date();
@@ -903,6 +904,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             await loadSeasons();
+            await loadSwimmerTermAssignmentsForAdmin();
             populateSeasonSelects();
 
             // Posodobi UI
@@ -2087,6 +2089,64 @@ document.addEventListener('DOMContentLoaded', () => {
     const elGenerateSeasonReportBtn = document.getElementById('generateSeasonReportBtn');
     if (elGenerateSeasonReportBtn) {
         elGenerateSeasonReportBtn.addEventListener('click', () => runSeasonReport());
+    }
+
+    const elCopyTermsBetweenSeasonsBtn = document.getElementById('copyTermsBetweenSeasonsBtn');
+    if (elCopyTermsBetweenSeasonsBtn) {
+        elCopyTermsBetweenSeasonsBtn.addEventListener('click', async () => {
+            const srcId = document.getElementById('copyTermsSourceSeason')?.value;
+            const tgtId = document.getElementById('copyTermsTargetSeason')?.value;
+            if (!srcId || !tgtId || srcId === tgtId) {
+                showMessage('Izberite dve različni sezoni.', 'warning');
+                return;
+            }
+            const tgtSeason = seasons.find(s => s.id === tgtId);
+            if (!tgtSeason) return;
+            const sourceTerms = TERMS.filter(t => t.season_id === srcId);
+            if (sourceTerms.length === 0) {
+                showMessage('V izvorni sezoni ni terminov.', 'warning');
+                return;
+            }
+            if (!confirm(`Kopiram ${sourceTerms.length} terminov v sezono «${tgtSeason.name}»? Ustvarjeni bodo novi zapisi; dodelitve plavalcev in trenerjev morate urediti ročno.`)) return;
+
+            const yearTag = String(tgtSeason.date_from || '').slice(0, 4) || 'nova';
+            let ok = 0;
+            for (const term of sourceTerms) {
+                let newId = `${term.id}-${yearTag}`;
+                let n = 0;
+                while (TERMS.some(t => t.id === newId)) {
+                    n++;
+                    newId = `${term.id}-${yearTag}-${n}`;
+                }
+                const row = {
+                    id: newId,
+                    day: term.day,
+                    start_time: term.start_time,
+                    end_time: term.end_time,
+                    date_from: tgtSeason.date_from,
+                    date_to: tgtSeason.date_to,
+                    season_id: tgtId
+                };
+                const { data, error } = await supabase.from('terms').insert([row]).select();
+                if (error) {
+                    console.error('Kopiranje termina:', term.id, error);
+                    showMessage('Napaka pri terminu: ' + term.id + ' – ' + (error.message || ''), 'error');
+                    continue;
+                }
+                if (data && data[0]) {
+                    const t = data[0];
+                    TERMS.push({
+                        ...t,
+                        label: t.label || `${DAYNAME[t.day]} ${String(t.start_time).slice(0, 5)}–${String(t.end_time).slice(0, 5)}`
+                    });
+                    ok++;
+                }
+            }
+            showMessage(`Kopiranih ${ok} od ${sourceTerms.length} terminov.`, ok === sourceTerms.length ? 'success' : 'warning');
+            updateTermSelects();
+            updateTermList();
+            renderSeasonsAdminList();
+        });
     }
 
     // ===== Brisanje terminov =====
@@ -5979,6 +6039,39 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    async function loadSwimmerTermAssignmentsForAdmin() {
+        swimmerTermAssignments = {};
+        try {
+            const { data, error } = await supabase.from('swimmer_term_assignments').select('*');
+            if (error) throw error;
+            (data || []).forEach(assignment => {
+                const key = `${assignment.swimmer_id}-${assignment.term_id}`;
+                if (!swimmerTermAssignments[key]) swimmerTermAssignments[key] = [];
+                swimmerTermAssignments[key].push({
+                    assigned_from_date: assignment.assigned_from_date,
+                    assigned_to_date: assignment.assigned_to_date
+                });
+            });
+        } catch (e) {
+            console.warn('Dodelitve plavalcev terminom niso naložene:', e.message || e);
+        }
+    }
+
+    /** Ali naj se plavalec šteje k terminu na ta dan (terms[] + datirane dodelitve) */
+    function isSwimmerCountedForTermOnDate(swimmer, termId, date) {
+        if (!swimmer || swimmer.is_deleted || !swimmer.terms || !swimmer.terms.includes(termId)) return false;
+        const key = `${swimmer.id}-${termId}`;
+        const rows = swimmerTermAssignments[key];
+        if (!rows || rows.length === 0) return true;
+        const ymd = iso(date);
+        return rows.some(a => {
+            const fromDate = a.assigned_from_date;
+            const toDate = a.assigned_to_date;
+            if (!toDate) return ymd >= fromDate;
+            return ymd >= fromDate && ymd <= toDate;
+        });
+    }
+
     function populateSeasonSelects() {
         const newTermSel = document.getElementById('newTermSeasonId');
         const repSel = document.getElementById('seasonReportSelect');
@@ -5995,6 +6088,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (repSel) {
             repSel.innerHTML = '<option value="">Izberi sezono</option>' + optHtml;
         }
+        const copySrc = document.getElementById('copyTermsSourceSeason');
+        const copyTgt = document.getElementById('copyTermsTargetSeason');
+        if (copySrc) copySrc.innerHTML = '<option value="">Izberi izvorno sezono</option>' + optHtml;
+        if (copyTgt) copyTgt.innerHTML = '<option value="">Izberi ciljno sezono</option>' + optHtml;
     }
 
     function escapeHtml(text) {
@@ -6038,7 +6135,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const isMorning = isTermMorningSlot(term);
                 const termAtt = attendance[ymd]?.[term.id] || {};
                 for (const s of swimmers) {
-                    if (s.is_deleted || !s.terms || !s.terms.includes(term.id)) continue;
+                    if (!isSwimmerCountedForTermOnDate(s, term.id, cur)) continue;
                     out.posAll++;
                     if (isMorning) out.posMorn++; else out.posAfter++;
                     const st = termAtt[s.id];
@@ -6077,6 +6174,161 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function getSeasonMonthTuples(season) {
+        const out = [];
+        const s = new Date(season.date_from);
+        const e = new Date(season.date_to);
+        let y = s.getFullYear();
+        let m = s.getMonth() + 1;
+        const endY = e.getFullYear();
+        const endM = e.getMonth() + 1;
+        while (y < endY || (y === endY && m <= endM)) {
+            out.push({ year: y, month: m });
+            m++;
+            if (m > 12) { m = 1; y++; }
+        }
+        return out;
+    }
+
+    /** Izračun stroškov trenerjev in objektov za en mesec (kot Finance, brez filtra »samo aktivni termini«). */
+    async function computeCalculatedCostsForMonth(year, month) {
+        const startDate = new Date(year, month - 1, 1);
+        const endDate = new Date(year, month, 0);
+        const trainerRates = await getTrainerRatesFromDB(month, year);
+        const termCosts = await getTermCostsFromDB();
+        const trainerCosts = {};
+
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+            const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
+            const isoDate = iso(d);
+
+            TERMS.forEach(term => {
+                if (term.day !== dayOfWeek || isoDate < term.date_from || isoDate > term.date_to) return;
+
+                const trainersForTerm = trainers.filter(t =>
+                    t.terms && t.terms.includes(term.id) && !t.is_deleted
+                );
+                const tStart = new Date(`2000-01-01T${term.start_time}`);
+                const tEnd = new Date(`2000-01-01T${term.end_time}`);
+                const durationHours = (tEnd - tStart) / (1000 * 60 * 60);
+
+                trainersForTerm.forEach(trainer => {
+                    const key = `${trainer.id}`;
+                    if (!trainerCosts[key]) {
+                        trainerCosts[key] = { trainer, sessions: 0, totalHours: 0, cost: 0 };
+                    }
+                    const trainerAtt = trainerAttendance[isoDate]?.[term.id]?.[trainer.id];
+                    if (!trainerAtt || trainerAtt.present !== false) {
+                        trainerCosts[key].sessions += 1;
+                        trainerCosts[key].totalHours += durationHours;
+                    } else if (trainerAtt.present === false && trainerAtt.note) {
+                        const substituteIdMatch = trainerAtt.note.match(/\(([a-f0-9-]{36})\)/);
+                        if (substituteIdMatch) {
+                            const substituteTrainerId = substituteIdMatch[1];
+                            const substituteTrainer = trainers.find(t => t.id === substituteTrainerId && !t.is_deleted);
+                            if (substituteTrainer) {
+                                const substituteKey = `${substituteTrainer.id}`;
+                                if (!trainerCosts[substituteKey]) {
+                                    trainerCosts[substituteKey] = {
+                                        trainer: substituteTrainer,
+                                        sessions: 0,
+                                        totalHours: 0,
+                                        cost: 0
+                                    };
+                                }
+                                trainerCosts[substituteKey].sessions += 1;
+                                trainerCosts[substituteKey].totalHours += durationHours;
+                            }
+                        }
+                    }
+                });
+
+                if (trainerAttendance[isoDate]?.[term.id]) {
+                    Object.keys(trainerAttendance[isoDate][term.id]).forEach(trainerId => {
+                        const isRegularlyAssigned = trainersForTerm.some(t => t.id === trainerId);
+                        if (!isRegularlyAssigned) {
+                            const trainer = trainers.find(t => t.id === trainerId && !t.is_deleted);
+                            if (trainer) {
+                                const key = `${trainer.id}`;
+                                if (!trainerCosts[key]) {
+                                    trainerCosts[key] = {
+                                        trainer,
+                                        sessions: 0,
+                                        totalHours: 0,
+                                        cost: 0
+                                    };
+                                }
+                                const tAtt = trainerAttendance[isoDate][term.id][trainerId];
+                                if (tAtt && tAtt.present === true) {
+                                    trainerCosts[key].sessions += 1;
+                                    trainerCosts[key].totalHours += durationHours;
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        for (const trainerCost of Object.values(trainerCosts)) {
+            const trainerHourlyRate = trainerRates[trainerCost.trainer.id] || 25;
+            trainerCost.cost = trainerCost.totalHours * trainerHourlyRate;
+        }
+        const totalTrainerCost = Object.values(trainerCosts).reduce((sum, tc) => sum + tc.cost, 0);
+
+        let totalFacilityCost = 0;
+        for (const term of TERMS) {
+            const termHourlyCost = termCosts[term.id] || 50;
+            if (termHourlyCost <= 0) continue;
+            const termStartDate = new Date(term.date_from);
+            const termEndDate = new Date(term.date_to);
+            if (startDate > termEndDate || endDate < termStartDate) continue;
+
+            const st = new Date(`2000-01-01T${term.start_time}`);
+            const et = new Date(`2000-01-01T${term.end_time}`);
+            const durationHours = (et - st) / (1000 * 60 * 60);
+
+            let termExecutionsInMonth = 0;
+            for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
+                const isoDate = iso(d);
+                if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
+                    const ts = getTermStatus(d, term.id);
+                    if (ts.status !== 'inactive') termExecutionsInMonth += 1;
+                }
+            }
+            totalFacilityCost += termExecutionsInMonth * durationHours * termHourlyCost;
+        }
+
+        return { totalTrainerCost, totalFacilityCost };
+    }
+
+    async function computeSeasonFinanceRollup(season) {
+        const tuples = getSeasonMonthTuples(season);
+        const mgmtDefault = parseFloat(elManagementCostPerMonth?.value) || 500;
+        let facility = 0;
+        let trainerC = 0;
+        let management = 0;
+        let membership = 0;
+        for (const { year, month } of tuples) {
+            const manual = await getManualCostsFromDB(month, year);
+            let f = manual?.facilityCost;
+            let t = manual?.trainerCost;
+            let m = manual?.managementCost;
+            if (f === undefined || t === undefined) {
+                const calc = await computeCalculatedCostsForMonth(year, month);
+                if (f === undefined) f = calc.totalFacilityCost;
+                if (t === undefined) t = calc.totalTrainerCost;
+            }
+            if (m === undefined) m = mgmtDefault;
+            facility += f;
+            trainerC += t;
+            management += m;
+            membership += parseFloat(manual?.membershipFee || 0);
+        }
+        return { facility, trainer: trainerC, management, membership, months: tuples.length };
+    }
+
     function pct(att, pos) {
         if (pos <= 0) return '—';
         return ((att / pos) * 100).toFixed(1) + ' %';
@@ -6097,8 +6349,14 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         out.innerHTML = '<p class="muted">Računanje …</p>';
+        await loadSwimmerTermAssignmentsForAdmin();
         const stats = buildSeasonAttendanceStats(season);
         const fees = await getSeasonFeesTotals(season);
+        const fin = await computeSeasonFinanceRollup(season);
+        const revenueTotal = fees.total + fin.membership;
+        const costTotal = fin.facility + fin.trainer + fin.management;
+        const net = revenueTotal - costTotal;
+        const netClass = net >= 0 ? '#166534' : '#991b1b';
         const html = `
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-bottom:20px">
             <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:14px">
@@ -6108,7 +6366,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:14px">
               <div style="font-size:12px;color:#166534">Udeležba (vsi termini)</div>
               <div style="font-size:22px;font-weight:700">${pct(stats.attAll, stats.posAll)}</div>
-              <div style="font-size:13px;color:#444">${stats.attAll} / ${stats.posAll} obiskov</div>
+              <div style="font-size:13px;color:#444">${stats.attAll} / ${stats.posAll} prisotnih / možnih</div>
             </div>
             <div style="background:#fffbeb;border:1px solid #fde047;border-radius:8px;padding:14px">
               <div style="font-size:12px;color:#854d0e">Jutranji (&lt; 12:00)</div>
@@ -6121,12 +6379,37 @@ document.addEventListener('DOMContentLoaded', () => {
               <div style="font-size:13px;color:#444">${stats.attAfter} / ${stats.posAfter}</div>
             </div>
             <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:14px">
-              <div style="font-size:12px;color:#991b1b">Bilanca vadnin (v obdobju)</div>
-              <div style="font-size:22px;font-weight:700">${fees.total.toFixed(2)} €</div>
-              <div style="font-size:13px;color:#444">${fees.rows} mesečnih zapisov</div>
+              <div style="font-size:12px;color:#991b1b">Prihodki vadnin (+ članarine)</div>
+              <div style="font-size:22px;font-weight:700">${revenueTotal.toFixed(2)} €</div>
+              <div style="font-size:13px;color:#444">Vadnine: ${fees.total.toFixed(2)} € (${fees.rows} zapisov)${fin.membership > 0 ? ` · Član.: ${fin.membership.toFixed(2)} €` : ''}</div>
+            </div>
+            <div style="background:#fff7ed;border:1px solid #fdba74;border-radius:8px;padding:14px">
+              <div style="font-size:12px;color:#9a3412">Stroški objektov (seštevek mesecev)</div>
+              <div style="font-size:22px;font-weight:700">${fin.facility.toFixed(2)} €</div>
+              <div style="font-size:13px;color:#444">${fin.months} mesecev · ročno v Finance ali izračun</div>
+            </div>
+            <div style="background:#ecfeff;border:1px solid #67e8f9;border-radius:8px;padding:14px">
+              <div style="font-size:12px;color:#0e7490">Stroški trenerjev</div>
+              <div style="font-size:22px;font-weight:700">${fin.trainer.toFixed(2)} €</div>
+              <div style="font-size:13px;color:#444">Urne postavke po mesecih</div>
+            </div>
+            <div style="background:#f5f5f4;border:1px solid #d6d3d1;border-radius:8px;padding:14px">
+              <div style="font-size:12px;color:#44403c">Vodenje (mesečni strošek)</div>
+              <div style="font-size:22px;font-weight:700">${fin.management.toFixed(2)} €</div>
+              <div style="font-size:13px;color:#444">Privzeto z nastavitve »Strošek vodenja« v Finance</div>
+            </div>
+            <div style="background:#ecfdf5;border:2px solid ${netClass};border-radius:8px;padding:14px;grid-column:1/-1">
+              <div style="font-size:12px;color:${netClass}"><strong>Letni poračun (v obdobju sezone)</strong></div>
+              <div style="font-size:24px;font-weight:700;color:${netClass}">${net >= 0 ? '+' : ''}${net.toFixed(2)} €</div>
+              <div style="font-size:13px;color:#444">Prihodki (${revenueTotal.toFixed(2)} €) − skupaj stroški (${costTotal.toFixed(2)} €)</div>
             </div>
           </div>
-          <p class="muted" style="font-size:13px">Vadnine: vsota (mesečna vadnina − popust) za vse mesece, ki spadajo v obdobje sezone. Podatki o prisotnosti iz naloženega stanja aplikacije (celotna baza prisotnosti).</p>
+          <p class="muted" style="font-size:13px;line-height:1.5">
+            <strong>Udeležba:</strong> možni obiski upoštevajo <code>swimmer_term_assignments</code> (od–do), če obstajajo; sicer velja dodelitev iz tabele plavalcev.
+            Nizak delež pogosto pomeni manjkajoče vnos prisotnosti (ni »prisoten«).<br>
+            <strong>Stroški:</strong> za vsak mesec v obdobju sezone se uporabijo ročne vrednosti iz Finance (če so), sicer izračun kot pri mesečnem povzetku.
+            Preverite polje »Strošek vodenja na mesec« na strani Finance za privzeti znesek.
+          </p>
         `;
         out.innerHTML = html;
     }
