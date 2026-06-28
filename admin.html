@@ -741,6 +741,28 @@
         </div>
 
         <div class="card">
+          <h3>Poročilo za računovodstvo (mesečni seznam vadnin)</h3>
+          <div class="inner">
+            <p class="muted" style="font-size:13px;margin-bottom:12px">
+              Seznam vseh plavalcev z <strong>zabeleženo vadnino</strong> za izbrani mesec v tabeli pristojbin zgoraj.
+              Plavalci z oznako <strong>OLY</strong> se ne prikažejo. Vrstni red velja za celotno sezono in ga lahko uredite spodaj.
+            </p>
+            <div class="summary-controls" style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+              <button type="button" class="btn" id="prevAccountingReportMonthBtn" title="Prejšnji mesec">←</button>
+              <div id="accountingReportMonthYearLabel" style="font-weight:bold;min-width:160px;text-align:center"></div>
+              <button type="button" class="btn" id="nextAccountingReportMonthBtn" title="Naslednji mesec">→</button>
+              <button type="button" class="btn" id="currentAccountingReportMonthBtn" style="background:#007bff;color:#fff">Trenutni mesec</button>
+              <button type="button" class="btn ok" id="printAccountingReportBtn">Natisni / shrani PDF</button>
+              <button type="button" class="btn pri" id="saveAccountingReportOrderBtn">Shrani vrstni red</button>
+              <button type="button" class="btn" id="sortAccountingReportAlphaBtn">Po abecedi</button>
+            </div>
+            <div id="accountingReportEditorBox">
+              <p class="muted">Nalaganje …</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
           <h3>Uvoz vadnin iz CSV</h3>
           <div class="inner">
                         <p class="muted">

@@ -107,6 +107,26 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentOlySwimmerSummaryMonth = now.getMonth() + 1;
     let currentOlySwimmerSummaryYear = now.getFullYear();
 
+    // Poročilo za računovodstvo
+    let currentAccountingReportMonth = now.getMonth() + 1;
+    let currentAccountingReportYear = now.getFullYear();
+    /** season_id → [{ swimmer_id, sort_order }] */
+    let accountingReportOrderBySeason = {};
+    /** Delovni vrstni red (swimmer id[]) za trenutno sezono v urejevalniku */
+    let accountingReportWorkingOrder = [];
+
+    /** Privzeti vrstni red iz poročila maj 2026 (sezona 2025/26) */
+    const ACCOUNTING_REPORT_SEED_NAMES = [
+        'David Kosi', 'Filip Velko Veselinov', 'Petra Hostnik', 'Sara Breznikar', 'Stefan Gjorevski',
+        'Anita Novak Valant', 'Boštjan Sluga', 'Irena Pentič', 'Iztok Škabar', 'Jaka Koren',
+        'Klemen Lazarevski', 'Rok Zajc', 'Marko Kebe', 'Aljoša Koren', 'Benjamin Hadžialjević',
+        'Borut Kariž', 'Ela Kranjc', 'Jan Prešeren', 'Matic Slabe', 'Nataša Rus Kukovič',
+        'Urška Kos', 'Kristina Šparemblek', 'Katja Jerovšek', 'Vesna Filipovič', 'Milenko Bursać',
+        'Brigita Puš', 'Juš Gašparič', 'Katja Kobolt', 'Peter Štemberger', 'Primož Podbregar',
+        'Grega Boštjančič', 'Petra Turk', 'Marjan Uršič', 'Mihaela Žitko', 'Marko Jermaniš',
+        'Tjaša Longar Kraševec'
+    ];
+
     const DAYNAME = ["","Ponedeljek","Torek","Sreda","Četrtek","Petek","Sobota","Nedelja"];
     const DAY_SHORT_NAME = ["", "Pon.", "Tor.", "Sre.", "Čet.", "Pet.", "Sob.", "Ned."];
 
@@ -763,6 +783,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Osveži pristojbine plavalcev
                 setTimeout(() => {
                     refreshSwimmerFees();
+                    refreshAccountingReportEditor();
                 }, 100);
                 
                 // Preveri stanje vadnin in avtomatsko kopiraj, če je potrebno
@@ -913,6 +934,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             await loadSeasons();
+            await loadAccountingReportOrders();
             populateSeasonSelects();
 
             // Posodobi UI
@@ -4515,6 +4537,59 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function updateAccountingReportMonthDisplay() {
+        const el = document.getElementById('accountingReportMonthYearLabel');
+        if (!el) return;
+        const monthNames = ['Januar', 'Februar', 'Marec', 'April', 'Maj', 'Junij',
+            'Julij', 'Avgust', 'September', 'Oktober', 'November', 'December'];
+        el.textContent = `${monthNames[currentAccountingReportMonth - 1]} ${currentAccountingReportYear}`;
+    }
+
+    function navigateAccountingReportMonth(dir) {
+        if (dir === 'prev') {
+            currentAccountingReportMonth--;
+            if (currentAccountingReportMonth < 1) {
+                currentAccountingReportMonth = 12;
+                currentAccountingReportYear--;
+            }
+        } else {
+            currentAccountingReportMonth++;
+            if (currentAccountingReportMonth > 12) {
+                currentAccountingReportMonth = 1;
+                currentAccountingReportYear++;
+            }
+        }
+        updateAccountingReportMonthDisplay();
+        refreshAccountingReportEditor();
+    }
+
+    function goToCurrentAccountingReportMonth() {
+        const d = new Date();
+        currentAccountingReportMonth = d.getMonth() + 1;
+        currentAccountingReportYear = d.getFullYear();
+        updateAccountingReportMonthDisplay();
+        refreshAccountingReportEditor();
+    }
+
+    document.getElementById('prevAccountingReportMonthBtn')?.addEventListener('click', () => navigateAccountingReportMonth('prev'));
+    document.getElementById('nextAccountingReportMonthBtn')?.addEventListener('click', () => navigateAccountingReportMonth('next'));
+    document.getElementById('currentAccountingReportMonthBtn')?.addEventListener('click', goToCurrentAccountingReportMonth);
+    document.getElementById('saveAccountingReportOrderBtn')?.addEventListener('click', () => saveAccountingReportOrder());
+    document.getElementById('sortAccountingReportAlphaBtn')?.addEventListener('click', () => sortAccountingReportAlphabetically());
+    document.getElementById('printAccountingReportBtn')?.addEventListener('click', () => printAccountingReport());
+
+    document.getElementById('accountingReportEditorBox')?.addEventListener('click', e => {
+        const up = e.target.closest('[data-acc-order-up]');
+        const down = e.target.closest('[data-acc-order-down]');
+        if (up) {
+            moveAccountingReportRow(parseInt(up.getAttribute('data-acc-order-up'), 10), -1);
+        } else if (down) {
+            moveAccountingReportRow(parseInt(down.getAttribute('data-acc-order-down'), 10), 1);
+        }
+    });
+
+    updateAccountingReportMonthDisplay();
+
 
 
     // Event listenerji za navigacijo mesecev - trainer summary
@@ -7473,7 +7548,321 @@ document.addEventListener('DOMContentLoaded', () => {
         
         elSwimmerFeesBox.innerHTML = html;
     }
-    
+
+    // ===== POROČILO ZA RAČUNOVODSTVO =====
+
+    function swimmerDisplayName(s) {
+        return `${s.first_name} ${s.last_name}`.trim();
+    }
+
+    function normalizePersonName(name) {
+        return (name || '').trim().toLocaleLowerCase('sl');
+    }
+
+    function getSeasonForMonthYear(month, year) {
+        const mid = iso(new Date(year, month - 1, 15));
+        const byDate = seasons.find(s => mid >= s.date_from && mid <= s.date_to);
+        if (byDate) return byDate;
+        return seasons.find(s => s.is_active) || seasons[0] || null;
+    }
+
+    async function loadAccountingReportOrders() {
+        accountingReportOrderBySeason = {};
+        try {
+            const { data, error } = await supabase
+                .from('accounting_report_swimmer_order')
+                .select('season_id, swimmer_id, sort_order')
+                .order('sort_order', { ascending: true });
+            if (error) throw error;
+            (data || []).forEach(row => {
+                if (!accountingReportOrderBySeason[row.season_id]) {
+                    accountingReportOrderBySeason[row.season_id] = [];
+                }
+                accountingReportOrderBySeason[row.season_id].push({
+                    swimmer_id: row.swimmer_id,
+                    sort_order: row.sort_order
+                });
+            });
+        } catch (e) {
+            console.warn('Vrstni red poročila za računovodstvo ni naložen (poženite SQL/create_accounting_report_order.sql):', e.message || e);
+        }
+    }
+
+    function swimmerIdFromSeedName(fullName) {
+        const target = normalizePersonName(fullName);
+        const hit = swimmers.find(s => normalizePersonName(swimmerDisplayName(s)) === target);
+        return hit ? hit.id : null;
+    }
+
+    async function ensureAccountingReportSeedForSeason(season) {
+        if (!season || accountingReportOrderBySeason[season.id]?.length) return;
+        const isSeedSeason = /2025\s*[\/\-]\s*26/i.test(season.name || '')
+            || (season.date_from <= '2026-06-30' && season.date_to >= '2025-09-01');
+        if (!isSeedSeason) return;
+        const ids = ACCOUNTING_REPORT_SEED_NAMES.map(swimmerIdFromSeedName).filter(Boolean);
+        if (ids.length === 0) return;
+        const rows = ids.map((swimmer_id, i) => ({
+            season_id: season.id,
+            swimmer_id,
+            sort_order: i + 1
+        }));
+        try {
+            const { error } = await supabase.from('accounting_report_swimmer_order').upsert(rows, {
+                onConflict: 'season_id,swimmer_id'
+            });
+            if (error) throw error;
+            accountingReportOrderBySeason[season.id] = rows.map(r => ({
+                swimmer_id: r.swimmer_id,
+                sort_order: r.sort_order
+            }));
+        } catch (e) {
+            console.warn('Privzeti vrstni red poročila ni shranjen:', e.message || e);
+            accountingReportOrderBySeason[season.id] = rows.map(r => ({
+                swimmer_id: r.swimmer_id,
+                sort_order: r.sort_order
+            }));
+        }
+    }
+
+    /** Plavalci z zapisom vadnine v bazi za mesec, brez OLY */
+    async function fetchAccountingReportFeeRows(month, year) {
+        const { data, error } = await supabase
+            .from('swimmer_monthly_fees')
+            .select('swimmer_id, monthly_fee, discount, is_oly')
+            .eq('month', month)
+            .eq('year', year);
+        if (error) throw error;
+        const rows = [];
+        (data || []).forEach(row => {
+            if (row.is_oly === true) return;
+            const swimmer = swimmers.find(s => s.id === row.swimmer_id && !s.is_deleted);
+            if (!swimmer) return;
+            const fee = parseFloat(row.monthly_fee || 0);
+            const discount = parseFloat(row.discount || 0);
+            const net = fee - discount;
+            if (net <= 0 && fee <= 0) return;
+            rows.push({
+                swimmer,
+                netFee: net > 0 ? net : fee,
+                fee,
+                discount
+            });
+        });
+        return rows;
+    }
+
+    function sortSwimmersAlpha(list) {
+        return [...list].sort((a, b) =>
+            swimmerDisplayName(a.swimmer).localeCompare(swimmerDisplayName(b.swimmer), 'sl')
+        );
+    }
+
+    function applyOrderToAccountingRows(feeRows, orderedIds) {
+        const byId = Object.fromEntries(feeRows.map(r => [r.swimmer.id, r]));
+        const out = [];
+        const used = new Set();
+        (orderedIds || []).forEach(id => {
+            if (byId[id]) {
+                out.push(byId[id]);
+                used.add(id);
+            }
+        });
+        const rest = feeRows.filter(r => !used.has(r.swimmer.id));
+        sortSwimmersAlpha(rest).forEach(r => out.push(r));
+        return out;
+    }
+
+    async function buildAccountingReportRows(month, year) {
+        const season = getSeasonForMonthYear(month, year);
+        const feeRows = await fetchAccountingReportFeeRows(month, year);
+        if (!season) {
+            return { season: null, rows: sortSwimmersAlpha(feeRows) };
+        }
+        await ensureAccountingReportSeedForSeason(season);
+        const orderRows = accountingReportOrderBySeason[season.id] || [];
+        const orderedIds = [...orderRows]
+            .sort((a, b) => a.sort_order - b.sort_order)
+            .map(r => r.swimmer_id);
+        return {
+            season,
+            rows: applyOrderToAccountingRows(feeRows, orderedIds)
+        };
+    }
+
+    function moveAccountingReportRow(index, delta) {
+        const next = index + delta;
+        if (next < 0 || next >= accountingReportWorkingOrder.length) return;
+        const arr = [...accountingReportWorkingOrder];
+        const tmp = arr[index];
+        arr[index] = arr[next];
+        arr[next] = tmp;
+        accountingReportWorkingOrder = arr;
+        const season = getSeasonForMonthYear(currentAccountingReportMonth, currentAccountingReportYear);
+        renderAccountingReportEditorTable(accountingReportWorkingOrder, season);
+    }
+
+    function sortAccountingReportAlphabetically() {
+        if (!accountingReportWorkingOrder.length) return;
+        accountingReportWorkingOrder = sortSwimmersAlpha(accountingReportWorkingOrder);
+        const season = getSeasonForMonthYear(currentAccountingReportMonth, currentAccountingReportYear);
+        renderAccountingReportEditorTable(accountingReportWorkingOrder, season);
+        showMessage('Vrstni red po abecedi (shrani gumb, če želite obdržati za sezono).', 'info');
+    }
+
+    function renderAccountingReportEditorTable(rows, season) {
+        const box = document.getElementById('accountingReportEditorBox');
+        if (!box) return;
+        if (!rows.length) {
+            box.innerHTML = '<p class="muted">Za izbrani mesec ni plavalcev z zabeleženo vadnino (brez OLY) v tabeli pristojbin.</p>';
+            return;
+        }
+        let header = '';
+        if (season) {
+            const nSaved = (accountingReportOrderBySeason[season.id] || []).length;
+            header = `<p class="muted" style="font-size:13px;margin-bottom:10px">Sezona: <strong>${escapeHtml(season.name)}</strong> · ${rows.length} plavalcev · ${nSaved ? 'shranjen vrstni red' : 'privzeti vrstni red (2025/26)'} · premakni z ↑ ↓, nato <strong>Shrani vrstni red</strong></p>`;
+        } else {
+            header = `<p class="muted" style="font-size:13px;margin-bottom:10px">${rows.length} plavalcev · po abecedi (ni sezone za ta mesec)</p>`;
+        }
+        let html = header + `<table class="trainer-hours-table" style="width:100%"><thead><tr>
+            <th style="width:70px">Vrstni red</th>
+            <th>Ime in priimek</th>
+            <th>E-pošta</th>
+            <th>Naslov</th>
+            <th>Pošta</th>
+            <th style="text-align:right">Vadnina (€)</th>
+        </tr></thead><tbody>`;
+        rows.forEach((row, i) => {
+            const s = row.swimmer;
+            html += `<tr>
+                <td style="white-space:nowrap">
+                    <button type="button" class="btn" style="padding:2px 8px;font-size:12px" data-acc-order-up="${i}" title="Premakni gor">↑</button>
+                    <button type="button" class="btn" style="padding:2px 8px;font-size:12px" data-acc-order-down="${i}" title="Premakni dol">↓</button>
+                </td>
+                <td>${escapeHtml(swimmerDisplayName(s))}</td>
+                <td>${escapeHtml(s.email || '')}</td>
+                <td>${escapeHtml(s.address || '')}</td>
+                <td>${escapeHtml(s.postal_code || '')}</td>
+                <td style="text-align:right">${formatAccountingFeeAmount(row.netFee)}</td>
+            </tr>`;
+        });
+        html += '</tbody></table>';
+        box.innerHTML = html;
+    }
+
+    async function refreshAccountingReportEditor() {
+        const box = document.getElementById('accountingReportEditorBox');
+        if (!box) return;
+        box.innerHTML = '<p class="muted">Nalaganje …</p>';
+        try {
+            const month = currentAccountingReportMonth;
+            const year = currentAccountingReportYear;
+            const { season, rows } = await buildAccountingReportRows(month, year);
+            accountingReportWorkingOrder = rows;
+            renderAccountingReportEditorTable(rows, season);
+        } catch (e) {
+            console.error(e);
+            box.innerHTML = '<p class="muted">Napaka pri nalaganju poročila.</p>';
+        }
+    }
+
+    async function saveAccountingReportOrder() {
+        const month = currentAccountingReportMonth;
+        const year = currentAccountingReportYear;
+        const season = getSeasonForMonthYear(month, year);
+        if (!season) {
+            showMessage('Ni sezone za izbrani mesec – vrstni red ni shranjen.', 'warning');
+            return;
+        }
+        if (!accountingReportWorkingOrder.length) {
+            showMessage('Ni plavalcev za shranjevanje vrstnega reda.', 'warning');
+            return;
+        }
+        const rows = accountingReportWorkingOrder.map((row, i) => ({
+            season_id: season.id,
+            swimmer_id: row.swimmer.id,
+            sort_order: i + 1
+        }));
+        try {
+            const { error: delErr } = await supabase
+                .from('accounting_report_swimmer_order')
+                .delete()
+                .eq('season_id', season.id);
+            if (delErr) throw delErr;
+            const { error } = await supabase.from('accounting_report_swimmer_order').insert(rows);
+            if (error) throw error;
+            accountingReportOrderBySeason[season.id] = rows.map(r => ({
+                swimmer_id: r.swimmer_id,
+                sort_order: r.sort_order
+            }));
+            showMessage(`Vrstni red shranjen za sezono «${season.name}».`, 'success');
+        } catch (e) {
+            console.error(e);
+            alert('Napaka pri shranjevanju vrstnega reda: ' + (e.message || e));
+        }
+    }
+
+    function formatAccountingFeeAmount(n) {
+        const v = Number(n);
+        if (Number.isInteger(v) || Math.abs(v - Math.round(v)) < 0.001) return String(Math.round(v));
+        return v.toFixed(1).replace(/\.0$/, '');
+    }
+
+    async function printAccountingReport() {
+        const month = currentAccountingReportMonth;
+        const year = currentAccountingReportYear;
+        const monthLabel = new Date(year, month - 1, 1).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
+        let rows = accountingReportWorkingOrder;
+        if (!rows.length) {
+            const built = await buildAccountingReportRows(month, year);
+            rows = built.rows;
+        }
+        if (!rows.length) {
+            showMessage('Ni podatkov za tisk.', 'warning');
+            return;
+        }
+        const tableRows = rows.map(row => {
+            const s = row.swimmer;
+            return `<tr>
+                <td>${escapeHtml(swimmerDisplayName(s))}</td>
+                <td>${escapeHtml(s.email || '')}</td>
+                <td>${escapeHtml(s.address || '')}</td>
+                <td>${escapeHtml(s.postal_code || '')}</td>
+                <td class="fee">${formatAccountingFeeAmount(row.netFee)}</td>
+            </tr>`;
+        }).join('');
+        const win = window.open('', '_blank');
+        if (!win) {
+            alert('Dovolite pojavna okna za tisk poročila.');
+            return;
+        }
+        win.document.write(`<!DOCTYPE html><html lang="sl"><head><meta charset="utf-8">
+            <title>Razpored PKL - vadnine_${monthLabel.replace(/\s+/g, '_')}</title>
+            <style>
+                body { font-family: Arial, Helvetica, sans-serif; font-size: 11pt; margin: 24px; color: #000; }
+                h1 { font-size: 14pt; font-weight: normal; margin: 0 0 16px 0; }
+                table { width: 100%; border-collapse: collapse; }
+                th, td { text-align: left; padding: 4px 8px 4px 0; vertical-align: top; border-bottom: 1px solid #eee; }
+                th { font-weight: bold; border-bottom: 2px solid #000; padding-bottom: 6px; }
+                td.fee { text-align: right; white-space: nowrap; }
+                th.fee { text-align: right; }
+                @media print { body { margin: 12mm; } }
+            </style></head><body>
+            <h1>Razpored PKL – vadnine (${monthLabel})</h1>
+            <table>
+                <thead><tr>
+                    <th>Ime priimek</th>
+                    <th>Mail</th>
+                    <th>Naslov</th>
+                    <th>Pošta</th>
+                    <th class="fee"></th>
+                </tr></thead>
+                <tbody>${tableRows}</tbody>
+            </table>
+            <script>window.onload=function(){window.print();};</script>
+            </body></html>`);
+        win.document.close();
+    }
+
     // Funkcija za izvoz vadnin v CSV
     window.exportSwimmerFees = async function() {
         const month = currentSwimmerFeesMonth;
