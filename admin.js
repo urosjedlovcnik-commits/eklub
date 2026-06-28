@@ -694,6 +694,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const [y, m, d] = isoStr.split('-').map(Number);
       return `${String(d).padStart(2, '0')} / ${String(m).padStart(2, '0')} / ${y}`;
     }
+
+    /** Aktiven plavalec z vsaj enim dodeljenim terminom (polje terms) */
+    function swimmerHasAssignedTerms(swimmer) {
+        return !!(swimmer && !swimmer.is_deleted && swimmer.terms && swimmer.terms.length > 0);
+    }
     
     function getTermsForDate(date) {
         const w = date.getDay() === 0 ? 7 : date.getDay();
@@ -7599,7 +7604,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const isSeedSeason = /2025\s*[\/\-]\s*26/i.test(season.name || '')
             || (season.date_from <= '2026-06-30' && season.date_to >= '2025-09-01');
         if (!isSeedSeason) return;
-        const ids = ACCOUNTING_REPORT_SEED_NAMES.map(swimmerIdFromSeedName).filter(Boolean);
+        const ids = ACCOUNTING_REPORT_SEED_NAMES
+            .map(swimmerIdFromSeedName)
+            .filter(id => {
+                if (!id) return false;
+                const s = swimmers.find(sw => sw.id === id);
+                return swimmerHasAssignedTerms(s);
+            });
         if (ids.length === 0) return;
         const rows = ids.map((swimmer_id, i) => ({
             season_id: season.id,
@@ -7637,6 +7648,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (row.is_oly === true) return;
             const swimmer = swimmers.find(s => s.id === row.swimmer_id && !s.is_deleted);
             if (!swimmer) return;
+            if (!swimmerHasAssignedTerms(swimmer)) return;
             const fee = parseFloat(row.monthly_fee || 0);
             const discount = parseFloat(row.discount || 0);
             const net = fee - discount;
@@ -7777,7 +7789,9 @@ document.addEventListener('DOMContentLoaded', () => {
             showMessage('Ni plavalcev za shranjevanje vrstnega reda.', 'warning');
             return;
         }
-        const rows = accountingReportWorkingOrder.map((row, i) => ({
+        const rows = accountingReportWorkingOrder
+            .filter(row => swimmerHasAssignedTerms(row.swimmer))
+            .map((row, i) => ({
             season_id: season.id,
             swimmer_id: row.swimmer.id,
             sort_order: i + 1
@@ -7875,7 +7889,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         try {
             const swimmerFees = await getSwimmerFees(month, year);
-            const activeSwimmers = swimmers.filter(s => !s.is_deleted);
+            const activeSwimmers = swimmers.filter(swimmerHasAssignedTerms);
             
             // Ustvari CSV vsebino z imenom, priimkom, emailom, naslovom, pošto in zneskom vadnine
             let csv = 'first_name,last_name,email,address,postal_code,monthly_fee\n';
@@ -9171,8 +9185,13 @@ document.addEventListener('DOMContentLoaded', () => {
             
 // console.log(`Najdenih ${previousMonthFees.length} vadnin iz prejšnega meseca za kopiranje`);
             
-            // Povozimo vadnine tekočega meseca z vadninami iz prejšnjega meseca (upsert prepiše obstoječe)
-            const newFees = previousMonthFees.map(previousFee => ({
+            // Povozimo vadnine tekočega meseca – samo plavalci z dodeljenim terminom
+            const newFees = previousMonthFees
+                .filter(previousFee => {
+                    const s = swimmers.find(sw => sw.id === previousFee.swimmer_id);
+                    return swimmerHasAssignedTerms(s);
+                })
+                .map(previousFee => ({
                 swimmer_id: previousFee.swimmer_id,
                 month: currentMonth1Based, // 1-based za bazo
                 year: currentYear,
