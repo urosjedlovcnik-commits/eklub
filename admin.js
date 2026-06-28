@@ -7844,12 +7844,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td class="fee">${formatAccountingFeeAmount(row.netFee)}</td>
             </tr>`;
         }).join('');
-        const win = window.open('', '_blank');
-        if (!win) {
-            alert('Dovolite pojavna okna za tisk poročila.');
-            return;
-        }
-        win.document.write(`<!DOCTYPE html><html lang="sl"><head><meta charset="utf-8">
+        const html = `<!DOCTYPE html><html lang="sl"><head><meta charset="utf-8">
             <title>Razpored PKL - vadnine_${monthLabel.replace(/\s+/g, '_')}</title>
             <style>
                 body { font-family: Arial, Helvetica, sans-serif; font-size: 11pt; margin: 24px; color: #000; }
@@ -7861,7 +7856,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 th.fee { text-align: right; }
                 @media print { body { margin: 12mm; } }
             </style></head><body>
-            <h1>Razpored PKL – vadnine (${monthLabel})</h1>
+            <h1>Razpored PKL – vadnine (${escapeHtml(monthLabel)})</h1>
             <table>
                 <thead><tr>
                     <th>Ime priimek</th>
@@ -7872,9 +7867,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 </tr></thead>
                 <tbody>${tableRows}</tbody>
             </table>
-            <script>window.onload=function(){window.print();};</script>
-            </body></html>`);
-        win.document.close();
+            </body></html>`;
+        printAccountingReportHtml(html);
+    }
+
+    /** Tisk brez window.open (brskalniki blokirajo pojavna okna po async). */
+    function printAccountingReportHtml(html) {
+        let frame = document.getElementById('accountingReportPrintFrame');
+        if (!frame) {
+            frame = document.createElement('iframe');
+            frame.id = 'accountingReportPrintFrame';
+            frame.title = 'Tisk poročila za računovodstvo';
+            frame.style.cssText = 'position:fixed;width:0;height:0;border:0;opacity:0;pointer-events:none';
+            document.body.appendChild(frame);
+        }
+        const win = frame.contentWindow;
+        if (!win) {
+            showMessage('Tisk ni na voljo v tem brskalniku.', 'error');
+            return;
+        }
+        const doc = win.document;
+        doc.open();
+        doc.write(html);
+        doc.close();
+        const triggerPrint = () => {
+            try {
+                win.focus();
+                win.print();
+            } catch (e) {
+                console.error('Tisk poročila:', e);
+                showMessage('Napaka pri tisku. Poskusite znova.', 'error');
+            }
+        };
+        if (doc.readyState === 'complete') {
+            setTimeout(triggerPrint, 100);
+        } else {
+            frame.onload = () => setTimeout(triggerPrint, 100);
+        }
     }
 
     // Funkcija za izvoz vadnin v CSV
