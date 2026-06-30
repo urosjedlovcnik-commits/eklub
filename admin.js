@@ -7092,61 +7092,37 @@ document.addEventListener('DOMContentLoaded', () => {
             // Pridobi stroške prog iz baze
             const termCosts = await getTermCostsFromDB();
 
-            
-            // Filtriraj samo aktivne termine (ki še niso potekli)
-            const activeTerms = TERMS.filter(term => {
+            // Termini, ki v izbranem mesecu dejansko tečejo (tudi če je sezona že končana)
+            const termsInMonth = TERMS.filter(term => {
+                const termStartDate = new Date(term.date_from);
                 const termEndDate = new Date(term.date_to);
-                const today = new Date();
-                const isActive = termEndDate >= today;
-
-                return isActive;
-            });
-            
-
-            
-            // Prikaži seznam neaktivnih terminov za debug
-            const inactiveTerms = TERMS.filter(term => {
-                const termEndDate = new Date(term.date_to);
-                const today = new Date();
-                return termEndDate < today;
+                return startDate <= termEndDate && endDate >= termStartDate;
             });
 
-            
-            for (const term of activeTerms) {
+            for (const term of termsInMonth) {
                 const termHourlyCost = termCosts[term.id] || 50; // Default 50€/uro
 
                 if (termHourlyCost > 0) {
-                    // Preveri, ali je termin aktiven v izbranem mesecu
-                    const termStartDate = new Date(term.date_from);
-                    const termEndDate = new Date(term.date_to);
-                    
-                    if (startDate <= termEndDate && endDate >= termStartDate) {
-                        // Izračunaj trajanje termina v urah
-                        const startTime = new Date(`2000-01-01T${term.start_time}`);
-                        const endTime = new Date(`2000-01-01T${term.end_time}`);
-                        const durationHours = (endTime - startTime) / (1000 * 60 * 60);
-                        
-                        // Preštej vse dni v mesecu, ko se termin izvaja
-                        let termExecutionsInMonth = 0;
-                        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-                            const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
-                            const isoDate = iso(d);
-                            
-                            // Preveri, ali je termin na ta dan in ali je aktiven
-                            if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
-                                // Preveri, ali je termin deaktiviran za ta dan
-                                const termStatus = getTermStatus(d, term.id);
-                                if (termStatus.status !== "inactive") {
-                                    // Termin je aktiven na ta dan
-                                    termExecutionsInMonth += 1;
-                                }
+                    // Izračunaj trajanje termina v urah
+                    const startTime = new Date(`2000-01-01T${term.start_time}`);
+                    const endTime = new Date(`2000-01-01T${term.end_time}`);
+                    const durationHours = (endTime - startTime) / (1000 * 60 * 60);
+
+                    // Preštej vse dni v mesecu, ko se termin izvaja
+                    let termExecutionsInMonth = 0;
+                    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                        const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
+                        const isoDate = iso(d);
+
+                        if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
+                            const termStatusForDay = getTermStatus(d, term.id);
+                            if (termStatusForDay.status !== 'inactive') {
+                                termExecutionsInMonth += 1;
                             }
                         }
-                        
-                        // Strošek prog = število izvedenih terminov × trajanje v urah × urni strošek
-                        const termMonthlyCost = termExecutionsInMonth * durationHours * termHourlyCost;
-                        totalFacilityCost += termMonthlyCost;
                     }
+
+                    totalFacilityCost += termExecutionsInMonth * durationHours * termHourlyCost;
                 }
             }
             
@@ -8547,16 +8523,8 @@ document.addEventListener('DOMContentLoaded', () => {
     async function saveTermCosts() {
         const termCosts = {};
         
-        // Filtriraj samo aktivne termine za shranjevanje
-        const activeTermsForSaving = TERMS.filter(term => {
-            const termEndDate = new Date(term.date_to);
-            const today = new Date();
-            return termEndDate >= today;
-        });
-        
-// console.log(`Saving term costs: processing ${activeTermsForSaving.length} active terms out of ${TERMS.length} total terms`);
-        
-        for (const term of activeTermsForSaving) {
+        // Shrani urne postavke za vse termine (tudi pretekle sezone)
+        for (const term of TERMS) {
             const input = document.getElementById(`term-cost-${term.id}`);
             if (input) {
                 termCosts[term.id] = input.value;
