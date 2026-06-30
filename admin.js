@@ -7837,15 +7837,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const fileSlug = `${String(month).padStart(2, '0')}_${year}`;
             const tableBody = [
                 [
+                    { text: 'Št.', style: 'tableHeader', alignment: 'center' },
                     { text: 'Ime priimek', style: 'tableHeader' },
                     { text: 'Mail', style: 'tableHeader' },
                     { text: 'Naslov', style: 'tableHeader' },
                     { text: 'Pošta', style: 'tableHeader' },
                     { text: 'Znesek', style: 'tableHeader', alignment: 'right' }
                 ],
-                ...rows.map(row => {
+                ...rows.map((row, index) => {
                     const s = row.swimmer;
                     return [
+                        accountingPdfCell(String(index + 1), 'center'),
                         accountingPdfCell(swimmerDisplayName(s)),
                         accountingPdfCell(s.email || ''),
                         accountingPdfCell(s.address || ''),
@@ -7864,7 +7866,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     {
                         table: {
                             headerRows: 1,
-                            widths: ['16%', '27%', '34%', '15%', '8%'],
+                            widths: ['4%', '15%', '26%', '33%', '14%', '8%'],
                             body: tableBody
                         },
                         layout: {
