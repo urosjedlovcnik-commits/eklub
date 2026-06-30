@@ -4581,7 +4581,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('currentAccountingReportMonthBtn')?.addEventListener('click', goToCurrentAccountingReportMonth);
     document.getElementById('saveAccountingReportOrderBtn')?.addEventListener('click', () => saveAccountingReportOrder());
     document.getElementById('sortAccountingReportAlphaBtn')?.addEventListener('click', () => sortAccountingReportAlphabetically());
-    document.getElementById('printAccountingReportBtn')?.addEventListener('click', () => printAccountingReport());
+    document.getElementById('printAccountingReportBtn')?.addEventListener('click', () => downloadAccountingReportPdf());
 
     document.getElementById('accountingReportEditorBox')?.addEventListener('click', e => {
         const up = e.target.closest('[data-acc-order-up]');
@@ -7821,88 +7821,97 @@ document.addEventListener('DOMContentLoaded', () => {
         return v.toFixed(1).replace(/\.0$/, '');
     }
 
-    async function printAccountingReport() {
+    async function getAccountingReportExportRows() {
         const month = currentAccountingReportMonth;
         const year = currentAccountingReportYear;
-        const monthLabel = new Date(year, month - 1, 1).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
         let rows = accountingReportWorkingOrder;
         if (!rows.length) {
             const built = await buildAccountingReportRows(month, year);
             rows = built.rows;
         }
-        if (!rows.length) {
-            showMessage('Ni podatkov za tisk.', 'warning');
-            return;
-        }
-        const tableRows = rows.map(row => {
-            const s = row.swimmer;
-            return `<tr>
-                <td>${escapeHtml(swimmerDisplayName(s))}</td>
-                <td>${escapeHtml(s.email || '')}</td>
-                <td>${escapeHtml(s.address || '')}</td>
-                <td>${escapeHtml(s.postal_code || '')}</td>
-                <td class="fee">${formatAccountingFeeAmount(row.netFee)}</td>
-            </tr>`;
-        }).join('');
-        const html = `<!DOCTYPE html><html lang="sl"><head><meta charset="utf-8">
-            <title>Razpored PKL - vadnine_${monthLabel.replace(/\s+/g, '_')}</title>
-            <style>
-                body { font-family: Arial, Helvetica, sans-serif; font-size: 11pt; margin: 24px; color: #000; }
-                h1 { font-size: 14pt; font-weight: normal; margin: 0 0 16px 0; }
-                table { width: 100%; border-collapse: collapse; }
-                th, td { text-align: left; padding: 4px 8px 4px 0; vertical-align: top; border-bottom: 1px solid #eee; }
-                th { font-weight: bold; border-bottom: 2px solid #000; padding-bottom: 6px; }
-                td.fee { text-align: right; white-space: nowrap; }
-                th.fee { text-align: right; }
-                @media print { body { margin: 12mm; } }
-            </style></head><body>
-            <h1>Razpored PKL – vadnine (${escapeHtml(monthLabel)})</h1>
-            <table>
-                <thead><tr>
-                    <th>Ime priimek</th>
-                    <th>Mail</th>
-                    <th>Naslov</th>
-                    <th>Pošta</th>
-                    <th class="fee"></th>
-                </tr></thead>
-                <tbody>${tableRows}</tbody>
-            </table>
-            </body></html>`;
-        printAccountingReportHtml(html);
+        return { month, year, rows };
     }
 
-    /** Tisk brez window.open (brskalniki blokirajo pojavna okna po async). */
-    function printAccountingReportHtml(html) {
-        let frame = document.getElementById('accountingReportPrintFrame');
-        if (!frame) {
-            frame = document.createElement('iframe');
-            frame.id = 'accountingReportPrintFrame';
-            frame.title = 'Tisk poročila za računovodstvo';
-            frame.style.cssText = 'position:fixed;width:0;height:0;border:0;opacity:0;pointer-events:none';
-            document.body.appendChild(frame);
-        }
-        const win = frame.contentWindow;
-        if (!win) {
-            showMessage('Tisk ni na voljo v tem brskalniku.', 'error');
+    async function downloadAccountingReportPdf() {
+        const btn = document.getElementById('printAccountingReportBtn');
+        if (typeof pdfMake === 'undefined') {
+            showMessage('PDF knjižnica ni naložena. Osvežite stran (Ctrl+F5).', 'error');
             return;
         }
-        const doc = win.document;
-        doc.open();
-        doc.write(html);
-        doc.close();
-        const triggerPrint = () => {
-            try {
-                win.focus();
-                win.print();
-            } catch (e) {
-                console.error('Tisk poročila:', e);
-                showMessage('Napaka pri tisku. Poskusite znova.', 'error');
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Pripravljam PDF …';
+        }
+        try {
+            const { month, year, rows } = await getAccountingReportExportRows();
+            if (!rows.length) {
+                showMessage('Ni podatkov za PDF.', 'warning');
+                return;
             }
-        };
-        if (doc.readyState === 'complete') {
-            setTimeout(triggerPrint, 100);
-        } else {
-            frame.onload = () => setTimeout(triggerPrint, 100);
+            const monthLabel = new Date(year, month - 1, 1).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
+            const fileSlug = `${String(month).padStart(2, '0')}_${year}`;
+            const tableBody = [
+                [
+                    { text: 'Ime priimek', style: 'tableHeader' },
+                    { text: 'Mail', style: 'tableHeader' },
+                    { text: 'Naslov', style: 'tableHeader' },
+                    { text: 'Pošta', style: 'tableHeader' },
+                    { text: '', style: 'tableHeader' }
+                ],
+                ...rows.map(row => {
+                    const s = row.swimmer;
+                    return [
+                        swimmerDisplayName(s),
+                        s.email || '',
+                        s.address || '',
+                        s.postal_code || '',
+                        { text: formatAccountingFeeAmount(row.netFee), alignment: 'right' }
+                    ];
+                })
+            ];
+            const docDefinition = {
+                pageSize: 'A4',
+                pageMargins: [36, 44, 36, 36],
+                defaultStyle: { font: 'Roboto', fontSize: 9.5 },
+                content: [
+                    { text: `Razpored PKL – vadnine (${monthLabel})`, fontSize: 13, margin: [0, 0, 0, 14] },
+                    {
+                        table: {
+                            headerRows: 1,
+                            widths: ['21%', '23%', '30%', '16%', '10%'],
+                            body: tableBody
+                        },
+                        layout: {
+                            hLineWidth(i, node) {
+                                if (i === 0 || i === 1) return 1;
+                                if (i === node.table.body.length) return 0.5;
+                                return 0.25;
+                            },
+                            vLineWidth: () => 0,
+                            hLineColor(i) {
+                                return i === 1 ? '#000000' : '#dddddd';
+                            },
+                            paddingLeft: () => 2,
+                            paddingRight: () => 2,
+                            paddingTop: () => 3,
+                            paddingBottom: () => 3
+                        }
+                    }
+                ],
+                styles: {
+                    tableHeader: { bold: true, fontSize: 9.5 }
+                }
+            };
+            pdfMake.createPdf(docDefinition).download(`Razpored_PKL_vadnine_${fileSlug}.pdf`);
+            showMessage('PDF je prenesen.', 'success');
+        } catch (e) {
+            console.error('PDF poročilo:', e);
+            showMessage('Napaka pri ustvarjanju PDF: ' + (e.message || e), 'error');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Prenesi PDF';
+            }
         }
     }
 
