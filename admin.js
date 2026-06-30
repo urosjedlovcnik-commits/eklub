@@ -7832,6 +7832,15 @@ document.addEventListener('DOMContentLoaded', () => {
         return { month, year, rows };
     }
 
+    function accountingPdfCell(text, alignment) {
+        return {
+            text: text == null ? '' : String(text),
+            noWrap: true,
+            fontSize: 7.5,
+            alignment: alignment || 'left'
+        };
+    }
+
     async function downloadAccountingReportPdf() {
         const btn = document.getElementById('printAccountingReportBtn');
         if (typeof pdfMake === 'undefined') {
@@ -7856,29 +7865,30 @@ document.addEventListener('DOMContentLoaded', () => {
                     { text: 'Mail', style: 'tableHeader' },
                     { text: 'Naslov', style: 'tableHeader' },
                     { text: 'Pošta', style: 'tableHeader' },
-                    { text: '', style: 'tableHeader' }
+                    { text: 'Znesek', style: 'tableHeader', alignment: 'right' }
                 ],
                 ...rows.map(row => {
                     const s = row.swimmer;
                     return [
-                        swimmerDisplayName(s),
-                        s.email || '',
-                        s.address || '',
-                        s.postal_code || '',
-                        { text: formatAccountingFeeAmount(row.netFee), alignment: 'right' }
+                        accountingPdfCell(swimmerDisplayName(s)),
+                        accountingPdfCell(s.email || ''),
+                        accountingPdfCell(s.address || ''),
+                        accountingPdfCell(s.postal_code || ''),
+                        accountingPdfCell(formatAccountingFeeAmount(row.netFee), 'right')
                     ];
                 })
             ];
             const docDefinition = {
                 pageSize: 'A4',
-                pageMargins: [36, 44, 36, 36],
-                defaultStyle: { font: 'Roboto', fontSize: 9.5 },
+                pageOrientation: 'landscape',
+                pageMargins: [22, 32, 22, 24],
+                defaultStyle: { font: 'Roboto', fontSize: 7.5 },
                 content: [
-                    { text: `Razpored PKL – vadnine (${monthLabel})`, fontSize: 13, margin: [0, 0, 0, 14] },
+                    { text: `Razpored PKL – vadnine (${monthLabel})`, fontSize: 11, margin: [0, 0, 0, 10] },
                     {
                         table: {
                             headerRows: 1,
-                            widths: ['21%', '23%', '30%', '16%', '10%'],
+                            widths: ['16%', '27%', '34%', '15%', '8%'],
                             body: tableBody
                         },
                         layout: {
@@ -7891,15 +7901,15 @@ document.addEventListener('DOMContentLoaded', () => {
                             hLineColor(i) {
                                 return i === 1 ? '#000000' : '#dddddd';
                             },
-                            paddingLeft: () => 2,
-                            paddingRight: () => 2,
-                            paddingTop: () => 3,
-                            paddingBottom: () => 3
+                            paddingLeft: () => 1,
+                            paddingRight: () => 1,
+                            paddingTop: () => 2,
+                            paddingBottom: () => 2
                         }
                     }
                 ],
                 styles: {
-                    tableHeader: { bold: true, fontSize: 9.5 }
+                    tableHeader: { bold: true, fontSize: 7.5 }
                 }
             };
             pdfMake.createPdf(docDefinition).download(`Razpored_PKL_vadnine_${fileSlug}.pdf`);
