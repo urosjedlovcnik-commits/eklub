@@ -42,6 +42,37 @@
   color: #2563eb;
 }
 
+.admin-season-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.admin-season-bar label {
+  font-weight: 600;
+  font-size: 15px;
+  margin: 0;
+  color: white;
+}
+
+.admin-season-bar select {
+  min-width: 240px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: none;
+}
+
+.admin-season-bar .season-bar-hint {
+  font-size: 13px;
+  color: rgba(255,255,255,0.85);
+}
+
 .admin-section {
   display: none;
 }
@@ -81,6 +112,11 @@
 
 .chip .remove-term-btn:hover {
   background: #dc2626;
+}
+
+.term-assign-checkboxes label:hover {
+  background: #f0f4ff;
+  border-radius: 4px;
 }
 
 .terms-cell {
@@ -314,6 +350,11 @@
       <button class="btn" data-section="csv">CSV uvoz/izvoz</button>
       <button class="btn" data-section="mailing">Mailing liste</button>
     </div>
+    <div class="admin-season-bar" id="adminSeasonBar">
+      <label for="adminSeasonFilter">Sezona:</label>
+      <select id="adminSeasonFilter"></select>
+      <span class="season-bar-hint">Podatki na vseh zavihkih (razen Sezone) veljajo za izbrano sezono.</span>
+    </div>
   </div>
 
   <!-- Sekcija za upravljanje plavalcev -->
@@ -347,9 +388,11 @@
         <div class="inner">
           <div class="flex-col">
             <div class="row" style="width:100%;align-items:stretch;gap:4px">
-              <select id="swimmerSelect"></select>
-              <select id="termSelect"></select>
-              <button class="btn pri" id="assignTermBtn" style="width:auto">Dodeli termin</button>
+              <select id="swimmerSelect" style="flex:1"></select>
+              <button class="btn pri" id="assignTermBtn" style="width:auto;white-space:nowrap">Dodeli izbrane termine</button>
+            </div>
+            <div id="termAssignCheckboxes" class="term-assign-checkboxes muted" style="margin-top:12px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;background:#fafafa;min-height:48px">
+              Najprej izberite plavalca
             </div>
           </div>
         </div>

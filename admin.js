@@ -746,8 +746,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return TERMS.filter(term => term.date_to >= todayISO);
     }
 
-    function getSwimmersSeasonFilterId() {
-        const el = document.getElementById('swimmersSeasonFilter');
+    function getAdminSeasonFilterId() {
+        const el = document.getElementById('adminSeasonFilter');
         if (el && el.value) return el.value;
         const rawSaved = sessionStorage.getItem(TERM_LIST_SEASON_STORAGE_KEY);
         if (rawSaved && seasons.some(s => s.id === rawSaved)) return rawSaved;
@@ -755,21 +755,49 @@ document.addEventListener('DOMContentLoaded', () => {
         return activeS ? activeS.id : (seasons[0]?.id || '');
     }
 
-    function getSwimmersSeasonTermIds() {
-        const seasonId = getSwimmersSeasonFilterId();
+    function getSwimmersSeasonFilterId() {
+        return getAdminSeasonFilterId();
+    }
+
+    function getAdminSeasonTermIds() {
+        const seasonId = getAdminSeasonFilterId();
         if (!seasonId) return null;
         return new Set(TERMS.filter(t => t.season_id === seasonId).map(t => t.id));
     }
 
-    function termMatchesSwimmersSeasonFilter(termId) {
-        const seasonTermIds = getSwimmersSeasonTermIds();
+    function getSwimmersSeasonTermIds() {
+        return getAdminSeasonTermIds();
+    }
+
+    function termMatchesAdminSeasonFilter(termId) {
+        const seasonTermIds = getAdminSeasonTermIds();
         if (!seasonTermIds) return true;
         return seasonTermIds.has(termId);
     }
 
-    function getTermsForSwimmersSeason(options = {}) {
+    function termMatchesSwimmersSeasonFilter(termId) {
+        return termMatchesAdminSeasonFilter(termId);
+    }
+
+    function entityHasTermsInAdminSeason(entity) {
+        if (!entity?.terms?.length) return false;
+        const seasonId = getAdminSeasonFilterId();
+        if (!seasonId) return true;
+        return entity.terms.some(tid => {
+            const t = TERMS.find(x => x.id === tid);
+            return t && t.season_id === seasonId;
+        });
+    }
+
+    function countTermsInAdminSeason(termIds) {
+        const seasonTermIds = getAdminSeasonTermIds();
+        if (!seasonTermIds) return (termIds || []).length;
+        return (termIds || []).filter(tid => seasonTermIds.has(tid)).length;
+    }
+
+    function getTermsForAdminSeason(options = {}) {
         const { excludeTermIds = [] } = options;
-        const seasonId = getSwimmersSeasonFilterId();
+        const seasonId = getAdminSeasonFilterId();
         let list = seasonId ? TERMS.filter(t => t.season_id === seasonId) : [...TERMS];
         if (excludeTermIds.length) {
             const excluded = new Set(excludeTermIds);
@@ -781,12 +809,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function getTermsForSwimmersSeason(options = {}) {
+        return getTermsForAdminSeason(options);
+    }
+
     function applyAdminSeasonFilter(seasonId, sourceEl) {
-        sessionStorage.setItem(TERM_LIST_SEASON_STORAGE_KEY, seasonId);
+        sessionStorage.setItem(TERM_LIST_SEASON_STORAGE_KEY, seasonId || '');
         const termListSf = document.getElementById('termListSeasonFilter');
-        const swimmersSf = document.getElementById('swimmersSeasonFilter');
-        if (termListSf && termListSf !== sourceEl) termListSf.value = seasonId;
-        if (swimmersSf && swimmersSf !== sourceEl && seasonId) swimmersSf.value = seasonId;
+        const adminSf = document.getElementById('adminSeasonFilter');
+        if (termListSf && termListSf !== sourceEl) termListSf.value = seasonId || '';
+        if (adminSf && adminSf !== sourceEl && seasonId) adminSf.value = seasonId;
         onAdminSeasonFilterChanged();
     }
 
@@ -796,6 +828,20 @@ document.addEventListener('DOMContentLoaded', () => {
         renderTermCheckboxesForSwimmer(elSwimmerSelect?.value || '');
         refreshSwimmerSummary();
         refreshOlySwimmerSummary();
+        updateTrainersList();
+        populateUnassignedTerms();
+        calculateTrainerSummaryData();
+        calculateTrainerHoursCostsData();
+        calculateTrainerNotesData();
+        refreshSwimmerFees();
+        renderTermCostsSettings();
+        updateMailingTermSelect();
+        if (typeof calculateFinanceData === 'function') {
+            calculateFinanceData();
+        }
+        if (typeof refreshAccountingReportEditor === 'function') {
+            refreshAccountingReportEditor();
+        }
     }
 
     // ===== Navigacija med sekcijami =====
@@ -814,6 +860,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Posodobi trenutno sekcijo
             currentSection = btn.getAttribute('data-section');
+
+            const seasonBar = document.getElementById('adminSeasonBar');
+            if (seasonBar) {
+                seasonBar.style.display = currentSection === 'seasons' ? 'none' : 'flex';
+            }
             
             if (currentSection === 'seasons') {
                 renderSeasonsAdminList();
@@ -1215,9 +1266,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Funkcija za prikazovanje samo terminov, ki niso dodeljeni nobenemu trenerju
     function populateUnassignedTerms() {
-        const activeTerms = getActiveTerms();
-        
-        // Zberi vse termine, ki so že dodeljeni kateremukoli trenerju
         const assignedTermIds = new Set();
         trainers.forEach(trainer => {
             if (trainer.terms && trainer.terms.length > 0) {
@@ -1227,15 +1275,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        // Filtriraj samo termine, ki niso dodeljeni nobenemu trenerju
-        const unassignedTerms = activeTerms.filter(term => 
+        // Filtriraj termine iz izbrane sezone, ki niso dodeljeni nobenemu trenerju
+        const unassignedTerms = getTermsForAdminSeason().filter(term =>
             !assignedTermIds.has(term.id)
         );
         
         unassignedTerms.forEach(t => {
             const option = document.createElement('option');
             option.value = t.id;
-            option.textContent = formatTermSelectLabel(t);
+            option.textContent = formatTermTimeLabel(t);
             elTrainerTermSelect.appendChild(option);
         });
         
@@ -1311,42 +1359,41 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
     }
 
-    function buildSwimmerTermsHtml(swimmer, seasonFilterId) {
-        const filterId = seasonFilterId !== undefined ? seasonFilterId : getSwimmersSeasonFilterId();
-        const groups = groupSwimmerTermsBySeason(swimmer.terms, filterId || null);
+    function buildAssignedTermsHtml(entity, seasonFilterId, removeHandler) {
+        const removeFn = removeHandler || 'removeTermFromSwimmer';
+        const filterId = seasonFilterId !== undefined ? seasonFilterId : getAdminSeasonFilterId();
+        const groups = groupSwimmerTermsBySeason(entity.terms, filterId || null);
         if (groups.length === 0) return '<span class="muted">Brez terminov v tej sezoni</span>';
 
+        const renderChips = entries => entries.map(({ termId, term }) => {
+            const label = term ? formatTermTimeLabel(term) : termId;
+            if (entity.is_deleted) {
+                return `<span class="chip">${escapeHtml(label)}</span>`;
+            }
+            return `<span class="chip" data-term-id="${termId}">
+                ${escapeHtml(label)}
+                <button class="remove-term-btn" onclick="${removeFn}('${entity.id}', '${termId}')" title="Odstrani termin">✖</button>
+            </span>`;
+        }).join(' ');
+
         if (filterId && groups.length === 1) {
-            const { entries } = groups[0];
-            const chips = entries.map(({ termId, term }) => {
-                const label = term ? formatTermTimeLabel(term) : termId;
-                if (swimmer.is_deleted) {
-                    return `<span class="chip">${escapeHtml(label)}</span>`;
-                }
-                return `<span class="chip" data-term-id="${termId}" data-swimmer-id="${swimmer.id}">
-                    ${escapeHtml(label)}
-                    <button class="remove-term-btn" onclick="removeTermFromSwimmer('${swimmer.id}', '${termId}')" title="Odstrani termin">✖</button>
-                </span>`;
-            }).join(' ');
-            return `<div>${chips}</div>`;
+            return `<div>${renderChips(groups[0].entries)}</div>`;
         }
 
-        return groups.map(({ seasonName, entries }) => {
-            const chips = entries.map(({ termId, term }) => {
-                const label = term ? formatTermTimeLabel(term) : termId;
-                if (swimmer.is_deleted) {
-                    return `<span class="chip">${escapeHtml(label)}</span>`;
-                }
-                return `<span class="chip" data-term-id="${termId}" data-swimmer-id="${swimmer.id}">
-                    ${escapeHtml(label)}
-                    <button class="remove-term-btn" onclick="removeTermFromSwimmer('${swimmer.id}', '${termId}')" title="Odstrani termin">✖</button>
-                </span>`;
-            }).join(' ');
-            return `<div class="swimmer-season-terms" style="margin-bottom:8px">
+        return groups.map(({ seasonName, entries }) => `
+            <div class="swimmer-season-terms" style="margin-bottom:8px">
                 <div style="font-size:11px;font-weight:600;color:#4338ca;margin-bottom:3px">${escapeHtml(seasonName)}</div>
-                <div>${chips}</div>
-            </div>`;
-        }).join('');
+                <div>${renderChips(entries)}</div>
+            </div>
+        `).join('');
+    }
+
+    function buildSwimmerTermsHtml(swimmer, seasonFilterId) {
+        return buildAssignedTermsHtml(swimmer, seasonFilterId, 'removeTermFromSwimmer');
+    }
+
+    function buildTrainerTermsHtml(trainer, seasonFilterId) {
+        return buildAssignedTermsHtml(trainer, seasonFilterId, 'removeTermFromTrainer');
     }
 
     function updateSwimmersList() {
@@ -1474,7 +1521,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const tbody = table.querySelector('tbody');
         
         // Sortiraj trenerje po priimku (in nato po imenu, če so priimki enaki)
-        const sortedTrainers = [...trainers].filter(trainer => !trainer.is_deleted).sort((a, b) => {
+        const sortedTrainers = [...trainers]
+            .filter(trainer => !trainer.is_deleted)
+            .sort((a, b) => {
             // Najprej sortiraj po priimku
             const lastNameCompare = (a.last_name || '').localeCompare(b.last_name || '', 'sl');
             if (lastNameCompare !== 0) {
@@ -1483,30 +1532,17 @@ document.addEventListener('DOMContentLoaded', () => {
             // Če so priimki enaki, sortiraj po imenu
             return (a.first_name || '').localeCompare(b.first_name || '', 'sl');
         });
-        
+
         sortedTrainers.forEach(trainer => {
                 const row = document.createElement('tr');
-                
-                // Ustvari termine kot "chips" z možnostjo brisanja
-                const termsChips = trainer.terms ? trainer.terms.map(termId => {
-                    const term = TERMS.find(t => t.id === termId);
-                    if (term) {
-                        return `
-                            <span class="chip" data-term-id="${termId}" data-trainer-id="${trainer.id}">
-                                ${DAY_SHORT_NAME[term.day]} ${formatTimeWithoutSeconds(term.start_time)}-${formatTimeWithoutSeconds(term.end_time)}
-                                <button class="remove-term-btn" onclick="removeTermFromTrainer('${trainer.id}', '${termId}')" title="Odstrani termin">✖</button>
-                            </span>
-                        `;
-                    }
-                    return `<span class="chip" data-term-id="${termId}">${termId}</span>`;
-                }).join(' ') : '';
+                const termsHtml = buildTrainerTermsHtml(trainer);
 
                 row.innerHTML = `
                     <td>${trainer.first_name}</td>
                     <td>${trainer.last_name}</td>
                     <td>${trainer.email || ''}</td>
                     <td>${trainer.phone || '<span class="muted">Brez telefona</span>'}</td>
-                    <td class="terms-cell">${termsChips || '<span class="muted">Brez terminov</span>'}</td>
+                    <td class="terms-cell">${termsHtml}</td>
                     <td>
                         <button class="btn warn" onclick="deleteTrainer('${trainer.id}')" style="font-size: 12px; padding: 4px 8px;">
                             Zbriši trenerja
@@ -2181,7 +2217,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('termListSeasonFilter')?.addEventListener('change', e => {
         applyAdminSeasonFilter(e.target.value, e.target);
     });
-    document.getElementById('swimmersSeasonFilter')?.addEventListener('change', e => {
+    document.getElementById('adminSeasonFilter')?.addEventListener('change', e => {
         applyAdminSeasonFilter(e.target.value, e.target);
     });
     document.getElementById('showSwimmersWithoutTerms')?.addEventListener('change', () => updateSwimmersList());
@@ -4975,6 +5011,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const trainerStats = {};
         const processedTrainers = new Set(); // Set za sledenje trenerjem, ki so že bili obravnavani
+        const seasonTermIds = getAdminSeasonTermIds();
         
         // Pridobi samo aktivne termine (ne potekle)
         const activeTerms = getActiveTerms();
@@ -4986,6 +5023,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const isoDate = iso(d);
             
             TERMS.forEach(term => {
+                if (seasonTermIds && !seasonTermIds.has(term.id)) return;
                 // Preveri, ali je termin aktiven (ne potekel)
                 if (!activeTermIds.has(term.id)) {
                     return; // Preskoči deaktivirane termine
@@ -5331,6 +5369,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const trainerStats = {};
         const processedTrainers = new Set();
         const hoursDetails = []; // Zbiraj detajle ur za modal
+        const seasonTermIds = getAdminSeasonTermIds();
         
         // Pridobi samo aktivne termine (ne potekle)
         const activeTerms = getActiveTerms();
@@ -5342,6 +5381,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const isoDate = iso(d);
             
             TERMS.forEach(term => {
+                if (seasonTermIds && !seasonTermIds.has(term.id)) return;
                 // Preveri, ali je termin aktiven (ne potekel)
                 if (!activeTermIds.has(term.id)) {
                     return; // Preskoči deaktivirane termine
@@ -5735,6 +5775,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let notes = '<table><thead><tr><th>Datum</th><th>Termin</th><th>Trener</th><th>Nadomestni trener</th></tr></thead><tbody>';
         
         const trainerNotes = [];
+        const seasonTermIds = getAdminSeasonTermIds();
         
         // Iteriraj po vseh dnevih v mesecu
         for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
@@ -5742,6 +5783,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const isoDate = iso(d);
             
             TERMS.forEach(term => {
+                if (seasonTermIds && !seasonTermIds.has(term.id)) return;
                 if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
                     // Poišči trenerje za ta termin
                     const trainersForTerm = trainers.filter(t => 
@@ -6522,7 +6564,7 @@ document.addEventListener('DOMContentLoaded', () => {
             termListSf.value = pick;
             sessionStorage.setItem(TERM_LIST_SEASON_STORAGE_KEY, pick);
         }
-        const swimmersSf = document.getElementById('swimmersSeasonFilter');
+        const swimmersSf = document.getElementById('adminSeasonFilter');
         if (swimmersSf) {
             if (seasons.length === 0) {
                 swimmersSf.innerHTML = '<option value="">Ni sezon</option>';
@@ -7106,7 +7148,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Izračunaj prihodke - uporabi individualne pristojbine plavalcev
             // Filtrirati samo plavalce, ki imajo dodeljene termine
-            const activeSwimmers = swimmers.filter(s => !s.is_deleted && s.terms && s.terms.length > 0);
+            const activeSwimmers = swimmers.filter(s => !s.is_deleted && entityHasTermsInAdminSeason(s));
 // console.log('🔍 calculateFinanceData - activeSwimmers:', activeSwimmers.length);
 
             
@@ -7148,6 +7190,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Pridobi postavke trenerjev iz baze za trenutni mesec in leto
             const trainerRates = await getTrainerRatesFromDB(currentFinanceMonth, currentFinanceYear);
+            const seasonTermIds = getAdminSeasonTermIds();
 
             // Iteriraj po vseh dnevih v mesecu
             for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
@@ -7155,6 +7198,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const isoDate = iso(d);
                 
                 TERMS.forEach(term => {
+                    if (seasonTermIds && !seasonTermIds.has(term.id)) return;
                     if (term.day === dayOfWeek && isoDate >= term.date_from && isoDate <= term.date_to) {
                         // Poišči trenerje za ta termin (redno dodeljeni)
                         const trainersForTerm = trainers.filter(t => 
@@ -7266,6 +7310,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Termini, ki v izbranem mesecu dejansko tečejo (tudi če je sezona že končana)
             const termsInMonth = TERMS.filter(term => {
+                const seasonTermIds = getAdminSeasonTermIds();
+                if (seasonTermIds && !seasonTermIds.has(term.id)) return false;
                 const termStartDate = new Date(term.date_from);
                 const termEndDate = new Date(term.date_to);
                 return startDate <= termEndDate && endDate >= termStartDate;
@@ -7556,8 +7602,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         const swimmerFees = await getSwimmerFees(month, year);
-        // Filtrirati samo plavalce, ki imajo dodeljene termine
-        const activeSwimmers = swimmers.filter(s => !s.is_deleted && s.terms && s.terms.length > 0);
+        const activeSwimmers = swimmers.filter(s => !s.is_deleted && entityHasTermsInAdminSeason(s));
         
         let html = `
             <div class="swimmer-fees-table">
@@ -7596,11 +7641,13 @@ document.addEventListener('DOMContentLoaded', () => {
         sortedActiveSwimmers.forEach(swimmer => {
             // Poišči dodeljene termine iz swimmer_terms
             const assignedTerms = [];
+            const seasonTermIds = getAdminSeasonTermIds();
             if (swimmer.terms && Array.isArray(swimmer.terms)) {
                 swimmer.terms.forEach(termId => {
+                    if (seasonTermIds && !seasonTermIds.has(termId)) return;
                     const term = TERMS.find(t => t.id === termId);
                     if (term) {
-                        assignedTerms.push(term.label);
+                        assignedTerms.push(formatTermTimeLabel(term));
                     }
                 });
             }
@@ -8525,19 +8572,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!elTermCostsSettings) return;
         
         const termCosts = await getTermCostsFromDB();
+        const sortedTerms = getTermsForAdminSeason();
+        
+        if (sortedTerms.length === 0) {
+            elTermCostsSettings.innerHTML = '<p class="muted">Ni terminov v izbrani sezoni.</p>';
+            return;
+        }
         
         let html = '<div class="term-costs-grid">';
-        
-        // Prikaži vse termine, sortirane po dnevu in času
-        // Ne filtriramo po datumu, ker lahko želimo nastaviti stroške tudi za pretekle termine
-        const sortedTerms = [...TERMS].sort((a, b) => {
-            if (a.day !== b.day) {
-                return a.day - b.day;
-            }
-            return a.start_time.localeCompare(b.start_time);
-        });
-        
-// console.log(`Term costs settings: showing ${sortedTerms.length} terms out of ${TERMS.length} total terms`);
         
         for (const term of sortedTerms) {
             const cost = termCosts[term.id] || 50; // Default to 50€/uro
@@ -9096,20 +9138,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // Funkcija za izvoz seznama plavalcev
     window.exportSwimmersList = function() {
         try {
-            // Ustvari CSV vsebino z vsemi plavalci
+            const seasonName = getSeasonNameById(getAdminSeasonFilterId()) || 'sezona';
             let csv = 'first_name,last_name,email,phone,address,postal_code,terms\n';
             
-            // Filtriraj samo aktivne plavalce
-            const activeSwimmers = swimmers.filter(s => !s.is_deleted);
+            const seasonTermIds = getAdminSeasonTermIds();
+            const activeSwimmers = swimmers.filter(s => !s.is_deleted && entityHasTermsInAdminSeason(s));
             
             if (activeSwimmers.length === 0) {
-                alert('Ni plavalcev za izvoz');
+                alert('Ni plavalcev za izvoz v izbrani sezoni');
                 return;
             }
             
             activeSwimmers.forEach(swimmer => {
                 const termsStr = swimmer.terms && swimmer.terms.length > 0 
-                    ? swimmer.terms.map(termId => {
+                    ? swimmer.terms.filter(termId => !seasonTermIds || seasonTermIds.has(termId)).map(termId => {
                         const term = TERMS.find(t => t.id === termId);
                         return term ? `${DAY_SHORT_NAME[term.day]}-${formatTimeWithoutSeconds(term.start_time)}-${formatTimeWithoutSeconds(term.end_time)}` : termId;
                     }).join(',')
@@ -9124,7 +9166,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const link = document.createElement('a');
             const url = URL.createObjectURL(blob);
             link.setAttribute('href', url);
-            link.setAttribute('download', `seznam_plavalcev_${new Date().toISOString().split('T')[0]}.csv`);
+            link.setAttribute('download', `seznam_plavalcev_${seasonName.replace(/[^\w\-]+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
             link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();
@@ -9172,16 +9214,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Ustvari CSV vsebino s termini
             let csv = 'term_id,dan,dan_kratek,začetna_ura,končna_ura,datum_od,datum_do\n';
             
-            // Sortiraj termine po dnevu in času (filtrirati samo aktivne, če je property na voljo)
-            const sortedTerms = TERMS.filter(t => t.is_deleted !== true).sort((a, b) => {
-                if (a.day !== b.day) {
-                    return a.day - b.day;
-                }
-                return a.start_time.localeCompare(b.start_time);
-            });
+            const sortedTerms = getTermsForAdminSeason();
             
             if (sortedTerms.length === 0) {
-                alert('Ni terminov za izvoz');
+                alert('Ni terminov za izvoz v izbrani sezoni');
                 return;
             }
             
@@ -9658,16 +9694,16 @@ document.addEventListener('DOMContentLoaded', () => {
         
         elMailingTermsCheckboxes.innerHTML = '';
         
-        // Prikaži samo aktivne termine
-        const activeTerms = getActiveTerms();
+        // Prikaži termine iz izbrane sezone
+        const sortedTerms = getTermsForAdminSeason();
         
-        if (activeTerms.length === 0) {
-            elMailingTermsCheckboxes.innerHTML = '<p class="muted">Ni aktivnih terminov</p>';
+        if (sortedTerms.length === 0) {
+            elMailingTermsCheckboxes.innerHTML = '<p class="muted">Ni terminov v izbrani sezoni</p>';
             return;
         }
         
         // Razvrsti termine: najprej po dnevu (1-7), nato po času začetka
-        const sortedTerms = activeTerms.sort((a, b) => {
+        sortedTerms.sort((a, b) => {
             if (a.day !== b.day) {
                 return a.day - b.day;
             }
@@ -9745,18 +9781,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             targetTermIds = Array.from(checkedCheckboxes).map(cb => cb.value);
         } else if (filterType === 'afternoon') {
-            // Popoldanske skupine (pred 18:00)
-            const activeTerms = getActiveTerms();
-            targetTermIds = activeTerms
+            targetTermIds = getTermsForAdminSeason()
                 .filter(term => {
                     const startHour = parseInt(term.start_time.split(':')[0]);
                     return startHour < 18;
                 })
                 .map(term => term.id);
         } else if (filterType === 'evening') {
-            // Večerne skupine (od 18:00 naprej)
-            const activeTerms = getActiveTerms();
-            targetTermIds = activeTerms
+            targetTermIds = getTermsForAdminSeason()
                 .filter(term => {
                     const startHour = parseInt(term.start_time.split(':')[0]);
                     return startHour >= 18;
