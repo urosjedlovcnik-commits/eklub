@@ -537,7 +537,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const elNewPostalCode = document.getElementById("newPostalCode");
     const elAddSwimmerBtn = document.getElementById("addSwimmerBtn");
     const elSwimmerSelect = document.getElementById("swimmerSelect");
-    const elTermSelect = document.getElementById("termSelect");
     const elAssignTermBtn = document.getElementById("assignTermBtn");
     const elDeleteSwimmerBtn = document.getElementById("deleteSwimmerBtn");
     const elSwimmerInfo = document.getElementById("swimmerInfo");
@@ -745,6 +744,58 @@ document.addEventListener('DOMContentLoaded', () => {
         const today = new Date();
         const todayISO = iso(today);
         return TERMS.filter(term => term.date_to >= todayISO);
+    }
+
+    function getSwimmersSeasonFilterId() {
+        const el = document.getElementById('swimmersSeasonFilter');
+        if (el && el.value) return el.value;
+        const rawSaved = sessionStorage.getItem(TERM_LIST_SEASON_STORAGE_KEY);
+        if (rawSaved && seasons.some(s => s.id === rawSaved)) return rawSaved;
+        const activeS = seasons.find(s => s.is_active);
+        return activeS ? activeS.id : (seasons[0]?.id || '');
+    }
+
+    function getSwimmersSeasonTermIds() {
+        const seasonId = getSwimmersSeasonFilterId();
+        if (!seasonId) return null;
+        return new Set(TERMS.filter(t => t.season_id === seasonId).map(t => t.id));
+    }
+
+    function termMatchesSwimmersSeasonFilter(termId) {
+        const seasonTermIds = getSwimmersSeasonTermIds();
+        if (!seasonTermIds) return true;
+        return seasonTermIds.has(termId);
+    }
+
+    function getTermsForSwimmersSeason(options = {}) {
+        const { excludeTermIds = [] } = options;
+        const seasonId = getSwimmersSeasonFilterId();
+        let list = seasonId ? TERMS.filter(t => t.season_id === seasonId) : [...TERMS];
+        if (excludeTermIds.length) {
+            const excluded = new Set(excludeTermIds);
+            list = list.filter(t => !excluded.has(t.id));
+        }
+        return list.sort((a, b) => {
+            if (a.day !== b.day) return a.day - b.day;
+            return a.start_time.localeCompare(b.start_time);
+        });
+    }
+
+    function applyAdminSeasonFilter(seasonId, sourceEl) {
+        sessionStorage.setItem(TERM_LIST_SEASON_STORAGE_KEY, seasonId);
+        const termListSf = document.getElementById('termListSeasonFilter');
+        const swimmersSf = document.getElementById('swimmersSeasonFilter');
+        if (termListSf && termListSf !== sourceEl) termListSf.value = seasonId;
+        if (swimmersSf && swimmersSf !== sourceEl && seasonId) swimmersSf.value = seasonId;
+        onAdminSeasonFilterChanged();
+    }
+
+    function onAdminSeasonFilterChanged() {
+        updateTermList();
+        updateSwimmersList();
+        renderTermCheckboxesForSwimmer(elSwimmerSelect?.value || '');
+        refreshSwimmerSummary();
+        refreshOlySwimmerSummary();
     }
 
     // ===== Navigacija med sekcijami =====
@@ -1051,8 +1102,7 @@ document.addEventListener('DOMContentLoaded', () => {
             elSwimmerSelect.appendChild(option);
         });
 
-        // Počisti select za termine
-        elTermSelect.innerHTML = '<option value="">Izberi termin</option>';
+        renderTermCheckboxesForSwimmer(elSwimmerSelect?.value || '');
 
         // Posodobi select v modalnem oknu
         const modalSwimmerSelect = document.getElementById('modalSwimmerSelect');
@@ -1078,58 +1128,48 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateTermSelects() {
-        elTermSelect.innerHTML = '<option value="">Izberi termin</option>';
-        
-        // Prikaži samo aktivne termine
-        const activeTerms = getActiveTerms();
-        
-        // Razvrsti termine: najprej po dnevu (1-7), nato po času začetka (jutranji pred popoldanskimi)
-        const sortedTerms = activeTerms.sort((a, b) => {
-            // Najprej primerjaj po dnevu
-            if (a.day !== b.day) {
-                return a.day - b.day;
-            }
-            // Če sta ista dana, razvrsti po času začetka
-            return a.start_time.localeCompare(b.start_time);
-        });
-        
-        sortedTerms.forEach(t => {
-            const option = document.createElement('option');
-            option.value = t.id;
-            option.textContent = formatTermSelectLabel(t);
-            elTermSelect.appendChild(option);
-        });
+        renderTermCheckboxesForSwimmer(elSwimmerSelect?.value || '');
+    }
+
+    function renderTermCheckboxesForSwimmer(swimmerId) {
+        const box = document.getElementById('termAssignCheckboxes');
+        if (!box) return;
+
+        if (!getSwimmersSeasonFilterId()) {
+            box.innerHTML = '<p class="muted" style="margin:0">Ni izbrane sezone.</p>';
+            return;
+        }
+
+        if (!swimmerId) {
+            box.innerHTML = '<p class="muted" style="margin:0">Najprej izberite plavalca.</p>';
+            return;
+        }
+
+        const swimmer = swimmers.find(s => s.id === swimmerId);
+        if (!swimmer) {
+            box.innerHTML = '<p class="muted" style="margin:0">Plavalec ni najden.</p>';
+            return;
+        }
+
+        const available = getTermsForSwimmersSeason({ excludeTermIds: swimmer.terms || [] });
+        if (available.length === 0) {
+            box.innerHTML = '<p class="muted" style="margin:0">V tej sezoni ni razpoložljivih terminov (ali jih plavalec že ima vse).</p>';
+            return;
+        }
+
+        const seasonName = getSeasonNameById(getSwimmersSeasonFilterId());
+        box.innerHTML = `<div style="font-size:12px;font-weight:600;color:#4338ca;margin-bottom:8px">${escapeHtml(seasonName)} — izberite termine:</div>` +
+            available.map(t => `
+                <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;font-size:14px;padding:2px 4px">
+                    <input type="checkbox" class="term-assign-cb" value="${t.id}">
+                    ${escapeHtml(formatTermTimeLabel(t))}
+                </label>
+            `).join('');
     }
 
     // Funkcija za posodabljanje select elementa za termine pri dodeljevanju plavalcem
     function updateTermSelectForSwimmer(swimmerId) {
-        elTermSelect.innerHTML = '<option value="">Izberi termin</option>';
-        
-        if (!swimmerId) return;
-        
-        const swimmer = swimmers.find(s => s.id === swimmerId);
-        if (!swimmer) return;
-        
-        // Filtriraj samo aktivne termine, ki jih plavalec še nima
-        const activeTerms = getActiveTerms();
-        const availableTerms = activeTerms.filter(term => !swimmer.terms.includes(term.id));
-        
-        // Razvrsti termine: najprej po dnevu (1-7), nato po času začetka (jutranji pred popoldanskimi)
-        const sortedTerms = availableTerms.sort((a, b) => {
-            // Najprej primerjaj po dnevu
-            if (a.day !== b.day) {
-                return a.day - b.day;
-            }
-            // Če sta ista dana, razvrsti po času začetka
-            return a.start_time.localeCompare(b.start_time);
-        });
-        
-        sortedTerms.forEach(t => {
-            const option = document.createElement('option');
-            option.value = t.id;
-            option.textContent = formatTermSelectLabel(t);
-            elTermSelect.appendChild(option);
-        });
+        renderTermCheckboxesForSwimmer(swimmerId);
     }
 
     function updateTrainerSelects() {
@@ -1228,10 +1268,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return term ? formatTermSelectLabel(term) : termId;
     }
 
-    function groupSwimmerTermsBySeason(termIds) {
+    function groupSwimmerTermsBySeason(termIds, seasonFilterId) {
         const grouped = new Map();
         (termIds || []).forEach(termId => {
             const term = TERMS.find(t => t.id === termId);
+            if (seasonFilterId && (!term || term.season_id !== seasonFilterId)) return;
             const key = term?.season_id || '__none__';
             if (!grouped.has(key)) grouped.set(key, []);
             grouped.get(key).push({ termId, term });
@@ -1252,9 +1293,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }));
     }
 
-    function formatSwimmerTermsSummary(swimmer) {
-        const groups = groupSwimmerTermsBySeason(swimmer?.terms);
+    function formatSwimmerTermsSummary(swimmer, seasonFilterId) {
+        const filterId = seasonFilterId !== undefined ? seasonFilterId : getSwimmersSeasonFilterId();
+        const groups = groupSwimmerTermsBySeason(swimmer?.terms, filterId || null);
         if (groups.length === 0) return '<span class="muted">—</span>';
+        if (filterId && groups.length === 1) {
+            const labels = groups[0].entries
+                .map(({ term, termId }) => term ? formatTermTimeLabel(term) : termId)
+                .join(', ');
+            return labels ? escapeHtml(labels) : '<span class="muted">—</span>';
+        }
         return groups.map(({ seasonName, entries }) => {
             const labels = entries
                 .map(({ term, termId }) => term ? formatTermTimeLabel(term) : termId)
@@ -1263,9 +1311,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
     }
 
-    function buildSwimmerTermsHtml(swimmer) {
-        const groups = groupSwimmerTermsBySeason(swimmer.terms);
-        if (groups.length === 0) return '<span class="muted">Brez terminov</span>';
+    function buildSwimmerTermsHtml(swimmer, seasonFilterId) {
+        const filterId = seasonFilterId !== undefined ? seasonFilterId : getSwimmersSeasonFilterId();
+        const groups = groupSwimmerTermsBySeason(swimmer.terms, filterId || null);
+        if (groups.length === 0) return '<span class="muted">Brez terminov v tej sezoni</span>';
+
+        if (filterId && groups.length === 1) {
+            const { entries } = groups[0];
+            const chips = entries.map(({ termId, term }) => {
+                const label = term ? formatTermTimeLabel(term) : termId;
+                if (swimmer.is_deleted) {
+                    return `<span class="chip">${escapeHtml(label)}</span>`;
+                }
+                return `<span class="chip" data-term-id="${termId}" data-swimmer-id="${swimmer.id}">
+                    ${escapeHtml(label)}
+                    <button class="remove-term-btn" onclick="removeTermFromSwimmer('${swimmer.id}', '${termId}')" title="Odstrani termin">✖</button>
+                </span>`;
+            }).join(' ');
+            return `<div>${chips}</div>`;
+        }
 
         return groups.map(({ seasonName, entries }) => {
             const chips = entries.map(({ termId, term }) => {
@@ -1313,13 +1377,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const tbody = table.querySelector('tbody');
         
         const showSwimmersWithoutTerms = document.getElementById('showSwimmersWithoutTerms')?.checked === true;
+        const seasonFilterId = getSwimmersSeasonFilterId();
 
         // Sortiraj plavalce po abecedi po priimku, nato po imenu
         const activeSwimmers = swimmers
             .filter(swimmer => {
                 if (swimmer.is_deleted) return false;
-                const hasTerms = swimmer.terms && swimmer.terms.length > 0;
-                if (!showSwimmersWithoutTerms && !hasTerms) return false;
+                const hasTermsInSeason = (swimmer.terms || []).some(termId => {
+                    const term = TERMS.find(t => t.id === termId);
+                    return term && term.season_id === seasonFilterId;
+                });
+                if (!showSwimmersWithoutTerms && !hasTermsInSeason) return false;
                 return true;
             })
             .sort((a, b) => {
@@ -1584,83 +1652,86 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ===== Dodeljevanje terminov =====
+    async function assignTermToSwimmer(swimmerId, termId) {
+        const swimmer = swimmers.find(s => s.id === swimmerId);
+        if (!swimmer || swimmer.terms.includes(termId)) return false;
+
+        const { error: swimmerError } = await supabase
+            .from('swimmers')
+            .update({ terms: [...swimmer.terms, termId] })
+            .eq('id', swimmerId);
+
+        if (swimmerError) {
+            console.error('Napaka pri dodeljevanju termina:', swimmerError);
+            throw swimmerError;
+        }
+
+        const today = new Date().toISOString().split('T')[0];
+        const { error: assignmentError } = await supabase
+            .from('swimmer_term_assignments')
+            .upsert({
+                swimmer_id: swimmerId,
+                term_id: termId,
+                assigned_from_date: today,
+                assigned_to_date: null
+            }, {
+                onConflict: 'swimmer_id,term_id,assigned_from_date',
+                ignoreDuplicates: false
+            });
+
+        if (assignmentError) {
+            console.error('Napaka pri shranjevanju datuma dodelitve:', assignmentError);
+        }
+
+        swimmer.terms.push(termId);
+
+        const eventData = { swimmerId, termId, timestamp: Date.now() };
+        localStorage.setItem('swimmerTermAssigned', JSON.stringify(eventData));
+        setTimeout(() => localStorage.removeItem('swimmerTermAssigned'), 100);
+        window.postMessage({ type: 'swimmerTermAssigned', data: eventData }, '*');
+        return true;
+    }
+
     elAssignTermBtn.addEventListener('click', async () => {
         const swimmerId = elSwimmerSelect.value;
-        const termId = elTermSelect.value;
+        const termIds = [...document.querySelectorAll('#termAssignCheckboxes .term-assign-cb:checked')]
+            .map(cb => cb.value)
+            .filter(Boolean);
         
-        if (!swimmerId || !termId) {
-            alert('Prosim izberite plavalca in termin');
+        if (!swimmerId || termIds.length === 0) {
+            alert('Prosim izberite plavalca in vsaj en termin');
             return;
         }
 
         const swimmer = swimmers.find(s => s.id === swimmerId);
-        if (swimmer) {
-            if (!swimmer.terms.includes(termId)) {
-                try {
-                    // Shrani termin v swimmers tabelo (za kompatibilnost)
-                    const { error: swimmerError } = await supabase
-                        .from('swimmers')
-                        .update({ terms: [...swimmer.terms, termId] })
-                        .eq('id', swimmerId);
+        if (!swimmer) return;
 
-                    if (swimmerError) {
-                        console.error('Napaka pri dodeljevanju termina:', swimmerError);
-                        alert('Napaka pri dodeljevanju termina. Preverite konzolo.');
-                        return;
-                    }
+        const invalidTerms = termIds.filter(termId => !termMatchesSwimmersSeasonFilter(termId));
+        if (invalidTerms.length > 0) {
+            alert('Izbrani termini ne spadajo v trenutno sezono.');
+            return;
+        }
 
-                    // Shrani datum dodelitve v novo tabelo
-                    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-                    const { error: assignmentError } = await supabase
-                        .from('swimmer_term_assignments')
-                        .upsert({
-                            swimmer_id: swimmerId,
-                            term_id: termId,
-                            assigned_from_date: today,
-                            assigned_to_date: null
-                        }, { 
-                            onConflict: 'swimmer_id,term_id,assigned_from_date',
-                            ignoreDuplicates: false
-                        });
-
-                    if (assignmentError) {
-                        console.error('Napaka pri shranjevanju datuma dodelitve:', assignmentError);
-                        // Ne prekini procesa, ker je termin že dodeljen
-                    }
-
-                    // Posodobi lokalno stanje
-                    swimmer.terms.push(termId);
-                    updateSwimmersList();
-                    elSwimmerInfo.textContent = `Termin dodeljen plavalcu ${swimmer.first_name} ${swimmer.last_name}`;
-                    
-                    // Osveži prikaz koledarja - pošlji event preko localStorage (za druga okna)
-                    // in window.postMessage (za ista okna)
-                    const eventData = {
-                        swimmerId: swimmerId,
-                        termId: termId,
-                        timestamp: Date.now()
-                    };
-                    
-                    // Za druga okna (localStorage event)
-                    localStorage.setItem('swimmerTermAssigned', JSON.stringify(eventData));
-                    setTimeout(() => localStorage.removeItem('swimmerTermAssigned'), 100);
-                    
-                    // Za ista okna (window.postMessage)
-                    window.postMessage({ type: 'swimmerTermAssigned', data: eventData }, '*');
-                    
-                    setTimeout(() => {
-                        elSwimmerInfo.textContent = '';
-                    }, 3000);
-                } catch (error) {
-                    console.error('Napaka pri dodeljevanju termina:', error);
-                    alert('Napaka pri dodeljevanju termina.');
-                }
-            } else {
-                elSwimmerInfo.textContent = 'Plavalec že ima ta termin';
-                setTimeout(() => {
-                    elSwimmerInfo.textContent = '';
-                }, 3000);
+        try {
+            let assigned = 0;
+            for (const termId of termIds) {
+                if (await assignTermToSwimmer(swimmerId, termId)) assigned++;
             }
+
+            if (assigned === 0) {
+                elSwimmerInfo.textContent = 'Plavalec že ima vse izbrane termine.';
+            } else {
+                updateSwimmersList();
+                renderTermCheckboxesForSwimmer(swimmerId);
+                elSwimmerInfo.textContent = `Dodeljenih ${assigned} terminov plavalcu ${swimmer.first_name} ${swimmer.last_name}`;
+            }
+            
+            setTimeout(() => {
+                elSwimmerInfo.textContent = '';
+            }, 3000);
+        } catch (error) {
+            console.error('Napaka pri dodeljevanju terminov:', error);
+            alert('Napaka pri dodeljevanju terminov. Preverite konzolo.');
         }
     });
 
@@ -1700,6 +1771,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Posodobi lokalno stanje
                 swimmer.terms = updatedTerms;
                 updateSwimmersList();
+                renderTermCheckboxesForSwimmer(swimmerId);
                 
                 // Osveži prikaz koledarja - pošlji event preko localStorage (za druga okna)
                 // in window.postMessage (za ista okna)
@@ -2107,8 +2179,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     document.getElementById('termListSeasonFilter')?.addEventListener('change', e => {
-        sessionStorage.setItem(TERM_LIST_SEASON_STORAGE_KEY, e.target.value);
-        updateTermList();
+        applyAdminSeasonFilter(e.target.value, e.target);
+    });
+    document.getElementById('swimmersSeasonFilter')?.addEventListener('change', e => {
+        applyAdminSeasonFilter(e.target.value, e.target);
     });
     document.getElementById('showSwimmersWithoutTerms')?.addEventListener('change', () => updateSwimmersList());
 
@@ -6045,16 +6119,17 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const today = new Date();
         today.setHours(0,0,0,0);
+        const seasonTermIds = getSwimmersSeasonTermIds();
 
-        // Inicializacija podatkov za aktivne plavalce z dodeljenimi termini
+        // Inicializacija podatkov za aktivne plavalce z dodeljenimi termini v izbrani sezoni
         // PLUS plavalci z prisotnostjo, tudi če niso več dodeljeni terminu
         swimmers.forEach(s => {
             // Izključi izbrisane plavalce (is_deleted)
             if (s.is_deleted) return;
             
-            // Dodaj plavalca v rezultate, če ima dodeljene termine
-            if (s.terms && s.terms.length > 0) {
-            res[s.id] = { first: s.first_name, last: s.last_name, att: 0, pos: 0, attendanceDates: [], absentDates: [], missedDates: [] };
+            const termsInSeason = (s.terms || []).filter(tid => !seasonTermIds || seasonTermIds.has(tid));
+            if (termsInSeason.length > 0) {
+                res[s.id] = { first: s.first_name, last: s.last_name, att: 0, pos: 0, attendanceDates: [], absentDates: [], missedDates: [] };
             }
         });
 
@@ -6065,6 +6140,7 @@ document.addEventListener('DOMContentLoaded', () => {
             d.setHours(0,0,0,0);
             if (d >= monthStart && d <= monthEnd) {
                 for (const termId in termData) {
+                    if (seasonTermIds && !seasonTermIds.has(termId)) continue;
                     for (const swimmerId in termData[termId]) {
                         const status = termData[termId][swimmerId];
                         const swimmer = swimmers.find(s => s.id === swimmerId);
@@ -6105,6 +6181,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const todaysTerms = getTermsForDate(currentDate);
 
             todaysTerms.forEach(term => {
+                if (seasonTermIds && !seasonTermIds.has(term.id)) return;
                 const termIsActive = getTermStatus(currentDate, term.id).status === "active";
                 
                 if (termIsActive) {
@@ -6444,6 +6521,26 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             termListSf.value = pick;
             sessionStorage.setItem(TERM_LIST_SEASON_STORAGE_KEY, pick);
+        }
+        const swimmersSf = document.getElementById('swimmersSeasonFilter');
+        if (swimmersSf) {
+            if (seasons.length === 0) {
+                swimmersSf.innerHTML = '<option value="">Ni sezon</option>';
+            } else {
+                swimmersSf.innerHTML = seasons.map(s =>
+                    `<option value="${s.id}">${escapeHtml(s.name)}</option>`
+                ).join('');
+                const rawSaved = sessionStorage.getItem(TERM_LIST_SEASON_STORAGE_KEY);
+                let pick = '';
+                if (rawSaved && seasons.some(s => s.id === rawSaved)) {
+                    pick = rawSaved;
+                } else {
+                    const activeS = seasons.find(s => s.is_active);
+                    pick = activeS ? activeS.id : seasons[0].id;
+                }
+                swimmersSf.value = pick;
+                if (pick) sessionStorage.setItem(TERM_LIST_SEASON_STORAGE_KEY, pick);
+            }
         }
         const browseSel = document.getElementById('seasonTermsBrowseSelect');
         if (browseSel) {
