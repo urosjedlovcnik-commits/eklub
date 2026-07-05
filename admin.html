@@ -114,6 +114,34 @@
   background: #dc2626;
 }
 
+.searchable-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.searchable-picker-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.searchable-picker-row input[type="search"] {
+  flex: 1;
+  min-width: 180px;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+}
+
+.searchable-picker-row select {
+  flex: 1;
+  min-width: 180px;
+}
+
 .term-assign-checkboxes label:hover {
   background: #f0f4ff;
   border-radius: 4px;
@@ -386,12 +414,13 @@
       <div class="card">
         <h3>Dodeli termine plavalcem</h3>
         <div class="inner">
-          <div class="flex-col">
-            <div class="row" style="width:100%;align-items:stretch;gap:4px">
-              <select id="swimmerSelect" style="flex:1"></select>
+          <div class="flex-col searchable-picker">
+            <div class="searchable-picker-row">
+              <input type="search" id="swimmerSearchInput" placeholder="Išči plavalca (ime, priimek, email)…" autocomplete="off">
+              <select id="swimmerSelect"></select>
               <button class="btn pri" id="assignTermBtn" style="width:auto;white-space:nowrap">Dodeli izbrane termine</button>
             </div>
-            <div id="termAssignCheckboxes" class="term-assign-checkboxes muted" style="margin-top:12px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;background:#fafafa;min-height:48px">
+            <div id="termAssignCheckboxes" class="term-assign-checkboxes muted" style="padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;background:#fafafa;min-height:48px">
               Najprej izberite plavalca
             </div>
           </div>
@@ -608,11 +637,14 @@
       <div class="card">
         <h3>Dodeli termine trenerjem</h3>
         <div class="inner">
-          <div class="flex-col">
-            <div class="row" style="width:100%;align-items:stretch;gap:4px">
+          <div class="flex-col searchable-picker">
+            <div class="searchable-picker-row">
+              <input type="search" id="trainerSearchInput" placeholder="Išči trenerja (ime, priimek, email)…" autocomplete="off">
               <select id="trainerSelect"></select>
-              <select id="trainerTermSelect"></select>
-              <button class="btn pri" id="assignTrainerTermBtn" style="width:auto">Dodeli termin</button>
+              <button class="btn pri" id="assignTrainerTermBtn" style="width:auto;white-space:nowrap">Dodeli izbrane termine</button>
+            </div>
+            <div id="termTrainerAssignCheckboxes" class="term-assign-checkboxes muted" style="padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;background:#fafafa;min-height:48px">
+              Najprej izberite trenerja
             </div>
           </div>
         </div>

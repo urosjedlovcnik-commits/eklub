@@ -49,6 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const elToggleEventBtn = document.getElementById("toggleEventBtn");
     const elCloseModalBtn = document.getElementById("closeModalBtn");
     const elModalSwimmerSelect = document.getElementById("modalSwimmerSelect");
+    const elModalSwimmerSearchInput = document.getElementById("modalSwimmerSearchInput");
     const elAddToEventBtn = document.getElementById("addToEventBtn");
     // Modal note
     const elInactiveNote = document.getElementById("inactiveNote");
@@ -72,6 +73,78 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // ===== Pomožne funkcije =====
+    let modalUnassignedSwimmers = [];
+
+    function swimmerDisplayName(s) {
+        return `${s.first_name} ${s.last_name}`.trim();
+    }
+
+    function swimmerMatchesSearch(s, query) {
+        if (!query || !query.trim()) return true;
+        const q = query.trim().toLowerCase();
+        const full = swimmerDisplayName(s).toLowerCase();
+        const reversed = `${s.last_name || ''} ${s.first_name || ''}`.trim().toLowerCase();
+        return full.includes(q) || reversed.includes(q);
+    }
+
+    function fillModalSwimmerPicker(unassigned, keepSearch) {
+        modalUnassignedSwimmers = unassigned;
+        if (!elModalSwimmerSelect) return;
+
+        if (!keepSearch && elModalSwimmerSearchInput) {
+            elModalSwimmerSearchInput.value = '';
+        }
+
+        const query = elModalSwimmerSearchInput ? elModalSwimmerSearchInput.value : '';
+        const filtered = unassigned.filter(s => swimmerMatchesSearch(s, query));
+
+        elModalSwimmerSelect.innerHTML = '';
+
+        if (unassigned.length === 0) {
+            const o = document.createElement('option');
+            o.textContent = 'Vsi plavalci so že v treningu ali nadomeščanju.';
+            o.disabled = true;
+            elModalSwimmerSelect.appendChild(o);
+            elAddToEventBtn.style.display = 'none';
+            elModalSwimmerSelect.style.display = 'none';
+            if (elModalSwimmerSearchInput) elModalSwimmerSearchInput.style.display = 'none';
+            return;
+        }
+
+        if (elModalSwimmerSearchInput) elModalSwimmerSearchInput.style.display = 'block';
+
+        if (filtered.length === 0) {
+            const o = document.createElement('option');
+            o.textContent = 'Ni ujemajočih plavalcev — poskusite drugače iskati.';
+            o.disabled = true;
+            elModalSwimmerSelect.appendChild(o);
+            elAddToEventBtn.style.display = 'none';
+            elModalSwimmerSelect.style.display = 'inline-block';
+            return;
+        }
+
+        filtered.forEach(s => {
+            const o = document.createElement('option');
+            o.value = s.id;
+            o.textContent = swimmerDisplayName(s);
+            elModalSwimmerSelect.appendChild(o);
+        });
+        elAddToEventBtn.style.display = 'inline-block';
+        elModalSwimmerSelect.style.display = 'inline-block';
+    }
+
+    if (elModalSwimmerSearchInput) {
+        elModalSwimmerSearchInput.addEventListener('input', () => {
+            fillModalSwimmerPicker(modalUnassignedSwimmers, true);
+        });
+        elModalSwimmerSelect?.addEventListener('change', () => {
+            const selected = modalUnassignedSwimmers.find(s => s.id === elModalSwimmerSelect.value);
+            if (selected && elModalSwimmerSearchInput) {
+                elModalSwimmerSearchInput.value = swimmerDisplayName(selected);
+            }
+        });
+    }
+
     function mkSwimmer(first,last,terms=[]){ return { first_name:first, last_name:last, terms:[...new Set(terms)] }; }
     function iso(d){ 
       // Formatira lokalni datum kot ISO string (YYYY-MM-DD)
@@ -1488,29 +1561,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       }
 
-      elModalSwimmerSelect.innerHTML = "";
       const allSwimmersInEvent = [...regularSwimmers, ...substitutionSwimmers];
       const currentEventSwimmerIds = allSwimmersInEvent.map(s => s.id);
       const unassigned = swimmers.filter(s => !currentEventSwimmerIds.includes(s.id) && !s.is_deleted)
                                .sort((a,b)=> (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name));
-      
-      if(unassigned.length > 0) {
-        unassigned.forEach(s => {
-          const o = document.createElement("option");
-          o.value = s.id;
-          o.textContent = `${s.first_name} ${s.last_name}`;
-          elModalSwimmerSelect.appendChild(o);
-        });
-        elAddToEventBtn.style.display = "inline-block";
-        elModalSwimmerSelect.style.display = "inline-block";
-      } else {
-        const o = document.createElement("option");
-        o.textContent = "Vsi plavalci so že v treningu ali nadomeščanju.";
-        o.disabled = true;
-        elModalSwimmerSelect.appendChild(o);
-        elAddToEventBtn.style.display = "none";
-        elModalSwimmerSelect.style.display = "none";
-      }
+      fillModalSwimmerPicker(unassigned);
 
       const termStatusObj = getTermStatus(date, termId);
       if (termStatusObj.status === "inactive") {

@@ -604,7 +604,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const elNewTrainerPhone = document.getElementById("newTrainerPhone");
     const elAddTrainerBtn = document.getElementById("addTrainerBtn");
     const elTrainerSelect = document.getElementById("trainerSelect");
-    const elTrainerTermSelect = document.getElementById("trainerTermSelect");
     const elAssignTrainerTermBtn = document.getElementById("assignTrainerTermBtn");
     const elDeleteTrainerBtn = document.getElementById("deleteTrainerBtn");
     const elTrainerInfo = document.getElementById("trainerInfo");
@@ -830,6 +829,7 @@ document.addEventListener('DOMContentLoaded', () => {
         refreshOlySwimmerSummary();
         updateTrainersList();
         populateUnassignedTerms();
+        renderTermCheckboxesForTrainer(elTrainerSelect?.value || '');
         calculateTrainerSummaryData();
         calculateTrainerHoursCostsData();
         calculateTrainerNotesData();
@@ -1133,48 +1133,65 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ===== Upravljanje plavalcev =====
-    function updateSwimmerSelects() {
-        // Posodobi select za plavalce
-        elSwimmerSelect.innerHTML = '<option value="">Izberi plavalca</option>';
-        
-        // Sortiraj plavalce po abecedi po priimku, nato po imenu
-        const sortedSwimmers = swimmers
-            .filter(s => !s.is_deleted)
-            .sort((a, b) => {
-                const aName = `${a.last_name} ${a.first_name}`;
-                const bName = `${b.last_name} ${b.first_name}`;
-                return aName.localeCompare(bName, 'sl');
-            });
-        
-        sortedSwimmers.forEach(s => {
+
+    function personDisplayName(p) {
+        return `${p.first_name} ${p.last_name}`.trim();
+    }
+
+    function personMatchesSearch(p, query) {
+        if (!query || !query.trim()) return true;
+        const q = query.trim().toLowerCase();
+        const full = personDisplayName(p).toLowerCase();
+        const reversed = `${p.last_name || ''} ${p.first_name || ''}`.trim().toLowerCase();
+        return full.includes(q) || reversed.includes(q) ||
+            (p.email || '').toLowerCase().includes(q) ||
+            (p.phone || '').includes(q);
+    }
+
+    function fillSearchableSelect(selectEl, items, emptyLabel, selectedId) {
+        if (!selectEl) return;
+        const prev = selectedId !== undefined ? selectedId : selectEl.value;
+        selectEl.innerHTML = `<option value="">${emptyLabel}</option>`;
+        items.forEach(item => {
             const option = document.createElement('option');
-            option.value = s.id;
-            option.textContent = `${s.first_name} ${s.last_name}`;
-            elSwimmerSelect.appendChild(option);
+            option.value = item.id;
+            option.textContent = personDisplayName(item);
+            selectEl.appendChild(option);
         });
+        if (prev && [...selectEl.options].some(o => o.value === prev)) {
+            selectEl.value = prev;
+        }
+    }
 
+    function refreshSwimmerAssignSelect() {
+        const searchInput = document.getElementById('swimmerSearchInput');
+        const query = searchInput ? searchInput.value : '';
+        const sorted = swimmers
+            .filter(s => !s.is_deleted && personMatchesSearch(s, query))
+            .sort((a, b) => `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`, 'sl'));
+        fillSearchableSelect(elSwimmerSelect, sorted, 'Izberi plavalca');
         renderTermCheckboxesForSwimmer(elSwimmerSelect?.value || '');
+    }
 
-        // Posodobi select v modalnem oknu
+    function refreshTrainerAssignSelect() {
+        const searchInput = document.getElementById('trainerSearchInput');
+        const query = searchInput ? searchInput.value : '';
+        const sorted = trainers
+            .filter(t => !t.is_deleted && personMatchesSearch(t, query))
+            .sort((a, b) => (a.last_name || '').localeCompare(b.last_name || '', 'sl') ||
+                (a.first_name || '').localeCompare(b.first_name || '', 'sl'));
+        fillSearchableSelect(elTrainerSelect, sorted, 'Izberi trenerja');
+        renderTermCheckboxesForTrainer(elTrainerSelect?.value || '');
+    }
+
+    function updateSwimmerSelects() {
+        refreshSwimmerAssignSelect();
         const modalSwimmerSelect = document.getElementById('modalSwimmerSelect');
         if (modalSwimmerSelect) {
-            modalSwimmerSelect.innerHTML = '<option value="">Izberi plavalca</option>';
-            
-            // Sortiraj plavalce po abecedi po priimku, nato po imenu
             const sortedSwimmers = swimmers
                 .filter(s => !s.is_deleted)
-                .sort((a, b) => {
-                    const aName = `${a.last_name} ${a.first_name}`;
-                    const bName = `${b.last_name} ${b.first_name}`;
-                    return aName.localeCompare(bName, 'sl');
-                });
-            
-            sortedSwimmers.forEach(s => {
-                const option = document.createElement('option');
-                option.value = s.id;
-                option.textContent = `${s.first_name} ${s.last_name}`;
-                modalSwimmerSelect.appendChild(option);
-            });
+                .sort((a, b) => `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`, 'sl'));
+            fillSearchableSelect(modalSwimmerSelect, sortedSwimmers, 'Izberi plavalca');
         }
     }
 
@@ -1223,77 +1240,62 @@ document.addEventListener('DOMContentLoaded', () => {
         renderTermCheckboxesForSwimmer(swimmerId);
     }
 
-    function updateTrainerSelects() {
-        // Posodobi select za trenerje
-        elTrainerSelect.innerHTML = '<option value="">Izberi trenerja</option>';
-        
-        // Sortiraj trenerje po priimku (in nato po imenu, če so priimki enaki)
-        const sortedTrainers = [...trainers].filter(t => !t.is_deleted).sort((a, b) => {
-            // Najprej sortiraj po priimku
-            const lastNameCompare = (a.last_name || '').localeCompare(b.last_name || '', 'sl');
-            if (lastNameCompare !== 0) {
-                return lastNameCompare;
-            }
-            // Če so priimki enaki, sortiraj po imenu
-            return (a.first_name || '').localeCompare(b.first_name || '', 'sl');
-        });
-        
-        sortedTrainers.forEach(t => {
-                const option = document.createElement('option');
-                option.value = t.id;
-                option.textContent = `${t.first_name} ${t.last_name}`;
-                elTrainerSelect.appendChild(option);
-        });
-
-        // Počisti select za termine pri trenerjih in prikaži nedodeljene termine
-        elTrainerTermSelect.innerHTML = '<option value="">Izberi termin</option>';
-        populateUnassignedTerms();
-    }
-
-    // Funkcija za posodabljanje select elementa za termine pri dodeljevanju trenerjem
-    function updateTermSelectForTrainer(trainerId) {
-        elTrainerTermSelect.innerHTML = '<option value="">Izberi termin</option>';
-        
-        if (!trainerId) {
-            // Če ni izbran trener, prikaži samo nedodeljene termine
-            populateUnassignedTerms();
-            return;
-        }
-        
-        // Ko je trener izbran, vseeno prikaži samo nedodeljene termine
-        populateUnassignedTerms();
-    }
-    
-    // Funkcija za prikazovanje samo terminov, ki niso dodeljeni nobenemu trenerju
-    function populateUnassignedTerms() {
+    function getUnassignedTermsForTrainers() {
         const assignedTermIds = new Set();
         trainers.forEach(trainer => {
             if (trainer.terms && trainer.terms.length > 0) {
-                trainer.terms.forEach(termId => {
-                    assignedTermIds.add(termId);
-                });
+                trainer.terms.forEach(termId => assignedTermIds.add(termId));
             }
         });
-        
-        // Filtriraj termine iz izbrane sezone, ki niso dodeljeni nobenemu trenerju
-        const unassignedTerms = getTermsForAdminSeason().filter(term =>
-            !assignedTermIds.has(term.id)
-        );
-        
-        unassignedTerms.forEach(t => {
-            const option = document.createElement('option');
-            option.value = t.id;
-            option.textContent = formatTermTimeLabel(t);
-            elTrainerTermSelect.appendChild(option);
-        });
-        
-        // Dodaj informativno sporočilo, če ni nedodeljenih terminov
-        if (unassignedTerms.length === 0) {
-            const option = document.createElement('option');
-            option.disabled = true;
-            option.textContent = 'Vsi aktivni termini so že dodeljeni';
-            elTrainerTermSelect.appendChild(option);
+        return getTermsForAdminSeason().filter(term => !assignedTermIds.has(term.id));
+    }
+
+    function renderTermCheckboxesForTrainer(trainerId) {
+        const box = document.getElementById('termTrainerAssignCheckboxes');
+        if (!box) return;
+
+        if (!getAdminSeasonFilterId()) {
+            box.innerHTML = '<p class="muted" style="margin:0">Ni izbrane sezone.</p>';
+            return;
         }
+
+        if (!trainerId) {
+            box.innerHTML = '<p class="muted" style="margin:0">Najprej izberite trenerja.</p>';
+            return;
+        }
+
+        const trainer = trainers.find(t => t.id === trainerId);
+        if (!trainer) {
+            box.innerHTML = '<p class="muted" style="margin:0">Trener ni najden.</p>';
+            return;
+        }
+
+        const available = getUnassignedTermsForTrainers();
+        if (available.length === 0) {
+            box.innerHTML = '<p class="muted" style="margin:0">V tej sezoni ni nedodeljenih terminov (vsi so že dodeljeni trenerjem).</p>';
+            return;
+        }
+
+        const seasonName = getSeasonNameById(getAdminSeasonFilterId());
+        box.innerHTML = `<div style="font-size:12px;font-weight:600;color:#4338ca;margin-bottom:8px">${escapeHtml(seasonName)} — izberite termine:</div>` +
+            available.map(t => `
+                <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;font-size:14px;padding:2px 4px">
+                    <input type="checkbox" class="term-trainer-assign-cb" value="${t.id}">
+                    ${escapeHtml(formatTermTimeLabel(t))}
+                </label>
+            `).join('');
+    }
+
+    function updateTrainerSelects() {
+        refreshTrainerAssignSelect();
+    }
+
+    function updateTermSelectForTrainer(trainerId) {
+        renderTermCheckboxesForTrainer(trainerId);
+    }
+
+    function populateUnassignedTerms() {
+        renderTermCheckboxesForTrainer(elTrainerSelect?.value || '');
     }
 
     function getSeasonNameById(seasonId) {
@@ -1833,53 +1835,65 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ===== Dodeljevanje terminov trenerjem =====
+    async function assignTermToTrainer(trainerId, termId) {
+        const trainer = trainers.find(t => t.id === trainerId);
+        if (!trainer) return false;
+        if (!trainer.terms) trainer.terms = [];
+        if (trainer.terms.includes(termId)) return false;
+
+        const { error } = await supabase
+            .from('trainer_terms')
+            .insert([{ trainer_id: trainerId, term_id: termId }]);
+
+        if (error) {
+            console.error('Napaka pri dodeljevanju termina trenerju:', error);
+            throw error;
+        }
+
+        trainer.terms.push(termId);
+        return true;
+    }
+
     elAssignTrainerTermBtn.addEventListener('click', async () => {
         const trainerId = elTrainerSelect.value;
-        const termId = elTrainerTermSelect.value;
-        
-        if (!trainerId || !termId) {
-            alert('Prosim izberite trenerja in termin');
+        const termIds = [...document.querySelectorAll('#termTrainerAssignCheckboxes .term-trainer-assign-cb:checked')]
+            .map(cb => cb.value)
+            .filter(Boolean);
+
+        if (!trainerId || termIds.length === 0) {
+            alert('Prosim izberite trenerja in vsaj en termin');
             return;
         }
 
         const trainer = trainers.find(t => t.id === trainerId);
-        if (trainer) {
-            if (!trainer.terms) trainer.terms = [];
-            if (!trainer.terms.includes(termId)) {
-                try {
-                    // Dodaj v tabelo trainer_terms
-                    const { error } = await supabase
-                        .from('trainer_terms')
-                        .insert([{
-                            trainer_id: trainerId,
-                            term_id: termId
-                        }]);
+        if (!trainer) return;
 
-                    if (error) {
-                        console.error('Napaka pri dodeljevanju termina trenerju:', error);
-                        alert('Napaka pri dodeljevanju termina trenerju. Preverite konzolo.');
-                        return;
-                    }
+        const invalidTerms = termIds.filter(termId => !termMatchesAdminSeasonFilter(termId));
+        if (invalidTerms.length > 0) {
+            alert('Izbrani termini ne spadajo v trenutno sezono.');
+            return;
+        }
 
-                    // Posodobi lokalno stanje
-                    trainer.terms.push(termId);
-                    updateTrainersList();
-                    updateTrainerSelects(); // Osveži dropdown z nedodeljenimi termini
-                    elTrainerInfo.textContent = `Termin dodeljen trenerju ${trainer.first_name} ${trainer.last_name}`;
-                    
-                    setTimeout(() => {
-                        elTrainerInfo.textContent = '';
-                    }, 3000);
-                } catch (error) {
-                    console.error('Napaka pri dodeljevanju termina trenerju:', error);
-                    alert('Napaka pri dodeljevanju termina trenerju.');
-                }
-            } else {
-                elTrainerInfo.textContent = 'Trener že ima ta termin';
-                setTimeout(() => {
-                    elTrainerInfo.textContent = '';
-                }, 3000);
+        try {
+            let assigned = 0;
+            for (const termId of termIds) {
+                if (await assignTermToTrainer(trainerId, termId)) assigned++;
             }
+
+            if (assigned === 0) {
+                elTrainerInfo.textContent = 'Trener že ima vse izbrane termine ali so termini zasedeni.';
+            } else {
+                updateTrainersList();
+                renderTermCheckboxesForTrainer(trainerId);
+                elTrainerInfo.textContent = `Dodeljenih ${assigned} terminov trenerju ${trainer.first_name} ${trainer.last_name}`;
+            }
+
+            setTimeout(() => {
+                elTrainerInfo.textContent = '';
+            }, 3000);
+        } catch (error) {
+            console.error('Napaka pri dodeljevanju terminov trenerju:', error);
+            alert('Napaka pri dodeljevanju terminov trenerju. Preverite konzolo.');
         }
     });
 
@@ -4974,18 +4988,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ===== Event listener za izbiro plavalca pri dodeljevanju terminov =====
+    document.getElementById('swimmerSearchInput')?.addEventListener('input', () => {
+        refreshSwimmerAssignSelect();
+    });
     if (elSwimmerSelect) {
         elSwimmerSelect.addEventListener('change', () => {
-            const selectedSwimmerId = elSwimmerSelect.value;
-            updateTermSelectForSwimmer(selectedSwimmerId);
+            const selected = swimmers.find(s => s.id === elSwimmerSelect.value);
+            const searchInput = document.getElementById('swimmerSearchInput');
+            if (searchInput && selected) {
+                searchInput.value = personDisplayName(selected);
+            }
+            updateTermSelectForSwimmer(elSwimmerSelect.value);
         });
     }
 
+    document.getElementById('trainerSearchInput')?.addEventListener('input', () => {
+        refreshTrainerAssignSelect();
+    });
     // ===== Event listener za izbiro trenerja pri dodeljevanju terminov =====
     if (elTrainerSelect) {
         elTrainerSelect.addEventListener('change', () => {
-            const selectedTrainerId = elTrainerSelect.value;
-            updateTermSelectForTrainer(selectedTrainerId);
+            const selected = trainers.find(t => t.id === elTrainerSelect.value);
+            const searchInput = document.getElementById('trainerSearchInput');
+            if (searchInput && selected) {
+                searchInput.value = personDisplayName(selected);
+            }
+            updateTermSelectForTrainer(elTrainerSelect.value);
         });
     }
 
