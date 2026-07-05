@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Stanja bodo naložena asinhrono
     let swimmers = [];
     let terms = [];
+    let seasons = [];
     let filteredSwimmers = [];
     
     // UI elementi
@@ -56,6 +57,72 @@ document.addEventListener('DOMContentLoaded', () => {
     function isValidEmail(email) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return emailRegex.test(email);
+    }
+    
+    function getSeasonName(seasonId) {
+        if (!seasonId) return 'Brez sezone';
+        return seasons.find(s => s.id === seasonId)?.name || 'Neznana sezona';
+    }
+
+    function groupSwimmerTermsBySeason(termIds) {
+        const grouped = new Map();
+        termIds.forEach(termId => {
+            const term = terms.find(t => t.id === termId);
+            const key = term?.season_id || '__none__';
+            if (!grouped.has(key)) grouped.set(key, []);
+            grouped.get(key).push(term || { id: termId, missing: true });
+        });
+        const seasonSortKey = key => {
+            if (key === '__none__') return '0000-01-01';
+            return seasons.find(s => s.id === key)?.date_from || '0000-01-01';
+        };
+        return [...grouped.entries()].sort((a, b) => seasonSortKey(b[0]).localeCompare(seasonSortKey(a[0])));
+    }
+
+    function renderTermsBySeason(termIds) {
+        if (!termIds.length) {
+            return `<div class="terms-section"><div class="no-terms" style="padding: 12px; font-size: 12px;">Ni dodeljenih terminov</div></div>`;
+        }
+        return groupSwimmerTermsBySeason(termIds).map(([seasonKey, seasonTerms]) => {
+            const seasonName = getSeasonName(seasonKey === '__none__' ? null : seasonKey);
+            const sorted = seasonTerms
+                .filter(t => !t.missing)
+                .sort((a, b) => {
+                    if (a.day !== b.day) return a.day - b.day;
+                    return a.start_time.localeCompare(b.start_time);
+                });
+            const missing = seasonTerms.filter(t => t.missing);
+            return `
+                <div class="terms-section">
+                    <div class="terms-title">${seasonName}</div>
+                    <div class="terms-grid">
+                        ${sorted.map(term => {
+                            const inactive = !isTermActive(term);
+                            return `
+                                <div class="term-chip" style="${inactive ? 'background:#f9fafb;color:#9ca3af;border-color:#e5e7eb;' : ''}">
+                                    ${formatTermTime(term)}
+                                    <small>${formatDate(term.date_from)} - ${formatDate(term.date_to)}</small>
+                                </div>
+                            `;
+                        }).join('')}
+                        ${missing.map(t => `<div class="term-chip" style="background:#fef2f2;color:#991b1b;">${t.id}</div>`).join('')}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+    
+    async function loadSeasons() {
+        try {
+            const { data, error } = await supabase
+                .from('seasons')
+                .select('*')
+                .order('date_from', { ascending: false });
+            if (error) throw error;
+            seasons = data || [];
+        } catch (error) {
+            console.error('Napaka pri nalaganju sezon:', error);
+        }
     }
     
     // ===== Nalaganje podatkov =====

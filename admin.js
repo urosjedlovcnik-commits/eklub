@@ -1096,7 +1096,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sortedTerms.forEach(t => {
             const option = document.createElement('option');
             option.value = t.id;
-            option.textContent = `${DAY_SHORT_NAME[t.day]} ${formatTimeWithoutSeconds(t.start_time)}-${formatTimeWithoutSeconds(t.end_time)}`;
+            option.textContent = formatTermSelectLabel(t);
             elTermSelect.appendChild(option);
         });
     }
@@ -1127,7 +1127,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sortedTerms.forEach(t => {
             const option = document.createElement('option');
             option.value = t.id;
-            option.textContent = `${DAY_SHORT_NAME[t.day]} ${formatTimeWithoutSeconds(t.start_time)}-${formatTimeWithoutSeconds(t.end_time)}`;
+            option.textContent = formatTermSelectLabel(t);
             elTermSelect.appendChild(option);
         });
     }
@@ -1195,7 +1195,7 @@ document.addEventListener('DOMContentLoaded', () => {
         unassignedTerms.forEach(t => {
             const option = document.createElement('option');
             option.value = t.id;
-            option.textContent = `${DAY_SHORT_NAME[t.day]} ${formatTimeWithoutSeconds(t.start_time)}-${formatTimeWithoutSeconds(t.end_time)}`;
+            option.textContent = formatTermSelectLabel(t);
             elTrainerTermSelect.appendChild(option);
         });
         
@@ -1206,6 +1206,83 @@ document.addEventListener('DOMContentLoaded', () => {
             option.textContent = 'Vsi aktivni termini so že dodeljeni';
             elTrainerTermSelect.appendChild(option);
         }
+    }
+
+    function getSeasonNameById(seasonId) {
+        if (!seasonId) return '';
+        return seasons.find(se => se.id === seasonId)?.name || '';
+    }
+
+    function formatTermTimeLabel(term) {
+        return `${DAY_SHORT_NAME[term.day]} ${formatTimeWithoutSeconds(term.start_time)}-${formatTimeWithoutSeconds(term.end_time)}`;
+    }
+
+    function formatTermSelectLabel(term) {
+        const season = getSeasonNameById(term.season_id);
+        const time = formatTermTimeLabel(term);
+        return season ? `${season} · ${time}` : time;
+    }
+
+    function formatTermLabelById(termId) {
+        const term = TERMS.find(t => t.id === termId);
+        return term ? formatTermSelectLabel(term) : termId;
+    }
+
+    function groupSwimmerTermsBySeason(termIds) {
+        const grouped = new Map();
+        (termIds || []).forEach(termId => {
+            const term = TERMS.find(t => t.id === termId);
+            const key = term?.season_id || '__none__';
+            if (!grouped.has(key)) grouped.set(key, []);
+            grouped.get(key).push({ termId, term });
+        });
+        const seasonSortKey = key => {
+            if (key === '__none__') return '0000-01-01';
+            return seasons.find(se => se.id === key)?.date_from || '0000-01-01';
+        };
+        return [...grouped.keys()]
+            .sort((a, b) => seasonSortKey(b).localeCompare(seasonSortKey(a)))
+            .map(key => ({
+                seasonName: key === '__none__' ? 'Brez sezone' : (getSeasonNameById(key) || 'Neznana sezona'),
+                entries: grouped.get(key).sort((a, b) => {
+                    if (!a.term || !b.term) return 0;
+                    if (a.term.day !== b.term.day) return a.term.day - b.term.day;
+                    return a.term.start_time.localeCompare(b.term.start_time);
+                })
+            }));
+    }
+
+    function formatSwimmerTermsSummary(swimmer) {
+        const groups = groupSwimmerTermsBySeason(swimmer?.terms);
+        if (groups.length === 0) return '<span class="muted">—</span>';
+        return groups.map(({ seasonName, entries }) => {
+            const labels = entries
+                .map(({ term, termId }) => term ? formatTermTimeLabel(term) : termId)
+                .join(', ');
+            return `<div style="font-size:12px;margin-bottom:3px"><span style="font-weight:600;color:#4338ca">${escapeHtml(seasonName)}:</span> ${escapeHtml(labels)}</div>`;
+        }).join('');
+    }
+
+    function buildSwimmerTermsHtml(swimmer) {
+        const groups = groupSwimmerTermsBySeason(swimmer.terms);
+        if (groups.length === 0) return '<span class="muted">Brez terminov</span>';
+
+        return groups.map(({ seasonName, entries }) => {
+            const chips = entries.map(({ termId, term }) => {
+                const label = term ? formatTermTimeLabel(term) : termId;
+                if (swimmer.is_deleted) {
+                    return `<span class="chip">${escapeHtml(label)}</span>`;
+                }
+                return `<span class="chip" data-term-id="${termId}" data-swimmer-id="${swimmer.id}">
+                    ${escapeHtml(label)}
+                    <button class="remove-term-btn" onclick="removeTermFromSwimmer('${swimmer.id}', '${termId}')" title="Odstrani termin">✖</button>
+                </span>`;
+            }).join(' ');
+            return `<div class="swimmer-season-terms" style="margin-bottom:8px">
+                <div style="font-size:11px;font-weight:600;color:#4338ca;margin-bottom:3px">${escapeHtml(seasonName)}</div>
+                <div>${chips}</div>
+            </div>`;
+        }).join('');
     }
 
     function updateSwimmersList() {
@@ -1226,7 +1303,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <th>Priimek</th>
                     <th>Email</th>
                     <th>Telefon</th>
-                    <th>Termini</th>
+                    <th>Sezone / Termini</th>
                     <th>Akcije</th>
                 </tr>
             </thead>
@@ -1268,21 +1345,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         sortedSwimmers.forEach(swimmer => {
             const row = document.createElement('tr');
-                const termIds = swimmer.terms || [];
-
-                // Ustvari termine kot "chips" z možnostjo brisanja
-                const termsChips = termIds.map(termId => {
-                    const term = TERMS.find(t => t.id === termId);
-                    if (term) {
-                        return `
-                            <span class="chip" data-term-id="${termId}" data-swimmer-id="${swimmer.id}">
-                                ${DAY_SHORT_NAME[term.day]} ${formatTimeWithoutSeconds(term.start_time)}-${formatTimeWithoutSeconds(term.end_time)}
-                                <button class="remove-term-btn" onclick="removeTermFromSwimmer('${swimmer.id}', '${termId}')" title="Odstrani termin">✖</button>
-                            </span>
-                        `;
-                    }
-                    return `<span class="chip" data-term-id="${termId}">${termId}</span>`;
-                }).join(' ');
+            const termsHtml = buildSwimmerTermsHtml(swimmer);
 
             // Določi stil vrstice glede na status
             if (swimmer.is_deleted) {
@@ -1295,7 +1358,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${swimmer.last_name}</td>
                 <td>${swimmer.email || '<span class="muted">Brez email naslova</span>'}</td>
                 <td>${swimmer.phone || '<span class="muted">Brez telefona</span>'}</td>
-                <td class="terms-cell">${swimmer.is_deleted ? '<span class="muted">Izbrisan</span>' : (termsChips || '<span class="muted">Brez terminov</span>')}</td>
+                <td class="terms-cell">${swimmer.is_deleted ? '<span class="muted">Izbrisan</span>' : termsHtml}</td>
                 <td>
                     ${swimmer.is_deleted ? 
                         `<button class="btn success" onclick="restoreSwimmer('${swimmer.id}')" style="font-size: 12px; padding: 4px 8px;">
@@ -2835,14 +2898,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return `${day}. ${month}. ${year} (${dayName})`;
         };
         
-        // Formatiraj termin
-        const formatTerm = (termId) => {
-            const term = TERMS.find(t => t.id === termId);
-            if (term) {
-                return `${DAY_SHORT_NAME[term.day]} ${formatTimeWithoutSeconds(term.start_time)}-${formatTimeWithoutSeconds(term.end_time)}`;
-            }
-            return termId;
-        };
+        // Formatiraj termin (z sezono)
+        const formatTerm = (termId) => formatTermLabelById(termId);
         
         // Funkcija za prikaz tabele
         const renderTable = (dates, title, colorClass) => {
@@ -2850,7 +2907,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return `<p class="muted">Ni ${title.toLowerCase()}</p>`;
             }
             let html = `<h5 style="margin-top: 20px; margin-bottom: 10px; color: ${colorClass === 'ok' ? '#28a745' : colorClass === 'warn' ? '#dc3545' : '#6c757d'};">${title} (${dates.length})</h5>`;
-            html += '<table style="width: 100%; border-collapse: collapse; margin-top: 10px;"><thead><tr><th style="border: 1px solid #ddd; padding: 8px; background: #f8f9fa;">Datum</th><th style="border: 1px solid #ddd; padding: 8px; background: #f8f9fa;">Termin</th></tr></thead><tbody>';
+            html += '<table style="width: 100%; border-collapse: collapse; margin-top: 10px;"><thead><tr><th style="border: 1px solid #ddd; padding: 8px; background: #f8f9fa;">Datum</th><th style="border: 1px solid #ddd; padding: 8px; background: #f8f9fa;">Sezona / Termin</th></tr></thead><tbody>';
             dates.forEach(item => {
                 html += `<tr>
                     <td style="border: 1px solid #ddd; padding: 8px;">${formatDate(item.date)}</td>
@@ -6101,7 +6158,7 @@ document.addEventListener('DOMContentLoaded', () => {
             window.currentSwimmerStats[swimmerId] = r;
         });
         
-        let html = `<table><thead><tr><th>Plavalec</th><th>Obiskani</th><th>Možni</th><th>Delež (%)</th></tr></thead><tbody>`;
+        let html = `<table><thead><tr><th>Plavalec</th><th>Sezone / Termini</th><th>Obiskani</th><th>Možni</th><th>Delež (%)</th></tr></thead><tbody>`;
         // Filtriramo plavalce, ki nimajo nobenega možnega obiska in dodajamo dodatno filtriranje
         const rows = Object.entries(summaryData)
             .filter(([swimmerId, r]) => {
@@ -6114,15 +6171,17 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .map(([swimmerId, r]) => ({ ...r, swimmerId }))
             .sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first));
-        if(rows.length===0) html += `<tr><td colspan="4" class="muted">Ni plavalcev.</td></tr>`;
+        if(rows.length===0) html += `<tr><td colspan="5" class="muted">Ni plavalcev.</td></tr>`;
         rows.forEach(r=>{
             const pct = r.pos > 0 ? (r.att / r.pos * 100).toFixed(1) : "0.0";
             const swimmerName = `${r.first} ${r.last}`;
+            const swimmer = swimmers.find(s => s.id === r.swimmerId);
+            const termsSummary = swimmer ? formatSwimmerTermsSummary(swimmer) : '<span class="muted">—</span>';
             // Naredi delež klikljiv
             const pctClickable = r.att > 0 
                 ? `<td><a href="#" class="attendance-link" data-swimmer-id="${r.swimmerId}" data-swimmer-name="${swimmerName}" style="color: inherit; text-decoration: underline; cursor: pointer;">${pct}</a></td>`
                 : `<td>${pct}</td>`;
-            html += `<tr><td>${swimmerName}</td><td>${r.att}</td><td>${r.pos}</td>${pctClickable}</tr>`;
+            html += `<tr><td>${swimmerName}</td><td class="terms-cell">${termsSummary}</td><td>${r.att}</td><td>${r.pos}</td>${pctClickable}</tr>`;
         });
         html += `</tbody></table>`;
         elSwimmerSummaryBox.innerHTML = html;
@@ -6183,7 +6242,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderOlySwimmerSummary(summaryData) {
         if (!elOlySwimmerSummaryBox) return;
         
-        let html = `<table><thead><tr><th>Plavalec</th><th>Obiskani</th><th>Možni</th><th>Delež (%)</th></tr></thead><tbody>`;
+        let html = `<table><thead><tr><th>Plavalec</th><th>Sezone / Termini</th><th>Obiskani</th><th>Možni</th><th>Delež (%)</th></tr></thead><tbody>`;
         
         const rows = Object.entries(summaryData)
             .filter(([swimmerId, r]) => {
@@ -6191,16 +6250,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (swimmer && swimmer.is_deleted) return false;
                 return r.pos > 0 || r.att > 0;
             })
-            .map(([swimmerId, r]) => r)
+            .map(([swimmerId, r]) => ({ ...r, swimmerId }))
             .sort((a, b) => (a.last + a.first).localeCompare(b.last + b.first));
             
         if (rows.length === 0) {
-            html += `<tr><td colspan="4" class="muted">Ni OLY plavalcev za ta mesec.</td></tr>`;
+            html += `<tr><td colspan="5" class="muted">Ni OLY plavalcev za ta mesec.</td></tr>`;
         }
         
         rows.forEach(r => {
             const pct = r.pos > 0 ? (r.att / r.pos * 100).toFixed(1) : "0.0";
-            html += `<tr><td>${r.first} ${r.last}</td><td>${r.att}</td><td>${r.pos}</td><td>${pct}</td></tr>`;
+            const swimmer = swimmers.find(s => s.id === r.swimmerId);
+            const termsSummary = swimmer ? formatSwimmerTermsSummary(swimmer) : '<span class="muted">—</span>';
+            html += `<tr><td>${r.first} ${r.last}</td><td class="terms-cell">${termsSummary}</td><td>${r.att}</td><td>${r.pos}</td><td>${pct}</td></tr>`;
         });
         
         html += `</tbody></table>`;
