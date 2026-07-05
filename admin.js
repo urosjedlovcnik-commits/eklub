@@ -2049,6 +2049,25 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('showSwimmersWithoutTerms')?.addEventListener('change', () => updateSwimmersList());
 
+    function buildTermIdBase(day, start, end) {
+        return `${DAY_SHORT_NAME[day].toLowerCase().replace('.', '')}-${start}-${end}`;
+    }
+
+    /** Edinstven ID termina; ob sezoni doda leto (npr. čet-20:00-21:00-2026). */
+    function buildUniqueTermId(day, start, end, seasonId, excludeTermId) {
+        let baseId = buildTermIdBase(day, start, end);
+        if (seasonId) {
+            const season = seasons.find(s => s.id === seasonId);
+            const yearTag = season ? String(season.date_from || '').slice(0, 4) : '';
+            if (yearTag) baseId = `${baseId}-${yearTag}`;
+        }
+        const isTaken = id => TERMS.some(t => t.id === id && t.id !== excludeTermId);
+        if (!isTaken(baseId)) return baseId;
+        let n = 1;
+        while (isTaken(`${baseId}-${n}`)) n++;
+        return `${baseId}-${n}`;
+    }
+
     // ===== Dodajanje terminov =====
     elAddTermBtn.addEventListener('click', async () => {
         const day = parseInt(elNewTermDay.value);
@@ -2067,9 +2086,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const termId = `${DAY_SHORT_NAME[day].toLowerCase().replace('.', '')}-${start}-${end}`;
         const elSeasonPick = document.getElementById('newTermSeasonId');
         const seasonIdVal = elSeasonPick && elSeasonPick.value ? elSeasonPick.value : null;
+        
+        const termId = buildUniqueTermId(day, start, end, seasonIdVal);
         
         try {
             const row = {
@@ -2273,15 +2293,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (!confirm(`Kopiram ${sourceTerms.length} terminov v sezono «${tgtSeason.name}»? Ustvarjeni bodo novi zapisi; dodelitve plavalcev in trenerjev morate urediti ročno.`)) return;
 
-            const yearTag = String(tgtSeason.date_from || '').slice(0, 4) || 'nova';
             let ok = 0;
             for (const term of sourceTerms) {
-                let newId = `${term.id}-${yearTag}`;
-                let n = 0;
-                while (TERMS.some(t => t.id === newId)) {
-                    n++;
-                    newId = `${term.id}-${yearTag}-${n}`;
-                }
+                const newId = buildUniqueTermId(term.day, term.start_time, term.end_time, tgtId);
                 const row = {
                     id: newId,
                     day: term.day,
@@ -2419,7 +2433,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 // Generiraj nov ID, če se je spremenil dan ali ura
                 const day = term.day; // Dan ostane enak
-                const newId = `${DAY_SHORT_NAME[day].toLowerCase().replace('.', '')}-${startTime}-${endTime}`;
+                const newId = buildUniqueTermId(day, startTime, endTime, seasonIdEdit, termId);
                 const idChanged = newId !== termId;
                 
                 // Posodobi podatke v bazi
