@@ -7618,162 +7618,131 @@ document.addEventListener('DOMContentLoaded', () => {
         return await saveSwimmerFeesToDB(month, year, fees);
     }
     
-    // Funkcija za osvežitev prikaza pristojbin plavalcev
+    function getDefaultSwimmerFeeByTermCount(numberOfTerms) {
+        if (numberOfTerms === 0) return 0;
+        if (numberOfTerms === 1) return 55;
+        if (numberOfTerms === 2) return 75;
+        return 90;
+    }
+
+    function getSwimmerSeasonTermLabels(swimmer) {
+        const seasonTermIds = getAdminSeasonTermIds();
+        const labels = [];
+        (swimmer.terms || []).forEach(termId => {
+            if (seasonTermIds && !seasonTermIds.has(termId)) return;
+            const term = TERMS.find(t => t.id === termId);
+            if (term) labels.push(formatTermTimeLabel(term));
+        });
+        return labels;
+    }
+
     async function refreshSwimmerFees() {
+        if (!elSwimmerFeesBox) return;
+
         const month = currentSwimmerFeesMonth;
         const year = currentSwimmerFeesYear;
-// console.log('🔍 refreshSwimmerFees - mesec:', month, 'leto:', year);
-        
-        if (month === undefined || year === undefined) {
+
+        if (month === undefined || month === null || !year) {
             elSwimmerFeesBox.innerHTML = '<p class="muted">Prosim izberite mesec in leto</p>';
             return;
         }
-        
-        const swimmerFees = await getSwimmerFees(month, year);
-        const activeSwimmers = swimmers.filter(s => !s.is_deleted && entityHasTermsInAdminSeason(s));
-        
-        let html = `
-            <div class="swimmer-fees-table">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Plavalec</th>
-                            <th>Dodeljeni termini</th>
-                            <th>Mesečna pristojbina (€)</th>
-                            <th>Dodatni popust za ${new Date(year, month - 1, 1).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' })} (€)</th>
-                            <th>OLY</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
-        
-        // Sortiraj plavalce po abecedi po priimku, nato po imenu
-        // Filtrirati samo plavalce, ki imajo dodeljene termine
-        const sortedActiveSwimmers = activeSwimmers
-            .filter(swimmer => swimmer.terms && swimmer.terms.length > 0)
+
+        const seasonName = getSeasonNameById(getAdminSeasonFilterId());
+        const swimmerFees = await getSwimmerFeesFromDB(month, year);
+
+        const sortedSwimmers = swimmers
+            .filter(s => !s.is_deleted && entityHasTermsInAdminSeason(s))
             .sort((a, b) => {
                 const aName = `${a.last_name} ${a.first_name}`;
                 const bName = `${b.last_name} ${b.first_name}`;
                 return aName.localeCompare(bName, 'sl');
             });
-        
-        // Preštej trenutno število OLY plavalcev za ta mesec (samo za plavalce z termini)
+
+        if (sortedSwimmers.length === 0) {
+            elSwimmerFeesBox.innerHTML = `<p class="muted">Ni plavalcev z dodeljenimi termini v sezoni <strong>${escapeHtml(seasonName) || '—'}</strong>. Dodelite termine v zavihku Plavalci.</p>`;
+            return;
+        }
+
         let olyCount = 0;
-        sortedActiveSwimmers.forEach(swimmer => {
+        sortedSwimmers.forEach(swimmer => {
             const feeData = swimmerFees[swimmer.id];
-            if (feeData && feeData.is_oly) {
-                olyCount++;
-            }
+            if (feeData && feeData.is_oly) olyCount++;
         });
-        
-        sortedActiveSwimmers.forEach(swimmer => {
-            // Poišči dodeljene termine iz swimmer_terms
-            const assignedTerms = [];
-            const seasonTermIds = getAdminSeasonTermIds();
-            if (swimmer.terms && Array.isArray(swimmer.terms)) {
-                swimmer.terms.forEach(termId => {
-                    if (seasonTermIds && !seasonTermIds.has(termId)) return;
-                    const term = TERMS.find(t => t.id === termId);
-                    if (term) {
-                        assignedTerms.push(formatTermTimeLabel(term));
-                    }
-                });
-            }
-            
-            const numberOfTerms = assignedTerms.length;
-            
-            // Določi default vadnino glede na število terminov
-            // Če vadnina že obstaja, jo pustimo pri miru
-            let defaultFee;
-            if (numberOfTerms === 0) {
-                defaultFee = 0; // Brez terminov = 0€
-            } else if (numberOfTerms === 1) {
-                defaultFee = 55; // 1 termin = 55€
-            } else if (numberOfTerms === 2) {
-                defaultFee = 75; // 2 termina = 75€
-            } else {
-                defaultFee = 90; // 3+ termini = 90€
-            }
-            
-            // Če vadnina že obstaja v bazi, uporabi to vrednost, sicer uporabi default
+
+        const requestedDate = new Date(year, month - 1, 1);
+        const currentDate = new Date();
+        currentDate.setDate(1);
+        currentDate.setHours(0, 0, 0, 0);
+        const isPastMonth = requestedDate < currentDate;
+        const monthLabel = new Date(year, month - 1, 1).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
+
+        let html = `<p class="muted" style="font-size:13px;margin-bottom:10px">Sezona: <strong>${escapeHtml(seasonName) || '—'}</strong> · ${sortedSwimmers.length} plavalcev · ${monthLabel}</p>`;
+        html += `
+            <table class="swimmer-fees-table">
+                <thead>
+                    <tr>
+                        <th>Plavalec</th>
+                        <th>Termini (sezona)</th>
+                        <th>Mesečna vadnina (€)</th>
+                        <th>Popust (€)</th>
+                        <th>Končna vadnina (€)</th>
+                        <th>OLY</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        let rowCount = 0;
+        for (const swimmer of sortedSwimmers) {
+            const termLabels = getSwimmerSeasonTermLabels(swimmer);
+            const termsDisplay = termLabels.length > 0 ? termLabels.join(', ') : 'Brez terminov';
+            const defaultFee = getDefaultSwimmerFeeByTermCount(termLabels.length);
             const feeData = swimmerFees[swimmer.id];
-            let currentFee;
-            let discount = 0;
-            let isOly = false;
-            
-            if (feeData && feeData.fee !== undefined) {
-                // Vadnina že obstaja - pusti pri miru
-                currentFee = feeData.fee;
-                discount = feeData.discount || 0;
-                isOly = feeData.is_oly || false;
-            } else {
-                // Vadnina še ne obstaja - uporabi default
-                currentFee = defaultFee;
-                discount = 0;
-                isOly = false;
-            }
-            
-            // Če je OLY obkljukljeno, nastavi znesek vadnine na 0
-            if (isOly) {
-                currentFee = 0;
-            }
-            
-            // Formatiraj termine - odstrani vejico na začetku, če obstaja
-            let termsDisplay = '';
-            if (assignedTerms.length > 0) {
-                // Filtrirati prazne stringe in odstraniti vejice na začetku
-                const cleanTerms = assignedTerms
-                    .filter(t => t && t.trim() !== '')
-                    .map(t => t.trim().replace(/^,\s*/, '')) // Odstrani vejico na začetku
-                    .filter(t => t !== '');
-                termsDisplay = cleanTerms.length > 0 ? cleanTerms.join(', ') : 'Brez terminov';
-            } else {
-                termsDisplay = 'Brez terminov';
-            }
-            
-            // Preveri, ali je checkbox OLY omogočen (maksimalno 15, ali če je že obkljukljen)
+
+            if (!feeData && isPastMonth) continue;
+
+            let fee = feeData?.fee ?? defaultFee;
+            let discount = feeData?.discount || 0;
+            const isOly = feeData?.is_oly || false;
+            const effectiveFee = isOly ? 0 : fee;
+            const finalFee = Math.max(0, effectiveFee - discount);
             const canCheckOly = olyCount < 15 || isOly;
-            
-            // Debug: izpis za prvega plavalca
-            if (swimmer.id === activeSwimmers[0]?.id) {
-                console.log('🔍 Debug OLY:', {
-                    swimmer: `${swimmer.first_name} ${swimmer.last_name}`,
-                    feeData: swimmerFees[swimmer.id],
-                    isOly: isOly,
-                    olyCount: olyCount,
-                    canCheckOly: canCheckOly
-                });
-            }
-            
+            const rowStyle = (finalFee === 0 && !isOly) ? 'style="background-color: #ffe0e0;"' : '';
+
+            rowCount++;
             html += `
-                <tr>
+                <tr ${rowStyle}>
                     <td>${swimmer.first_name} ${swimmer.last_name}</td>
                     <td>${termsDisplay}</td>
                     <td>
-                        <input type="number" id="fee-${swimmer.id}" value="${currentFee}" min="0" step="0.01" style="width: 80px;" onchange="updateSwimmerFee('${swimmer.id}', this.value, ${month}, ${year})" ${isOly ? 'disabled' : ''}>
+                        <input type="number" id="fee-${swimmer.id}" value="${effectiveFee}" min="0" step="0.01" style="width: 80px;" onchange="updateSwimmerFee('${swimmer.id}', this.value, ${month}, ${year})" ${isOly ? 'disabled' : ''}>
                     </td>
                     <td>
                         <input type="number" id="discount-${swimmer.id}" value="${discount}" min="0" step="0.01" style="width: 80px;" onchange="updateSwimmerDiscount('${swimmer.id}', this.value, ${month}, ${year})" ${isOly ? 'disabled' : ''}>
                     </td>
+                    <td><strong>${finalFee.toFixed(2)}€</strong></td>
                     <td style="text-align: center;">
                         <input type="checkbox" id="oly-${swimmer.id}" ${isOly ? 'checked' : ''} ${canCheckOly ? '' : 'disabled'} onchange="updateSwimmerOly('${swimmer.id}', this.checked, ${month}, ${year})" style="cursor: pointer; width: 20px; height: 20px;">
                         ${!canCheckOly && !isOly ? '<span style="font-size: 10px; color: #999; display: block;">Max 15</span>' : ''}
                     </td>
                 </tr>
             `;
-        });
-        
+        }
+
+        if (rowCount === 0) {
+            elSwimmerFeesBox.innerHTML = `<p class="muted">Za ${monthLabel} v sezoni <strong>${escapeHtml(seasonName) || '—'}</strong> ni shranjenih pristojbin. Izberite trenutni ali prihodnji mesec, da nastavite privzete vadnine.</p>`;
+            return;
+        }
+
         html += `
-                    </tbody>
-                </table>
-            </div>
+                </tbody>
+            </table>
             <div style="margin-top: 10px; padding: 10px; background: #f0f0f0; border-radius: 6px;">
-                <strong>OLY opcija:</strong> Maksimalno 15 plavalcev lahko ima obkljukljeno OLY opcijo. 
-                Plavalci z OLY imajo znesek vadnine 0€, vendar mesečno prispevajo 40€. 
+                <strong>OLY opcija:</strong> Maksimalno 15 plavalcev lahko ima obkljukljeno OLY opcijo.
+                Plavalci z OLY imajo znesek vadnine 0€, vendar mesečno prispevajo 40€.
                 Trenutno: <strong>${olyCount}/15</strong> OLY plavalcev.
             </div>
         `;
-        
         elSwimmerFeesBox.innerHTML = html;
     }
 
@@ -8810,172 +8779,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             showMessage('Napaka pri shranjevanju urnih postavk!', 'error');
         }
-    }
-
-    // Posodobljena funkcija za osvežitev pristojbin plavalcev
-    async function refreshSwimmerFees() {
-        if (!elSwimmerFeesBox) return;
-        
-        const month = currentSwimmerFeesMonth;
-        const year = currentSwimmerFeesYear;
-        
-        if (!month || !year) {
-            elSwimmerFeesBox.innerHTML = '<p class="muted">Izberite mesec in leto za upravljanje pristojbin...</p>';
-            return;
-        }
-        
-        const swimmerFees = await getSwimmerFeesFromDB(month, year);
-        
-        // Preštej trenutno število OLY plavalcev za ta mesec
-        const activeSwimmers = swimmers.filter(s => !s.is_deleted);
-        let olyCount = 0;
-        activeSwimmers.forEach(swimmer => {
-            const feeData = swimmerFees[swimmer.id];
-            if (feeData && feeData.is_oly) {
-                olyCount++;
-            }
-        });
-        
-        let html = `
-            <table class="swimmer-fees-table">
-                <thead>
-                    <tr>
-                        <th>Plavalec</th>
-                        <th>Termini</th>
-                        <th>Mesečna vadnina (€)</th>
-                        <th>Popust (€)</th>
-                        <th>Končna vadnina (€)</th>
-                        <th>OLY</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
-        
-        // Sortiraj plavalce po abecedi po priimku, nato po imenu
-        // Filtrirati samo plavalce, ki imajo dodeljene termine
-        const sortedSwimmers = swimmers
-            .filter(swimmer => !swimmer.is_deleted && swimmer.terms && swimmer.terms.length > 0)
-            .sort((a, b) => {
-                const aName = `${a.last_name} ${a.first_name}`;
-                const bName = `${b.last_name} ${b.first_name}`;
-                return aName.localeCompare(bName, 'sl');
-            });
-        
-        // Preveri, ali je iskan mesec v preteklosti
-        const requestedDate = new Date(year, month - 1, 1);
-        const currentDate = new Date();
-        currentDate.setDate(1);
-        currentDate.setHours(0, 0, 0, 0);
-        const isPastMonth = requestedDate < currentDate;
-        
-        for (const swimmer of sortedSwimmers) {
-            
-            const feeData = swimmerFees[swimmer.id];
-            
-            // Če ni vadnine za tega plavalca
-            if (!feeData) {
-                // Za pretekle mesece: če ni vadnine, plavalec verjetno še ni bil dodan - ne prikaži
-                if (isPastMonth) {
-                    continue; // Preskoči tega plavalca - ne prikaži ga v tabeli
-                }
-                // Za sedanji/prihodnji mesec: uporabi privzeto vadnino
-                const defaultFeeData = { fee: 80, discount: 0, is_oly: false };
-                const effectiveFee = defaultFeeData.fee;
-                const finalFee = Math.max(0, effectiveFee - defaultFeeData.discount);
-                
-                // Uporabi defaultFeeData za prikaz...
-                const termLabels = (swimmer.terms || []).map(termId => {
-                    const term = TERMS.find(t => t.id === termId);
-                    return term ? term.label : termId;
-                }).join(', ');
-                
-                const termsDisplay = termLabels.trim() || 'Brez terminov';
-                
-                // Preveri OLY limit
-                const canCheckOly = olyCount < 15;
-                
-                // Obarvaj vrstice z 0€ vadnino z nežno pastelno rdečo barvo (razen če je OLY obkljukano)
-                // Vendar v tem primeru nimamo isOly, ker nimamo feeData, zato obarvaj samo če ni default fee 0
-                const rowStyle = (finalFee === 0 && effectiveFee !== 0) ? 'style="background-color: #ffe0e0;"' : '';
-                
-                html += `
-                    <tr ${rowStyle}>
-                        <td>${swimmer.first_name} ${swimmer.last_name}</td>
-                        <td>${termsDisplay}</td>
-                        <td>
-                            <input type="number" id="fee-${swimmer.id}" value="${effectiveFee}" min="0" step="0.01" style="width: 80px;" onchange="updateSwimmerFee('${swimmer.id}', this.value, ${month}, ${year})">
-                        </td>
-                        <td>
-                            <input type="number" id="discount-${swimmer.id}" value="${defaultFeeData.discount}" min="0" step="0.01" style="width: 80px;" onchange="updateSwimmerDiscount('${swimmer.id}', this.value, ${month}, ${year})">
-                        </td>
-                        <td><strong>${finalFee.toFixed(2)}€</strong></td>
-                        <td style="text-align: center;">
-                            <input type="checkbox" id="oly-${swimmer.id}" ${canCheckOly ? '' : 'disabled'} onchange="updateSwimmerOly('${swimmer.id}', this.checked, ${month}, ${year})" style="cursor: pointer; width: 20px; height: 20px;">
-                            ${!canCheckOly ? '<span style="font-size: 10px; color: #999; display: block;">Max 15</span>' : ''}
-                        </td>
-                    </tr>
-                `;
-                continue;
-            }
-            
-            const isOly = feeData.is_oly || false;
-            
-            // Če je OLY obkljukljeno, nastavi znesek vadnine na 0
-            const effectiveFee = isOly ? 0 : feeData.fee;
-            const finalFee = Math.max(0, effectiveFee - feeData.discount);
-            
-            const termLabels = (swimmer.terms || []).map(termId => {
-                const term = TERMS.find(t => t.id === termId);
-                return term ? term.label : termId;
-            }).join(', ');
-            
-            // Preveri, ali je checkbox OLY omogočen (maksimalno 15, ali če je že obkljukljen)
-            const canCheckOly = olyCount < 15 || isOly;
-            
-            // Obarvaj vrstice z 0€ vadnino z nežno pastelno rdečo barvo (razen če je OLY obkljukano)
-            const rowStyle = (finalFee === 0 && !isOly) ? 'style="background-color: #ffe0e0;"' : '';
-            
-            html += `
-                <tr ${rowStyle}>
-                    <td>${swimmer.first_name} ${swimmer.last_name}</td>
-                    <td>${termLabels || 'Brez terminov'}</td>
-                    <td>
-                        <input type="number" 
-                               value="${effectiveFee}" 
-                               min="0" 
-                               step="0.01" 
-                               style="width: 80px;"
-                               onchange="updateSwimmerFee('${swimmer.id}', this.value, ${month}, ${year})"
-                               ${isOly ? 'disabled' : ''}>
-                    </td>
-                    <td>
-                        <input type="number" 
-                               value="${feeData.discount}" 
-                               min="0" 
-                               step="0.01" 
-                               style="width: 80px;"
-                               onchange="updateSwimmerDiscount('${swimmer.id}', this.value, ${month}, ${year})"
-                               ${isOly ? 'disabled' : ''}>
-                    </td>
-                    <td><strong>${finalFee.toFixed(2)}€</strong></td>
-                    <td style="text-align: center;">
-                        <input type="checkbox" id="oly-${swimmer.id}" ${isOly ? 'checked' : ''} ${canCheckOly ? '' : 'disabled'} onchange="updateSwimmerOly('${swimmer.id}', this.checked, ${month}, ${year})" style="cursor: pointer; width: 20px; height: 20px;">
-                        ${!canCheckOly && !isOly ? '<span style="font-size: 10px; color: #999; display: block;">Max 15</span>' : ''}
-                    </td>
-                </tr>
-            `;
-        }
-        
-        html += `
-                </tbody>
-            </table>
-            <div style="margin-top: 10px; padding: 10px; background: #f0f0f0; border-radius: 6px;">
-                <strong>OLY opcija:</strong> Maksimalno 15 plavalcev lahko ima obkljukljeno OLY opcijo. 
-                Plavalci z OLY imajo znesek vadnine 0€, vendar mesečno prispevajo 40€. 
-                Trenutno: <strong>${olyCount}/15</strong> OLY plavalcev.
-            </div>
-        `;
-        elSwimmerFeesBox.innerHTML = html;
     }
 
     // Posodobljena funkcija za posodobitev pristojbine plavalca
