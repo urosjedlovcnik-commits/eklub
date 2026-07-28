@@ -844,64 +844,84 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ===== Navigacija med sekcijami =====
+    // ===== Navigacija med sekcijami (URL: admin.html#finance) =====
+    const ADMIN_SECTIONS = ['swimmers', 'terms', 'seasons', 'trainers', 'finance', 'csv', 'mailing'];
+
+    function getAdminSectionFromHash() {
+        const raw = (location.hash || '').replace(/^#/, '').trim().toLowerCase();
+        const section = raw.split(/[/?&]/)[0];
+        return ADMIN_SECTIONS.includes(section) ? section : null;
+    }
+
+    function setAdminSectionHash(section) {
+        if (!ADMIN_SECTIONS.includes(section)) return;
+        const next = `#${section}`;
+        if (location.hash === next) return;
+        history.replaceState(null, '', next);
+    }
+
+    function showAdminSection(section, options = {}) {
+        const { updateHash = true } = options;
+        if (!ADMIN_SECTIONS.includes(section)) section = 'swimmers';
+
+        const targetEl = document.getElementById(`${section}-section`);
+        if (!targetEl) return;
+
+        document.querySelectorAll('.admin-nav .btn').forEach(b => {
+            b.classList.toggle('active', b.getAttribute('data-section') === section);
+        });
+        document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+        targetEl.classList.add('active');
+        currentSection = section;
+
+        if (updateHash) setAdminSectionHash(section);
+
+        const seasonBar = document.getElementById('adminSeasonBar');
+        if (seasonBar) {
+            seasonBar.style.display = section === 'seasons' ? 'none' : 'flex';
+        }
+
+        if (section === 'seasons') {
+            renderSeasonsAdminList();
+            populateSeasonSelects();
+        }
+        if (section === 'terms') {
+            populateSeasonSelects();
+            const browseSel = document.getElementById('seasonTermsBrowseSelect');
+            renderSeasonTermsForSeason(browseSel ? browseSel.value : '');
+            updateTermList();
+        }
+        if (section === 'finance') {
+            setTimeout(() => {
+                refreshSwimmerFees();
+                refreshAccountingReportEditor();
+            }, 100);
+            setTimeout(async () => {
+                const status = await checkFeesStatus();
+                if (status.status === 'incomplete' && status.missingMonths.length > 0) {
+                    await copyPreviousMonthFees();
+                }
+            }, 500);
+        }
+    }
+
+    function applyAdminSectionFromHash() {
+        const fromHash = getAdminSectionFromHash();
+        showAdminSection(fromHash || currentSection || 'swimmers', { updateHash: !!fromHash });
+    }
+
     document.querySelectorAll('.admin-nav .btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            // Odstrani aktivno stanje iz vseh gumbov
-            document.querySelectorAll('.admin-nav .btn').forEach(b => b.classList.remove('active'));
-            // Doda aktivno stanje kliknjenemu gumbu
-            btn.classList.add('active');
-            
-            // Skrije vse sekcije
-            document.querySelectorAll('.admin-section').forEach(section => section.classList.remove('active'));
-            // Prikaže ustrezno sekcijo
-            const sectionId = btn.getAttribute('data-section') + '-section';
-            document.getElementById(sectionId).classList.add('active');
-            
-            // Posodobi trenutno sekcijo
-            currentSection = btn.getAttribute('data-section');
-
-            const seasonBar = document.getElementById('adminSeasonBar');
-            if (seasonBar) {
-                seasonBar.style.display = currentSection === 'seasons' ? 'none' : 'flex';
-            }
-            
-            if (currentSection === 'seasons') {
-                renderSeasonsAdminList();
-                populateSeasonSelects();
-            }
-            if (currentSection === 'terms') {
-                populateSeasonSelects();
-                const browseSel = document.getElementById('seasonTermsBrowseSelect');
-                renderSeasonTermsForSeason(browseSel ? browseSel.value : '');
-                updateTermList();
-            }
-
-            // Če je finance sekcija aktivna, avtomatsko osveži pristojbine plavalcev
-            if (currentSection === 'finance') {
-                // Nastavi trenutni mesec in leto za pristojbine
-                const currentDate = new Date();
-                const currentMonth = currentDate.getMonth();
-                const currentYear = currentDate.getFullYear();
-                
-                // Opomba: elSwimmerFeesMonthSelect in elSwimmerFeesYearSelect so bili zamenjani z navigacijskimi gumbi
-                // Vrednosti se sedaj upravljajo preko currentSwimmerFeesMonth in currentSwimmerFeesYear
-                
-                // Osveži pristojbine plavalcev
-                setTimeout(() => {
-                    refreshSwimmerFees();
-                    refreshAccountingReportEditor();
-                }, 100);
-                
-                // Preveri stanje vadnin in avtomatsko kopiraj, če je potrebno
-                setTimeout(async () => {
-                    const status = await checkFeesStatus();
-                    if (status.status === 'incomplete' && status.missingMonths.length > 0) {
-                        await copyPreviousMonthFees();
-                    }
-                }, 500);
-            }
+            const section = btn.getAttribute('data-section');
+            showAdminSection(section, { updateHash: true });
         });
+    });
+
+    window.addEventListener('hashchange', () => {
+        const fromHash = getAdminSectionFromHash();
+        if (fromHash && fromHash !== currentSection) {
+            showAdminSection(fromHash, { updateHash: false });
+        }
     });
 
     // ===== Nalaganje podatkov =====
@@ -1126,6 +1146,8 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
 // console.log('📊 Urne postavke trenerjev v bazi:', trainerRatesData);
             }
+
+            applyAdminSectionFromHash();
 
         } catch (error) {
             console.error('❌ Napaka pri nalaganju podatkov:', error);
@@ -7796,12 +7818,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const isSeedSeason = /2025\s*[\/\-]\s*26/i.test(season.name || '')
             || (season.date_from <= '2026-06-30' && season.date_to >= '2025-09-01');
         if (!isSeedSeason) return;
-        const ids = ACCOUNTING_REPORT_SEED_NAMES
+                const ids = ACCOUNTING_REPORT_SEED_NAMES
             .map(swimmerIdFromSeedName)
             .filter(id => {
                 if (!id) return false;
                 const s = swimmers.find(sw => sw.id === id);
-                return swimmerHasAssignedTerms(s);
+                return entityHasTermsInAdminSeason(s);
             });
         if (ids.length === 0) return;
         const rows = ids.map((swimmer_id, i) => ({
@@ -7827,7 +7849,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    /** Plavalci z zapisom vadnine v bazi za mesec, brez OLY */
+    function getAccountingReportSeason(month, year) {
+        const seasonId = getAdminSeasonFilterId();
+        if (seasonId) {
+            const fromFilter = seasons.find(s => s.id === seasonId);
+            if (fromFilter) return fromFilter;
+        }
+        return getSeasonForMonthYear(month, year);
+    }
+
+    /** Plavalci z zapisom vadnine v bazi za mesec, brez OLY — samo izbrana sezona */
     async function fetchAccountingReportFeeRows(month, year) {
         const { data, error } = await supabase
             .from('swimmer_monthly_fees')
@@ -7840,7 +7871,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (row.is_oly === true) return;
             const swimmer = swimmers.find(s => s.id === row.swimmer_id && !s.is_deleted);
             if (!swimmer) return;
-            if (!swimmerHasAssignedTerms(swimmer)) return;
+            if (!entityHasTermsInAdminSeason(swimmer)) return;
             const fee = parseFloat(row.monthly_fee || 0);
             const discount = parseFloat(row.discount || 0);
             const net = fee - discount;
@@ -7877,7 +7908,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function buildAccountingReportRows(month, year) {
-        const season = getSeasonForMonthYear(month, year);
+        const season = getAccountingReportSeason(month, year);
         const feeRows = await fetchAccountingReportFeeRows(month, year);
         if (!season) {
             return { season: null, rows: sortSwimmersAlpha(feeRows) };
@@ -7901,14 +7932,14 @@ document.addEventListener('DOMContentLoaded', () => {
         arr[index] = arr[next];
         arr[next] = tmp;
         accountingReportWorkingOrder = arr;
-        const season = getSeasonForMonthYear(currentAccountingReportMonth, currentAccountingReportYear);
+        const season = getAccountingReportSeason(currentAccountingReportMonth, currentAccountingReportYear);
         renderAccountingReportEditorTable(accountingReportWorkingOrder, season);
     }
 
     function sortAccountingReportAlphabetically() {
         if (!accountingReportWorkingOrder.length) return;
         accountingReportWorkingOrder = sortSwimmersAlpha(accountingReportWorkingOrder);
-        const season = getSeasonForMonthYear(currentAccountingReportMonth, currentAccountingReportYear);
+        const season = getAccountingReportSeason(currentAccountingReportMonth, currentAccountingReportYear);
         renderAccountingReportEditorTable(accountingReportWorkingOrder, season);
         showMessage('Vrstni red po abecedi (shrani gumb, če želite obdržati za sezono).', 'info');
     }
@@ -7917,7 +7948,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const box = document.getElementById('accountingReportEditorBox');
         if (!box) return;
         if (!rows.length) {
-            box.innerHTML = '<p class="muted">Za izbrani mesec ni plavalcev z zabeleženo vadnino (brez OLY) v tabeli pristojbin.</p>';
+            const seasonLabel = season?.name || getSeasonNameById(getAdminSeasonFilterId()) || 'izbrani sezoni';
+            box.innerHTML = `<p class="muted">Za izbrani mesec ni plavalcev z zabeleženo vadnino (brez OLY) v sezoni <strong>${escapeHtml(seasonLabel)}</strong>.</p>`;
             return;
         }
         let header = '';
@@ -7972,7 +8004,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function saveAccountingReportOrder() {
         const month = currentAccountingReportMonth;
         const year = currentAccountingReportYear;
-        const season = getSeasonForMonthYear(month, year);
+        const season = getAccountingReportSeason(month, year);
         if (!season) {
             showMessage('Ni sezone za izbrani mesec – vrstni red ni shranjen.', 'warning');
             return;
@@ -7982,7 +8014,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         const rows = accountingReportWorkingOrder
-            .filter(row => swimmerHasAssignedTerms(row.swimmer))
+            .filter(row => entityHasTermsInAdminSeason(row.swimmer))
             .map((row, i) => ({
             season_id: season.id,
             swimmer_id: row.swimmer.id,
