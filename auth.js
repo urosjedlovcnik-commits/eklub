@@ -1,111 +1,98 @@
-// Izboljšan avtentikacijski sistem
-// OPOMBA: V produkciji uporabi zunanji auth provider (Supabase Auth, Firebase Auth, itd.)
+// Admin avtentikacija prek strežniške API poti (geslo ni v kodi).
+// V Vercel nastavite: ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_SESSION_SECRET
 
 class AuthManager {
     constructor() {
-        this.adminCredentials = {
-            // V produkciji uporabi hash funkcije ali zunanji auth
-            'uros.jedlovcnik@gmail.com': this.hashPassword('PlavalnaSola2025!')
-        };
-        this.sessionDuration = CONFIG.ADMIN.SESSION_DURATION_DAYS * 24 * 60 * 60 * 1000; // v milisekundah
+        this.sessionKey = 'adminSession';
+        this.sessionDuration = CONFIG.ADMIN.SESSION_DURATION_DAYS * 24 * 60 * 60 * 1000;
     }
 
-    // Preprosta hash funkcija (v produkciji uporabi bcrypt ali podobno)
-    hashPassword(password) {
-        // TO NI VARNA HASH FUNKCIJA! Uporabi bcrypt v produkciji
-        let hash = 0;
-        for (let i = 0; i < password.length; i++) {
-            const char = password.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash; // Pretvori v 32bit integer
+    getStoredSession() {
+        try {
+            const raw = localStorage.getItem(this.sessionKey);
+            return raw ? JSON.parse(raw) : null;
+        } catch {
+            return null;
         }
-        return hash.toString();
     }
 
-    // Preveri admin credentials
-    validateAdmin(email, password) {
-        const hashedPassword = this.hashPassword(password);
-        return this.adminCredentials[email] === hashedPassword;
-    }
-
-    // Prijavi administratorja
-    loginAdmin(email, password) {
-        if (!this.validateAdmin(email, password)) {
-            throw new Error('Napačni prijavni podatki');
+    async loginAdmin(email, password) {
+        const res = await fetch('/api/admin-login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            throw new Error(data.error || 'Napačni prijavni podatki');
         }
 
         const loginData = {
-            email: email,
-            loginTime: Date.now(),
-            sessionId: this.generateSessionId()
+            email: data.email,
+            token: data.token,
+            loginTime: Date.now()
         };
-
-        localStorage.setItem('adminSession', JSON.stringify(loginData));
-        
+        localStorage.setItem(this.sessionKey, JSON.stringify(loginData));
         return loginData;
     }
 
-    // Generiraj session ID
-    generateSessionId() {
-        return Math.random().toString(36).substring(2) + Date.now().toString(36);
-    }
-
-    // Preveri, če je admin prijavljen
-    isAdminLoggedIn() {
+    async verifySessionRemote(session) {
+        if (!session?.token) return false;
         try {
-            const sessionData = localStorage.getItem('adminSession');
-            if (!sessionData) return false;
-
-            const session = JSON.parse(sessionData);
-            const now = Date.now();
-            const timeDiff = now - session.loginTime;
-
-            // Preveri, če je session potekel
-            if (timeDiff > this.sessionDuration) {
-                this.logoutAdmin();
-                return false;
-            }
-
-            // Preveri, če je email še vedno veljaven admin
-            if (!this.adminCredentials[session.email]) {
-                this.logoutAdmin();
-                return false;
-            }
-
-            return session;
-        } catch (error) {
-            this.logoutAdmin();
+            const res = await fetch('/api/admin-verify', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.token}`
+                },
+                body: JSON.stringify({ token: session.token })
+            });
+            if (!res.ok) return false;
+            const data = await res.json();
+            return data.valid === true;
+        } catch {
             return false;
         }
     }
 
-    // Odjavi administratorja
-    logoutAdmin() {
-        localStorage.removeItem('adminSession');
+    /** Sinhron preverjanje – ali obstaja shranjen žeton (uporabljaj ensureAuthenticated za dejansko validacijo). */
+    isAdminLoggedIn() {
+        const session = this.getStoredSession();
+        return session?.token ? session : false;
     }
 
-    // Pridobi trenutni admin email
+    /** Preveri žeton na strežniku; ob neveljavnem odjavi. */
+    async ensureAuthenticated() {
+        const session = this.getStoredSession();
+        if (!session?.token) return false;
+        const valid = await this.verifySessionRemote(session);
+        if (!valid) {
+            this.logoutAdmin();
+            return false;
+        }
+        return session;
+    }
+
+    logoutAdmin() {
+        localStorage.removeItem(this.sessionKey);
+    }
+
     getCurrentAdminEmail() {
         const session = this.isAdminLoggedIn();
         return session ? session.email : null;
     }
 
-    // Pridobi preostali čas sessiona
     getSessionTimeRemaining() {
-        const session = this.isAdminLoggedIn();
+        const session = this.getStoredSession();
         if (!session) return 0;
-
-        const elapsed = Date.now() - session.loginTime;
-        const remaining = this.sessionDuration - elapsed;
-        return Math.max(0, remaining);
+        const elapsed = Date.now() - (session.loginTime || 0);
+        return Math.max(0, this.sessionDuration - elapsed);
     }
 
-    // Pridobi preostale dni sessiona
     getSessionDaysRemaining() {
         const remainingMs = this.getSessionTimeRemaining();
         return Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
     }
 }
 
-// Ustvari globalno instanco
 window.authManager = new AuthManager();

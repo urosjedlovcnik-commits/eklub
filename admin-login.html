@@ -177,11 +177,9 @@
       const errorMessage = document.getElementById('errorMessage');
       
       // Preveri, če je uporabnik že prijavljen
-      const session = authManager.isAdminLoggedIn();
-      if (session) {
-        window.location.href = 'admin.html';
-        return;
-      }
+      authManager.ensureAuthenticated().then(session => {
+        if (session) window.location.href = 'admin.html';
+      });
       
       function showError(message) {
         errorMessage.textContent = message;
@@ -210,8 +208,7 @@
         setLoading(true);
         
         try {
-          // Uporabi novi auth sistem
-          authManager.loginAdmin(email, password);
+          await authManager.loginAdmin(email, password);
           window.location.href = 'admin.html';
         } catch (error) {
           showError(error.message);

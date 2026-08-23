@@ -60,12 +60,14 @@ FOR ALL TO anon USING (
 );
 ```
 
-### 2. **Spremeni admin geslo**
-V `auth.js` spremeni geslo iz `PlavalnaSola2025!` na močnejše:
-```javascript
-// Trenutno geslo: PlavalnaSola2025!
-// Spremeni na nekaj varnejšega!
-```
+### 2. **Admin geslo (Vercel okolje)**
+Geslo **ni več v kodi**. Nastavite v Vercel Dashboard → Settings → Environment Variables:
+
+- `ADMIN_EMAIL` — admin e-pošta
+- `ADMIN_PASSWORD` — geslo (isto kot prej, če želite)
+- `ADMIN_SESSION_SECRET` — naključen niz (min. 32 znakov)
+
+Glejte `.env.example` za predlogo.
 
 ### 3. **Uporabi HTTPS**
 - Nikoli ne uporabljaj HTTP v produkciji
@@ -129,5 +131,5 @@ const { user, error } = await supabase.auth.signInWithPassword({
 - ✅ Izboljšan auth sistem  
 - ✅ Čiščenje debug kode
 - ⚠️ **POTREBNO**: RLS v Supabase
-- ⚠️ **POTREBNO**: Močnejše geslo
+- ⚠️ **POTREBNO**: Nastavite ADMIN_* spremenljivke v Vercel
 - ⚠️ **POTREBNO**: HTTPS v produkciji

@@ -434,6 +434,16 @@
             <input type="checkbox" id="showSwimmersWithoutTerms">
             Prikaži tudi plavalce brez dodeljenega termina
           </label>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+            <label style="font-size:14px">Skupinsko — način plačila:</label>
+            <select id="bulkPaymentPlanSelect" style="font-size:14px;padding:6px 10px">
+              <option value="">— izberi —</option>
+              <option value="monthly">Mesečno</option>
+              <option value="lump_sum">Enkratno (oktober)</option>
+              <option value="two_installments">2 obroka (oktober + februar)</option>
+            </select>
+            <button type="button" class="btn pri" id="bulkApplyPaymentPlanBtn">Uporabi za vse v sezoni</button>
+          </div>
           <div id="swimmersList"></div>
         </div>
       </div>
@@ -825,6 +835,7 @@
               <br><strong>Članarina (30 €)</strong> se obračuna <strong>enkrat na sezono</strong> – v mesecu, ki ga imate odprtega. Obkljukajte vsem hkrati ali posamezno; kdor ni obkljukan, je ne plača.
               Plavalci z 0 € so označeni rdeče in v PDF niso vključeni.
             </p>
+            <div id="accountingReportSummary"></div>
             <div class="summary-controls" style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
               <button type="button" class="btn" id="prevAccountingReportMonthBtn" title="Prejšnji mesec">←</button>
               <div id="accountingReportMonthYearLabel" style="font-weight:bold;min-width:160px;text-align:center"></div>
