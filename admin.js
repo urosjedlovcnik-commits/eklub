@@ -281,11 +281,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function updateAdminSeasonContextLabels() {
-        const seasonName = getSeasonNameById(getAdminSeasonFilterId());
+        const seasonId = getAdminSeasonFilterId();
+        const seasonName = getSeasonNameById(seasonId);
         const label = seasonName ? `Velja za: ${seasonName}` : 'Izberite sezono v pasu zgoraj.';
         document.querySelectorAll('[data-season-context]').forEach(el => {
             el.textContent = label;
         });
+        const setupNote = document.getElementById('seasonSetupSeasonNote');
+        if (setupNote) {
+            setupNote.textContent = seasonName
+                ? `Sezona: ${seasonName} — enaka kot v pasu zgoraj.`
+                : 'Izberite sezono v pasu zgoraj.';
+        }
+        const pklBadge = document.querySelector('.pkl-fee-badge');
+        if (pklBadge) {
+            pklBadge.textContent = seasonName || 'Brez sezone';
+        }
     }
     
     // Funkcije za navigacijo skozi mesece
@@ -1303,6 +1314,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderTrainerRatesSettings();
         updateAdminSeasonContextLabels();
         updateAdminSeasonBarHint();
+        if (currentSection === 'seasons') {
+            renderSeasonSetupChecklist();
+        }
     }
 
     // ===== Navigacija med sekcijami (URL: admin.html#finance) =====
@@ -1353,7 +1367,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const seasonBar = document.getElementById('adminSeasonBar');
         if (seasonBar) {
-            seasonBar.style.display = section === 'seasons' ? 'none' : 'flex';
+            seasonBar.style.display = 'flex';
         }
         updateAdminSeasonContextLabels();
 
@@ -3194,10 +3208,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error(e);
             alert('Napaka pri posodabljanju sezone: ' + (e.message || e));
         }
-    });
-
-    document.getElementById('seasonSetupSelect')?.addEventListener('change', () => {
-        renderSeasonSetupChecklist();
     });
 
     document.getElementById('seasonSetupCard')?.addEventListener('click', e => {
@@ -7404,19 +7414,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (prev && seasons.some(s => s.id === prev)) browseSel.value = prev;
             renderSeasonTermsForSeason(browseSel.value || '');
         }
-        const setupSel = document.getElementById('seasonSetupSelect');
-        if (setupSel) {
-            const prev = setupSel.value;
-            setupSel.innerHTML = seasons.length
-                ? optHtml
-                : '<option value="">Ni sezon</option>';
-            if (prev && seasons.some(s => s.id === prev)) {
-                setupSel.value = prev;
-            } else {
-                const activeS = seasons.find(s => s.is_active);
-                setupSel.value = activeS ? activeS.id : (seasons[0]?.id || '');
-            }
-        }
     }
 
     /** Ročno označene kljukice priprave sezone: season_id → { item_id: bool } */
@@ -7554,12 +7551,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function renderSeasonSetupChecklist() {
         const box = document.getElementById('seasonSetupChecklist');
-        const sel = document.getElementById('seasonSetupSelect');
         if (!box) return;
 
-        const seasonId = sel?.value || '';
+        const seasonId = getAdminSeasonFilterId();
         if (!seasonId) {
-            box.innerHTML = '<p class="muted">Izberite sezono za prikaz checkliste.</p>';
+            box.innerHTML = '<p class="muted">Ni izbrane sezone — izberite sezono v pasu zgoraj.</p>';
             return;
         }
 

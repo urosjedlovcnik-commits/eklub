@@ -201,6 +201,157 @@
   border-color: #86efac;
 }
 
+/* PKL privzete vadnine */
+.pkl-fee-card {
+  border: 1px solid #bfdbfe;
+  overflow: hidden;
+}
+
+.pkl-fee-card > h3 {
+  display: none;
+}
+
+.pkl-fee-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-bottom: 1px solid #bfdbfe;
+}
+
+.pkl-fee-header h3 {
+  margin: 0;
+  font-size: 17px;
+  color: #1e3a8a;
+}
+
+.pkl-fee-badge {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1d4ed8;
+  background: #fff;
+  border: 1px solid #93c5fd;
+  border-radius: 999px;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+
+.pkl-fee-intro {
+  font-size: 13px;
+  color: #475569;
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+.pkl-fee-grid {
+  display: grid;
+  grid-template-columns: minmax(120px, 1.2fr) repeat(3, 1fr);
+  gap: 8px 10px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.pkl-fee-grid-head {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding-bottom: 4px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.pkl-fee-grid-head span:not(:first-child) {
+  text-align: center;
+}
+
+.pkl-fee-row-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.pkl-fee-input-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.pkl-fee-input-wrap input {
+  width: 72px;
+  padding: 7px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  text-align: right;
+  font-size: 14px;
+  background: #fff;
+}
+
+.pkl-fee-input-wrap input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.pkl-fee-input-wrap span {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.pkl-fee-membership {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+
+.pkl-fee-membership strong {
+  color: #166534;
+  font-size: 14px;
+}
+
+.pkl-fee-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+}
+
+.pkl-fee-footer a {
+  font-size: 13px;
+}
+
+@media (max-width: 720px) {
+  .pkl-fee-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .pkl-fee-grid-head span:first-child,
+  .pkl-fee-row-label {
+    grid-column: 1 / -1;
+  }
+}
+
+.season-setup-season-note {
+  font-size: 13px;
+  padding: 8px 12px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  color: #1e40af;
+}
+
 .admin-table-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -515,7 +666,7 @@
     <div class="admin-season-bar" id="adminSeasonBar">
       <label for="adminSeasonFilter">Sezona:</label>
       <select id="adminSeasonFilter"></select>
-      <span class="season-bar-hint" id="adminSeasonBarHint">Podatki na vseh zavihkih (razen Sezone) veljajo za izbrano sezono.</span>
+      <span class="season-bar-hint" id="adminSeasonBarHint">Podatki na vseh zavihkih veljajo za izbrano sezono.</span>
     </div>
   </div>
 
@@ -724,13 +875,9 @@
           <p class="muted" style="font-size:13px;margin-bottom:12px">
             Ob začetku nove sezone preverite osnovne nastavitve. Kljukice lahko označite ročno ali jih sistem predlaga glede na podatke v bazi.
           </p>
-          <div class="row" style="flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:8px">
-            <label>Sezona:
-              <select id="seasonSetupSelect" style="min-width:280px"></select>
-            </label>
-          </div>
+          <div id="seasonSetupSeasonNote" class="season-setup-season-note">Sezona: …</div>
           <div id="seasonSetupChecklist">
-            <p class="muted">Izberite sezono …</p>
+            <p class="muted">Nalaganje …</p>
           </div>
         </div>
       </div>
@@ -938,33 +1085,38 @@
           </div>
         </div>
 
-        <div class="card">
-          <h3>Privzete vadnine (PKL cenik)</h3>
+        <div class="card pkl-fee-card">
+          <div class="pkl-fee-header">
+            <h3>Privzete vadnine (PKL cenik)</h3>
+            <span class="pkl-fee-badge">Sezona 2026/27</span>
+          </div>
           <div class="inner">
-            <p class="muted" style="font-size:13px;margin-bottom:12px">
+            <p class="pkl-fee-intro">
               Privzete vrednosti za predloge in prazna polja — <strong>ne prepisujejo</strong> ročno vnesenih zneskov ali popustov po plavalcu.
-              Vir: <a href="https://www.plavalniklub-ljubljana.si/plavanje-odraslih/" target="_blank" rel="noopener">plavalniklub-ljubljana.si/plavanje-odraslih</a> (sezona 2026/27).
             </p>
-            <p style="font-size:13px;font-weight:600;margin-bottom:8px">Mesečno plačilo</p>
-            <div class="row" style="flex-wrap:wrap;gap:12px;margin-bottom:12px">
-              <label>1× tedensko <input type="number" id="defaultFeeMonthly1" min="0" step="0.01" style="width:80px;margin-left:6px"> €</label>
-              <label>2× tedensko <input type="number" id="defaultFeeMonthly2" min="0" step="0.01" style="width:80px;margin-left:6px"> €</label>
-              <label>3× tedensko <input type="number" id="defaultFeeMonthly3" min="0" step="0.01" style="width:80px;margin-left:6px"> €</label>
-              <label>Članarina <input type="number" id="defaultFeeMembership" min="0" step="0.01" style="width:80px;margin-left:6px"> €</label>
+            <div class="pkl-fee-grid">
+              <div class="pkl-fee-grid-head"><span>Termini / teden</span><span>Mesečno</span><span>Enkratno (9 m)</span><span>2 obroka</span></div>
+              <span class="pkl-fee-row-label">1×</span>
+              <div class="pkl-fee-input-wrap"><input type="number" id="defaultFeeMonthly1" min="0" step="0.01"><span>€</span></div>
+              <div class="pkl-fee-input-wrap"><input type="number" id="defaultFeeLump1" min="0" step="0.01"><span>€</span></div>
+              <div class="pkl-fee-input-wrap"><input type="number" id="defaultFeeInstallment1" min="0" step="0.01"><span>€</span></div>
+              <span class="pkl-fee-row-label">2×</span>
+              <div class="pkl-fee-input-wrap"><input type="number" id="defaultFeeMonthly2" min="0" step="0.01"><span>€</span></div>
+              <div class="pkl-fee-input-wrap"><input type="number" id="defaultFeeLump2" min="0" step="0.01"><span>€</span></div>
+              <div class="pkl-fee-input-wrap"><input type="number" id="defaultFeeInstallment2" min="0" step="0.01"><span>€</span></div>
+              <span class="pkl-fee-row-label">3×</span>
+              <div class="pkl-fee-input-wrap"><input type="number" id="defaultFeeMonthly3" min="0" step="0.01"><span>€</span></div>
+              <div class="pkl-fee-input-wrap"><input type="number" id="defaultFeeLump3" min="0" step="0.01"><span>€</span></div>
+              <div class="pkl-fee-input-wrap"><input type="number" id="defaultFeeInstallment3" min="0" step="0.01"><span>€</span></div>
             </div>
-            <p style="font-size:13px;font-weight:600;margin-bottom:8px">Enkratno (9 mesecev)</p>
-            <div class="row" style="flex-wrap:wrap;gap:12px;margin-bottom:12px">
-              <label>1× <input type="number" id="defaultFeeLump1" min="0" step="0.01" style="width:80px;margin-left:6px"> €</label>
-              <label>2× <input type="number" id="defaultFeeLump2" min="0" step="0.01" style="width:80px;margin-left:6px"> €</label>
-              <label>3× <input type="number" id="defaultFeeLump3" min="0" step="0.01" style="width:80px;margin-left:6px"> €</label>
+            <div class="pkl-fee-membership">
+              <strong>Letna članarina (enkrat na sezono)</strong>
+              <div class="pkl-fee-input-wrap"><input type="number" id="defaultFeeMembership" min="0" step="0.01"><span>€</span></div>
             </div>
-            <p style="font-size:13px;font-weight:600;margin-bottom:8px">2 obroka (oktober + februar)</p>
-            <div class="row" style="flex-wrap:wrap;gap:12px;margin-bottom:12px">
-              <label>1× <input type="number" id="defaultFeeInstallment1" min="0" step="0.01" style="width:80px;margin-left:6px"> € / obrok</label>
-              <label>2× <input type="number" id="defaultFeeInstallment2" min="0" step="0.01" style="width:80px;margin-left:6px"> € / obrok</label>
-              <label>3× <input type="number" id="defaultFeeInstallment3" min="0" step="0.01" style="width:80px;margin-left:6px"> € / obrok</label>
+            <div class="pkl-fee-footer">
+              <a href="https://www.plavalniklub-ljubljana.si/plavanje-odraslih/" target="_blank" rel="noopener">Vir: plavalniklub-ljubljana.si</a>
+              <button type="button" class="btn pri" id="saveDefaultFeeSettingsBtn">Shrani privzete vadnine</button>
             </div>
-            <button type="button" class="btn pri" id="saveDefaultFeeSettingsBtn">Shrani privzete vadnine</button>
           </div>
         </div>
 
