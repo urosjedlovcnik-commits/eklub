@@ -736,8 +736,11 @@
             <input type="checkbox" id="showSwimmersWithoutTerms">
             Prikaži tudi plavalce brez dodeljenega termina
           </label>
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-            <label style="font-size:14px">Skupinsko — način plačila:</label>
+          <div class="bulk-actions-box">
+            <strong>Skupinske akcije</strong>
+            <p class="muted" style="font-size:13px;margin:6px 0 10px">Velja za <strong>vse plavalce v izbrani sezoni</strong> (ne samo za tiste v iskanju spodaj).</p>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <label style="font-size:14px">Način plačila:</label>
             <select id="bulkPaymentPlanSelect" style="font-size:14px;padding:6px 10px">
               <option value="">— izberi —</option>
               <option value="monthly">Mesečno</option>
@@ -745,7 +748,8 @@
               <option value="two_installments">2 obroka (oktober + februar)</option>
             </select>
             <button type="button" class="btn pri" id="bulkApplyPaymentPlanBtn">Uporabi za vse v sezoni</button>
-            <button type="button" class="btn" id="bulkApplyMembershipBtn" title="Obračun v trenutnem mesecu Finance; posameznike odznačite v poročilu za računovodstvo">Skupinsko — članarina (30 €)</button>
+            <button type="button" class="btn" id="bulkApplyMembershipBtn" title="Obračun v trenutnem mesecu Finance; posameznike odznačite v poročilu za računovodstvo">Skupinsko — članarina</button>
+            </div>
           </div>
           <div style="margin-bottom:14px">
             <input type="search" id="swimmersTableSearchInput" placeholder="Išči v tabeli (ime, priimek, email, telefon)…" style="width:100%;max-width:420px;padding:8px 10px;border:1px solid var(--border);border-radius:8px">
@@ -755,7 +759,7 @@
       </div>
 
                   <div style="display: flex; gap: 20px; width: 100%; flex-wrap: wrap;">
-            <div class="card" style="flex: 1; min-width: 400px;">
+            <div class="card" style="flex: 1; min-width: min(100%, 320px);">
               <h3>Povzetek udeležbe plavalcev (za prikazani mesec)</h3>
               <div class="inner">
                 <div class="summary-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
@@ -768,11 +772,14 @@
                   <button class="btn" id="currentSwimmerSummaryMonthBtn" style="background: #007bff; color: white; padding: 8px 12px; cursor: pointer;" title="Pojdi na trenutni mesec">Trenutni mesec</button>
                   <input type="month" id="swimmerSummaryMonthYearInput" style="display: none;">
                 </div>
+          <p style="margin-top: 8px;">
+            <a href="index.html" class="btn" style="font-size:13px">Odpri koledar za vnos prisotnosti →</a>
+          </p>
                 <div id="swimmerSummaryBox">Nalaganje podatkov...</div>
               </div>
             </div>
 
-            <div class="card" style="flex: 1; min-width: 400px;">
+            <div class="card" style="flex: 1; min-width: min(100%, 320px);">
               <h3>Povzetek udeležbe OLY plavalcev (za prikazani mesec)</h3>
               <div class="inner">
                 <div class="summary-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
@@ -886,10 +893,11 @@
         </div>
       </div>
       <div class="card" id="seasonSetupCard">
-        <h3>Priprava sezone — checklist</h3>
+        <h3>Priprava sezone — voden korak za korakom</h3>
         <div class="inner">
           <p class="muted" style="font-size:13px;margin-bottom:12px">
-            Ob začetku nove sezone preverite osnovne nastavitve. Kljukice lahko označite ročno ali jih sistem predlaga glede na podatke v bazi.
+            Ob začetku nove sezone sledite vrstnemu redu spodaj. Kljukice lahko označite ročno ali jih sistem predlaga glede na podatke v bazi.
+            Po kopiranju terminov ne pozabite dodeliti plavalcev in trenerjev (to se ne prenese samodejno).
           </p>
           <div id="seasonSetupSeasonNote" class="season-setup-season-note">Sezona: …</div>
           <div id="seasonSetupChecklist">
@@ -897,7 +905,7 @@
           </div>
         </div>
       </div>
-      <div class="card">
+      <div class="card" id="copyTermsCard">
         <h3>Kopiraj termine v drugo sezono</h3>
         <div class="inner">
           <p class="muted" style="font-size:13px;margin-bottom:12px">Ustvari nove termine z novimi ID-ji, enakim dnem in uro, datuma od/do iz <strong>ciljne</strong> sezone. Plavalci in trenerji <strong>se ne</strong> prenesejo.</p>
@@ -1043,10 +1051,18 @@
   <!-- Sekcija za Finance -->
   <div class="admin-section" id="finance-section">
     <p class="admin-tab-season-context" data-season-context></p>
+    <nav class="finance-toc" aria-label="Finance navigacija">
+      <a href="#finance-overview">Pregled</a>
+      <a href="#finance-prices">Cenik</a>
+      <a href="#finance-trainer-rates">Trenerji</a>
+      <a href="#finance-copy-fees">Kopiranje</a>
+      <a href="#finance-swimmer-fees">Vadnine</a>
+      <a href="#finance-accounting">Računovodstvo</a>
+    </nav>
     <div class="grid">
       <!-- Glavni del strani (leva stran) -->
       <div class="main-content">
-        <div class="card">
+        <div class="card" id="finance-overview">
           <h3>Mesečna vadnina - Pregled stroškov</h3>
           <div class="inner">
             <p class="muted" style="font-size:13px;margin-bottom:12px">En mesec velja za celoten zavihek Finance (vadnine, trenerji, računovodstvo …).</p>
@@ -1065,7 +1081,7 @@
           </div>
         </div>
 
-        <div class="card">
+        <div class="card" id="finance-prices">
           <h3>Nastavitve cen</h3>
           <div class="inner">
             <div class="row">
@@ -1077,7 +1093,7 @@
           </div>
         </div>
 
-        <div class="card pkl-fee-card">
+        <div class="card pkl-fee-card" id="finance-pkl">
           <div class="pkl-fee-header">
             <h3>Privzete vadnine (PKL cenik)</h3>
             <span class="pkl-fee-badge">Sezona 2026/27</span>
@@ -1129,7 +1145,7 @@
           </div>
         </div>
 
-        <div class="card">
+        <div class="card" id="finance-trainer-rates">
           <h3>Nastavitve postavk trenerjev (na termin)</h3>
           <div class="inner">
             <div class="summary-controls finance-sub-month-nav" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
@@ -1156,7 +1172,7 @@
           </div>
         </div>
 
-        <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+        <div class="card" id="finance-copy-fees" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
           <h3 style="color: white;">🔄 Kopiranje vadnin iz prejšnega meseca</h3>
           <div class="inner">
             <p style="margin-bottom: 15px; color: #e8e8e8;">
@@ -1179,7 +1195,7 @@
           </div>
         </div>
 
-        <div class="card">
+        <div class="card" id="finance-swimmer-fees">
           <h3>Upravljanje mesečnih pristojbin plavalcev</h3>
           <div class="inner">
             <div class="summary-controls finance-sub-month-nav" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
@@ -1199,7 +1215,7 @@
           </div>
         </div>
 
-        <div class="card">
+        <div class="card" id="finance-accounting">
           <h3>Poročilo za računovodstvo (mesečni seznam vadnin)</h3>
           <div class="inner">
             <p class="muted" style="font-size:13px;margin-bottom:12px">

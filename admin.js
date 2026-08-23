@@ -3221,7 +3221,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('seasonSetupCard')?.addEventListener('click', e => {
         const btn = e.target.closest('[data-goto-section]');
-        if (btn) showAdminSection(btn.getAttribute('data-goto-section'), { updateHash: true });
+        if (!btn) return;
+        const section = btn.getAttribute('data-goto-section');
+        const scrollTo = btn.getAttribute('data-scroll-to');
+        showAdminSection(section, { updateHash: true });
+        if (scrollTo) {
+            setTimeout(() => {
+                document.getElementById(scrollTo)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 80);
+        }
     });
 
     document.getElementById('seasons-section')?.addEventListener('click', async e => {
@@ -7429,32 +7437,57 @@ document.addEventListener('DOMContentLoaded', async () => {
     const SEASON_SETUP_STORAGE_KEY = 'eklub_season_setup_checks';
     const SEASON_SETUP_ITEMS = [
         {
+            id: 'copy_terms',
+            label: '1. Kopiraj / preveri termine',
+            detail: 'V ciljni sezoni morajo obstajati termini (kopiraj iz prejšnje sezone ali dodaj ročno)',
+            linkSection: 'seasons',
+            linkLabel: 'Sezone → Kopiraj termine',
+            scrollTo: 'copyTermsCard'
+        },
+        {
+            id: 'assign_swimmers',
+            label: '2. Dodeli plavalce na termine',
+            detail: 'Vsak aktiven plavalec v sezoni naj ima vsaj en termin',
+            linkSection: 'swimmers',
+            linkLabel: 'Plavalci → Dodeli termine'
+        },
+        {
+            id: 'assign_trainers',
+            label: '3. Dodeli trenerje na termine',
+            detail: 'Trenerji naj imajo dodeljene jutranje / večerne termine',
+            linkSection: 'trainers',
+            linkLabel: 'Trenerji → Dodeli termine'
+        },
+        {
             id: 'payment_plans',
-            label: 'Načini plačila',
+            label: '4. Načini plačila',
             detail: 'Mesečno / enkratno (oktober) / 2 obroka (okt. + feb.)',
             linkSection: 'swimmers',
             linkLabel: 'Plavalci'
         },
         {
             id: 'fee_amounts',
-            label: 'Zneski vadnin po terminih',
+            label: '5. Zneski vadnin po terminih',
             detail: `${formatDefaultFeesSummary()} — pri kopiranju in praznih poljih; popuste vnesite ročno`,
             linkSection: 'finance',
-            linkLabel: 'Finance → Vadnine'
+            linkLabel: 'Finance → Vadnine',
+            scrollTo: 'finance-swimmer-fees'
         },
         {
             id: 'membership',
-            label: 'Članarina (30 €)',
+            label: '6. Članarina',
             detail: 'Mesec obračuna za vsakega plavalca (enkrat na sezono)',
             linkSection: 'finance',
-            linkLabel: 'Finance → Računovodstvo'
+            linkLabel: 'Finance → Računovodstvo',
+            scrollTo: 'finance-accounting'
         },
         {
             id: 'report_order',
-            label: 'Vrstni red poročila za računovodstvo',
+            label: '7. Vrstni red poročila za računovodstvo',
             detail: 'Shrani vrstni red v poročilu za računovodstvo',
             linkSection: 'finance',
-            linkLabel: 'Finance → Računovodstvo'
+            linkLabel: 'Finance → Računovodstvo',
+            scrollTo: 'finance-accounting'
         }
     ];
 
@@ -7501,10 +7534,53 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (n === 0) {
             SEASON_SETUP_ITEMS.forEach(item => {
-                result[item.id] = { ok: false, hint: 'Ni plavalcev z dodeljenimi termini v tej sezoni.' };
+                if (item.id === 'copy_terms') {
+                    const termCount = TERMS.filter(t => t.season_id === seasonId).length;
+                    result[item.id] = {
+                        ok: termCount > 0,
+                        hint: termCount > 0
+                            ? `${termCount} terminov v sezoni.`
+                            : 'Še ni terminov — kopirajte iz prejšnje sezone ali jih dodajte.'
+                    };
+                } else if (item.id === 'assign_trainers') {
+                    result[item.id] = { ok: false, hint: 'Najprej dodelite plavalce na termine sezone.' };
+                } else {
+                    result[item.id] = { ok: false, hint: 'Ni plavalcev z dodeljenimi termini v tej sezoni.' };
+                }
             });
             return result;
         }
+
+        const termCount = TERMS.filter(t => t.season_id === seasonId).length;
+        result.copy_terms = {
+            ok: termCount > 0,
+            hint: termCount > 0
+                ? `${termCount} terminov v sezoni.`
+                : 'Še ni terminov — kopirajte iz prejšnje sezone.'
+        };
+
+        result.assign_swimmers = {
+            ok: n > 0,
+            hint: `${n} plavalcev z vsaj enim terminom v sezoni.`
+        };
+
+        let trainersWithTerms = 0;
+        try {
+            const seasonTermIds = TERMS.filter(t => t.season_id === seasonId).map(t => t.id);
+            if (seasonTermIds.length > 0) {
+                const { data: tt } = await supabase
+                    .from('trainer_terms')
+                    .select('trainer_id')
+                    .in('term_id', seasonTermIds);
+                trainersWithTerms = new Set((tt || []).map(r => r.trainer_id)).size;
+            }
+        } catch (_) { /* ignore */ }
+        result.assign_trainers = {
+            ok: trainersWithTerms > 0,
+            hint: trainersWithTerms > 0
+                ? `${trainersWithTerms} trenerjev ima dodeljene termine sezone.`
+                : 'Nobeden trener še nima termina v tej sezoni.'
+        };
 
         const withBillingRecord = inSeason.filter(s => !!swimmerSeasonBilling[`${s.id}|${seasonId}`]).length;
         result.payment_plans = {
@@ -7593,7 +7669,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <span class="muted" style="font-size:12px">${escapeHtml(item.detail)}</span><br>
                             <span style="font-size:12px">${autoBadge} — ${escapeHtml(st.hint || '')}</span><br>
                             <button type="button" class="btn" style="margin-top:6px;padding:2px 8px;font-size:12px"
-                                    data-goto-section="${item.linkSection}">${escapeHtml(item.linkLabel)} →</button>
+                                    data-goto-section="${item.linkSection}"
+                                    data-scroll-to="${item.scrollTo || ''}">${escapeHtml(item.linkLabel)} →</button>
                         </span>
                     </label>
                 </div>`;

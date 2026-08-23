@@ -80,7 +80,9 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
 .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center;padding:18px;z-index:100}
 .modal .box{background:#fff;border:1px solid var(--border);border-radius:12px;max-width:680px;width:100%;box-shadow:0 10px 30px rgba(0,0,0,.15); position:fixed; top:10%; left:50%; transform:translate(-50%, 0); max-height:80vh; overflow:hidden; display:flex; flex-direction:column;}
 .modal .box-header{display:flex;align-items:center;justify-content:space-between;padding:12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px; flex-shrink:0;}
-.modal .box-body{padding:12px; overflow-y:auto; flex:1;}
+.modal .box-body{padding:12px; overflow-y:auto; flex:1; position:relative}
+.modal .box-body.is-loading{pointer-events:none; opacity:.55}
+.modal .box-body.is-loading::after{content:'Nalaganje …';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:600;color:#475569;background:rgba(255,255,255,.65);z-index:2}
 .chips{display:flex;gap:10px; flex-wrap:wrap; margin-bottom: 12px;}
 .chip {
   display: inline-flex;
@@ -677,5 +679,75 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   
   #finance-section .sidebar {
     position: static;
+  }
+}
+
+.finance-toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  position: sticky;
+  top: 8px;
+  z-index: 20;
+}
+
+.finance-toc a {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1d4ed8;
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #bfdbfe;
+}
+
+.finance-toc a:hover {
+  background: #eff6ff;
+}
+
+.bulk-actions-box {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+}
+
+#finance-overview,
+#finance-prices,
+#finance-trainer-rates,
+#finance-copy-fees,
+#finance-swimmer-fees,
+#finance-accounting,
+#finance-pkl {
+  scroll-margin-top: 64px;
+}
+
+@media (max-width: 768px) {
+  .finance-toc {
+    position: static;
+    gap: 6px;
+  }
+  .finance-toc a {
+    font-size: 12px;
+    padding: 5px 8px;
+  }
+  .auth-bar-actions .btn {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+  .summary-controls {
+    flex-wrap: wrap !important;
+    justify-content: center;
+  }
+  .admin-table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }

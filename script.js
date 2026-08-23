@@ -77,6 +77,23 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===== Pomožne funkcije =====
     let modalUnassignedSwimmers = [];
 
+    function showToast(message, type = 'info') {
+      const el = document.createElement('div');
+      el.className = `message message-${type}`;
+      el.textContent = message;
+      document.body.appendChild(el);
+      setTimeout(() => {
+        if (el.parentNode) el.parentNode.removeChild(el);
+      }, 4000);
+    }
+
+    function setEventModalLoading(loading) {
+      if (!elModal) return;
+      const body = elModal.querySelector('.box-body');
+      if (!body) return;
+      body.classList.toggle('is-loading', !!loading);
+    }
+
     function swimmerDisplayName(s) {
         return `${s.first_name} ${s.last_name}`.trim();
     }
@@ -412,10 +429,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Če je RLS napaka, prikaži uporabniku razumljivo sporočilo
             if (error.code === '42501') {
-              alert('⚠️ Varnostna napaka: RLS policy za trainer_attendance ni pravilno nastavljen.\n\nProblem bo rešen s strani administratorja.');
+              showToast('Varnostna napaka RLS pri prisotnosti trenerja. Kontaktirajte administratorja.', 'error');
               console.error('RLS Policy napaka - potrebno nastaviti policy za trainer_attendance tabelo');
             } else {
-              alert('Napaka pri shranjevanju prisotnosti trenerja: ' + error.message);
+              showToast('Napaka pri shranjevanju prisotnosti trenerja.', 'error');
             }
             
             // Kljub napaki posodobi lokalno stanje, da se UI pravilno prikaže
@@ -431,7 +448,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         } catch (error) {
           console.error('Napaka pri posodabljanju prisotnosti trenerja:', error);
-          alert('Nepričakovana napaka pri shranjevanju. Preverite internetno povezavo.');
+          showToast('Nepričakovana napaka pri shranjevanju. Preverite povezavo.', 'error');
         }
       }
     }
@@ -878,10 +895,15 @@ document.addEventListener('DOMContentLoaded', () => {
           day.appendChild(e);
         });
 
-        // Event delegation za boljšo performanco
+        // Event delegation: klik na konkreten termin odpre ta termin; klik na celico z več termini odpre izbirnik
         if (todays.length > 0) {
           day.addEventListener("click", (e) => {
             e.stopPropagation();
+            const eventEl = e.target.closest('.event');
+            if (eventEl?.dataset?.termId) {
+              openEvent(date, eventEl.dataset.termId);
+              return;
+            }
             if (todays.length === 1) {
               openEvent(date, todays[0].id);
             } else {
@@ -1017,11 +1039,23 @@ document.addEventListener('DOMContentLoaded', () => {
       if (elToggleEventBtn) {
         elToggleEventBtn.style.display = trainerAuth?.permissions?.canAccessAdmin ? '' : 'none';
       }
+
+      const tPreview = termById(termId) || ALL_TERMS.find(x => x.id === termId);
+      elModalTitle.textContent = tPreview?.label || 'Trening';
+      elModalMeta.innerHTML = `<span class="chip">Nalaganje …</span>`;
+      openModal(elModal);
+      setEventModalLoading(true);
       
+      try {
       // Osveži podatke za ta dan, da zagotovimo, da imamo najnovejše podatke iz baze
       await refreshDayData(date);
       
-      const t = termById(termId);
+      const t = termById(termId) || tPreview;
+      if (!t) {
+        showToast('Termin ni bil najden.', 'error');
+        closeModal(elModal);
+        return;
+      }
       elModalTitle.textContent = `${t.label}`;
       elModalMeta.innerHTML = `
         <span class="chip">${formatDate(iso(date))}</span>
@@ -1040,6 +1074,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       if (error) {
           console.error('Napaka pri nalaganju prisotnosti:', error);
+          showToast('Napaka pri nalaganju prisotnosti.', 'error');
           return;
       }
       
@@ -1865,10 +1900,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (error) {
           console.error("Napaka pri shranjevanju zapiska:", error);
-          alert("Napaka pri shranjevanju zapiska. Preverite konzolo.");
+          showToast("Napaka pri shranjevanju zapiska.", "error");
         } else {
           await refreshDayData(date);
-          alert("Zapisek shranjen!");
+          showToast("Zapisek shranjen.", "success");
         }
       };
       
@@ -1885,18 +1920,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 .upsert({ date: ymd, term_id: termId, status: "active", note: null }, { onConflict: ['date', 'term_id'] });
             if (error) {
                 console.error('Napaka pri aktiviranju statusa:', error);
-                alert('Napaka pri aktivaciji. Preverite konzolo.');
+                showToast('Napaka pri aktivaciji.', 'error');
                 return;
             }
-            await refreshModalData(date, termId);
+            await refreshDayData(date);
+            await openEvent(date, termId);
             renderMonth();
         }
       };
 
+      } finally {
+        setEventModalLoading(false);
+      }
+    }
+
+    if (elConfirmNoteBtn && !elConfirmNoteBtn.dataset.bound) {
+      elConfirmNoteBtn.dataset.bound = '1';
       elConfirmNoteBtn.onclick = async () => {
         const note = elNoteInput.value.trim();
         if (!note) {
-          alert("Prosim, vnesite opombo pred potrditvijo.");
+          showToast("Vnesite opombo pred potrditvijo.", "warning");
           return;
         }
         
@@ -1909,7 +1952,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (error) {
           console.error('Napaka pri posodabljanju statusa:', error);
-          alert('Napaka pri deaktivaciji. Preverite konzolo.');
+          showToast('Napaka pri deaktivaciji.', 'error');
           return;
         }
 
@@ -1918,18 +1961,25 @@ document.addEventListener('DOMContentLoaded', () => {
         await openEvent(modalCtx.date, modalCtx.termId);
         renderMonth();
       };
+    }
 
+    if (elCancelNoteBtn && !elCancelNoteBtn.dataset.bound) {
+      elCancelNoteBtn.dataset.bound = '1';
       elCancelNoteBtn.onclick = () => { closeModal(elNoteModal); };
+    }
 
+    if (elCloseNoteModalBtn && !elCloseNoteModalBtn.dataset.bound) {
+      elCloseNoteModalBtn.dataset.bound = '1';
       elCloseNoteModalBtn.onclick = () => { closeModal(elNoteModal); };
+    }
 
+    if (elNoteModal && !elNoteModal.dataset.bound) {
+      elNoteModal.dataset.bound = '1';
       elNoteModal.addEventListener("click", (e) => {
         if (e.target === elNoteModal) {
           closeModal(elNoteModal);
         }
       });
-
-      openModal(elModal);
     }
     
     function openModal(modalEl){ modalEl.style.display = "flex"; modalEl.setAttribute("aria-hidden", "false"); }
@@ -1967,7 +2017,7 @@ document.addEventListener('DOMContentLoaded', () => {
           
           if (attendanceError) {
             console.error('Napaka pri brisanju prisotnosti plavalcev:', attendanceError);
-            alert('Napaka pri brisanju prisotnosti plavalcev: ' + attendanceError.message);
+            showToast('Napaka pri brisanju prisotnosti plavalcev.', 'error');
             return;
           }
           
@@ -1980,7 +2030,7 @@ document.addEventListener('DOMContentLoaded', () => {
           
           if (trainerAttendanceError) {
             console.error('Napaka pri brisanju prisotnosti trenerjev:', trainerAttendanceError);
-            alert('Napaka pri brisanju prisotnosti trenerjev: ' + trainerAttendanceError.message);
+            showToast('Napaka pri brisanju prisotnosti trenerjev.', 'error');
             return;
           }
           
@@ -2000,11 +2050,11 @@ document.addEventListener('DOMContentLoaded', () => {
           await refreshModalData(modalCtx.date, modalCtx.termId);
           renderMonth();
           
-          alert('Prisotnost je bila uspešno ponastavljena!');
+          showToast('Prisotnost je bila uspešno ponastavljena.', 'success');
           
         } catch (error) {
           console.error('Napaka pri ponastavitvi prisotnosti:', error);
-          alert('Napaka pri ponastavitvi prisotnosti: ' + error.message);
+          showToast('Napaka pri ponastavitvi prisotnosti.', 'error');
         }
       });
     }
@@ -2038,11 +2088,13 @@ document.addEventListener('DOMContentLoaded', () => {
         .upsert({ date: ymd, term_id: modalCtx.termId, swimmer_id: swimmer.id, status: true }, { onConflict: ['date', 'term_id', 'swimmer_id'] });
       
       if (error) { 
-        console.error('Napaka pri dodajanju plavalca v trening:', error); 
+        console.error('Napaka pri dodajanju plavalca v trening:', error);
+        showToast('Napaka pri dodajanju v nadomeščanje.', 'error');
       } else {
         await refreshDayData(modalCtx.date);
         openEvent(modalCtx.date, modalCtx.termId);
         renderMonth();
+        showToast('Plavalec dodan v nadomeščanje.', 'success');
       }
     });
 
@@ -2395,7 +2447,7 @@ document.addEventListener('DOMContentLoaded', () => {
           await refreshModalData(new Date(date), termId);
           hideTrainerNotesSection();
         } else {
-          alert('Prosim izberite nadomestnega trenerja iz sistema ali vnesite ime novega trenerja');
+          showToast('Izberite nadomestnega trenerja ali vnesite ime.', 'warning');
         }
       });
     }
