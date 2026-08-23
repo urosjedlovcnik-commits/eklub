@@ -2146,8 +2146,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadAllData() {
-      // Naloži vse podatke
-      await Promise.all([loadTerms(), loadSwimmers(), loadSwimmerTermAssignments(), loadTrainers(), loadAttendance(), loadTrainerAttendance(), loadTermStatus()]);
+      try {
+        await Promise.all([loadTerms(), loadSwimmers(), loadSwimmerTermAssignments(), loadTrainers(), loadAttendance(), loadTrainerAttendance(), loadTermStatus()]);
+      } catch (err) {
+        console.error('Napaka pri nalaganju podatkov koledarja:', err);
+      }
       
       // Počisti cache ob osvežitvi podatkov
       clearCache();
