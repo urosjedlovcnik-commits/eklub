@@ -1,0 +1,17 @@
+---
+description: Po končanih spremembah vedno commit in push na GitHub (main).
+alwaysApply: true
+---
+
+# Samodejni push na GitHub
+
+Ko dokončaš smiselne spremembe v tem projektu (ne le raziskovanje ali odgovor na vprašanje):
+
+1. Preveri `git status` in diff.
+2. Ustvari commit s kratkim sporočilom v slovenščini (kaj in zakaj).
+3. **Vedno** pošlji na `origin main` (`git push origin main`), razen če uporabnik eksplicitno reče, da ne.
+4. Uporabniku sporoči commit hash in repo URL.
+
+Ne commitaj `.env`, gesel ali drugih občutljivih datotek.
+
+Če commit ne uspe (npr. manjkajoč git identitet), uporabi inline `-c user.name` / `-c user.email` iz zgodovine repozitorija — ne spreminjaj globalnega git config.
