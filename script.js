@@ -46,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const elModalTitle = document.getElementById("modalTitle");
     const elModalMeta = document.getElementById("modalMeta");
     const elAttendanceTable = document.getElementById("attendanceTable").querySelector("tbody");
+    const elMarkAllPresentBtn = document.getElementById("markAllPresentBtn");
     const elTrainerAttendanceTable = document.getElementById("trainerAttendanceTable").querySelector("tbody");
     const elSubstitutionTable = document.getElementById("substitutionTable").querySelector("tbody");
     const elToggleEventBtn = document.getElementById("toggleEventBtn");
@@ -1877,6 +1878,48 @@ document.addEventListener('DOMContentLoaded', () => {
         .filter(s => isSwimmerEnrolledInSeason(s, seasonId, date))
         .sort((a,b)=> (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name));
       fillModalSwimmerPicker(unassigned);
+
+      if (elMarkAllPresentBtn) {
+        elMarkAllPresentBtn.disabled = isInactive(date, termId) || regularSwimmers.length === 0;
+        elMarkAllPresentBtn.onclick = async () => {
+          if (isInactive(date, termId)) return;
+          const targets = regularSwimmers.filter(s => termAtt[s.id] !== true);
+          if (targets.length === 0) {
+            showToast('Vsi redni plavalci so že označeni kot prisotni.', 'info');
+            return;
+          }
+          if (!confirm(`Označim vse redne plavalce (${targets.length}) kot prisotne?`)) return;
+
+          elMarkAllPresentBtn.disabled = true;
+          const rows = targets.map(s => ({
+            date: ymd,
+            term_id: termId,
+            swimmer_id: s.id,
+            status: true
+          }));
+
+          if (!attendance[ymd]) attendance[ymd] = {};
+          if (!attendance[ymd][termId]) attendance[ymd][termId] = {};
+          targets.forEach(s => { attendance[ymd][termId][s.id] = true; });
+
+          const { error } = await supabase
+            .from('attendance')
+            .upsert(rows, { onConflict: ['date', 'term_id', 'swimmer_id'] });
+
+          if (error) {
+            console.error('Napaka pri skupinski prisotnosti:', error);
+            showToast('Napaka pri označevanju vseh prisotnih.', 'error');
+            await refreshDayData(date);
+            await openEvent(date, termId);
+            return;
+          }
+
+          showToast(`Označenih ${targets.length} plavalcev kot prisotnih.`, 'success');
+          clearAttendanceCacheForTerm(date, termId);
+          await openEvent(date, termId);
+          renderMonth();
+        };
+      }
 
       const termStatusObj = getTermStatus(date, termId);
       if (termStatusObj.status === "inactive") {

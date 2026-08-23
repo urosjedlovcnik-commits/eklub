@@ -291,6 +291,9 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   color: white;
 }
 
+.attendance-header-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.attendance-header-row h4{margin:0}
+
 .notes-section label {
   display: block;
   margin-bottom: 4px;

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Navodila za učitelje — eKlub</title>
+  <style>
+    :root { --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --blue:#2563eb; --ok:#16a34a; --bg:#f8fafc; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color:var(--ink); background:var(--bg); line-height:1.45; }
+    .page { max-width:720px; margin:0 auto; padding:24px 18px 40px; }
+    h1 { font-size:1.5rem; margin:0 0 6px; }
+    .sub { color:var(--muted); margin:0 0 20px; font-size:.95rem; }
+    h2 { font-size:1.05rem; margin:22px 0 8px; border-bottom:1px solid var(--line); padding-bottom:4px; }
+    ol, ul { margin:0 0 12px; padding-left:1.25rem; }
+    li { margin:4px 0; }
+    .card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin:12px 0; }
+    .tip { background:#eff6ff; border-color:#bfdbfe; }
+    .warn { background:#fff7ed; border-color:#fed7aa; }
+    code, .url { background:#f1f5f9; padding:2px 6px; border-radius:4px; font-size:.9em; }
+    a { color:var(--blue); }
+    .steps { counter-reset: step; list-style:none; padding:0; }
+    .steps li { counter-increment: step; position:relative; padding-left:2.2rem; margin:10px 0; }
+    .steps li::before { content:counter(step); position:absolute; left:0; top:0; width:1.5rem; height:1.5rem; border-radius:999px; background:var(--blue); color:#fff; font-size:.8rem; font-weight:700; display:flex; align-items:center; justify-content:center; }
+    .colors span { display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:6px; vertical-align:middle; }
+    .c-red { background:#ef4444; } .c-orange { background:#f59e0b; } .c-green { background:#22c55e; }
+    .footer { margin-top:28px; font-size:.85rem; color:var(--muted); }
+    @media print {
+      body { background:#fff; }
+      .page { padding:0; max-width:none; }
+      a { color:inherit; text-decoration:none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>Navodila za učitelje — eKlub</h1>
+    <p class="sub">Koledar prisotnosti plavalcev · 1 stran · za tisk ali telefon</p>
+
+    <div class="card tip">
+      <strong>Prijava:</strong>
+      <a class="url" href="https://eklub.vercel.app/login.html">eklub.vercel.app/login.html</a><br>
+      E-pošta + geslo, ki vam ga da admin. Če pozabite geslo: na prijavi kliknite «Pozabljeno geslo?» ali v koledarju «Spremeni geslo».
+    </div>
+
+    <h2>Kako označiti trening</h2>
+    <ol class="steps">
+      <li>Odprite koledar (po prijavi).</li>
+      <li>Kliknite na <strong>termin</strong> (uro) — odpre se okno treninga.</li>
+      <li>Pri vsakem plavalcu označite <strong>Prisoten</strong> ali <strong>Odsoten</strong>.</li>
+      <li>Hitra bližnjica: gumb <strong>Vsi prisotni</strong> (nato po potrebi popravite odsotne).</li>
+      <li>Po želji vpišite <strong>opombo o treningu</strong> in jo shranite.</li>
+    </ol>
+
+    <h2>Barve na koledarju</h2>
+    <div class="card">
+      <div><span class="colors"><span class="c-green"></span></span> zelen — prisotnost je vnesena</div>
+      <div><span class="colors"><span class="c-orange"></span></span> oranžen — delno (nekateri še niso označeni)</div>
+      <div><span class="colors"><span class="c-red"></span></span> rdeč — trening je mimo, prisotnosti še ni</div>
+    </div>
+
+    <h2>Kaj vidim?</h2>
+    <ul>
+      <li>Vidite <strong>samo svoje termine</strong> (in treninge, kjer vas admin doda kot nadomeščanje).</li>
+      <li>Ne vidite admin panela / financ — to je za vodstvo kluba.</li>
+      <li>Plavalce za nadomeščanje lahko dodate le, če so v sezoni prijavljeni na vsaj en termin.</li>
+    </ul>
+
+    <h2>Nadomeščanje</h2>
+    <div class="card">
+      <strong>Plavalec:</strong> spodaj «Dodaj v nadomeščanje» → poiščite ime → Dodaj.<br>
+      <strong>Trener (vi ste odsotni):</strong> pri vaši vrstici označite odsotnost in vpišite nadomestnega (če vam admin to omogoči).
+    </div>
+
+    <div class="card warn">
+      <strong>Pomembno</strong>
+      <ul>
+        <li>Ne delite gesla z drugimi.</li>
+        <li>«Ponastavi trening» zbriše vso prisotnost tega dneva — uporabljajte previdno.</li>
+        <li>Če koledar ne kaže vaših terminov: odjavite se, prijavite znova ali pišite adminu.</li>
+      </ul>
+    </div>
+
+    <h2>Odjava</h2>
+    <p>Zgoraj desno: <strong>Odjava</strong>. Prijava običajno ostane shranjena v brskalniku (ni treba vsakič znova).</p>
+
+    <p class="footer">eKlub · za težave kontaktirajte administratorja kluba · tisk: Ctrl+P</p>
+  </div>
+</body>
+</html>
