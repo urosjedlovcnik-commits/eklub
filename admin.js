@@ -684,12 +684,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Elementi za modal urejanja plavalca
     const elEditSwimmerModal = document.getElementById("editSwimmerModal");
+    const elEditSwimmerModalTitle = document.getElementById("editSwimmerModalTitle");
     const elEditSwimmerFirst = document.getElementById("editSwimmerFirst");
     const elEditSwimmerLast = document.getElementById("editSwimmerLast");
     const elEditSwimmerEmail = document.getElementById("editSwimmerEmail");
     const elEditSwimmerPhone = document.getElementById("editSwimmerPhone");
     const elEditSwimmerAddress = document.getElementById("editSwimmerAddress");
     const elEditSwimmerPostalCode = document.getElementById("editSwimmerPostalCode");
+    const elEditSwimmerPaymentPlan = document.getElementById("editSwimmerPaymentPlan");
+    const elEditSwimmerOly = document.getElementById("editSwimmerOly");
+    const elEditSwimmerOlyHint = document.getElementById("editSwimmerOlyHint");
+    const elEditSwimmerNotes = document.getElementById("editSwimmerNotes");
+    const elEditSwimmerTermsBox = document.getElementById("editSwimmerTermsBox");
+    const elEditSwimmerSeasonLabel = document.getElementById("editSwimmerSeasonLabel");
+    const elEditSwimmerPastSeasons = document.getElementById("editSwimmerPastSeasons");
     const elSaveEditSwimmerBtn = document.getElementById("saveEditSwimmerBtn");
     const elCloseEditSwimmerModalBtn = document.getElementById("closeEditSwimmerModalBtn");
     const elEditSwimmerInfo = document.getElementById("editSwimmerInfo");
@@ -1828,6 +1836,177 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function buildSwimmerTermsHtml(swimmer, seasonFilterId) {
         return buildAssignedTermsHtml(swimmer, seasonFilterId, 'removeTermFromSwimmer');
+    }
+
+    function getSwimmerTermIdsInSeason(swimmer, seasonId) {
+        if (!swimmer?.terms?.length) return [];
+        return swimmer.terms.filter(tid => {
+            const term = TERMS.find(t => t.id === tid);
+            return term && term.season_id === seasonId;
+        });
+    }
+
+    function getSwimmerSeasonHistory(swimmer) {
+        const bySeason = new Map();
+        (swimmer?.terms || []).forEach(termId => {
+            const term = TERMS.find(t => t.id === termId);
+            const key = term?.season_id || '__none__';
+            if (!bySeason.has(key)) bySeason.set(key, []);
+            bySeason.get(key).push(term || { id: termId });
+        });
+        const seasonSortKey = key => {
+            if (key === '__none__') return '0000-01-01';
+            return seasons.find(se => se.id === key)?.date_from || '0000-01-01';
+        };
+        return [...bySeason.keys()]
+            .sort((a, b) => seasonSortKey(b).localeCompare(seasonSortKey(a)))
+            .map(key => ({
+                seasonId: key,
+                seasonName: key === '__none__' ? 'Brez sezone' : (getSeasonNameById(key) || 'Neznana sezona'),
+                dateFrom: key === '__none__' ? null : seasons.find(s => s.id === key)?.date_from,
+                terms: bySeason.get(key).sort((a, b) => {
+                    if (!a.day || !b.day) return 0;
+                    if (a.day !== b.day) return a.day - b.day;
+                    return (a.start_time || '').localeCompare(b.start_time || '');
+                })
+            }));
+    }
+
+    function renderEditSwimmerPastSeasons(swimmer, currentSeasonId) {
+        if (!elEditSwimmerPastSeasons) return;
+        const history = getSwimmerSeasonHistory(swimmer).filter(h =>
+            h.seasonId !== currentSeasonId && h.seasonId !== '__none__'
+        );
+        if (history.length === 0) {
+            elEditSwimmerPastSeasons.innerHTML = '<span class="muted">Ni zgodovine dodeljenih terminov v prejšnjih sezonah.</span>';
+            return;
+        }
+        elEditSwimmerPastSeasons.innerHTML = history.map(h => {
+            const labels = h.terms.map(t => formatTermTimeLabel(t)).join(', ');
+            const dates = h.dateFrom ? ` <span style="color:#64748b">(${escapeHtml(h.dateFrom.slice(0, 4))})</span>` : '';
+            return `<div style="margin-bottom:8px"><strong>${escapeHtml(h.seasonName)}</strong>${dates}: ${escapeHtml(labels)}</div>`;
+        }).join('');
+    }
+
+    function renderEditSwimmerTermsCheckboxes(swimmer, seasonId) {
+        if (!elEditSwimmerTermsBox) return;
+        if (!seasonId) {
+            elEditSwimmerTermsBox.innerHTML = '<p class="muted" style="margin:0">Izberite sezono v pasu zgoraj.</p>';
+            return;
+        }
+        const seasonTerms = TERMS.filter(t => t.season_id === seasonId).sort((a, b) => {
+            if (a.day !== b.day) return a.day - b.day;
+            return a.start_time.localeCompare(b.start_time);
+        });
+        if (seasonTerms.length === 0) {
+            elEditSwimmerTermsBox.innerHTML = '<p class="muted" style="margin:0">V tej sezoni ni terminov.</p>';
+            return;
+        }
+        const assigned = new Set(getSwimmerTermIdsInSeason(swimmer, seasonId));
+        elEditSwimmerTermsBox.innerHTML = seasonTerms.map(t => `
+            <label>
+                <input type="checkbox" class="edit-swimmer-term-cb" value="${t.id}" ${assigned.has(t.id) ? 'checked' : ''}>
+                ${escapeHtml(formatTermTimeLabel(t))}
+            </label>
+        `).join('');
+    }
+
+    function populateEditSwimmerPaymentPlanSelect(swimmerId, seasonId) {
+        if (!elEditSwimmerPaymentPlan) return;
+        const season = seasons.find(s => s.id === seasonId);
+        const plan = getSwimmerPaymentPlan(swimmerId, seasonId);
+        const allowed = getAllowedPaymentPlansForSeason(season);
+        const effectivePlan = allowed.includes(plan) ? plan : 'monthly';
+        elEditSwimmerPaymentPlan.innerHTML = Object.entries(PAYMENT_PLAN_LABELS)
+            .filter(([value]) => allowed.includes(value))
+            .map(([value, label]) =>
+                `<option value="${value}"${value === effectivePlan ? ' selected' : ''}>${label}</option>`
+            ).join('');
+        const hint = getPaymentPlanBillingHint(effectivePlan, season);
+        if (elEditSwimmerSeasonLabel && season) {
+            elEditSwimmerSeasonLabel.textContent = `Sezona: ${season.name}${hint ? ' · ' + hint : ''}`;
+        }
+    }
+
+    async function populateEditSwimmerModal(swimmerId) {
+        const swimmer = swimmers.find(s => s.id === swimmerId);
+        if (!swimmer) return;
+
+        const seasonId = getAdminSeasonFilterId();
+        elEditSwimmerModalTitle.textContent = `Uredi plavalca — ${swimmer.first_name} ${swimmer.last_name}`;
+
+        elEditSwimmerFirst.value = swimmer.first_name || '';
+        elEditSwimmerLast.value = swimmer.last_name || '';
+        elEditSwimmerEmail.value = swimmer.email || '';
+        elEditSwimmerPhone.value = swimmer.phone || '';
+        elEditSwimmerAddress.value = swimmer.address || '';
+        elEditSwimmerPostalCode.value = swimmer.postal_code || '';
+        if (elEditSwimmerNotes) elEditSwimmerNotes.value = swimmer.notes || '';
+
+        renderEditSwimmerTermsCheckboxes(swimmer, seasonId);
+        populateEditSwimmerPaymentPlanSelect(swimmerId, seasonId);
+        renderEditSwimmerPastSeasons(swimmer, seasonId);
+
+        const month = currentFinanceMonth;
+        const year = currentFinanceYear;
+        const monthLabel = new Date(year, month - 1, 1).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
+        let isOly = false;
+        let olyCount = 0;
+        try {
+            const fees = await getSwimmerFeesFromDB(month, year);
+            isOly = fees[swimmerId]?.is_oly === true;
+            olyCount = Object.values(fees).filter(f => f?.is_oly === true).length;
+        } catch (e) {
+            console.warn('OLY status ni naložen:', e);
+        }
+        if (elEditSwimmerOly) {
+            elEditSwimmerOly.checked = isOly;
+            const canOly = olyCount < 15 || isOly;
+            elEditSwimmerOly.disabled = !canOly;
+        }
+        if (elEditSwimmerOlyHint) {
+            elEditSwimmerOlyHint.textContent = `Velja za ${monthLabel} · trenutno ${olyCount}/15 OLY · vadnina 0 € + 40 € prispevek`;
+        }
+
+        elEditSwimmerInfo.textContent = '';
+    }
+
+    async function removeTermFromSwimmerQuiet(swimmerId, termId) {
+        const swimmer = swimmers.find(s => s.id === swimmerId);
+        if (!swimmer) return false;
+        const updatedTerms = swimmer.terms.filter(t => t !== termId);
+        const { error } = await supabase
+            .from('swimmers')
+            .update({ terms: updatedTerms })
+            .eq('id', swimmerId);
+        if (error) throw error;
+
+        const today = new Date().toISOString().split('T')[0];
+        await supabase
+            .from('swimmer_term_assignments')
+            .update({ assigned_to_date: today })
+            .eq('swimmer_id', swimmerId)
+            .eq('term_id', termId)
+            .is('assigned_to_date', null);
+
+        swimmer.terms = updatedTerms;
+        return true;
+    }
+
+    async function syncSwimmerTermsForSeason(swimmerId, seasonId, desiredTermIds) {
+        const swimmer = swimmers.find(s => s.id === swimmerId);
+        if (!swimmer || !seasonId) return;
+
+        const current = getSwimmerTermIdsInSeason(swimmer, seasonId);
+        const toAdd = desiredTermIds.filter(id => !current.includes(id));
+        const toRemove = current.filter(id => !desiredTermIds.includes(id));
+
+        for (const termId of toRemove) {
+            await removeTermFromSwimmerQuiet(swimmerId, termId);
+        }
+        for (const termId of toAdd) {
+            await assignTermToSwimmer(swimmerId, termId);
+        }
     }
 
     function buildTrainerTermsHtml(trainer, seasonFilterId) {
@@ -3350,45 +3529,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // ===== Funkcionalnost urejanja plavalcev =====
-    window.editSwimmer = function(swimmerId) {
+    window.editSwimmer = async function(swimmerId) {
         const swimmer = swimmers.find(s => s.id === swimmerId);
         if (!swimmer) {
-            alert('Plavalec ne obstaja.');
+            showMessage('Plavalec ne obstaja.', 'warning');
             return;
         }
 
-        // Polni polja v modalu s trenutnimi podatki
-        elEditSwimmerFirst.value = swimmer.first_name || '';
-        elEditSwimmerLast.value = swimmer.last_name || '';
-        elEditSwimmerEmail.value = swimmer.email || '';
-        elEditSwimmerPhone.value = swimmer.phone || '';
-        elEditSwimmerAddress.value = swimmer.address || '';
-        elEditSwimmerPostalCode.value = swimmer.postal_code || '';
-        elEditSwimmerInfo.textContent = '';
-        
-        // Prikaži modal
-        elEditSwimmerModal.style.display = 'flex';
-        
-        // Shrani ID plavalca za shranjevanje
         elEditSwimmerModal.setAttribute('data-swimmer-id', swimmerId);
+        elEditSwimmerModal.style.display = 'flex';
+        await populateEditSwimmerModal(swimmerId);
     };
 
     elSaveEditSwimmerBtn.addEventListener('click', async () => {
         const swimmerId = elEditSwimmerModal.getAttribute('data-swimmer-id');
         if (!swimmerId) {
-            alert('Napaka: ID plavalca ni najden.');
+            showMessage('Napaka: ID plavalca ni najden.', 'error');
             return;
         }
 
-        // Preberi vrednosti iz polj
         const first = elEditSwimmerFirst.value.trim();
         const last = elEditSwimmerLast.value.trim();
         const email = elEditSwimmerEmail.value.trim() || null;
         const phone = elEditSwimmerPhone.value.trim() || null;
         const address = elEditSwimmerAddress.value.trim() || null;
         const postalCode = elEditSwimmerPostalCode.value.trim() || null;
+        const notes = elEditSwimmerNotes?.value.trim() || null;
+        const seasonId = getAdminSeasonFilterId();
 
-        // Validacija
         if (!first || !last) {
             elEditSwimmerInfo.textContent = 'Ime in priimek sta obvezna polja.';
             elEditSwimmerInfo.style.color = '#dc3545';
@@ -3403,31 +3571,39 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         elEditSwimmerInfo.textContent = 'Shranjevanje...';
         elEditSwimmerInfo.style.color = '#666';
+        elSaveEditSwimmerBtn.disabled = true;
 
         try {
-            // Posodobi v bazi
             const updateData = {
                 first_name: first,
                 last_name: last,
-                email: email,
-                phone: phone,
-                address: address,
-                postal_code: postalCode
+                email,
+                phone,
+                address,
+                postal_code: postalCode,
+                notes
             };
 
-            const { error } = await supabase
+            let { error } = await supabase
                 .from('swimmers')
                 .update(updateData)
                 .eq('id', swimmerId);
 
+            if (error && (error.message?.includes('notes') || error.code === '42703')) {
+                const fallbackData = { ...updateData };
+                delete fallbackData.notes;
+                ({ error } = await supabase.from('swimmers').update(fallbackData).eq('id', swimmerId));
+                if (!error) {
+                    showMessage('Opombe niso shranjene — poženite SQL/add_swimmer_notes.sql v Supabase.', 'warning');
+                }
+            }
+
             if (error) {
-                console.error('Napaka pri shranjevanju plavalca:', error);
                 elEditSwimmerInfo.textContent = 'Napaka pri shranjevanju: ' + error.message;
                 elEditSwimmerInfo.style.color = '#dc3545';
                 return;
             }
 
-            // Posodobi lokalno stanje
             const swimmer = swimmers.find(s => s.id === swimmerId);
             if (swimmer) {
                 swimmer.first_name = first;
@@ -3436,19 +3612,38 @@ document.addEventListener('DOMContentLoaded', async () => {
                 swimmer.phone = phone;
                 swimmer.address = address;
                 swimmer.postal_code = postalCode;
+                if (notes !== null && updateData.notes !== undefined) swimmer.notes = notes;
             }
 
-            // Osveži seznam
-            updateSwimmersList();
+            if (seasonId && elEditSwimmerTermsBox) {
+                const desiredTerms = [...elEditSwimmerTermsBox.querySelectorAll('.edit-swimmer-term-cb:checked')]
+                    .map(cb => cb.value);
+                await syncSwimmerTermsForSeason(swimmerId, seasonId, desiredTerms);
+            }
 
-            // Zapri modal
+            if (seasonId && elEditSwimmerPaymentPlan?.value) {
+                await setSwimmerPaymentPlan(swimmerId, seasonId, elEditSwimmerPaymentPlan.value);
+            }
+
+            if (elEditSwimmerOly && !elEditSwimmerOly.disabled) {
+                await updateSwimmerOly(swimmerId, elEditSwimmerOly.checked === true, currentFinanceMonth, currentFinanceYear);
+            }
+
+            updateSwimmersList();
+            renderTermCheckboxesForSwimmer(swimmerId);
+            if (typeof refreshSwimmerFees === 'function') refreshSwimmerFees();
+            if (typeof refreshAccountingReportEditor === 'function') refreshAccountingReportEditor();
+            if (typeof calculateFinanceData === 'function') calculateFinanceData();
+
             elEditSwimmerModal.style.display = 'none';
             elEditSwimmerInfo.textContent = '';
-
-        } catch (error) {
-            console.error('Napaka pri shranjevanju plavalca:', error);
-            elEditSwimmerInfo.textContent = 'Napaka pri shranjevanju: ' + error.message;
+            showMessage('Plavalec je posodobljen.', 'success');
+        } catch (err) {
+            console.error('Napaka pri shranjevanju plavalca:', err);
+            elEditSwimmerInfo.textContent = 'Napaka pri shranjevanju: ' + (err.message || err);
             elEditSwimmerInfo.style.color = '#dc3545';
+        } finally {
+            elSaveEditSwimmerBtn.disabled = false;
         }
     });
 
