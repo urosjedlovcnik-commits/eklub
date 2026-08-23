@@ -8,6 +8,20 @@ const TRAINER_ROLES = {
 
 const CALENDAR_VIEW_KEY = 'eklub_calendar_view';
 
+function mapAuthErrorMessage(message) {
+    const msg = (message || '').toLowerCase();
+    if (msg.includes('invalid login credentials')) {
+        return 'Napačen email ali geslo. Geslo nastavite v Supabase (Authentication → Users), ne gre za admin panel geslo.';
+    }
+    if (msg.includes('email not confirmed')) {
+        return 'Email še ni potrjen. Preverite pošto ali v Supabase potrdite uporabnika ročno.';
+    }
+    if (msg.includes('too many requests')) {
+        return 'Preveč poskusov prijave. Počakajte minuto in poskusite znova.';
+    }
+    return message || 'Napaka pri prijavi';
+}
+
 class TrainerAuthManager {
     constructor() {
         this.supabase = createSupabaseClient();
@@ -46,7 +60,7 @@ class TrainerAuthManager {
 
     async login(email, password) {
         const { data, error } = await this.supabase.auth.signInWithPassword({ email, password });
-        if (error) throw new Error(error.message || 'Napaka pri prijavi');
+        if (error) throw new Error(mapAuthErrorMessage(error.message));
 
         const trainer = await this.loadTrainerProfile(data.user);
         if (!trainer) {
