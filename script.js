@@ -575,6 +575,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Cache za optimizacijo
     let termsCache = new Map();
+    let termsForDateCache = new Map();
     let attendanceStatusCache = new Map();
     
     // Funkcija za čiščenje cache-ja
