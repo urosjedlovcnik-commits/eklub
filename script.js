@@ -292,8 +292,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (badge) badge.textContent = trainerAuth.permissions?.label || 'Trener';
 
       if (viewWrap) {
-        if (trainerAuth.permissions?.canViewAllTrainings) {
+        const canToggle = !!trainerAuth.permissions?.canAccessAdmin
+          && !!trainerAuth.permissions?.canViewAllTrainings;
+        if (canToggle) {
           viewWrap.hidden = false;
+          viewWrap.style.display = '';
           viewWrap.querySelectorAll('.view-toggle-btn').forEach(btn => {
           const mode = btn.getAttribute('data-view');
           btn.classList.toggle('active', mode === (trainerAuth.viewMode || 'all'));
@@ -311,6 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         } else {
           viewWrap.hidden = true;
+          viewWrap.style.display = 'none';
         }
       }
 

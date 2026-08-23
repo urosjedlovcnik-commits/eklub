@@ -73,9 +73,10 @@ class TrainerAuthManager {
                     label: 'Super admin'
                 };
             case TRAINER_ROLES.TRAINER_ADMIN:
+                // Enako kot trener glede pogleda: samo svoji termini (brez «Vsi termini»)
                 return {
                     role,
-                    canViewAllTrainings: true,
+                    canViewAllTrainings: false,
                     canAccessAdmin: false,
                     label: 'Admin trener'
                 };
@@ -191,11 +192,14 @@ class TrainerAuthManager {
     }
 
     shouldShowAllTerms() {
-        return this.permissions?.canViewAllTrainings && this.viewMode === 'all';
+        return this.permissions?.canAccessAdmin
+            && this.permissions?.canViewAllTrainings
+            && this.viewMode === 'all';
     }
 
     setViewMode(mode) {
         if (mode !== 'all' && mode !== 'own') return;
+        if (mode === 'all' && !this.permissions?.canAccessAdmin) return;
         if (mode === 'all' && !this.permissions?.canViewAllTrainings) return;
         this.viewMode = mode;
         sessionStorage.setItem(this.getViewModeStorageKey(), mode);
