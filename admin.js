@@ -1531,6 +1531,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const table = document.createElement('table');
+        const seasonFilterId = getSwimmersSeasonFilterId();
         const seasonName = getSeasonNameById(seasonFilterId);
         table.innerHTML = `
             <thead>
@@ -1550,7 +1551,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const tbody = table.querySelector('tbody');
         
         const showSwimmersWithoutTerms = document.getElementById('showSwimmersWithoutTerms')?.checked === true;
-        const seasonFilterId = getSwimmersSeasonFilterId();
 
         // Sortiraj plavalce po abecedi po priimku, nato po imenu
         const activeSwimmers = swimmers
