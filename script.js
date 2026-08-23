@@ -291,9 +291,10 @@ document.addEventListener('DOMContentLoaded', () => {
       label.textContent = trainerAuth.getDisplayName() || trainerAuth.currentTrainer.email;
       if (badge) badge.textContent = trainerAuth.permissions?.label || 'Trener';
 
-      if (viewWrap && trainerAuth.permissions?.canViewAllTrainings) {
-        viewWrap.hidden = false;
-        viewWrap.querySelectorAll('.view-toggle-btn').forEach(btn => {
+      if (viewWrap) {
+        if (trainerAuth.permissions?.canViewAllTrainings) {
+          viewWrap.hidden = false;
+          viewWrap.querySelectorAll('.view-toggle-btn').forEach(btn => {
           const mode = btn.getAttribute('data-view');
           btn.classList.toggle('active', mode === (trainerAuth.viewMode || 'all'));
           if (btn.dataset.bound) return;
@@ -308,6 +309,9 @@ document.addEventListener('DOMContentLoaded', () => {
             updateCalendarStatusBanner();
           });
         });
+        } else {
+          viewWrap.hidden = true;
+        }
       }
 
       if (adminLink && trainerAuth.permissions?.canAccessAdmin) {

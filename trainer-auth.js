@@ -53,7 +53,13 @@ class TrainerAuthManager {
         this.currentTrainer = null;
         this.permissions = null;
         this.ownTermIds = new Set();
-        this.viewMode = sessionStorage.getItem(CALENDAR_VIEW_KEY) || null;
+        this.substituteTermIds = new Set();
+        this.viewMode = null;
+    }
+
+    getViewModeStorageKey() {
+        const uid = this.currentUser?.id || this.currentTrainer?.id || 'guest';
+        return `${CALENDAR_VIEW_KEY}_${uid}`;
     }
 
     calculatePermissions(role) {
@@ -98,6 +104,7 @@ class TrainerAuthManager {
         this.permissions = this.calculatePermissions(trainer.role || TRAINER_ROLES.TRAINER);
         this.ensureViewModeDefault();
         await this.loadOwnTermIds();
+        await this.loadSubstituteTermIds();
         return this.getContext();
     }
 
@@ -116,6 +123,7 @@ class TrainerAuthManager {
         this.permissions = this.calculatePermissions(trainer.role || TRAINER_ROLES.TRAINER);
         this.ensureViewModeDefault();
         await this.loadOwnTermIds();
+        await this.loadSubstituteTermIds();
         return this.getContext();
     }
 
@@ -152,10 +160,34 @@ class TrainerAuthManager {
         (data || []).forEach(row => this.ownTermIds.add(row.term_id));
     }
 
+    /** Termini, kjer je trener bil vpisan kot nadomešča (trainer_attendance). */
+    async loadSubstituteTermIds() {
+        this.substituteTermIds = new Set();
+        if (!this.currentTrainer?.id) return;
+        const { data, error } = await this.supabase
+            .from('trainer_attendance')
+            .select('term_id')
+            .eq('trainer_id', this.currentTrainer.id);
+        if (error) {
+            console.warn('Napaka pri nalaganju nadomeščanj trenerja:', error.message);
+            return;
+        }
+        (data || []).forEach(row => this.substituteTermIds.add(row.term_id));
+    }
+
     ensureViewModeDefault() {
-        if (this.viewMode === 'all' || this.viewMode === 'own') return;
-        this.viewMode = this.permissions.canViewAllTrainings ? 'all' : 'own';
-        sessionStorage.setItem(CALENDAR_VIEW_KEY, this.viewMode);
+        const key = this.getViewModeStorageKey();
+        const stored = sessionStorage.getItem(key);
+        if (stored === 'all' || stored === 'own') {
+            this.viewMode = stored;
+        } else {
+            this.viewMode = this.permissions.canViewAllTrainings ? 'all' : 'own';
+        }
+        // Navadni trener nikoli ne sme imeti pogleda «vsi termini»
+        if (!this.permissions.canViewAllTrainings && this.viewMode === 'all') {
+            this.viewMode = 'own';
+        }
+        sessionStorage.setItem(key, this.viewMode);
     }
 
     shouldShowAllTerms() {
@@ -166,14 +198,15 @@ class TrainerAuthManager {
         if (mode !== 'all' && mode !== 'own') return;
         if (mode === 'all' && !this.permissions?.canViewAllTrainings) return;
         this.viewMode = mode;
-        sessionStorage.setItem(CALENDAR_VIEW_KEY, mode);
+        sessionStorage.setItem(this.getViewModeStorageKey(), mode);
     }
 
     filterTerms(terms) {
         if (!Array.isArray(terms)) return [];
         if (this.shouldShowAllTerms()) return terms;
-        if (this.ownTermIds.size === 0) return [];
-        return terms.filter(t => this.ownTermIds.has(t.id));
+        const allowed = new Set([...this.ownTermIds, ...this.substituteTermIds]);
+        if (allowed.size === 0) return [];
+        return terms.filter(t => allowed.has(t.id));
     }
 
     getContext() {
@@ -191,12 +224,14 @@ class TrainerAuthManager {
     }
 
     async logout() {
+        const viewKey = this.getViewModeStorageKey();
         await this.supabase.auth.signOut();
         this.currentUser = null;
         this.currentTrainer = null;
         this.permissions = null;
         this.ownTermIds.clear();
-        sessionStorage.removeItem(CALENDAR_VIEW_KEY);
+        this.substituteTermIds.clear();
+        sessionStorage.removeItem(viewKey);
         this.viewMode = null;
     }
 

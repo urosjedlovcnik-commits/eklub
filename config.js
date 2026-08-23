@@ -37,6 +37,8 @@ function createSupabaseClient() {
         auth: {
             persistSession: true,
             autoRefreshToken: true,
+            // Seja v localStorage (ključ spodaj) — traja, dokler velja refresh token v Supabase Auth.
+            // Trajanje nastavite v Supabase → Authentication → Settings (JWT / refresh token).
             storageKey: 'eklub-supabase-auth'
         }
     });
