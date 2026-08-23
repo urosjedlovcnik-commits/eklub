@@ -822,15 +822,16 @@
               Seznam plavalcev iz izbrane sezone za <strong>obračun izbranega meseca</strong>:
               mesečni plačniki vsak mesec; enkratni in dvakratni le v mesecih obračuna (oktober, februar).
               Vrstni red: zgoraj mesečno, nato dvakrat letno, spodaj enkrat letno. Plavalci z <strong>OLY</strong> se ne prikažejo.
+              Članarino (30 €) nastavite globalno ali posamezno s checkboxom v stolpcu <strong>Član.</strong>
             </p>
             <div class="summary-controls" style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
               <button type="button" class="btn" id="prevAccountingReportMonthBtn" title="Prejšnji mesec">←</button>
               <div id="accountingReportMonthYearLabel" style="font-weight:bold;min-width:160px;text-align:center"></div>
               <button type="button" class="btn" id="nextAccountingReportMonthBtn" title="Naslednji mesec">→</button>
               <button type="button" class="btn" id="currentAccountingReportMonthBtn" style="background:#007bff;color:#fff">Trenutni mesec</button>
-              <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer">
+              <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer" title="Obkljukaj ali odkljukaj članarino pri vseh plavalcih na seznamu">
                 <input type="checkbox" id="accountingIncludeMembershipFee" style="width:18px;height:18px;cursor:pointer">
-                Obračunaj članarino (30 €)
+                Obračunaj članarino vsem (30 €)
               </label>
               <button type="button" class="btn ok" id="printAccountingReportBtn">Prenesi PDF</button>
               <button type="button" class="btn pri" id="saveAccountingReportOrderBtn">Shrani vrstni red</button>

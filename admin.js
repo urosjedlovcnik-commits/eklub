@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
     /** Zapomni si izbiro filtra sezone na zavihku Termini (vse sezone = prazen niz) */
     const TERM_LIST_SEASON_STORAGE_KEY = 'eklub_admin_termListSeason';
 
-    /** Načini plačila: swimmer_id|season_id -> payment_plan */
+    /** Načini plačila in članarina: swimmer_id|season_id → { payment_plan, include_membership_fee } */
     let swimmerSeasonBilling = {};
 
     const PAYMENT_PLAN_LABELS = {
@@ -835,10 +835,48 @@ document.addEventListener('DOMContentLoaded', () => {
         return true;
     }
 
-    function getSwimmerPaymentPlan(swimmerId, seasonId) {
+    function getSwimmerSeasonBillingRecord(swimmerId, seasonId) {
         const sid = seasonId || getAdminSeasonFilterId();
-        if (!sid) return 'monthly';
-        return swimmerSeasonBilling[`${swimmerId}|${sid}`] || 'monthly';
+        if (!sid) return { payment_plan: 'monthly', include_membership_fee: false };
+        return swimmerSeasonBilling[`${swimmerId}|${sid}`] || { payment_plan: 'monthly', include_membership_fee: false };
+    }
+
+    function getSwimmerPaymentPlan(swimmerId, seasonId) {
+        return getSwimmerSeasonBillingRecord(swimmerId, seasonId).payment_plan;
+    }
+
+    function getSwimmerMembershipIncluded(swimmerId, seasonId) {
+        return getSwimmerSeasonBillingRecord(swimmerId, seasonId).include_membership_fee === true;
+    }
+
+    async function upsertSwimmerSeasonBilling(swimmerId, seasonId, patch) {
+        const sid = seasonId || getAdminSeasonFilterId();
+        if (!sid) {
+            showMessage('Izberite sezono v pasu zgoraj.', 'warning');
+            return false;
+        }
+        const current = getSwimmerSeasonBillingRecord(swimmerId, sid);
+        const next = {
+            payment_plan: patch.payment_plan || current.payment_plan || 'monthly',
+            include_membership_fee: patch.include_membership_fee !== undefined
+                ? patch.include_membership_fee === true
+                : current.include_membership_fee === true
+        };
+        try {
+            const { error } = await supabase.from('swimmer_season_billing').upsert({
+                swimmer_id: swimmerId,
+                season_id: sid,
+                payment_plan: next.payment_plan,
+                include_membership_fee: next.include_membership_fee
+            }, { onConflict: 'swimmer_id,season_id' });
+            if (error) throw error;
+            swimmerSeasonBilling[`${swimmerId}|${sid}`] = next;
+            return true;
+        } catch (e) {
+            console.error(e);
+            showMessage('Napaka pri shranjevanju: ' + (e.message || e), 'error');
+            return false;
+        }
     }
 
     function buildPaymentPlanSelectHtml(swimmerId, selectedPlan, disabled) {
@@ -861,10 +899,15 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadSwimmerSeasonBilling() {
         swimmerSeasonBilling = {};
         try {
-            const { data, error } = await supabase.from('swimmer_season_billing').select('swimmer_id, season_id, payment_plan');
+            const { data, error } = await supabase
+                .from('swimmer_season_billing')
+                .select('swimmer_id, season_id, payment_plan, include_membership_fee');
             if (error) throw error;
             (data || []).forEach(row => {
-                swimmerSeasonBilling[`${row.swimmer_id}|${row.season_id}`] = row.payment_plan;
+                swimmerSeasonBilling[`${row.swimmer_id}|${row.season_id}`] = {
+                    payment_plan: row.payment_plan || 'monthly',
+                    include_membership_fee: row.include_membership_fee === true
+                };
             });
         } catch (e) {
             console.warn('Načini plačila niso naloženi (poženite SQL/create_swimmer_season_billing.sql):', e.message || e);
@@ -878,29 +921,56 @@ document.addEventListener('DOMContentLoaded', () => {
             return false;
         }
         if (!PAYMENT_PLAN_LABELS[paymentPlan]) return false;
-        try {
-            const { error } = await supabase.from('swimmer_season_billing').upsert({
-                swimmer_id: swimmerId,
-                season_id: sid,
-                payment_plan: paymentPlan
-            }, { onConflict: 'swimmer_id,season_id' });
-            if (error) throw error;
-            swimmerSeasonBilling[`${swimmerId}|${sid}`] = paymentPlan;
+        const ok = await upsertSwimmerSeasonBilling(swimmerId, sid, { payment_plan: paymentPlan });
+        if (ok) {
             updateSwimmersList();
             refreshSwimmerFees();
             if (typeof refreshAccountingReportEditor === 'function') refreshAccountingReportEditor();
             if (typeof calculateFinanceData === 'function') calculateFinanceData();
-            return true;
-        } catch (e) {
-            console.error(e);
-            showMessage('Napaka pri shranjevanju načina plačila: ' + (e.message || e), 'error');
-            return false;
         }
+        return ok;
     }
 
     window.updateSwimmerPaymentPlan = async function(swimmerId, paymentPlan) {
         await setSwimmerPaymentPlan(swimmerId, getAdminSeasonFilterId(), paymentPlan);
     };
+
+    window.updateSwimmerMembershipFee = async function(swimmerId, included) {
+        const seasonId = getAdminSeasonFilterId();
+        const ok = await upsertSwimmerSeasonBilling(swimmerId, seasonId, { include_membership_fee: included === true });
+        if (ok) {
+            updateSwimmersList();
+            syncGlobalMembershipCheckbox();
+            const season = getAccountingReportSeason(currentAccountingReportMonth, currentAccountingReportYear);
+            renderAccountingReportEditorTable(accountingReportWorkingOrder, season);
+        }
+    };
+
+    async function applyGlobalMembershipFeeToReport(checked) {
+        const seasonId = getAdminSeasonFilterId();
+        if (!seasonId || !accountingReportWorkingOrder.length) return;
+        for (const row of accountingReportWorkingOrder) {
+            await upsertSwimmerSeasonBilling(row.swimmer.id, seasonId, { include_membership_fee: checked });
+        }
+        updateSwimmersList();
+        syncGlobalMembershipCheckbox();
+        const season = getAccountingReportSeason(currentAccountingReportMonth, currentAccountingReportYear);
+        renderAccountingReportEditorTable(accountingReportWorkingOrder, season);
+    }
+
+    function syncGlobalMembershipCheckbox() {
+        const el = document.getElementById('accountingIncludeMembershipFee');
+        if (!el) return;
+        if (!accountingReportWorkingOrder.length) {
+            el.checked = false;
+            el.indeterminate = false;
+            return;
+        }
+        const seasonId = getAdminSeasonFilterId();
+        const states = accountingReportWorkingOrder.map(r => getSwimmerMembershipIncluded(r.swimmer.id, seasonId));
+        el.checked = states.every(Boolean);
+        el.indeterminate = !el.checked && states.some(Boolean);
+    }
 
     function getTermsForAdminSeason(options = {}) {
         const { excludeTermIds = [] } = options;
@@ -1551,6 +1621,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <th>Telefon</th>
                     <th>Sezone / Termini</th>
                     <th>Način plačila${seasonName ? ` (${escapeHtml(seasonName)})` : ''}</th>
+                    <th>Član. (30 €)</th>
                     <th>Akcije</th>
                 </tr>
             </thead>
@@ -1602,8 +1673,11 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const paymentPlan = getSwimmerPaymentPlan(swimmer.id, seasonFilterId);
             let paymentPlanCell = '<span class="muted">—</span>';
+            let membershipCell = '<span class="muted">—</span>';
             if (!swimmer.is_deleted && hasTermsInSeason && seasonFilterId) {
                 paymentPlanCell = buildPaymentPlanSelectHtml(swimmer.id, paymentPlan, false);
+                const hasMembership = getSwimmerMembershipIncluded(swimmer.id, seasonFilterId);
+                membershipCell = `<input type="checkbox" ${hasMembership ? 'checked' : ''} onchange="updateSwimmerMembershipFee('${swimmer.id}', this.checked)" style="width:18px;height:18px;cursor:pointer" title="Obračunaj članarino">`;
             }
 
             // Določi stil vrstice glede na status
@@ -1619,6 +1693,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${swimmer.phone || '<span class="muted">Brez telefona</span>'}</td>
                 <td class="terms-cell">${swimmer.is_deleted ? '<span class="muted">Izbrisan</span>' : termsHtml}</td>
                 <td>${paymentPlanCell}</td>
+                <td style="text-align:center">${membershipCell}</td>
                 <td>
                     ${swimmer.is_deleted ? 
                         `<button class="btn success" onclick="restoreSwimmer('${swimmer.id}')" style="font-size: 12px; padding: 4px 8px;">
@@ -4920,9 +4995,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('saveAccountingReportOrderBtn')?.addEventListener('click', () => saveAccountingReportOrder());
     document.getElementById('sortAccountingReportAlphaBtn')?.addEventListener('click', () => sortAccountingReportAlphabetically());
     document.getElementById('printAccountingReportBtn')?.addEventListener('click', () => downloadAccountingReportPdf());
-    document.getElementById('accountingIncludeMembershipFee')?.addEventListener('change', () => {
-        const season = getAccountingReportSeason(currentAccountingReportMonth, currentAccountingReportYear);
-        renderAccountingReportEditorTable(accountingReportWorkingOrder, season);
+    document.getElementById('accountingIncludeMembershipFee')?.addEventListener('change', async (e) => {
+        await applyGlobalMembershipFeeToReport(e.target.checked === true);
     });
 
     document.getElementById('accountingReportEditorBox')?.addEventListener('click', e => {
@@ -8052,9 +8126,19 @@ document.addEventListener('DOMContentLoaded', () => {
         return document.getElementById('accountingIncludeMembershipFee')?.checked === true;
     }
 
+    function rowIncludesMembership(row) {
+        const seasonId = getAdminSeasonFilterId();
+        return getSwimmerMembershipIncluded(row.swimmer.id, seasonId);
+    }
+
     function getAccountingRowTotal(row) {
         const base = Number(row.netFee) || 0;
-        return base + (isAccountingMembershipIncluded() ? MEMBERSHIP_FEE_EUR : 0);
+        return base + (rowIncludesMembership(row) ? MEMBERSHIP_FEE_EUR : 0);
+    }
+
+    function accountingReportHasAnyMembership(rows) {
+        const seasonId = getAdminSeasonFilterId();
+        return (rows || accountingReportWorkingOrder).some(r => getSwimmerMembershipIncluded(r.swimmer.id, seasonId));
     }
 
     function groupAndSortAccountingRows(feeRows, orderedIds, seasonId) {
@@ -8153,7 +8237,7 @@ document.addEventListener('DOMContentLoaded', () => {
             box.innerHTML = `<p class="muted">Za <strong>${escapeHtml(monthLabel)}</strong> v sezoni <strong>${escapeHtml(seasonLabel)}</strong> ni plavalcev za obračun (mesečni vsak mesec; enkratno/dvakratno le v mesecih obračuna).</p>`;
             return;
         }
-        const includeMembership = isAccountingMembershipIncluded();
+        const seasonId = getAdminSeasonFilterId();
         let header = '';
         if (season) {
             const nSaved = (accountingReportOrderBySeason[season.id] || []).length;
@@ -8161,33 +8245,27 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             header = `<p class="muted" style="font-size:13px;margin-bottom:10px">${rows.length} plavalcev · po skupinah načina plačila</p>`;
         }
-        const amountHeaders = includeMembership
-            ? `<th style="text-align:right">Vadnina (€)</th><th style="text-align:right">Članarina (€)</th><th style="text-align:right">Skupaj (€)</th>`
-            : `<th style="text-align:right">Znesek vadnine (€)</th>`;
         let html = header + `<table class="trainer-hours-table" style="width:100%"><thead><tr>
             <th style="width:70px">Vrstni red</th>
             <th>Ime in priimek</th>
             <th>E-pošta</th>
             <th>Naslov</th>
             <th>Pošta</th>
-            ${amountHeaders}
+            <th style="text-align:right">Znesek vadnine (€)</th>
+            <th style="text-align:center">Član. (30 €)</th>
+            <th style="text-align:right">Skupaj (€)</th>
         </tr></thead><tbody>`;
 
         let lastPlan = null;
         rows.forEach((row, i) => {
             const plan = row.paymentPlan || 'monthly';
             if (plan !== lastPlan) {
-                const colSpan = includeMembership ? 8 : 7;
-                html += `<tr style="background:#eef2ff"><td colspan="${colSpan}"><strong>${escapeHtml(PAYMENT_PLAN_REPORT_GROUP_LABELS[plan] || plan)}</strong></td></tr>`;
+                html += `<tr style="background:#eef2ff"><td colspan="8"><strong>${escapeHtml(PAYMENT_PLAN_REPORT_GROUP_LABELS[plan] || plan)}</strong></td></tr>`;
                 lastPlan = plan;
             }
             const s = row.swimmer;
+            const hasMembership = getSwimmerMembershipIncluded(s.id, seasonId);
             const total = getAccountingRowTotal(row);
-            const amountCells = includeMembership
-                ? `<td style="text-align:right">${formatAccountingFeeAmount(row.netFee)}</td>
-                   <td style="text-align:right">${formatAccountingFeeAmount(MEMBERSHIP_FEE_EUR)}</td>
-                   <td style="text-align:right"><strong>${formatAccountingFeeAmount(total)}</strong></td>`
-                : `<td style="text-align:right">${formatAccountingFeeAmount(row.netFee)}</td>`;
             html += `<tr>
                 <td style="white-space:nowrap">
                     <button type="button" class="btn" style="padding:2px 8px;font-size:12px" data-acc-order-up="${i}" title="Premakni gor">↑</button>
@@ -8197,11 +8275,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${escapeHtml(s.email || '')}</td>
                 <td>${escapeHtml(s.address || '')}</td>
                 <td>${escapeHtml(s.postal_code || '')}</td>
-                ${amountCells}
+                <td style="text-align:right">${formatAccountingFeeAmount(row.netFee)}</td>
+                <td style="text-align:center">
+                    <input type="checkbox" ${hasMembership ? 'checked' : ''} onchange="updateSwimmerMembershipFee('${s.id}', this.checked)" style="width:18px;height:18px;cursor:pointer" title="Obračunaj članarino">
+                </td>
+                <td style="text-align:right"><strong>${formatAccountingFeeAmount(total)}</strong></td>
             </tr>`;
         });
         html += '</tbody></table>';
         box.innerHTML = html;
+        syncGlobalMembershipCheckbox();
     }
 
     async function refreshAccountingReportEditor() {
@@ -8302,26 +8385,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const monthLabel = new Date(year, month - 1, 1).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
             const fileSlug = `${String(month).padStart(2, '0')}_${year}`;
-            const includeMembership = isAccountingMembershipIncluded();
-            const headerRow = includeMembership
-                ? [
-                    { text: 'Št.', style: 'tableHeader', alignment: 'center' },
-                    { text: 'Ime priimek', style: 'tableHeader' },
-                    { text: 'Mail', style: 'tableHeader' },
-                    { text: 'Naslov', style: 'tableHeader' },
-                    { text: 'Pošta', style: 'tableHeader' },
-                    { text: 'Vadnina', style: 'tableHeader', alignment: 'right' },
-                    { text: 'Član.', style: 'tableHeader', alignment: 'right' },
-                    { text: 'Skupaj', style: 'tableHeader', alignment: 'right' }
-                ]
-                : [
-                    { text: 'Št.', style: 'tableHeader', alignment: 'center' },
-                    { text: 'Ime priimek', style: 'tableHeader' },
-                    { text: 'Mail', style: 'tableHeader' },
-                    { text: 'Naslov', style: 'tableHeader' },
-                    { text: 'Pošta', style: 'tableHeader' },
-                    { text: 'Znesek', style: 'tableHeader', alignment: 'right' }
-                ];
+            const hasAnyMembership = accountingReportHasAnyMembership(rows);
+            const headerRow = [
+                { text: 'Št.', style: 'tableHeader', alignment: 'center' },
+                { text: 'Ime priimek', style: 'tableHeader' },
+                { text: 'Mail', style: 'tableHeader' },
+                { text: 'Naslov', style: 'tableHeader' },
+                { text: 'Pošta', style: 'tableHeader' },
+                { text: 'Vadnina', style: 'tableHeader', alignment: 'right' },
+                { text: 'Član.', style: 'tableHeader', alignment: 'right' },
+                { text: 'Skupaj', style: 'tableHeader', alignment: 'right' }
+            ];
             const tableBody = [headerRow];
             let lastPlan = null;
             let rowIndex = 0;
@@ -8337,32 +8411,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 rowIndex++;
                 const s = row.swimmer;
+                const membershipAmount = rowIncludesMembership(row) ? MEMBERSHIP_FEE_EUR : 0;
                 const total = getAccountingRowTotal(row);
-                if (includeMembership) {
-                    tableBody.push([
-                        accountingPdfCell(String(rowIndex), 'center'),
-                        accountingPdfCell(swimmerDisplayName(s)),
-                        accountingPdfCell(s.email || ''),
-                        accountingPdfCell(s.address || ''),
-                        accountingPdfCell(s.postal_code || ''),
-                        accountingPdfCell(formatAccountingFeeAmount(row.netFee), 'right'),
-                        accountingPdfCell(formatAccountingFeeAmount(MEMBERSHIP_FEE_EUR), 'right'),
-                        accountingPdfCell(formatAccountingFeeAmount(total), 'right')
-                    ]);
-                } else {
-                    tableBody.push([
-                        accountingPdfCell(String(rowIndex), 'center'),
-                        accountingPdfCell(swimmerDisplayName(s)),
-                        accountingPdfCell(s.email || ''),
-                        accountingPdfCell(s.address || ''),
-                        accountingPdfCell(s.postal_code || ''),
-                        accountingPdfCell(formatAccountingFeeAmount(row.netFee), 'right')
-                    ]);
-                }
+                tableBody.push([
+                    accountingPdfCell(String(rowIndex), 'center'),
+                    accountingPdfCell(swimmerDisplayName(s)),
+                    accountingPdfCell(s.email || ''),
+                    accountingPdfCell(s.address || ''),
+                    accountingPdfCell(s.postal_code || ''),
+                    accountingPdfCell(formatAccountingFeeAmount(row.netFee), 'right'),
+                    accountingPdfCell(membershipAmount ? formatAccountingFeeAmount(membershipAmount) : '—', 'right'),
+                    accountingPdfCell(formatAccountingFeeAmount(total), 'right')
+                ]);
             });
-            const colWidths = includeMembership
-                ? ['4%', '14%', '22%', '28%', '12%', '7%', '6%', '7%']
-                : ['4%', '15%', '26%', '33%', '14%', '8%'];
+            const colWidths = ['4%', '14%', '22%', '28%', '12%', '7%', '6%', '7%'];
             const docDefinition = {
                 pageSize: 'A4',
                 pageOrientation: 'landscape',
@@ -8370,7 +8432,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 defaultStyle: { font: 'Roboto', fontSize: 7.5 },
                 content: [
                     {
-                        text: `Razpored PKL – vadnine (${monthLabel})${includeMembership ? ' + članarina' : ''}`,
+                        text: `Razpored PKL – vadnine (${monthLabel})${hasAnyMembership ? ' + članarina' : ''}`,
                         fontSize: 11,
                         margin: [0, 0, 0, 10]
                     },
