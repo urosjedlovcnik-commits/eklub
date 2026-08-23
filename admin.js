@@ -1187,6 +1187,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (typeof refreshAccountingReportEditor === 'function') {
             refreshAccountingReportEditor();
         }
+        renderTrainerRatesSettings();
     }
 
     // ===== Navigacija med sekcijami (URL: admin.html#finance) =====
@@ -1686,6 +1687,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         return term ? formatTermSelectLabel(term) : termId;
     }
 
+    function getTrainerTermsActiveInMonth(trainer, month, year, seasonId) {
+        const lastDay = new Date(year, month, 0).getDate();
+        const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
+        const monthEnd = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+        return (trainer.terms || [])
+            .map(tid => TERMS.find(t => t.id === tid))
+            .filter(term => {
+                if (!term) return false;
+                if (seasonId && term.season_id !== seasonId) return false;
+                return term.date_from <= monthEnd && term.date_to >= monthStart;
+            })
+            .sort((a, b) => {
+                if (a.day !== b.day) return a.day - b.day;
+                return a.start_time.localeCompare(b.start_time);
+            });
+    }
     function groupSwimmerTermsBySeason(termIds, seasonFilterId) {
         const grouped = new Map();
         (termIds || []).forEach(termId => {
@@ -9309,6 +9326,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         await copyPreviousMonthTrainerRates(currentTrainerRatesMonth, currentTrainerRatesYear);
         
         const trainerRates = await getTrainerRatesFromDB(currentTrainerRatesMonth, currentTrainerRatesYear);
+        const seasonId = getAdminSeasonFilterId();
+        const seasonName = getSeasonNameById(seasonId) || 'izbrana sezona';
+        const monthLabel = new Date(currentTrainerRatesYear, currentTrainerRatesMonth - 1, 1)
+            .toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
         
         // Sortiraj trenerje po priimku (in nato po imenu, če so priimki enaki)
         const sortedTrainers = [...trainers]
@@ -9321,14 +9342,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return (a.first_name || '').localeCompare(b.first_name || '', 'sl');
             });
         
-        let html = '<div class="trainer-rates-list" style="display: flex; flex-direction: column; gap: 12px;">';
+        let html = `<p class="muted" style="font-size:13px;margin-bottom:12px">Sezona: <strong>${escapeHtml(seasonName)}</strong> · ${monthLabel} · prikazani so samo termini, ki v tem mesecu dejansko tečejo.</p>`;
+        html += '<div class="trainer-rates-list" style="display: flex; flex-direction: column; gap: 12px;">';
         
         for (const trainer of sortedTrainers) {
             const rate = trainerRates[trainer.id] || 25; // Default to 25€/termin
             
-            // Preštej število terminov, ki jih ima trener na teden
-            const trainerTerms = trainer.terms || [];
-            const termCount = trainerTerms.length;
+            const activeTerms = getTrainerTermsActiveInMonth(
+                trainer,
+                currentTrainerRatesMonth,
+                currentTrainerRatesYear,
+                seasonId
+            );
+            const termCount = activeTerms.length;
+            const termLabels = activeTerms.map(t => formatTermTimeLabel(t)).join(', ');
+            const termHint = termCount > 0
+                ? termLabels
+                : 'Ni aktivnih terminov v tem mesecu — preverite dodelitev v zavihku Trenerji ali izberite drug mesec/sezono';
             
             html += `
                 <div class="trainer-rate-row" style="display: flex; align-items: center; gap: 15px; padding: 12px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
@@ -9336,9 +9366,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <label for="trainer-rate-${trainer.id}" style="font-weight: 500; display: block; margin-bottom: 4px;">
                             ${trainer.first_name} ${trainer.last_name}
                         </label>
-                        <span style="font-size: 12px; color: #6c757d;">
+                        <span style="font-size: 12px; color: ${termCount > 0 ? '#6c757d' : '#991b1b'};">
                             ${termCount} termin${termCount === 1 ? '' : termCount === 2 ? 'a' : 'ov'} na teden
                         </span>
+                        <div style="font-size: 11px; color: #6c757d; margin-top: 2px;">${escapeHtml(termHint)}</div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <input type="number" 
