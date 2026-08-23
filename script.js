@@ -37,6 +37,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const elCalendarGrid = document.getElementById("calendarGrid");
     const elPrev = document.getElementById("prevBtn");
     const elNext = document.getElementById("nextBtn");
+    const elToday = document.getElementById("todayBtn");
+    const elCalendarWrap = document.getElementById("calendarWrap");
 
     
     // Modal
@@ -222,10 +224,14 @@ document.addEventListener('DOMContentLoaded', () => {
           btn.dataset.bound = '1';
           btn.addEventListener('click', () => {
             trainerAuth.setViewMode('all');
-            const sel = document.getElementById('viewModeSelect');
-            if (sel) sel.value = 'all';
+            const viewWrap = document.getElementById('viewModeWrap');
+            if (viewWrap) {
+              viewWrap.querySelectorAll('.view-toggle-btn').forEach(b => {
+                b.classList.toggle('active', b.getAttribute('data-view') === 'all');
+              });
+            }
             applyVisibleTermsFilter();
-            renderMonth();
+            refreshCalendarForCurrentMonth();
             updateCalendarStatusBanner();
           });
         }
@@ -256,7 +262,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const label = document.getElementById('authUserLabel');
       const badge = document.getElementById('authRoleBadge');
       const viewWrap = document.getElementById('viewModeWrap');
-      const viewSelect = document.getElementById('viewModeSelect');
       const adminLink = document.getElementById('adminLink');
       const logoutBtn = document.getElementById('logoutBtn');
 
@@ -265,14 +270,22 @@ document.addEventListener('DOMContentLoaded', () => {
       label.textContent = trainerAuth.getDisplayName() || trainerAuth.currentTrainer.email;
       if (badge) badge.textContent = trainerAuth.permissions?.label || 'Trener';
 
-      if (viewWrap && viewSelect && trainerAuth.permissions?.canViewAllTrainings) {
+      if (viewWrap && trainerAuth.permissions?.canViewAllTrainings) {
         viewWrap.hidden = false;
-        viewSelect.value = trainerAuth.viewMode || 'all';
-        viewSelect.addEventListener('change', () => {
-          trainerAuth.setViewMode(viewSelect.value);
-          applyVisibleTermsFilter();
-          renderMonth();
-          updateCalendarStatusBanner();
+        viewWrap.querySelectorAll('.view-toggle-btn').forEach(btn => {
+          const mode = btn.getAttribute('data-view');
+          btn.classList.toggle('active', mode === (trainerAuth.viewMode || 'all'));
+          if (btn.dataset.bound) return;
+          btn.dataset.bound = '1';
+          btn.addEventListener('click', () => {
+            trainerAuth.setViewMode(mode);
+            viewWrap.querySelectorAll('.view-toggle-btn').forEach(b => {
+              b.classList.toggle('active', b.getAttribute('data-view') === mode);
+            });
+            applyVisibleTermsFilter();
+            refreshCalendarForCurrentMonth();
+            updateCalendarStatusBanner();
+          });
         });
       }
 
@@ -280,7 +293,8 @@ document.addEventListener('DOMContentLoaded', () => {
         adminLink.hidden = false;
       }
 
-      if (logoutBtn) {
+      if (logoutBtn && !logoutBtn.dataset.bound) {
+        logoutBtn.dataset.bound = '1';
         logoutBtn.addEventListener('click', async () => {
           await trainerAuth.logout();
           window.location.href = 'login.html';
@@ -569,6 +583,127 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function isInactive(date, termId){ return getTermStatus(date, termId).status === "inactive"; }
 
+    function setCalendarLoading(loading) {
+      if (elCalendarWrap) elCalendarWrap.classList.toggle('is-loading', !!loading);
+    }
+
+    function getViewMonthRange() {
+      const y = viewDate.getFullYear();
+      const m = viewDate.getMonth();
+      return {
+        start: new Date(y, m, 1),
+        end: new Date(y, m + 1, 0)
+      };
+    }
+
+    function clearRecordDatesInRange(store, start, end) {
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        delete store[iso(d)];
+      }
+    }
+
+    function countAssignedSwimmers(date, termId) {
+      return swimmers.filter(s => {
+        if (!s.terms?.includes(termId) || s.is_deleted) return false;
+        return isSwimmerAssignedToTermOnDate(s.id, termId, date);
+      }).length;
+    }
+
+    async function loadAttendanceForViewMonth() {
+      const { start, end } = getViewMonthRange();
+      const startIso = iso(start);
+      const endIso = iso(end);
+      try {
+        const { data, error } = await supabase
+          .from('attendance')
+          .select('date, term_id, swimmer_id, status')
+          .gte('date', startIso)
+          .lte('date', endIso);
+        if (error) {
+          console.error('Napaka pri nalaganju prisotnosti (mesec):', error);
+          return;
+        }
+        clearRecordDatesInRange(attendance, start, end);
+        (data || []).forEach(row => {
+          if (!attendance[row.date]) attendance[row.date] = {};
+          if (!attendance[row.date][row.term_id]) attendance[row.date][row.term_id] = {};
+          attendance[row.date][row.term_id][row.swimmer_id] = row.status;
+        });
+      } catch (error) {
+        console.error('Napaka pri nalaganju prisotnosti (mesec):', error);
+      }
+    }
+
+    async function loadTermStatusForViewMonth() {
+      const { start, end } = getViewMonthRange();
+      const startIso = iso(start);
+      const endIso = iso(end);
+      try {
+        const { data, error } = await supabase
+          .from('term_status')
+          .select('date, term_id, status, note, notes')
+          .gte('date', startIso)
+          .lte('date', endIso);
+        if (error) {
+          console.error('Napaka pri nalaganju statusa terminov (mesec):', error);
+          return;
+        }
+        clearRecordDatesInRange(termStatus, start, end);
+        (data || []).forEach(row => {
+          if (!termStatus[row.date]) termStatus[row.date] = {};
+          termStatus[row.date][row.term_id] = { status: row.status, note: row.note, notes: row.notes };
+        });
+      } catch (error) {
+        console.error('Napaka pri nalaganju statusa terminov (mesec):', error);
+      }
+    }
+
+    async function loadTrainerAttendanceForViewMonth() {
+      const { start, end } = getViewMonthRange();
+      const startIso = iso(start);
+      const endIso = iso(end);
+      try {
+        const { data, error } = await supabase
+          .from('trainer_attendance')
+          .select('date, term_id, trainer_id, present, note')
+          .gte('date', startIso)
+          .lte('date', endIso);
+        if (error) {
+          console.error('Napaka pri nalaganju prisotnosti trenerjev (mesec):', error);
+          return;
+        }
+        clearRecordDatesInRange(trainerAttendance, start, end);
+        (data || []).forEach(row => {
+          if (!trainerAttendance[row.date]) trainerAttendance[row.date] = {};
+          if (!trainerAttendance[row.date][row.term_id]) trainerAttendance[row.date][row.term_id] = {};
+          trainerAttendance[row.date][row.term_id][row.trainer_id] = {
+            present: row.present,
+            note: row.note || ''
+          };
+        });
+      } catch (error) {
+        console.error('Napaka pri nalaganju prisotnosti trenerjev (mesec):', error);
+      }
+    }
+
+    async function loadMonthDetailData() {
+      await Promise.all([
+        loadAttendanceForViewMonth(),
+        loadTermStatusForViewMonth(),
+        loadTrainerAttendanceForViewMonth()
+      ]);
+    }
+
+    async function refreshCalendarForCurrentMonth() {
+      setCalendarLoading(true);
+      clearCache();
+      renderMonth(false);
+      await loadMonthDetailData();
+      clearCache();
+      renderMonth(true);
+      setCalendarLoading(false);
+    }
+
 
     // ===== Pogled meseca =====
     let viewDate = new Date(); viewDate.setDate(1);
@@ -642,7 +777,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
     
-    function renderMonth(){
+    function renderMonth(withStatusColors = true){
       const y=viewDate.getFullYear(), m=viewDate.getMonth();
       elMonthLabel.textContent = new Date(y,m,1).toLocaleDateString("sl-SI", {month:"long",year:"numeric"});
       
@@ -685,9 +820,7 @@ document.addEventListener('DOMContentLoaded', () => {
           // Optimizirano barvno kodiranje
           // Preveri, ali je trening že potekel (glede na datum IN čas za današnje treninge)
           const isTrainingFinished = isTrainingPast(date, t.start_time);
-          if (isTrainingFinished) {
-            // Vedno uporabimo getAttendanceStatus, ki uporablja svoj lasten cache
-            // To zagotovi, da se uporabljajo najnovejši podatki
+          if (withStatusColors && isTrainingFinished) {
             const status = getAttendanceStatus(date, t.id);
             if (status) {
               e.classList.add(status);
@@ -697,8 +830,13 @@ document.addEventListener('DOMContentLoaded', () => {
           if (isInactive(date, t.id)) {
               e.classList.add("disabled");
           }
+
+          const swimmerCount = countAssignedSwimmers(date, t.id);
+          const countHtml = swimmerCount > 0
+            ? `<span class="event-count" title="${swimmerCount} plavalcev">${swimmerCount}</span>`
+            : '';
           
-          e.innerHTML = `<span class="time">${t.start_time.slice(0, 5)}<span class="end-time">–${t.end_time.slice(0, 5)}</span></span>`;
+          e.innerHTML = `<span class="time">${t.start_time.slice(0, 5)}<span class="end-time">–${t.end_time.slice(0, 5)}</span></span>${countHtml}`;
           e.title = t.label;
           e.dataset.termId = t.id;
           day.appendChild(e);
@@ -839,6 +977,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function openEvent(date, termId){
       modalCtx = { date:new Date(date), termId };
+
+      if (elToggleEventBtn) {
+        elToggleEventBtn.style.display = trainerAuth?.permissions?.canAccessAdmin ? '' : 'none';
+      }
       
       // Osveži podatke za ta dan, da zagotovimo, da imamo najnovejše podatke iz baze
       await refreshDayData(date);
@@ -848,12 +990,10 @@ document.addEventListener('DOMContentLoaded', () => {
       elModalMeta.innerHTML = `
         <span class="chip">${formatDate(iso(date))}</span>
         <span class="chip">${DAYNAME[t.day]}</span>
+        <span class="chip">${countAssignedSwimmers(date, termId)} plavalcev</span>
       `;
       
       const ymd = iso(date);
-      
-      // Ključni popravek: zagotovitev svežih podatkov ob odprtju modala
-      await refreshDayData(date);
       
       // Asinhrono pridobivanje prisotnosti za ta termin na ta dan
       const { data, error } = await supabase
@@ -1872,14 +2012,20 @@ document.addEventListener('DOMContentLoaded', () => {
     function debouncedRender() {
       clearTimeout(navigationTimeout);
       navigationTimeout = setTimeout(() => {
-        clearCache();
-        renderMonth();
-      }, 50);
+        refreshCalendarForCurrentMonth();
+      }, 80);
     }
     
     // ===== Navigacija =====
     elPrev.addEventListener("click", ()=>{ viewDate.setMonth(viewDate.getMonth()-1); debouncedRender(); });
     elNext.addEventListener("click", ()=>{ viewDate.setMonth(viewDate.getMonth()+1); debouncedRender(); });
+    if (elToday) {
+      elToday.addEventListener("click", () => {
+        const now = new Date();
+        viewDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        debouncedRender();
+      });
+    }
 
     // ===== Nalaganje podatkov =====
     async function loadTerms() {
@@ -2146,35 +2292,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadAllData() {
+      setCalendarLoading(true);
       try {
-        await Promise.all([loadTerms(), loadSwimmers(), loadSwimmerTermAssignments(), loadTrainers(), loadAttendance(), loadTrainerAttendance(), loadTermStatus()]);
+        await Promise.all([
+          loadTerms(),
+          loadSwimmers(),
+          loadSwimmerTermAssignments(),
+          loadTrainers()
+        ]);
+        clearCache();
+        renderMonth(false);
+        updateCalendarStatusBanner();
+        await loadMonthDetailData();
+        clearCache();
+        renderMonth(true);
+        updateCalendarStatusBanner();
       } catch (err) {
         console.error('Napaka pri nalaganju podatkov koledarja:', err);
+      } finally {
+        setCalendarLoading(false);
       }
-      
-      // Počisti cache ob osvežitvi podatkov
-      clearCache();
-      
-      // Osveži cache za vse termine v trenutnem mesecu PO tem, ko so podatki naloženi
-      // To zagotovi, da se barvno kodiranje pravilno prikaže ob začetku
-      const currentMonth = viewDate.getMonth();
-      const currentYear = viewDate.getFullYear();
-      const monthStart = new Date(currentYear, currentMonth, 1);
-      const monthEnd = new Date(currentYear, currentMonth + 1, 0);
-      
-      // Pomembno: počakajmo, da se podatki pravilno shranijo v attendance objekt
-      // Nato osvežimo cache za vse termine
-      for (let d = 1; d <= monthEnd.getDate(); d++) {
-        const date = new Date(currentYear, currentMonth, d);
-        const todays = getTermsForDate(date);
-        todays.forEach(t => {
-          clearAttendanceCacheForTerm(date, t.id);
-        });
-      }
-      
-      // Renderaj mesec PO tem, ko so podatki naloženi in cache osvežen
-      renderMonth();
-      updateCalendarStatusBanner();
     }
 
 

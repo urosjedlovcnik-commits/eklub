@@ -13,13 +13,10 @@
       <span class="auth-role-badge" id="authRoleBadge"></span>
     </div>
     <div class="auth-bar-actions">
-      <label class="auth-view-toggle" id="viewModeWrap" hidden>
-        Prikaz:
-        <select id="viewModeSelect">
-          <option value="all">Vsi termini</option>
-          <option value="own">Samo moji</option>
-        </select>
-      </label>
+      <div class="view-toggle" id="viewModeWrap" hidden>
+        <button type="button" class="btn view-toggle-btn active" data-view="all">Vsi termini</button>
+        <button type="button" class="btn view-toggle-btn" data-view="own">Samo moji</button>
+      </div>
       <a href="admin.html" class="btn" id="adminLink" hidden>Admin panel</a>
       <button type="button" class="btn" id="logoutBtn">Odjava</button>
     </div>
@@ -30,12 +27,13 @@
   <div id="calendarStatusBanner" class="calendar-status-banner" hidden></div>
 
   <div class="toolbar">
-    <button class="btn" id="prevBtn">◀ Prejšnji mesec</button>
-    <span class="tag" id="monthLabel"></span>
-    <button class="btn" id="nextBtn">Naslednji mesec ▶</button>
+    <button class="btn" id="prevBtn" title="Prejšnji mesec">◀</button>
+    <button class="btn" id="todayBtn" title="Pojdi na trenutni mesec">Danes</button>
+    <span class="tag" id="monthLabel">…</span>
+    <button class="btn" id="nextBtn" title="Naslednji mesec">▶</button>
   </div>
 
-  <div class="calendar">
+  <div class="calendar" id="calendarWrap">
     <div class="calendar-head">
       <div>Pon</div><div>Tor</div><div>Sre</div><div>Čet</div><div>Pet</div><div>Sob</div><div>Ned</div>
     </div>
@@ -63,6 +61,17 @@
           <strong style="display:block; margin-bottom:4px;">Opomba:</strong>
           <span id="inactiveNoteText"></span>
         </div>
+
+        <div class="modal-notes-prominent" id="modalNotesBlock">
+          <h4>Opombe o treningu</h4>
+          <div class="notes-section">
+            <label for="notesInput" class="muted">Opomba za ta termin:</label>
+            <textarea id="notesInput" placeholder="Vsebina treninga, opazke …"></textarea>
+            <button id="saveNotesBtn" class="btn primary-btn">Shrani opombo</button>
+          </div>
+        </div>
+
+        <hr style="margin:12px 0;border:none;border-top:1px solid var(--border)">
 
         <table id="trainerAttendanceTable" class="attendance-table">
           <thead><tr><th>Trener</th><th>Prisotnost</th></tr></thead>
@@ -113,14 +122,6 @@
           <select id="modalSwimmerSelect"></select>
           <button class="btn ok" id="addToEventBtn">Dodaj v nadomeščanje</button>
         </div>
-        <hr style="margin:12px 0;border:none;border-top:1px solid var(--border)">
-        <h4>Opombe o treningu</h4>
-        <div class="notes-section">
-          <label for="notesInput" class="muted">Opomba:</label>
-          <textarea id="notesInput" placeholder="Dodaj opombo za ta trening (npr. vsebina treninga, opazke trenerja)."></textarea>
-          <button id="saveNotesBtn" class="btn primary-btn">Shrani trening</button>
-        </div>
-
       </div>
     </div>
   </div>
