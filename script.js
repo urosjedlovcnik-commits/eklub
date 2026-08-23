@@ -89,6 +89,27 @@ document.addEventListener('DOMContentLoaded', () => {
         return full.includes(q) || reversed.includes(q);
     }
 
+    /** Ali ima plavalec v sezoni vsaj en termin (za izbor nadomeščanja). */
+    function isSwimmerEnrolledInSeason(swimmer, seasonId, date) {
+      const swimmerTerms = swimmer.terms || [];
+      if (swimmerTerms.length === 0) return false;
+
+      const seasonTermIds = seasonId
+        ? ALL_TERMS.filter(t => t.season_id === seasonId).map(t => t.id)
+        : ALL_TERMS.map(t => t.id);
+      if (seasonTermIds.length === 0) return false;
+
+      const seasonTermSet = new Set(seasonTermIds);
+      return swimmerTerms.some(termId => {
+        if (!seasonTermSet.has(termId)) return false;
+        const key = `${swimmer.id}-${termId}`;
+        const assignments = swimmerTermAssignments[key] || [];
+        // Brez zapisov o datumu: šteje se, da je prijavljen (kot v adminu)
+        if (assignments.length === 0) return true;
+        return isSwimmerAssignedToTermOnDate(swimmer.id, termId, date);
+      });
+    }
+
     function fillModalSwimmerPicker(unassigned, keepSearch) {
         modalUnassignedSwimmers = unassigned;
         if (!elModalSwimmerSelect) return;
@@ -104,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (unassigned.length === 0) {
             const o = document.createElement('option');
-            o.textContent = 'Vsi plavalci so že v treningu ali nadomeščanju.';
+            o.textContent = 'Ni plavalcev s prijavo v tej sezoni (ali so že na treningu).';
             o.disabled = true;
             elModalSwimmerSelect.appendChild(o);
             elAddToEventBtn.style.display = 'none';
@@ -1807,8 +1828,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const allSwimmersInEvent = [...regularSwimmers, ...substitutionSwimmers];
       const currentEventSwimmerIds = allSwimmersInEvent.map(s => s.id);
-      const unassigned = swimmers.filter(s => !currentEventSwimmerIds.includes(s.id) && !s.is_deleted)
-                               .sort((a,b)=> (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name));
+      const seasonId = t?.season_id || null;
+      const unassigned = swimmers
+        .filter(s => !currentEventSwimmerIds.includes(s.id) && !s.is_deleted)
+        .filter(s => isSwimmerEnrolledInSeason(s, seasonId, date))
+        .sort((a,b)=> (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name));
       fillModalSwimmerPicker(unassigned);
 
       const termStatusObj = getTermStatus(date, termId);
