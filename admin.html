@@ -245,32 +245,48 @@
   line-height: 1.5;
 }
 
-.pkl-fee-grid {
-  display: grid;
-  grid-template-columns: minmax(120px, 1.2fr) repeat(3, 1fr);
-  gap: 8px 10px;
-  align-items: center;
+.pkl-fee-table-wrap {
+  overflow-x: auto;
   margin-bottom: 14px;
 }
 
-.pkl-fee-grid-head {
+.pkl-fee-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 420px;
+}
+
+.pkl-fee-table th {
   font-size: 12px;
   font-weight: 700;
   color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  padding-bottom: 4px;
+  padding: 8px 10px 10px;
   border-bottom: 2px solid #e2e8f0;
+  text-align: center;
 }
 
-.pkl-fee-grid-head span:not(:first-child) {
+.pkl-fee-table th:first-child {
+  text-align: left;
+}
+
+.pkl-fee-table td {
+  padding: 10px;
+  border-bottom: 1px solid #f1f5f9;
   text-align: center;
+  vertical-align: middle;
+}
+
+.pkl-fee-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .pkl-fee-row-label {
   font-size: 14px;
   font-weight: 600;
   color: #334155;
+  text-align: left !important;
 }
 
 .pkl-fee-input-wrap {
@@ -330,16 +346,6 @@
 
 .pkl-fee-footer a {
   font-size: 13px;
-}
-
-@media (max-width: 720px) {
-  .pkl-fee-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-  .pkl-fee-grid-head span:first-child,
-  .pkl-fee-row-label {
-    grid-column: 1 / -1;
-  }
 }
 
 .season-setup-season-note {
@@ -1030,7 +1036,25 @@
     <div class="grid">
       <!-- Glavni del strani (leva stran) -->
       <div class="main-content">
-        <!-- Gumb za kopiranje vadnin iz prejšnega meseca -->
+        <div class="card">
+          <h3>Mesečna vadnina - Pregled stroškov</h3>
+          <div class="inner">
+            <p class="muted" style="font-size:13px;margin-bottom:12px">En mesec velja za celoten zavihek Finance (vadnine, trenerji, računovodstvo …).</p>
+            <div class="summary-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+              <button class="btn" id="prevMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Prejšnji mesec">←</button>
+              <div style="text-align: center; min-width: 200px; cursor: pointer; padding: 10px; border-radius: 8px; transition: background-color 0.2s;" id="monthYearContainer" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
+                <div id="currentMonthYear" style="font-size: 18px; font-weight: bold; color: #333;"></div>
+                <div style="font-size: 12px; color: #666;">Klikni za izbiro datuma</div>
+              </div>
+              <button class="btn" id="nextMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Naslednji mesec">→</button>
+              <button class="btn" id="currentMonthBtn" style="background: #007bff; color: white; padding: 8px 12px; cursor: pointer;" title="Pojdi na trenutni mesec">Trenutni mesec</button>
+              <input type="month" id="monthYearInput" style="display: none;">
+            </div>
+            <div id="financeMonthSummary"></div>
+            <div id="financeSummaryBox">Nalaganje podatkov...</div>
+          </div>
+        </div>
+
         <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
           <h3 style="color: white;">🔄 Kopiranje vadnin iz prejšnega meseca</h3>
           <div class="inner">
@@ -1049,27 +1073,8 @@
               </button>
             </div>
             <p style="margin-top: 10px; font-size: 0.9em; color: #d0d0d0;">
-              <strong>Opomba:</strong> Kopiranje zahteva potrditev. Vadnine se kopirajo za mesec, izbran v spodnjem pregledu stroškov.
+              <strong>Opomba:</strong> Kopiranje zahteva potrditev. Vadnine se kopirajo za mesec, izbran v pregledu stroškov zgoraj.
             </p>
-          </div>
-        </div>
-        
-        <div class="card">
-          <h3>Mesečna vadnina - Pregled stroškov</h3>
-          <div class="inner">
-            <p class="muted" style="font-size:13px;margin-bottom:12px">En mesec velja za celoten zavihek Finance (vadnine, trenerji, računovodstvo …).</p>
-            <div class="summary-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
-              <button class="btn" id="prevMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Prejšnji mesec">←</button>
-              <div style="text-align: center; min-width: 200px; cursor: pointer; padding: 10px; border-radius: 8px; transition: background-color 0.2s;" id="monthYearContainer" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
-                <div id="currentMonthYear" style="font-size: 18px; font-weight: bold; color: #333;"></div>
-                <div style="font-size: 12px; color: #666;">Klikni za izbiro datuma</div>
-              </div>
-              <button class="btn" id="nextMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Naslednji mesec">→</button>
-              <button class="btn" id="currentMonthBtn" style="background: #007bff; color: white; padding: 8px 12px; cursor: pointer;" title="Pojdi na trenutni mesec">Trenutni mesec</button>
-              <input type="month" id="monthYearInput" style="display: none;">
-            </div>
-            <div id="financeMonthSummary"></div>
-            <div id="financeSummaryBox">Nalaganje podatkov...</div>
           </div>
         </div>
 
@@ -1094,20 +1099,37 @@
             <p class="pkl-fee-intro">
               Privzete vrednosti za predloge in prazna polja — <strong>ne prepisujejo</strong> ročno vnesenih zneskov ali popustov po plavalcu.
             </p>
-            <div class="pkl-fee-grid">
-              <div class="pkl-fee-grid-head"><span>Termini / teden</span><span>Mesečno</span><span>Enkratno (9 m)</span><span>2 obroka</span></div>
-              <span class="pkl-fee-row-label">1×</span>
-              <div class="pkl-fee-input-wrap"><input type="number" id="defaultFeeMonthly1" min="0" step="0.01"><span>€</span></div>
-              <div class="pkl-fee-input-wrap"><input type="number" id="defaultFeeLump1" min="0" step="0.01"><span>€</span></div>
-              <div class="pkl-fee-input-wrap"><input type="number" id="defaultFeeInstallment1" min="0" step="0.01"><span>€</span></div>
-              <span class="pkl-fee-row-label">2×</span>
-              <div class="pkl-fee-input-wrap"><input type="number" id="defaultFeeMonthly2" min="0" step="0.01"><span>€</span></div>
-              <div class="pkl-fee-input-wrap"><input type="number" id="defaultFeeLump2" min="0" step="0.01"><span>€</span></div>
-              <div class="pkl-fee-input-wrap"><input type="number" id="defaultFeeInstallment2" min="0" step="0.01"><span>€</span></div>
-              <span class="pkl-fee-row-label">3×</span>
-              <div class="pkl-fee-input-wrap"><input type="number" id="defaultFeeMonthly3" min="0" step="0.01"><span>€</span></div>
-              <div class="pkl-fee-input-wrap"><input type="number" id="defaultFeeLump3" min="0" step="0.01"><span>€</span></div>
-              <div class="pkl-fee-input-wrap"><input type="number" id="defaultFeeInstallment3" min="0" step="0.01"><span>€</span></div>
+            <div class="pkl-fee-table-wrap">
+              <table class="pkl-fee-table">
+                <thead>
+                  <tr>
+                    <th>Termini / teden</th>
+                    <th>Mesečno</th>
+                    <th>Enkratno (9 m)</th>
+                    <th>2 obroka</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="pkl-fee-row-label">1×</td>
+                    <td><div class="pkl-fee-input-wrap"><input type="number" id="defaultFeeMonthly1" min="0" step="0.01"><span>€</span></div></td>
+                    <td><div class="pkl-fee-input-wrap"><input type="number" id="defaultFeeLump1" min="0" step="0.01"><span>€</span></div></td>
+                    <td><div class="pkl-fee-input-wrap"><input type="number" id="defaultFeeInstallment1" min="0" step="0.01"><span>€</span></div></td>
+                  </tr>
+                  <tr>
+                    <td class="pkl-fee-row-label">2×</td>
+                    <td><div class="pkl-fee-input-wrap"><input type="number" id="defaultFeeMonthly2" min="0" step="0.01"><span>€</span></div></td>
+                    <td><div class="pkl-fee-input-wrap"><input type="number" id="defaultFeeLump2" min="0" step="0.01"><span>€</span></div></td>
+                    <td><div class="pkl-fee-input-wrap"><input type="number" id="defaultFeeInstallment2" min="0" step="0.01"><span>€</span></div></td>
+                  </tr>
+                  <tr>
+                    <td class="pkl-fee-row-label">3×</td>
+                    <td><div class="pkl-fee-input-wrap"><input type="number" id="defaultFeeMonthly3" min="0" step="0.01"><span>€</span></div></td>
+                    <td><div class="pkl-fee-input-wrap"><input type="number" id="defaultFeeLump3" min="0" step="0.01"><span>€</span></div></td>
+                    <td><div class="pkl-fee-input-wrap"><input type="number" id="defaultFeeInstallment3" min="0" step="0.01"><span>€</span></div></td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
             <div class="pkl-fee-membership">
               <strong>Letna članarina (enkrat na sezono)</strong>
