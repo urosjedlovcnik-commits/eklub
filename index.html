@@ -7,6 +7,24 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <div class="auth-bar" id="authBar">
+    <div class="auth-bar-user">
+      <strong id="authUserLabel">Nalaganje …</strong>
+      <span class="auth-role-badge" id="authRoleBadge"></span>
+    </div>
+    <div class="auth-bar-actions">
+      <label class="auth-view-toggle" id="viewModeWrap" hidden>
+        Prikaz:
+        <select id="viewModeSelect">
+          <option value="all">Vsi termini</option>
+          <option value="own">Samo moji</option>
+        </select>
+      </label>
+      <a href="admin-login.html" class="btn" id="adminLink" hidden>Admin panel</a>
+      <button type="button" class="btn" id="logoutBtn">Odjava</button>
+    </div>
+  </div>
+
   <h1>Koledar prisotnosti plavalcev</h1>
 
   <div class="toolbar">
@@ -142,6 +160,7 @@
 
 	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 	<script src="./config.js"></script>
+	<script src="./trainer-auth.js"></script>
 	<script src="./script.js"></script>
 </body>
 </html>

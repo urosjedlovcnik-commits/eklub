@@ -5,6 +5,12 @@
 }
 *{box-sizing:border-box}
 body{font-family:system-ui, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); color:#0f172a; margin:30px 18px 18px;}
+.auth-bar{max-width:1200px;margin:0 auto 14px;padding:10px 14px;background:#fff;border:1px solid var(--border);border-radius:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.auth-bar-user{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.auth-role-badge{font-size:12px;font-weight:600;color:#1d4ed8;background:#eff6ff;border:1px solid #bfdbfe;border-radius:999px;padding:3px 10px}
+.auth-bar-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.auth-view-toggle{font-size:13px;color:#475569;display:flex;align-items:center;gap:6px}
+.auth-view-toggle select{width:auto;margin:0;padding:6px 8px}
 h1{margin:0 0 12px;text-align:center}
 .toolbar{max-width:1200px;margin:0 auto 12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center}
 .btn{padding:8px 12px;border:1px solid var(--border);border-radius:10px;background:#fff;cursor:pointer;font-size:inherit}

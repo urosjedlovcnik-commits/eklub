@@ -33,7 +33,13 @@ function createSupabaseClient() {
         return null;
     }
     
-    return window.supabase.createClient(CONFIG.SUPABASE.URL, CONFIG.SUPABASE.ANON_KEY);
+    return window.supabase.createClient(CONFIG.SUPABASE.URL, CONFIG.SUPABASE.ANON_KEY, {
+        auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            storageKey: 'eklub-supabase-auth'
+        }
+    });
 }
 
 // Izvozi konfiguracijo

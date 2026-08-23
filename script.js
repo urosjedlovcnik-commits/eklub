@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const useLocalStorage = false;
 
     // Stanja bodo naložena asinhrono
+    let ALL_TERMS = [];
     let TERMS = [];
     let swimmers = [];
     let trainers = [];
@@ -201,8 +202,60 @@ document.addEventListener('DOMContentLoaded', () => {
       return `${String(d).padStart(2, '0')} / ${String(m).padStart(2, '0')} / ${y}`;
     }
 
-    // Cache za getTermsForDate
-    let termsForDateCache = new Map();
+    function applyVisibleTermsFilter() {
+      if (typeof trainerAuth !== 'undefined' && trainerAuth.filterTerms) {
+        TERMS = trainerAuth.filterTerms(ALL_TERMS);
+      } else {
+        TERMS = ALL_TERMS.slice();
+      }
+      termsForDateCache.clear();
+    }
+
+    function setupAuthBar() {
+      const label = document.getElementById('authUserLabel');
+      const badge = document.getElementById('authRoleBadge');
+      const viewWrap = document.getElementById('viewModeWrap');
+      const viewSelect = document.getElementById('viewModeSelect');
+      const adminLink = document.getElementById('adminLink');
+      const logoutBtn = document.getElementById('logoutBtn');
+
+      if (!label || !trainerAuth?.currentTrainer) return;
+
+      label.textContent = trainerAuth.getDisplayName() || trainerAuth.currentTrainer.email;
+      if (badge) badge.textContent = trainerAuth.permissions?.label || 'Trener';
+
+      if (viewWrap && viewSelect && trainerAuth.permissions?.canViewAllTrainings) {
+        viewWrap.hidden = false;
+        viewSelect.value = trainerAuth.viewMode || 'all';
+        viewSelect.addEventListener('change', () => {
+          trainerAuth.setViewMode(viewSelect.value);
+          applyVisibleTermsFilter();
+          renderMonth();
+        });
+      }
+
+      if (adminLink && trainerAuth.permissions?.canAccessAdmin) {
+        adminLink.hidden = false;
+      }
+
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+          await trainerAuth.logout();
+          window.location.href = 'login.html';
+        });
+      }
+    }
+
+    async function requireAuth() {
+      const ctx = await trainerAuth.restoreSession();
+      if (!ctx) {
+        const returnPath = window.location.pathname.split('/').pop() || 'index.html';
+        window.location.href = `login.html?return=${encodeURIComponent(returnPath)}`;
+        return false;
+      }
+      setupAuthBar();
+      return true;
+    }
     
     function getTermsForDate(date) {
       const cacheKey = iso(date);
@@ -1795,6 +1848,8 @@ document.addEventListener('DOMContentLoaded', () => {
             ...t,
             label: `${DAY_SHORT_NAME[t.day]} ${t.start_time.slice(0, 5)}–${t.end_time.slice(0, 5)}`
           }));
+          ALL_TERMS = TERMS.slice();
+          applyVisibleTermsFilter();
         }
       } else {
         // Uporaba Supabase (ko bo CORS problem rešen)
@@ -1802,10 +1857,11 @@ document.addEventListener('DOMContentLoaded', () => {
           const { data, error } = await supabase.from('terms').select('*');
           if (error) console.error('Napaka pri nalaganju terminov:', error);
           else {
-            TERMS = data.map(t => ({
+            ALL_TERMS = data.map(t => ({
               ...t,
               label: `${DAY_SHORT_NAME[t.day]} ${t.start_time.slice(0, 5)}–${t.end_time.slice(0, 5)}`
             }));
+            applyVisibleTermsFilter();
           }
         } catch (error) {
           console.error('Napaka pri nalaganju terminov:', error);
@@ -2178,5 +2234,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ===== Inicializacija =====
-    loadAllData();
+    async function initApp() {
+      const ok = await requireAuth();
+      if (!ok) return;
+      await loadAllData();
+    }
+    initApp();
 });
