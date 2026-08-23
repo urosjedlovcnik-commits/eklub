@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Admin - Upravljanje plavalne šole</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.admin-header {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: white;
+  padding: 20px;
+  margin: -30px -18px 20px -18px;
+  text-align: center;
+}
+
+.admin-header h1 {
+  margin: 0;
+  color: white;
+}
+
+.admin-nav {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 15px;
+  flex-wrap: wrap;
+}
+
+.admin-nav .btn {
+  background: rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: white;
+}
+
+.admin-nav .btn:hover {
+  background: rgba(255,255,255,0.3);
+}
+
+.admin-nav .btn.active {
+  background: white;
+  color: #2563eb;
+}
+
+.admin-season-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.admin-season-bar label {
+  font-weight: 600;
+  font-size: 15px;
+  margin: 0;
+  color: white;
+}
+
+.admin-season-bar select {
+  min-width: 240px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: none;
+}
+
+.admin-season-bar .season-bar-hint {
+  font-size: 13px;
+  color: rgba(255,255,255,0.85);
+}
+
+.admin-section {
+  display: none;
+}
+
+.admin-section.active {
+  display: block;
+}
+
+/* Stili za termine kot "chips" */
+.chip {
+  display: inline-block;
+  background: #e5e7eb;
+  border: 1px solid #d1d5db;
+  border-radius: 16px;
+  padding: 4px 12px;
+  margin: 2px;
+  font-size: 12px;
+  position: relative;
+}
+
+.chip .remove-term-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  margin-left: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.chip .remove-term-btn:hover {
+  background: #dc2626;
+}
+
+.searchable-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.searchable-picker-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.searchable-picker-row input[type="search"] {
+  flex: 1;
+  min-width: 180px;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+}
+
+.searchable-picker-row select {
+  flex: 1;
+  min-width: 180px;
+}
+
+.term-assign-checkboxes label:hover {
+  background: #f0f4ff;
+  border-radius: 4px;
+}
+
+.terms-cell {
+  max-width: 300px;
+  word-wrap: break-word;
+}
+
+.back-to-main {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 1000;
+}
+
+@media (max-width: 768px) {
+  .back-to-main {
+    position: static;
+    margin-bottom: 20px;
+  }
+}
+
+/* Stili za termine po dnevih */
+.day-section {
+  margin-bottom: 30px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.day-section h4 {
+  background: #f8f9fa;
+  margin: 0;
+  padding: 15px;
+  border-bottom: 1px solid #ddd;
+  color: #333;
+  font-size: 18px;
+}
+
+.term-card {
+  border-bottom: 1px solid #eee;
+  padding: 20px;
+  max-width: 100%;
+}
+
+.term-card:last-child {
+  border-bottom: none;
+}
+
+.term-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+  gap: 10px;
+  max-width: 100%;
+}
+
+.term-time {
+  font-weight: bold;
+  font-size: 16px;
+  color: #333;
+  min-width: 120px;
+}
+
+.term-period {
+  color: #666;
+  font-size: 14px;
+  min-width: 150px;
+}
+
+.term-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.term-swimmers {
+  margin-top: 15px;
+  max-width: 100%;
+}
+
+.term-swimmers strong {
+  display: block;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.swimmers-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.remove-term-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 10px;
+  cursor: pointer;
+  margin-left: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remove-term-btn:hover {
+  background: #c82333;
+}
+
+/* Dodatni stili za boljšo pozicioniranje */
+.term-list {
+  max-width: 100%;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.grid {
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+/* Centriranje vsebine terminov */
+#terms-section .grid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+#terms-section .card {
+  width: 100%;
+  max-width: 800px;
+}
+
+/* Centriranje vsebine v karticah */
+#terms-section .inner {
+  text-align: left;
+}
+
+/* Centriranje gumbov in vnosnih polj */
+#terms-section .row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+#terms-section label {
+  min-width: 120px;
+  text-align: right;
+}
+
+#terms-section input,
+#terms-section select {
+  min-width: 150px;
+}
+
+#terms-section button {
+  margin: 0 auto;
+}
+
+/* Stili za tabelico ur in stroškov trenerjev */
+.trainer-hours-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+
+.trainer-hours-table th,
+.trainer-hours-table td {
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.trainer-hours-table th {
+  background-color: #f8f9fa;
+  font-weight: bold;
+  color: #333;
+}
+
+.trainer-hours-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.trainer-hours-table tr:hover {
+  background-color: #f5f5f5;
+}
+
+.trainer-hours-total {
+  font-weight: bold;
+  background-color: #e3f2fd !important;
+  border-top: 2px solid #2196f3 !important;
+}
+
+.trainer-hours-cost {
+  color: #2e7d32;
+  font-weight: bold;
+}
+
+.trainer-hours-hours {
+  color: #1976d2;
+  font-weight: bold;
+}
+</style>
+</head>
+<body>
+  <div class="back-to-main">
+    <a href="index.html" class="btn">← Nazaj na koledar</a>
+    <a href="swimmers-list.html" class="btn" style="margin-left: 10px;">Seznam plavalcev</a>
+    <button class="btn warn" id="logoutBtn" style="margin-left: 10px;">Odjava</button>
+  </div>
+
+  <div class="admin-header">
+    <h1>Admin - Upravljanje plavalne šole</h1>
+    <p id="adminInfo" style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;">Pozdravljeni, administrator</p>
+    <div class="admin-nav">
+      <button class="btn active" data-section="swimmers">Plavalci</button>
+      <button class="btn" data-section="terms">Termini</button>
+      <button class="btn" data-section="seasons">Sezone</button>
+      <button class="btn" data-section="trainers">Trenerji</button>
+      <button class="btn" data-section="finance">Finance</button>
+      <button class="btn" data-section="csv">CSV uvoz/izvoz</button>
+      <button class="btn" data-section="mailing">Mailing liste</button>
+    </div>
+    <div class="admin-season-bar" id="adminSeasonBar">
+      <label for="adminSeasonFilter">Sezona:</label>
+      <select id="adminSeasonFilter"></select>
+      <span class="season-bar-hint">Podatki na vseh zavihkih (razen Sezone) veljajo za izbrano sezono.</span>
+    </div>
+  </div>
+
+  <!-- Sekcija za upravljanje plavalcev -->
+  <div class="admin-section active" id="swimmers-section">
+    <div class="grid">
+      <div class="card">
+        <h3>Dodaj novega plavalca</h3>
+        <div class="inner">
+          <div class="flex-col">
+            <div class="row" style="width:100%;align-items:stretch;gap:4px">
+              <input type="text" id="newFirst" placeholder="Ime">
+              <input type="text" id="newLast" placeholder="Priimek">
+              <input type="email" id="newEmail" placeholder="Email (opcijsko)">
+              <input type="tel" id="newPhone" placeholder="Telefon (opcijsko)">
+              <button class="btn ok" id="addSwimmerBtn" style="width:auto">Dodaj</button>
+            </div>
+            <div class="row" style="width:100%;align-items:stretch;gap:4px;margin-top:8px">
+              <input type="text" id="newAddress" placeholder="Naslov (opcijsko)" style="flex:2">
+              <input type="text" id="newPostalCode" placeholder="Pošta (opcijsko)" style="flex:1">
+            </div>
+            <div class="row" style="width:100%;align-items:stretch;gap:4px">
+              <button id="deleteSwimmerBtn" class="btn warn">Zbriši plavalca</button>
+            </div>
+          </div>
+          <div id="swimmerInfo" class="muted"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Dodeli termine plavalcem</h3>
+        <div class="inner">
+          <div class="flex-col searchable-picker">
+            <div class="searchable-picker-row">
+              <input type="search" id="swimmerSearchInput" placeholder="Išči plavalca (ime, priimek, email)…" autocomplete="off">
+              <select id="swimmerSelect"></select>
+              <button class="btn pri" id="assignTermBtn" style="width:auto;white-space:nowrap">Dodeli izbrane termine</button>
+            </div>
+            <div id="termAssignCheckboxes" class="term-assign-checkboxes muted" style="padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;background:#fafafa;min-height:48px">
+              Najprej izberite plavalca
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Seznam plavalcev</h3>
+        <div class="inner">
+          <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:14px;cursor:pointer">
+            <input type="checkbox" id="showSwimmersWithoutTerms">
+            Prikaži tudi plavalce brez dodeljenega termina
+          </label>
+          <div id="swimmersList"></div>
+        </div>
+      </div>
+
+                  <div style="display: flex; gap: 20px; width: 100%; flex-wrap: wrap;">
+            <div class="card" style="flex: 1; min-width: 400px;">
+              <h3>Povzetek udeležbe plavalcev (za prikazani mesec)</h3>
+              <div class="inner">
+                <div class="summary-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+                  <button class="btn" id="prevSwimmerSummaryMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Prejšnji mesec">←</button>
+                  <div style="text-align: center; min-width: 200px; cursor: pointer; padding: 10px; border-radius: 8px; transition: background-color 0.2s;" id="swimmerSummaryMonthYearContainer" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
+                    <div id="currentSwimmerSummaryMonthYear" style="font-size: 18px; font-weight: bold; color: #333;"></div>
+                    <div style="font-size: 12px; color: #666;">Klikni za izbiro datuma</div>
+                  </div>
+                  <button class="btn" id="nextSwimmerSummaryMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Naslednji mesec">→</button>
+                  <button class="btn" id="currentSwimmerSummaryMonthBtn" style="background: #007bff; color: white; padding: 8px 12px; cursor: pointer;" title="Pojdi na trenutni mesec">Trenutni mesec</button>
+                  <input type="month" id="swimmerSummaryMonthYearInput" style="display: none;">
+                </div>
+                <div id="swimmerSummaryBox">Nalaganje podatkov...</div>
+              </div>
+            </div>
+
+            <div class="card" style="flex: 1; min-width: 400px;">
+              <h3>Povzetek udeležbe OLY plavalcev (za prikazani mesec)</h3>
+              <div class="inner">
+                <div class="summary-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+                  <button class="btn" id="prevOlySwimmerSummaryMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Prejšnji mesec">←</button>
+                  <div style="text-align: center; min-width: 200px; cursor: pointer; padding: 10px; border-radius: 8px; transition: background-color 0.2s;" id="olySwimmerSummaryMonthYearContainer" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
+                    <div id="currentOlySwimmerSummaryMonthYear" style="font-size: 18px; font-weight: bold; color: #333;"></div>
+                    <div style="font-size: 12px; color: #666;">Klikni za izbiro datuma</div>
+                  </div>
+                  <button class="btn" id="nextOlySwimmerSummaryMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Naslednji mesec">→</button>
+                  <button class="btn" id="currentOlySwimmerSummaryMonthBtn" style="background: #007bff; color: white; padding: 8px 12px; cursor: pointer;" title="Pojdi na trenutni mesec">Trenutni mesec</button>
+                  <input type="month" id="olySwimmerSummaryMonthYearInput" style="display: none;">
+                </div>
+                <div id="olySwimmerSummaryBox">Nalaganje podatkov...</div>
+              </div>
+            </div>
+          </div>
+    </div>
+  </div>
+
+  <!-- Sekcija za upravljanje terminov -->
+  <div class="admin-section" id="terms-section">
+    <div class="grid">
+      <div class="card">
+        <h3>Upravljanje terminov</h3>
+        <div class="inner">
+          <div class="row" style="margin-bottom:14px;flex-wrap:wrap;gap:10px;align-items:center;justify-content:flex-start;width:100%">
+            <label for="termListSeasonFilter" style="text-align:left">Prikaži sezono:</label>
+            <select id="termListSeasonFilter" style="min-width:260px">
+              <option value="">Vse sezone (zmešano)</option>
+            </select>
+          </div>
+          <p class="muted" style="font-size:13px;margin-bottom:10px">Izberite sezono, da pod vsakim dnem vidite samo termine te sezone (npr. samo 2026/27).</p>
+          <div class="term-list" id="termList"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Dodaj nov termin</h3>
+        <div class="inner">
+          <div class="row">
+            <label for="newTermDay">Dan:</label>
+            <select id="newTermDay">
+              <option value="1">Ponedeljek</option>
+              <option value="2">Torek</option>
+              <option value="3">Sreda</option>
+              <option value="4">Četrtek</option>
+              <option value="5">Petek</option>
+              <option value="6">Sobota</option>
+              <option value="7">Nedelja</option>
+            </select>
+          </div>
+          <div class="row">
+            <label for="newTermStart">Začetna ura:</label>
+            <input type="time" id="newTermStart" step="60">
+          </div>
+          <div class="row">
+            <label for="newTermEnd">Končna ura:</label>
+            <input type="time" id="newTermEnd" step="60">
+          </div>
+          <div class="row">
+            <label for="newTermDateFrom">Datum trajanja od:</label>
+            <input type="text" id="newTermDateFrom" placeholder="dd / mm / yyyy">
+          </div>
+          <div class="row">
+            <label for="newTermDateTo">do:</label>
+            <input type="text" id="newTermDateTo" placeholder="dd / mm / yyyy">
+          </div>
+          <div class="row">
+            <label for="newTermSeasonId">Sezona:</label>
+            <select id="newTermSeasonId" style="flex:1">
+              <option value="">Brez sezone</option>
+            </select>
+          </div>
+          <button class="btn pri" id="addTermBtn">Dodaj termin</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Termini sezone in dodeljeni plavalci</h3>
+        <div class="inner">
+          <div class="row" style="flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:12px">
+            <label>Sezona:
+              <select id="seasonTermsBrowseSelect" style="min-width:280px">
+                <option value="">Izberite sezono</option>
+              </select>
+            </label>
+          </div>
+          <p class="muted" style="font-size:13px;margin-bottom:12px">Termini z izbrano sezono (<code>season_id</code>) in plavalci, ki imajo ta termin med dodeljenimi (<code>terms</code>).</p>
+          <div id="seasonTermsBrowseOutput">
+            <p class="muted">Izberite sezono zgoraj.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sezone in letna poročila -->
+  <div class="admin-section" id="seasons-section">
+    <div class="grid">
+      <div class="card">
+        <h3>Nova sezona</h3>
+        <div class="inner">
+          <div class="row" style="flex-wrap:wrap;gap:8px;align-items:center">
+            <input type="text" id="newSeasonName" placeholder="Naziv (npr. 2026/27)" style="min-width:200px">
+            <label style="display:flex;align-items:center;gap:6px">Od <input type="date" id="newSeasonDateFrom"></label>
+            <label style="display:flex;align-items:center;gap:6px">Do <input type="date" id="newSeasonDateTo"></label>
+            <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="newSeasonIsActive"> Aktivna</label>
+            <button type="button" class="btn pri" id="addSeasonBtn">Shrani sezono</button>
+          </div>
+          <p class="muted" style="margin-top:12px;font-size:13px"><strong>Plavalci</strong> imajo dodeljene termine v polju <code>terms</code>. <strong>Termini</strong> so lahko vezani na sezono (<code>season_id</code>). Brisanje sezone počisti to vezavo pri terminih (termini ostanejo).</p>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Kopiraj termine v drugo sezono</h3>
+        <div class="inner">
+          <p class="muted" style="font-size:13px;margin-bottom:12px">Ustvari nove termine z novimi ID-ji, enakim dnem in uro, datuma od/do iz <strong>ciljne</strong> sezone. Plavalci in trenerji <strong>se ne</strong> prenesejo.</p>
+          <div class="row" style="flex-wrap:wrap;gap:12px;align-items:center">
+            <label>Izvorno: <select id="copyTermsSourceSeason" style="min-width:220px"></select></label>
+            <label>Ciljno: <select id="copyTermsTargetSeason" style="min-width:220px"></select></label>
+            <button type="button" class="btn ok" id="copyTermsBetweenSeasonsBtn">Kopiraj termine</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Seznam sezon</h3>
+        <div class="inner" id="seasonsListContainer">
+          <p class="muted">Nalaganje …</p>
+        </div>
+      </div>
+      <div class="card" style="grid-column: 1 / -1; max-width:100%">
+        <h3>Letno poročilo (udeležba in bilanca vadnin)</h3>
+        <div class="inner">
+          <div class="row" style="flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:16px">
+            <label>Sezona:
+              <select id="seasonReportSelect" style="min-width:280px">
+                <option value="">Izberi sezono</option>
+              </select>
+            </label>
+            <label>Udeležba šteje:
+              <select id="seasonReportAttendanceScope" style="min-width:320px" title="Skupni delež je vedno vsota prisotnih / vsota možnih (uteženo). Za primerjavo z OLY mesečno tabelo izberite Samo OLY.">
+                <option value="all">Vsi plavalci (dodeljeni terminom sezone)</option>
+                <option value="oly">Samo OLY (vadninski zapisi z OLY v obdobju sezone)</option>
+              </select>
+            </label>
+            <button type="button" class="btn ok" id="generateSeasonReportBtn">Izračunaj poročilo</button>
+          </div>
+          <p class="muted" style="font-size:13px;margin-bottom:12px">
+            <strong>Jutranji treningi:</strong> začetek termina pred 12:00. <strong>Popoldanski:</strong> od 12:00 naprej.
+            <strong>Udeležba:</strong> prisotni in možni se štejeta za iste kombinacije dan + termin sezone + plavalec z dodeljenim terminom (označena prisotnost).
+          </p>
+          <div id="seasonReportOutput"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sekcija za upravljanje trenerjev -->
+  <div class="admin-section" id="trainers-section">
+    <div class="grid">
+      <div class="card">
+        <h3>Dodaj novega trenerja</h3>
+        <div class="inner">
+          <div class="flex-col">
+            <div class="row" style="width:100%;align-items:stretch;gap:4px">
+              <input type="text" id="newTrainerFirst" placeholder="Ime">
+              <input type="text" id="newTrainerLast" placeholder="Priimek">
+              <input type="email" id="newTrainerEmail" placeholder="Email">
+              <input type="tel" id="newTrainerPhone" placeholder="Telefon (opcijsko)">
+              <button class="btn ok" id="addTrainerBtn" style="width:auto">Dodaj</button>
+            </div>
+            <div class="row" style="width:100%;align-items:stretch;gap:4px">
+              <button id="deleteTrainerBtn" class="btn warn">Zbriši trenerja</button>
+            </div>
+          </div>
+          <div id="trainerInfo" class="muted"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Dodeli termine trenerjem</h3>
+        <div class="inner">
+          <div class="flex-col searchable-picker">
+            <div class="searchable-picker-row">
+              <input type="search" id="trainerSearchInput" placeholder="Išči trenerja (ime, priimek, email)…" autocomplete="off">
+              <select id="trainerSelect"></select>
+              <button class="btn pri" id="assignTrainerTermBtn" style="width:auto;white-space:nowrap">Dodeli izbrane termine</button>
+            </div>
+            <div id="termTrainerAssignCheckboxes" class="term-assign-checkboxes muted" style="padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;background:#fafafa;min-height:48px">
+              Najprej izberite trenerja
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Seznam trenerjev</h3>
+        <div class="inner">
+          <div id="trainersList"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Povzetek prisotnosti trenerjev (za prikazani mesec)</h3>
+        <div class="inner">
+          <div class="summary-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+            <button class="btn" id="prevTrainerSummaryMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Prejšnji mesec">←</button>
+            <div style="text-align: center; min-width: 200px; cursor: pointer; padding: 10px; border-radius: 8px; transition: background-color 0.2s;" id="trainerSummaryMonthYearContainer" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
+              <div id="currentTrainerSummaryMonthYear" style="font-size: 18px; font-weight: bold; color: #333;"></div>
+              <div style="font-size: 12px; color: #666;">Klikni za izbiro datuma</div>
+            </div>
+            <button class="btn" id="nextTrainerSummaryMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Naslednji mesec">→</button>
+            <button class="btn" id="currentTrainerSummaryMonthBtn" style="background: #007bff; color: white; padding: 8px 12px; cursor: pointer;" title="Pojdi na trenutni mesec">Trenutni mesec</button>
+            <input type="month" id="trainerSummaryMonthYearInput" style="display: none;">
+          </div>
+          <div id="trainerSummaryBox">Nalaganje podatkov...</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Izračun ur in stroškov trenerjev (za prikazani mesec)</h3>
+        <div class="inner">
+          <div class="summary-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+            <button class="btn" id="prevTrainerHoursMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Prejšnji mesec">←</button>
+            <div style="text-align: center; min-width: 200px; cursor: pointer; padding: 10px; border-radius: 8px; transition: background-color 0.2s;" id="trainerHoursMonthYearContainer" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
+              <div id="currentTrainerHoursMonthYear" style="font-size: 18px; font-weight: bold; color: #333;"></div>
+              <div style="font-size: 12px; color: #666;">Klikni za izbiro datuma</div>
+            </div>
+            <button class="btn" id="nextTrainerHoursMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Naslednji mesec">→</button>
+            <button class="btn" id="currentTrainerHoursMonthBtn" style="background: #007bff; color: white; padding: 8px 12px; cursor: pointer;" title="Pojdi na trenutni mesec">Trenutni mesec</button>
+            <input type="month" id="trainerHoursMonthYearInput" style="display: none;">
+          </div>
+          <div id="trainerHoursCostsBox">Nalaganje podatkov...</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Opombe o odsotnosti trenerjev</h3>
+        <div class="inner">
+          <div class="summary-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+            <button class="btn" id="prevTrainerNotesMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Prejšnji mesec">←</button>
+            <div style="text-align: center; min-width: 200px; cursor: pointer; padding: 10px; border-radius: 8px; transition: background-color 0.2s;" id="trainerNotesMonthYearContainer" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
+              <div id="currentTrainerNotesMonthYear" style="font-size: 18px; font-weight: bold; color: #333;"></div>
+              <div style="font-size: 12px; color: #666;">Klikni za izbiro datuma</div>
+            </div>
+            <button class="btn" id="nextTrainerNotesMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Naslednji mesec">→</button>
+            <button class="btn" id="currentTrainerNotesMonthBtn" style="background: #007bff; color: white; padding: 8px 12px; cursor: pointer;" title="Pojdi na trenutni mesec">Trenutni mesec</button>
+            <input type="month" id="trainerNotesMonthYearInput" style="display: none;">
+          </div>
+          <div id="trainerNotesBox">Nalaganje podatkov...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sekcija za Finance -->
+  <div class="admin-section" id="finance-section">
+    <div class="grid">
+      <!-- Glavni del strani (leva stran) -->
+      <div class="main-content">
+        <!-- Gumb za kopiranje vadnin iz prejšnega meseca -->
+        <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+          <h3 style="color: white;">🔄 Kopiranje vadnin iz prejšnega meseca</h3>
+          <div class="inner">
+            <p style="margin-bottom: 15px; color: #e8e8e8;">
+              Ta funkcija bo avtomatsko kopirala vse vadnine iz prejšnega meseca v trenutni mesec.
+            </p>
+            <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+              <button class="btn" id="copyFeesBtn" style="background: white; color: #667eea; border: none; font-weight: bold;">
+                🔄 Kopiraj vadnine iz prejšnega meseca
+              </button>
+              <button class="btn" id="copyFeesNextYearBtn" style="background: #ff6b35; color: white; border: none; font-weight: bold;">
+                📅 Kopiraj vadnine za naslednje leto
+              </button>
+              <button class="btn" id="checkFeesStatusBtn" style="background: #28a745; color: white; border: none; font-weight: bold;">
+                🔍 Preveri stanje vadnin
+              </button>
+            </div>
+            <p style="margin-top: 10px; font-size: 0.9em; color: #d0d0d0;">
+              <strong>Opomba:</strong> Funkcija se izvede avtomatsko ob nalaganju strani, če trenutne vadnine ne obstajajo.
+            </p>
+          </div>
+        </div>
+        
+        <div class="card">
+          <h3>Mesečna vadnina - Pregled stroškov</h3>
+          <div class="inner">
+            <div class="summary-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+              <button class="btn" id="prevMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Prejšnji mesec">←</button>
+              <div style="text-align: center; min-width: 200px; cursor: pointer; padding: 10px; border-radius: 8px; transition: background-color 0.2s;" id="monthYearContainer" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
+                <div id="currentMonthYear" style="font-size: 18px; font-weight: bold; color: #333;"></div>
+                <div style="font-size: 12px; color: #666;">Klikni za izbiro datuma</div>
+              </div>
+              <button class="btn" id="nextMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Naslednji mesec">→</button>
+              <button class="btn" id="currentMonthBtn" style="background: #007bff; color: white; padding: 8px 12px; cursor: pointer;" title="Pojdi na trenutni mesec">Trenutni mesec</button>
+              <input type="month" id="monthYearInput" style="display: none;">
+            </div>
+            <div id="financeSummaryBox">Nalaganje podatkov...</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Nastavitve cen</h3>
+          <div class="inner">
+            <div class="row">
+              <label for="managementCostPerMonth">Stroški vodenja na mesec:</label>
+              <input type="number" id="managementCostPerMonth" value="500" min="0" step="0.01" style="width: 120px;">
+              <span>€</span>
+            </div>
+            <button class="btn pri" id="saveCostsBtn">Shrani nastavitve</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Nastavitve postavk trenerjev (na termin)</h3>
+          <div class="inner">
+            <div class="summary-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+              <button class="btn" id="prevTrainerRatesMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Prejšnji mesec">←</button>
+              <div style="text-align: center; min-width: 200px; cursor: pointer; padding: 10px; border-radius: 8px; transition: background-color 0.2s;" id="trainerRatesMonthYearContainer" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
+                <div id="currentTrainerRatesMonthYear" style="font-size: 18px; font-weight: bold; color: #333;"></div>
+                <div style="font-size: 12px; color: #666;">Klikni za izbiro datuma</div>
+              </div>
+              <button class="btn" id="nextTrainerRatesMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Naslednji mesec">→</button>
+              <button class="btn" id="currentTrainerRatesMonthBtn" style="background: #007bff; color: white; padding: 8px 12px; cursor: pointer;" title="Pojdi na trenutni mesec">Trenutni mesec</button>
+              <input type="month" id="trainerRatesMonthYearInput" style="display: none;">
+            </div>
+            <div id="trainerRatesSettings">
+              <p class="muted">Nalaganje trenerjev...</p>
+            </div>
+            <button class="btn pri" id="saveTrainerRatesBtn">Shrani postavke trenerjev</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Podrobni pregled stroškov</h3>
+          <div class="inner">
+            <div id="detailedCostsBox">Izberite mesec in leto za prikaz podrobnosti...</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Upravljanje mesečnih pristojbin plavalcev</h3>
+          <div class="inner">
+            <div class="summary-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+              <button class="btn" id="prevSwimmerFeesMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Prejšnji mesec">←</button>
+              <div style="text-align: center; min-width: 200px; cursor: pointer; padding: 10px; border-radius: 8px; transition: background-color 0.2s;" id="swimmerFeesMonthYearContainer" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
+                <div id="currentSwimmerFeesMonthYear" style="font-size: 18px; font-weight: bold; color: #333;"></div>
+                <div style="font-size: 12px; color: #666;">Klikni za izbiro datuma</div>
+              </div>
+              <button class="btn" id="nextSwimmerFeesMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Naslednji mesec">→</button>
+              <button class="btn" id="currentSwimmerFeesMonthBtn" style="background: #007bff; color: white; padding: 8px 12px; cursor: pointer;" title="Pojdi na trenutni mesec">Trenutni mesec</button>
+              <input type="month" id="swimmerFeesMonthYearInput" style="display: none;">
+            </div>
+            <div id="swimmerFeesBox">Nalaganje podatkov...</div>
+            <div style="margin-top: 16px;">
+              <button class="btn pri" id="exportFeesBtn">Izvozi vadnine v CSV</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Poročilo za računovodstvo (mesečni seznam vadnin)</h3>
+          <div class="inner">
+            <p class="muted" style="font-size:13px;margin-bottom:12px">
+              Seznam plavalcev iz izbrane sezone za <strong>obračun izbranega meseca</strong>:
+              mesečni plačniki vsak mesec; enkratni in dvakratni le v mesecih obračuna (oktober, februar).
+              Vrstni red: zgoraj mesečno, nato dvakrat letno, spodaj enkrat letno. Plavalci z <strong>OLY</strong> se ne prikažejo.
+              <br><strong>Članarina (30 €)</strong> se obračuna <strong>enkrat na sezono</strong> – v mesecu, ki ga imate odprtega. Obkljukajte vsem hkrati ali posamezno; kdor ni obkljukan, je ne plača.
+              Plavalci z 0 € so označeni rdeče in v PDF niso vključeni.
+            </p>
+            <div class="summary-controls" style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+              <button type="button" class="btn" id="prevAccountingReportMonthBtn" title="Prejšnji mesec">←</button>
+              <div id="accountingReportMonthYearLabel" style="font-weight:bold;min-width:160px;text-align:center"></div>
+              <button type="button" class="btn" id="nextAccountingReportMonthBtn" title="Naslednji mesec">→</button>
+              <button type="button" class="btn" id="currentAccountingReportMonthBtn" style="background:#007bff;color:#fff">Trenutni mesec</button>
+              <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer" title="Obračuna članarino vsem na seznamu v tem mesecu; kdor jo ima že obračunano v drugem mesecu, ostane nespremenjen">
+                <input type="checkbox" id="accountingIncludeMembershipFee" style="width:18px;height:18px;cursor:pointer">
+                Obračunaj članarino vsem v tem mesecu (30 €)
+              </label>
+              <button type="button" class="btn ok" id="printAccountingReportBtn">Prenesi PDF</button>
+              <button type="button" class="btn pri" id="saveAccountingReportOrderBtn">Shrani vrstni red</button>
+              <button type="button" class="btn" id="sortAccountingReportAlphaBtn">Po abecedi</button>
+            </div>
+            <div id="accountingReportEditorBox">
+              <p class="muted">Nalaganje …</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Uvoz vadnin iz CSV</h3>
+          <div class="inner">
+                        <p class="muted">
+                Uvožena CSV datoteka mora v glavi vsebovati stolpce <code>first_name</code>, <code>last_name</code> in <code>monthly_fee</code>.
+                Opcijsko lahko dodate tudi stolpce <code>discount</code> za popuste, <code>email</code>, <code>phone</code>, <code>address</code> in <code>postal_code</code> za posodabljanje podatkov.
+              <br><br>
+                              <strong>Pomembno:</strong> Uvožene vadnine veljajo za vse prihodnje mesece (od izbranega meseca naprej).
+                <br><br>
+                <strong>Popusti:</strong> Popusti se upoštevajo samo za mesec, v katerem so uvoženi, ne pa tudi za prihodnje mesece.
+                <br><br>
+                <strong>Kontaktni podatki in naslov:</strong> Če so v CSV datoteki podani email, telefon, naslov ali pošta, se bodo obstoječi plavalci avtomatsko posodobili z novimi podatki.
+              <br><br>
+              <strong>Opomba:</strong> Uvožena datoteka lahko uporablja vejico (`,`) ali podpičje (`;`) kot ločilo med stolpci.
+              <br>
+              <strong>Primer:</strong>
+                          <pre style="background:#f1f5f9; padding:8px; border-radius:6px; overflow-x:auto;">
+first_name,last_name,email,phone,address,postal_code,monthly_fee,discount
+Janez,Novak,janez.novak@email.com,+386 40 123 456,Trubarjeva 1,1000 Ljubljana,80.00,0.00
+Maja,Kovač,maja.kovac@email.com,+386 41 234 567,Prešernova 5,1000 Ljubljana,75.00,5.00
+            </pre>
+            </p>
+            <div class="row" style="margin-top:12px; align-items: center;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <label style="margin-right: 4px;">Izberi mesec za uvoz:</label>
+                <select id="csvFeesMonthSelect" style="width: 150px; padding: 6px; border: 1px solid var(--border); border-radius: 6px;">
+                  <option value="1">Januar</option>
+                  <option value="2">Februar</option>
+                  <option value="3">Marec</option>
+                  <option value="4">April</option>
+                  <option value="5">Maj</option>
+                  <option value="6">Junij</option>
+                  <option value="7">Julij</option>
+                  <option value="8">Avgust</option>
+                  <option value="9">September</option>
+                  <option value="10">Oktober</option>
+                  <option value="11">November</option>
+                  <option value="12">December</option>
+                </select>
+                <select id="csvFeesYearSelect" style="width: 100px; padding: 6px; border: 1px solid var(--border); border-radius: 6px;">
+                </select>
+              </div>
+            </div>
+            <div class="row" style="margin-top:12px">
+              <label class="btn">
+                Uvozi vadnine
+                <input type="file" id="csvFeesInput" accept=".csv" style="display:none">
+              </label>
+              <button class="btn" onclick="debugSwimmerFees()" style="margin-left: 8px;">Debug pristojbine</button>
+              <button class="btn" onclick="clearInvalidFees()" style="margin-left: 8px; background-color: #dc3545;">Počisti neveljavne vadnine</button>
+              <button class="btn" onclick="checkDatabaseIntegrity().then(result => console.log('Integriteta baze:', result))" style="margin-left: 8px; background-color: #17a2b8;">Preveri integriteto baze</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desni sidebar -->
+      <div class="sidebar">
+        <div class="card">
+          <h3>Nastavitve stroškov prog po terminih (na uro)</h3>
+          <div class="inner">
+            <p class="muted" style="margin-bottom: 12px;">Prikazani so vsi termini, sortirani po dnevu in času</p>
+            <div id="termCostsSettings">
+              <p class="muted">Nalaganje terminov...</p>
+            </div>
+            <button class="btn pri" id="saveTermCostsBtn">Shrani stroške prog</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sekcija za Mailing liste -->
+  <div class="admin-section" id="mailing-section">
+    <div class="grid">
+      <div class="card">
+        <h3>Mailing liste</h3>
+        <div class="inner">
+          <div class="flex-col">
+            <div class="row" style="width:100%;align-items:stretch;gap:4px;margin-bottom:15px">
+              <label for="mailingFilterType" style="min-width:150px;text-align:right;padding-top:8px">Tip filtra:</label>
+              <select id="mailingFilterType" style="flex:1">
+                <option value="term">Določen termin</option>
+                <option value="afternoon">Popoldanske skupine (pred 18:00)</option>
+                <option value="evening">Večerne skupine (od 18:00 naprej)</option>
+              </select>
+            </div>
+            <div class="row" style="width:100%;align-items:flex-start;gap:4px;margin-bottom:15px" id="mailingTermSelectRow">
+              <label style="min-width:150px;text-align:right;padding-top:8px">Izberi termine:</label>
+              <div id="mailingTermsCheckboxes" style="flex:1;max-height:200px;overflow-y:auto;border:1px solid #ddd;padding:10px;border-radius:6px;background:#f9f9f9">
+                <p class="muted">Nalaganje terminov...</p>
+              </div>
+            </div>
+            <div class="row" style="width:100%;align-items:stretch;gap:4px;margin-bottom:15px">
+              <button class="btn pri" id="loadMailingListBtn" style="width:auto">Prikaži email naslove</button>
+              <button class="btn" id="copyMailingListBtn" style="width:auto;display:none">Kopiraj email naslove</button>
+            </div>
+          </div>
+          <div id="mailingListBox" style="margin-top:20px">
+            <p class="muted">Izberite tip filtra in kliknite "Prikaži email naslove"</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sekcija za CSV uvoz/izvoz -->
+  <div class="admin-section" id="csv-section">
+    <div class="card csv-options">
+      <h3>Uvoz in izvoz CSV</h3>
+      <div class="inner">
+        <h4>Uvoz plavalcev</h4>
+        <p class="muted">
+          Uvožena CSV datoteka mora v glavi vsebovati stolpce <code>first_name</code>, <code>last_name</code> in <code>terms</code>.
+          <br><br>
+          <strong>Format terminov:</strong>
+          <br>
+          Sistem podpira dva formata terminov:
+          <br>
+          <strong>1. Format ID (priporočeno):</strong> <code>pon-17:00-18:00</code>
+          <br>
+          - Dan: <code>pon</code>, <code>tor</code>, <code>sre</code>, <code>čet</code>, <code>pet</code>, <code>sob</code>, <code>ned</code> (majhne črke, brez pike)
+          <br>
+          - Ura: <code>HH:MM</code> (brez sekund)
+          <br>
+          - Primer: <code>pon-17:00-18:00</code>, <code>sre-20:00-21:00</code>
+          <br><br>
+          <strong>2. Format z vejico (avtomatska pretvorba):</strong> <code>Pon.-20:00:00-21:00:00</code>
+          <br>
+          - Dan: <code>Pon.</code>, <code>Tor.</code>, <code>Sre.</code>, <code>Čet.</code>, <code>Pet.</code>, <code>Sob.</code>, <code>Ned.</code> (s piko)
+          <br>
+          - Ura: <code>HH:MM:SS</code> (s sekundami) - sistem avtomatsko odstrani sekunde
+          <br>
+          - Primer: <code>Pon.-20:00:00-21:00:00</code>
+          <br><br>
+          <strong>Več terminov:</strong> Ločite z vejico in celoten seznam zaprite v narekovaje: <code>"pon-17:00-18:00,sre-18:00-19:00"</code>
+          <br><br>
+          <strong>Opcijski stolpci:</strong> <code>email</code>, <code>phone</code>, <code>address</code> in <code>postal_code</code> - za dodajanje kontaktnih podatkov in naslova.
+          <br><br>
+          <strong>Separator:</strong> Podprti so vejica (`,`) ali podpičje (`;`) - sistem avtomatsko prepozna.
+          <br>
+          <strong>Primer:</strong>
+          <pre style="background:#f1f5f9; padding:8px; border-radius:6px; overflow-x:auto;">
+first_name,last_name,email,phone,address,postal_code,terms
+Janez,Novak,janez.novak@email.com,+386 40 123 456,Trg svobode 1,1000 Ljubljana,"pon-17:00-18:00,sre-18:00-19:00"
+Maja,Kovač,maja@example.com,041234567,Cesta 15,4000 Kranj,"Pon.-20:00:00-21:00:00,Čet.-20:00:00-21:00:00"
+          </pre>
+          <strong>Pomembno:</strong> Termini morajo že obstajati v bazi. Preverite ID termine v sekciji "Termini" → "Upravljanje terminov".
+        </p>
+        <div class="row" style="margin-top:0">
+          <label class="btn">
+            Uvozi plavalce
+            <input type="file" id="csvInput" accept=".csv" style="display:none">
+          </label>
+          <button class="btn" onclick="downloadSwimmerTermsExample()" style="margin-left: 8px;">Prenesi primer</button>
+          <button class="btn" onclick="exportSwimmersList()" style="margin-left: 8px;">Izvozi seznam plavalcev</button>
+        </div>
+        <hr style="border:none; border-top:1px solid var(--border); margin: 12px 0;">
+        
+        <h4>Uvoz terminov</h4>
+        <p class="muted">
+          Uvožena CSV datoteka mora v glavi vsebovati stolpce <code>id</code>, <code>day</code>, <code>start_time</code>, <code>end_time</code>, <code>date_from</code> in <code>date_to</code>.
+          Datum mora biti v formatu <code>dd / mm / yyyy</code>.
+          <br><br>
+          <strong>Opomba:</strong> Obstoječi termini z istim ID-jem bodo prepisani.
+          <br>
+          <strong>Primer:</strong>
+          <pre style="background:#f1f5f9; padding:8px; border-radius:6px; overflow-x:auto;">
+id,day,start_time,end_time,date_from,date_to
+pon-17:00-18:00,1,17:00,18:00,"01 / 09 / 2024","31 / 05 / 2025"
+sre-18:00-19:00,3,18:00,19:00,"01 / 09 / 2024","31 / 05 / 2025"
+          </pre>
+        </p>
+        <div class="row" style="margin-top:0">
+          <label class="btn">
+            Uvozi termine
+            <input type="file" id="csvTermsInput" accept=".csv" style="display:none">
+          </label>
+          <button class="btn" onclick="exportTermsList()" style="margin-left: 8px;">Izvozi termine (ID-je za CSV)</button>
+        </div>
+        <hr style="border:none; border-top:1px solid var(--border); margin: 12px 0;">
+
+        <h4>Izvoz povzetka</h4>
+        <div class="csv-export-controls">
+          <select id="exportMonthSelect"></select>
+          <select id="exportYearSelect"></select>
+          <button class="btn" id="exportCsvBtn">Izvozi</button>
+        </div>
+        <hr style="border:none; border-top:1px solid var(--border); margin: 12px 0;">
+        
+        <h4>Obnovitev prisotnosti</h4>
+        <p class="muted">
+          Če ste izgubili prisotnost za določen termin in mesec, jo lahko obnovite iz Supabase Point-in-Time Recovery ali pa uvozite iz CSV datoteke.
+          <br><br>
+          <strong>Format CSV za uvoz prisotnosti:</strong>
+          <br>
+          CSV datoteka mora vsebovati stolpce: <code>date</code>, <code>term_id</code>, <code>swimmer_id</code>, <code>status</code>
+          <br>
+          <strong>Status:</strong> <code>present</code>, <code>absent</code> ali <code>excused</code>
+          <br><br>
+          <strong>Primer CSV:</strong>
+          <pre style="background:#f1f5f9; padding:8px; border-radius:6px; overflow-x:auto;">
+date,term_id,swimmer_id,status
+2024-11-05,tor-06:15-07:30,uuid-plavalca-1,present
+2024-11-12,tor-06:15-07:30,uuid-plavalca-1,present
+2024-11-19,tor-06:15-07:30,uuid-plavalca-1,absent
+2024-11-26,tor-06:15-07:30,uuid-plavalca-1,present
+          </pre>
+          <strong>Pomembno:</strong> Pri uvozu se obstoječe zapise posodobi, nove zapise pa doda.
+        </p>
+        <div class="row" style="margin-top:0">
+          <label class="btn">
+            Uvozi prisotnost iz CSV
+            <input type="file" id="csvAttendanceInput" accept=".csv" style="display:none">
+          </label>
+          <button class="btn" id="restoreAttendanceBtn" style="margin-left: 8px;">Obnovi iz Supabase backup (prejšnji mesec)</button>
+        </div>
+        <div id="restoreAttendanceInfo" class="muted" style="margin-top: 10px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal za urejanje terminov -->
+  <div class="modal" id="editTermModal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="box">
+      <div class="box-header">
+        <strong id="editTermModalTitle">Uredi termin</strong>
+        <button class="btn" id="closeEditTermModalBtn">Zapri</button>
+      </div>
+      <div class="box-body">
+        <div class="row">
+          <label for="editTermDateFrom">Datum trajanja od:</label>
+          <input type="text" id="editTermDateFrom" placeholder="dd / mm / yyyy">
+        </div>
+        <div class="row">
+          <label for="editTermDateTo">do:</label>
+          <input type="text" id="editTermDateTo" placeholder="dd / mm / yyyy">
+        </div>
+        <div class="row">
+          <label for="editTermStart">Začetna ura:</label>
+          <input type="time" id="editTermStart" step="60">
+        </div>
+        <div class="row">
+          <label for="editTermEnd">Končna ura:</label>
+          <input type="time" id="editTermEnd" step="60">
+        </div>
+        <div class="row">
+          <label for="editTermSeasonId">Sezona:</label>
+          <select id="editTermSeasonId" style="flex:1"></select>
+        </div>
+        <button class="btn pri" id="saveEditTermBtn">Shrani</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal za urejanje sezone -->
+  <div class="modal" id="editSeasonModal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="box">
+      <div class="box-header">
+        <strong>Uredi sezono</strong>
+        <button type="button" class="btn" id="closeEditSeasonModalBtn">Zapri</button>
+      </div>
+      <div class="box-body">
+        <div class="row">
+          <label for="editSeasonName">Naziv:</label>
+          <input type="text" id="editSeasonName" placeholder="npr. 2026/27" style="min-width:220px">
+        </div>
+        <div class="row">
+          <label for="editSeasonDateFrom">Od:</label>
+          <input type="date" id="editSeasonDateFrom">
+        </div>
+        <div class="row">
+          <label for="editSeasonDateTo">Do:</label>
+          <input type="date" id="editSeasonDateTo">
+        </div>
+        <div class="row">
+          <label for="editSeasonIsActive" style="min-width:auto"><input type="checkbox" id="editSeasonIsActive"> Aktivna</label>
+        </div>
+        <div class="row" style="gap:8px">
+          <button type="button" class="btn pri" id="saveEditSeasonBtn">Shrani</button>
+          <button type="button" class="btn" id="cancelEditSeasonModalBtn">Prekliči</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal za prikaz detajlov ur -->
+  <div class="modal" id="hoursDetailsModal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="box">
+      <div class="box-header">
+        <strong id="hoursDetailsModalTitle">Detajli ur</strong>
+        <button class="btn" id="closeHoursDetailsModalBtn">Zapri</button>
+      </div>
+      <div class="box-body">
+        <div id="hoursDetailsContent">
+          Nalaganje podatkov...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal za prikaz datumov odsotnosti trenerja -->
+  <div class="modal" id="trainerAbsenceModal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="box">
+      <div class="box-header">
+        <strong id="trainerAbsenceModalTitle">Datumi odsotnosti</strong>
+        <button class="btn" id="closeTrainerAbsenceModalBtn">Zapri</button>
+      </div>
+      <div class="box-body">
+        <div id="trainerAbsenceContent">
+          Nalaganje podatkov...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal za prikaz programa prisotnosti plavalca -->
+  <div class="modal" id="swimmerAttendanceModal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="box">
+      <div class="box-header">
+        <strong id="swimmerAttendanceModalTitle">Program prisotnosti</strong>
+        <button class="btn" id="closeSwimmerAttendanceModalBtn">Zapri</button>
+      </div>
+      <div class="box-body">
+        <div id="swimmerAttendanceContent">
+          Nalaganje podatkov...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal za urejanje plavalca -->
+  <div class="modal" id="editSwimmerModal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="box">
+      <div class="box-header">
+        <strong id="editSwimmerModalTitle">Uredi plavalca</strong>
+        <button class="btn" id="closeEditSwimmerModalBtn">Zapri</button>
+      </div>
+      <div class="box-body">
+        <div class="row">
+          <label for="editSwimmerFirst">Ime:</label>
+          <input type="text" id="editSwimmerFirst" placeholder="Ime" required>
+        </div>
+        <div class="row">
+          <label for="editSwimmerLast">Priimek:</label>
+          <input type="text" id="editSwimmerLast" placeholder="Priimek" required>
+        </div>
+        <div class="row">
+          <label for="editSwimmerEmail">Email:</label>
+          <input type="email" id="editSwimmerEmail" placeholder="Email (opcijsko)">
+        </div>
+        <div class="row">
+          <label for="editSwimmerPhone">Telefon:</label>
+          <input type="tel" id="editSwimmerPhone" placeholder="Telefon (opcijsko)">
+        </div>
+        <div class="row">
+          <label for="editSwimmerAddress">Naslov:</label>
+          <input type="text" id="editSwimmerAddress" placeholder="Naslov (opcijsko)">
+        </div>
+        <div class="row">
+          <label for="editSwimmerPostalCode">Pošta:</label>
+          <input type="text" id="editSwimmerPostalCode" placeholder="Pošta (opcijsko)">
+        </div>
+        <div id="editSwimmerInfo" class="muted" style="margin-top: 10px;"></div>
+        <button class="btn pri" id="saveEditSwimmerBtn">Shrani spremembe</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.10/build/pdfmake.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.10/build/vfs_fonts.js"></script>
+  <script src="./config.js"></script>
+  <script src="./auth.js"></script>
+  <script src="./admin.js"></script>
+</body>
+</html>

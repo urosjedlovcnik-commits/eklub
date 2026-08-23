@@ -1,0 +1,5 @@
+first_name,last_name,email,phone,monthly_fee,discount
+Janez,Novak,janez.novak@email.com,+386 40 123 456,80.00,0.00
+Maja,Kovač,maja.kovac@email.com,+386 41 234 567,75.00,5.00
+Peter,Horvat,peter.horvat@email.com,+386 42 345 678,85.00,0.00
+Ana,Žnidar,ana.znidar@email.com,+386 43 456 789,70.00,10.00

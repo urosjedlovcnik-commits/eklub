@@ -1,0 +1,2 @@
+INSERT INTO "public"."term_status" ("date", "term_id", "status", "note", "notes") VALUES ('2025-08-03', 'pon-07-00-08-00', 'inactive', 'Bolezen', 'Trening je bil pretežak
+Plavalci so jokali'), ('2025-08-03', 'pon-20-00-21-00', null, null, ''), ('2025-08-04', 'pon-20-00-21-00', 'active', '', ''), ('2025-08-17', 'pon-20-00-21-00', null, null, ''), ('2025-08-24', 'pon-20-00-21-00', null, null, '');

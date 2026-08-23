@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hitri Test - Trainer Auth</title>
+    <style>
+        body {
+            font-family: system-ui;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f7fa;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 { color: #2563eb; text-align: center; }
+        .test-link {
+            display: block;
+            padding: 15px 20px;
+            margin: 10px 0;
+            background: #2563eb;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            text-align: center;
+            transition: background 0.2s;
+        }
+        .test-link:hover { background: #1d4ed8; }
+        .trainer-admin { background: #0ea5e9; }
+        .trainer-admin:hover { background: #0284c7; }
+        .basic-trainer { background: #f59e0b; }
+        .basic-trainer:hover { background: #d97706; }
+        .description {
+            font-size: 14px;
+            color: #6b7280;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🚀 Hitri Test Trainer Auth Sistema</h1>
+        <p>Kliknite na povezavo za direkten dostop do dashboarda z različnimi vlogami:</p>
+    </div>
+
+    <div class="card">
+        <h3>🔵 Trainer Administrator</h3>
+        <a href="trainer-login.html" class="test-link trainer-admin">
+            Vstopi kot Trainer Admin
+        </a>
+        <div class="description">
+            ✅ Vidi vse treninge<br>
+            ✅ Gumb "Prikaži vse/samo svoje"<br>
+            ✅ Polne statistike
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>🟡 Osnovni Trener</h3>
+        <a href="trainer-login.html" class="test-link basic-trainer">
+            Vstopi kot Osnovni Trener
+        </a>
+        <div class="description">
+            ⚠️ Vidi samo svoje treninge<br>
+            ❌ Ni gumba za prikaz vseh<br>
+            ⚠️ Omejene statistike
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>🔴 Super Admin</h3>
+        <a href="../admin.html" class="test-link">
+            Pojdi na Admin Panel
+        </a>
+        <div class="description">
+            ✅ Popoln dostop do sistema<br>
+            ✅ Obstoječi admin panel
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>🧪 Login Test</h3>
+        <a href="trainer-login.html" class="test-link" style="background: #6b7280;">
+            Test Login Sistema
+        </a>
+        <div class="description">
+            Demo prijave z različnimi računi
+        </div>
+    </div>
+
+    <div class="card">
+        <p style="font-size: 12px; color: #6b7280; text-align: center;">
+            ✅ Realna avtentikacija: Uporablja Supabase Auth in realne podatke
+        </p>
+    </div>
+</body>
+</html>

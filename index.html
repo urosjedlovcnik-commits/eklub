@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Prisotnost plavalcev – koledar, prisotnost, CSV</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Koledar prisotnosti plavalcev</h1>
+
+  <div class="toolbar">
+    <button class="btn" id="prevBtn">◀ Prejšnji mesec</button>
+    <span class="tag" id="monthLabel"></span>
+    <button class="btn" id="nextBtn">Naslednji mesec ▶</button>
+  </div>
+
+  <div class="calendar">
+    <div class="calendar-head">
+      <div>Pon</div><div>Tor</div><div>Sre</div><div>Čet</div><div>Pet</div><div>Sob</div><div>Ned</div>
+    </div>
+    <div class="calendar-grid" id="calendarGrid"></div>
+  </div>
+
+
+
+
+
+  <div class="modal" id="eventModal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="box">
+      <div class="box-header">
+        <div>
+          <strong id="modalTitle">Trening</strong>
+          <div class="chips" id="modalMeta"></div>
+        </div>
+        <div class="row">
+          <button class="btn warn" id="toggleEventBtn">Deaktiviraj/Aktiviraj</button>
+          <button class="btn" id="closeModalBtn">Zapri</button>
+        </div>
+      </div>
+      <div class="box-body">
+        <div id="inactiveNote" style="display:none; margin-bottom:12px; padding:10px; background:#fef3c7; border-radius:8px; border:1px solid #fcd34d;">
+          <strong style="display:block; margin-bottom:4px;">Opomba:</strong>
+          <span id="inactiveNoteText"></span>
+        </div>
+
+        <table id="trainerAttendanceTable" class="attendance-table">
+          <thead><tr><th>Trener</th><th>Prisotnost</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        
+        <!-- Dodajam prostor za opombe trenerjev -->
+        <div id="trainerNotesSection" style="display:none; margin-top:12px;">
+          <h4>Nadomeščanje trenerja</h4>
+          <div class="notes-section">
+            <div style="margin-bottom:12px;">
+              <label for="trainerNotesInput" class="muted">Izberi nadomestnega trenerja iz sistema:</label>
+              <select id="trainerNotesInput">
+                <option value="">Izberi trenerja...</option>
+              </select>
+            </div>
+            <div style="margin-bottom:12px;">
+              <label for="trainerNotesTextarea" class="muted">Ali vnesi ime novega trenerja:</label>
+              <textarea id="trainerNotesTextarea" placeholder="Vnesite ime in priimek novega trenerja"></textarea>
+            </div>
+            <div class="row" style="margin-top:8px;">
+              <button id="saveTrainerNotesBtn" class="btn ok">Shrani nadomeščanje</button>
+              <button id="cancelTrainerNotesBtn" class="btn neutral">Prekliči</button>
+            </div>
+          </div>
+        </div>
+        
+        <hr style="margin:12px 0;border:none;border-top:1px solid var(--border)">
+        
+        <h4>Prisotnost plavalcev</h4>
+        <table id="attendanceTable" class="attendance-table">
+          <thead><tr><th>Plavalec</th><th>Prisotnost</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div style="margin-top: 8px; text-align: center;">
+          <button class="btn warn" id="resetAttendanceBtn" style="font-size: 12px; padding: 4px 8px;">Ponastavi trening</button>
+        </div>
+        <hr style="margin:12px 0;border:none;border-top:1px solid var(--border)">
+        <h4>Nadomeščanje</h4>
+        <table id="substitutionTable" class="attendance-table">
+          <thead><tr><th>Plavalec</th><th>Prisotnost</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <hr style="margin:12px 0;border:none;border-top:1px solid var(--border)">
+        <h4>Dodaj plavalca v nadomeščanje</h4>
+        <input type="search" id="modalSwimmerSearchInput" placeholder="Išči plavalca (ime, priimek)…" autocomplete="off" style="width:100%;margin-bottom:8px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;box-sizing:border-box">
+        <div class="row">
+          <select id="modalSwimmerSelect"></select>
+          <button class="btn ok" id="addToEventBtn">Dodaj v nadomeščanje</button>
+        </div>
+        <hr style="margin:12px 0;border:none;border-top:1px solid var(--border)">
+        <h4>Opombe o treningu</h4>
+        <div class="notes-section">
+          <label for="notesInput" class="muted">Opomba:</label>
+          <textarea id="notesInput" placeholder="Dodaj opombo za ta trening (npr. vsebina treninga, opazke trenerja)."></textarea>
+          <button id="saveNotesBtn" class="btn primary-btn">Shrani trening</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="modal day-modal" id="dayModal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="box">
+      <div class="box-header">
+        <strong id="dayModalTitle">Izberi termin</strong>
+        <button class="btn" id="closeDayModalBtn">Zapri</button>
+      </div>
+      <div class="box-body">
+        <div id="dayModalList" class="day-modal-list"></div>
+      </div>
+    </div>
+  </div>
+
+
+
+
+
+
+
+<div id="noteModal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title">Deaktivacija treninga</h5>
+            <span class="close-btn" id="closeNoteModalBtn">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p>Prosim, vnesite opombo za deaktivacijo:</p>
+            <textarea id="noteInput" rows="4"></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn neutral" id="cancelNoteBtn">Prekliči</button>
+            <button class="btn ok" id="confirmNoteBtn">Potrdi</button>
+        </div>
+    </div>
+</div>
+
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+	<script src="./config.js"></script>
+	<script src="./script.js"></script>
+</body>
+</html>

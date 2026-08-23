@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trener Login - Plavalna šola</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .login-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            width: 100%;
+            max-width: 450px;
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .login-header h1 {
+            color: #2563eb;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .login-header p {
+            color: #6b7280;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #374151;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+        
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        
+        .login-btn {
+            width: 100%;
+            padding: 14px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 10px;
+        }
+        
+        .login-btn:hover {
+            background: #1d4ed8;
+        }
+        
+        .login-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        
+        .error-message {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .success-message {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #16a34a;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .test-accounts {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 8px;
+            font-size: 12px;
+        }
+        
+        .test-accounts h4 {
+            color: #374151;
+            margin-bottom: 10px;
+        }
+        
+        .test-account {
+            margin-bottom: 8px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        
+        .test-account:hover {
+            background: #e2e8f0;
+        }
+        
+        .test-account strong {
+            color: #2563eb;
+        }
+        
+        .back-link {
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .back-link a {
+            color: #6b7280;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        
+        .back-link a:hover {
+            color: #374151;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>🏊‍♂️ Trener Login</h1>
+            <p>Prijavite se v vaš trenerski račun</p>
+        </div>
+        
+        <div id="errorMessage" class="error-message"></div>
+        <div id="successMessage" class="success-message"></div>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="loginMethod">Način prijave:</label>
+                <select id="loginMethod">
+                    <option value="manual">Ročna prijava</option>
+                    <option value="test">Test računi</option>
+                </select>
+            </div>
+            
+            <div id="manualLogin">
+                <div class="form-group">
+                    <label for="email">E-pošta:</label>
+                    <input type="email" id="email" required placeholder="vnesite vaš email">
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Geslo:</label>
+                    <input type="password" id="password" required placeholder="vnesite geslo">
+                </div>
+            </div>
+            
+            <div id="testLogin" style="display: none;">
+                <div class="form-group">
+                    <label for="testUser">Test uporabnik:</label>
+                    <select id="testUser">
+                        <option value="">Izberi test uporabnika</option>
+                        <option value="super_admin">Super Admin (Uroš Jedlovčnik)</option>
+                        <option value="trainer_admin">Trainer Admin (m4j0n3z4@gmail.com)</option>
+                        <option value="basic_trainer">Osnovni Trener (uros@playworldgame.ocm)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <button type="submit" class="login-btn" id="loginBtn">
+                Prijava
+            </button>
+        </form>
+        
+        <div class="test-accounts">
+            <h4>🧪 Test računi (DEMO MODE):</h4>
+            <div class="test-account" onclick="fillTestAccount('super_admin')">
+                <strong>Super Admin:</strong> uros.jedlovcnik@gmail.com<br>
+                <strong>Geslo:</strong> PlavalnaSola2025!<br>
+                <small>→ Popoln dostop (preusmeritev na obstoječi admin)</small>
+            </div>
+            <div class="test-account" onclick="fillTestAccount('trainer_admin')">
+                <strong>Trainer Admin:</strong> m4j0n3z4@gmail.com<br>
+                <strong>Geslo:</strong> DEMO123!<br>
+                <small>→ Vidi vse treninge</small>
+            </div>
+            <div class="test-account" onclick="fillTestAccount('basic_trainer')">
+                <strong>Osnovni Trener:</strong> uros@playworldgame.ocm<br>
+                <strong>Geslo:</strong> DEMO123!<br>
+                <small>→ Vidi samo svoje treninge</small>
+            </div>
+            <div style="margin-top: 10px; padding: 8px; background: #d1fae5; border-radius: 4px; font-size: 11px;">
+                ✅ Realna avtentikacija: Uporablja Supabase Auth
+            </div>
+        </div>
+        
+        <div class="back-link">
+            <a href="../index.html">← Nazaj na glavno stran</a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config-auth.js"></script>
+    <script src="trainer-auth.js"></script>
+    <script>
+                    document.addEventListener('DOMContentLoaded', () => {
+                const loginForm = document.getElementById('loginForm');
+                const loginMethodSelect = document.getElementById('loginMethod');
+                const manualLoginDiv = document.getElementById('manualLogin');
+                const testLoginDiv = document.getElementById('testLogin');
+                const emailInput = document.getElementById('email');
+                const passwordInput = document.getElementById('password');
+                const testUserSelect = document.getElementById('testUser');
+                const loginBtn = document.getElementById('loginBtn');
+                const errorMessage = document.getElementById('errorMessage');
+                const successMessage = document.getElementById('successMessage');
+                
+                // 🧪 DEBUG: Preveri, ali so vsi objekti naloženi
+                console.log('🔍 DEBUG: DOM loaded');
+                console.log('🔍 DEBUG: AUTH_CONFIG:', typeof AUTH_CONFIG !== 'undefined' ? 'OK' : 'MISSING');
+                console.log('🔍 DEBUG: trainerAuth:', typeof trainerAuth !== 'undefined' ? 'OK' : 'MISSING');
+                console.log('🔍 DEBUG: createAuthSupabaseClient:', typeof createAuthSupabaseClient !== 'undefined' ? 'OK' : 'MISSING');
+                
+                // Preveri, če je uporabnik že prijavljen
+                // checkExistingSession(); // Odstranimo to, ker ustvarja loop
+            
+            // Spreminjanje načina prijave
+            loginMethodSelect.addEventListener('change', () => {
+                const method = loginMethodSelect.value;
+                if (method === 'manual') {
+                    manualLoginDiv.style.display = 'block';
+                    testLoginDiv.style.display = 'none';
+                } else {
+                    manualLoginDiv.style.display = 'none';
+                    testLoginDiv.style.display = 'block';
+                }
+            });
+            
+            // Prijavni obrazec
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await handleLogin();
+            });
+            
+            async function handleLogin() {
+                const method = loginMethodSelect.value;
+                let email, password;
+                
+                if (method === 'manual') {
+                    email = emailInput.value.trim();
+                    password = passwordInput.value;
+                } else {
+                    const testUserType = testUserSelect.value;
+                    if (!testUserType) {
+                        showError('Prosim izberite test uporabnika');
+                        return;
+                    }
+                    
+                    const testUser = AUTH_CONFIG.TEST_USERS[testUserType.toUpperCase()];
+                    email = testUser.email;
+                    password = testUser.password;
+                }
+                
+                if (!email || !password) {
+                    showError('Prosim izpolnite vsa polja');
+                    return;
+                }
+                
+                setLoading(true);
+                
+                try {
+                    console.log('🔍 DEBUG: Pokušam prijavo z:', email);
+                    
+                    // Enostaven demo login brez Supabase
+                    const demoUsers = {
+                        'm4j0n3z4@gmail.com': {
+                            id: 'demo-trainer-1',
+                            first_name: 'urke',
+                            last_name: 'prdurke',
+                            email: 'm4j0n3z4@gmail.com',
+                            role: 'trainer_admin',
+                            password: 'DEMO123!'
+                        },
+                        'uros.jedlovcnik@gmail.com': {
+                            id: 'demo-admin-1',
+                            first_name: 'Uroš',
+                            last_name: 'Jedlovčnik',
+                            email: 'uros.jedlovcnik@gmail.com',
+                            role: 'super_admin',
+                            password: 'PlavalnaSola2025!'
+                        },
+                        'uros@playworldgame.ocm': {
+                            id: 'demo-trainer-2',
+                            first_name: 'Urke',
+                            last_name: 'Care',
+                            email: 'uros@playworldgame.ocm',
+                            role: 'trainer',
+                            password: 'DEMO123!'
+                        }
+                    };
+                    
+                    const demoUser = demoUsers[email];
+                    if (!demoUser || demoUser.password !== password) {
+                        throw new Error('Napačen email ali geslo');
+                    }
+                    
+                    console.log('🔍 DEBUG: Demo prijava uspešna:', demoUser);
+                    
+                    // Shrani session direktno v localStorage
+                    const sessionData = {
+                        userId: demoUser.id,
+                        trainerId: demoUser.id,
+                        trainerRole: demoUser.role,
+                        firstName: demoUser.first_name,
+                        lastName: demoUser.last_name,
+                        email: demoUser.email,
+                        loginTime: Date.now(),
+                        expiresAt: Date.now() + (24 * 60 * 60 * 1000) // 24 ur
+                    };
+                    
+                    localStorage.setItem('trainer_session', JSON.stringify(sessionData));
+                    console.log('🔍 DEBUG: Session shranjen:', sessionData);
+                    
+                    showSuccess(`Dobrodošli, ${demoUser.first_name}!`);
+                    console.log('🔍 DEBUG: Preusmerjam na:', demoUser.role);
+                    
+                    // Preusmeri glede na vlogo
+                    setTimeout(() => {
+                        if (demoUser.role === 'super_admin') {
+                            console.log('🔍 DEBUG: Preusmerjam na admin.html');
+                            window.location.href = '../admin.html';
+                        } else {
+                            console.log('🔍 DEBUG: Preusmerjam na trainer-dashboard.html');
+                            window.location.href = 'trainer-dashboard.html';
+                        }
+                    }, 1000);
+                    
+                } catch (error) {
+                    console.log('🔍 DEBUG: Napaka pri prijavi:', error);
+                    showError(error.message);
+                } finally {
+                    setLoading(false);
+                }
+            }
+            
+            async function checkExistingSession() {
+                try {
+                    // Preveri samo lokalni session, ne Supabase Auth
+                    const localSession = trainerAuth.getStoredSession();
+                    if (localSession && localSession.expiresAt > Date.now()) {
+                        // Preusmeri na ustrezno stran
+                        if (localSession.trainerRole === 'super_admin') {
+                            window.location.href = '../admin.html';
+                        } else {
+                            window.location.href = 'trainer-dashboard.html';
+                        }
+                    }
+                } catch (error) {
+                    console.log('Ni obstoječega sessiona');
+                }
+            }
+            
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorMessage.style.display = 'block';
+                successMessage.style.display = 'none';
+                setTimeout(() => {
+                    errorMessage.style.display = 'none';
+                }, 5000);
+            }
+            
+            function showSuccess(message) {
+                successMessage.textContent = message;
+                successMessage.style.display = 'block';
+                errorMessage.style.display = 'none';
+            }
+            
+            function setLoading(loading) {
+                loginBtn.disabled = loading;
+                loginBtn.textContent = loading ? 'Prijavljanje...' : 'Prijava';
+            }
+            
+            // Globalna funkcija za hitro polnjenje
+            window.fillTestAccount = function(type) {
+                loginMethodSelect.value = 'manual';
+                manualLoginDiv.style.display = 'block';
+                testLoginDiv.style.display = 'none';
+                
+                // Demo podatki
+                const demoAccounts = {
+                    'super_admin': {
+                        email: 'uros.jedlovcnik@gmail.com',
+                        password: 'PlavalnaSola2025!'
+                    },
+                    'trainer_admin': {
+                        email: 'm4j0n3z4@gmail.com',
+                        password: 'DEMO123!'
+                    },
+                    'basic_trainer': {
+                        email: 'uros@playworldgame.ocm',
+                        password: 'DEMO123!'
+                    }
+                };
+                
+                const account = demoAccounts[type];
+                if (account) {
+                    emailInput.value = account.email;
+                    passwordInput.value = account.password;
+                }
+            };
+        });
+    </script>
+</body>
+</html>

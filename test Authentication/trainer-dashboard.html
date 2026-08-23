@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trener Dashboard - Plavalna šola</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #f5f7fa;
+            color: #0f172a;
+            line-height: 1.6;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            margin-bottom: 10px;
+        }
+        
+        .user-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .user-details {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .user-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        
+        .btn-primary:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .btn-danger {
+            background: #dc2626;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #b91c1c;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        
+        .card h3 {
+            color: #1f2937;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .permission-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .permission-full {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .permission-all-trainings {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+        
+        .permission-own-only {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 8px;
+        }
+        
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2563eb;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 5px;
+        }
+        
+        .calendar-container {
+            grid-column: 1 / -1;
+        }
+        
+        .calendar {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .calendar-header {
+            background: #f8fafc;
+            padding: 20px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .calendar-nav {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+        }
+        
+        .calendar-day-header {
+            padding: 15px 10px;
+            text-align: center;
+            font-weight: 600;
+            background: #f1f5f9;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .calendar-day {
+            min-height: 120px;
+            padding: 10px;
+            border-right: 1px solid #e5e7eb;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .calendar-day.other-month {
+            background: #f9fafb;
+            opacity: 0.5;
+        }
+        
+        .calendar-day.today {
+            background: #eff6ff;
+            border: 2px solid #2563eb;
+        }
+        
+        .day-number {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .day-events {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .event {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .event-own {
+            background: #dbeafe;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+        }
+        
+        .event-all {
+            background: #f0fdf4;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+        
+                 .event:hover {
+             transform: translateY(-1px);
+             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+         }
+
+         /* 🏊‍♂️ PRISOTNOST STILI */
+         .attendance-control {
+             margin-top: 4px;
+             padding: 4px 8px;
+             border-radius: 4px;
+             font-size: 10px;
+             cursor: pointer;
+             text-align: center;
+             font-weight: 600;
+             transition: all 0.2s;
+             border: 1px solid transparent;
+         }
+
+         .attendance-control:hover {
+             transform: translateY(-1px);
+             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+         }
+
+         .attendance-present {
+             background: #dcfce7;
+             color: #166534;
+             border-color: #bbf7d0;
+         }
+
+         .attendance-absent {
+             background: #fef2f2;
+             color: #dc2626;
+             border-color: #fecaca;
+         }
+
+         .attendance-not-set {
+             background: #fef3c7;
+             color: #92400e;
+             border-color: #fed7aa;
+         }
+
+         .attendance-error {
+             background: #fef2f2;
+             color: #dc2626;
+             border-color: #fecaca;
+         }
+
+         /* 🏊‍♂️ MODAL STILI */
+         .modal {
+             position: fixed;
+             z-index: 1000;
+             left: 0;
+             top: 0;
+             width: 100%;
+             height: 100%;
+             background-color: rgba(0,0,0,0.5);
+             display: flex;
+             align-items: center;
+             justify-content: center;
+         }
+
+         .modal-content {
+             background-color: #fff;
+             margin: 20px;
+             padding: 0;
+             border-radius: 8px;
+             width: 90%;
+             max-width: 600px;
+             max-height: 90vh;
+             overflow: hidden;
+             box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+         }
+
+         .modal-header {
+             padding: 20px;
+             border-bottom: 1px solid #e5e7eb;
+             display: flex;
+             justify-content: space-between;
+             align-items: center;
+         }
+
+         .modal-header h3 {
+             margin: 0;
+             color: #111827;
+         }
+
+         .close {
+             color: #6b7280;
+             font-size: 28px;
+             font-weight: bold;
+             cursor: pointer;
+             line-height: 1;
+         }
+
+         .close:hover {
+             color: #111827;
+         }
+
+         .modal-body {
+             padding: 20px;
+             max-height: 60vh;
+             overflow-y: auto;
+         }
+
+         .modal-footer {
+             padding: 20px;
+             border-top: 1px solid #e5e7eb;
+             display: flex;
+             justify-content: flex-end;
+             gap: 12px;
+         }
+
+         .term-info {
+             background: #f8fafc;
+             padding: 16px;
+             border-radius: 6px;
+             margin-bottom: 20px;
+             border: 1px solid #e2e8f0;
+         }
+
+         .term-details {
+             font-size: 14px;
+             line-height: 1.6;
+         }
+
+         .swimmers-list {
+             margin-bottom: 20px;
+         }
+
+         .swimmer-item {
+             display: flex;
+             align-items: center;
+             padding: 12px;
+             border: 1px solid #e5e7eb;
+             border-radius: 6px;
+             margin-bottom: 8px;
+             background: #fff;
+             transition: all 0.2s;
+         }
+
+         .swimmer-item:hover {
+             border-color: #3b82f6;
+             box-shadow: 0 2px 4px rgba(59, 130, 246, 0.1);
+         }
+
+         .swimmer-info {
+             flex: 1;
+         }
+
+         .swimmer-name {
+             font-weight: 600;
+             color: #111827;
+             margin-bottom: 4px;
+         }
+
+         .swimmer-details {
+             font-size: 12px;
+             color: #6b7280;
+         }
+
+         .swimmer-attendance {
+             display: flex;
+             gap: 8px;
+             align-items: center;
+         }
+
+         .attendance-btn {
+             padding: 6px 12px;
+             border: 1px solid #d1d5db;
+             border-radius: 4px;
+             background: #fff;
+             cursor: pointer;
+             font-size: 12px;
+             font-weight: 500;
+             transition: all 0.2s;
+         }
+
+         .attendance-btn:hover {
+             transform: translateY(-1px);
+             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+         }
+
+         .attendance-btn.present {
+             background: #dcfce7;
+             color: #166534;
+             border-color: #bbf7d0;
+         }
+
+         .attendance-btn.absent {
+             background: #fef2f2;
+             color: #dc2626;
+             border-color: #fecaca;
+         }
+
+         .attendance-btn.not-set {
+             background: #fef3c7;
+             color: #92400e;
+             border-color: #fed7aa;
+         }
+
+         .attendance-btn.active {
+             transform: scale(1.05);
+             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+             font-weight: 600;
+         }
+
+         .attendance-btn.present.active {
+             background: #16a34a;
+             color: #fff;
+             border-color: #16a34a;
+         }
+
+         .attendance-btn.absent.active {
+             background: #dc2626;
+             color: #fff;
+             border-color: #dc2626;
+         }
+
+         .attendance-btn.not-set.active {
+             background: #d97706;
+             color: #fff;
+             border-color: #d97706;
+         }
+
+         .attendance-summary {
+             display: grid;
+             grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+             gap: 16px;
+             padding: 16px;
+             background: #f8fafc;
+             border-radius: 6px;
+             border: 1px solid #e2e8f0;
+         }
+
+         .summary-item {
+             text-align: center;
+         }
+
+         .summary-item .label {
+             display: block;
+             font-size: 12px;
+             color: #6b7280;
+             margin-bottom: 4px;
+         }
+
+         .summary-item .value {
+             display: block;
+             font-size: 18px;
+             font-weight: 600;
+             color: #111827;
+         }
+
+         .summary-item .value.present {
+             color: #166534;
+         }
+
+         .summary-item .value.absent {
+             color: #dc2626;
+         }
+
+         .summary-item .value.not-set {
+             color: #92400e;
+         }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+        }
+        
+                 .error {
+             background: #fef2f2;
+             border: 1px solid #fecaca;
+             color: #dc2626;
+             padding: 15px;
+             border-radius: 8px;
+             margin-bottom: 20px;
+         }
+
+         .success {
+             background: #f0fdf4;
+             border: 1px solid #bbf7d0;
+             color: #16a34a;
+             padding: 15px;
+             border-radius: 8px;
+             margin-bottom: 20px;
+         }
+        
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .calendar-day {
+                min-height: 80px;
+                padding: 5px;
+            }
+            
+            .day-events {
+                gap: 2px;
+            }
+            
+            .event {
+                font-size: 10px;
+                padding: 2px 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏊‍♂️ Trener Dashboard</h1>
+        <div class="user-info">
+            <div class="user-details">
+                <div id="trainerName">Nalaganje...</div>
+                <div id="trainerRole"></div>
+            </div>
+            <div class="user-actions">
+                <a href="../index.html" class="btn btn-primary">Glavni koledar</a>
+                <a href="../admin.html" class="btn btn-primary" id="adminLink" style="display: none;">Admin panel</a>
+                <button class="btn btn-danger" id="logoutBtn">Odjava</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div id="errorMessage" class="error" style="display: none;"></div>
+        
+        <div class="dashboard-grid">
+            <!-- Uporabniške informacije -->
+            <div class="card">
+                <h3>Vaš profil</h3>
+                <div id="permissionBadge" class="permission-badge">Nalaganje...</div>
+                <div id="permissionDescription">Nalaganje dovoljenj...</div>
+                
+                                 <div class="stats-grid">
+                     <div class="stat-item">
+                         <div class="stat-number" id="totalTerms">-</div>
+                         <div class="stat-label">Vaši termini</div>
+                     </div>
+                     <div class="stat-item">
+                         <div class="stat-number" id="todayTerms">-</div>
+                         <div class="stat-label">Danes</div>
+                     </div>
+                     <div class="stat-item">
+                         <div class="stat-number" id="weekTerms">-</div>
+                         <div class="stat-label">Ta teden</div>
+                     </div>
+                     <div class="stat-item">
+                         <div class="stat-number" id="attendancePercentage">-</div>
+                         <div class="stat-label">Prisotnost %</div>
+                     </div>
+                 </div>
+            </div>
+
+            <!-- Hitre akcije -->
+            <div class="card">
+                <h3>Hitre akcije</h3>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button class="btn btn-primary" onclick="goToToday()">Pojdi na danes</button>
+                    <button class="btn btn-primary" onclick="refreshData()">Osveži podatke</button>
+                    <button class="btn btn-primary" id="viewAllBtn" style="display: none;" onclick="toggleViewMode()">
+                        <span id="viewModeText">Prikaži vse treninge</span>
+                    </button>
+                </div>
+                
+                <div style="margin-top: 20px; padding: 15px; background: #f8fafc; border-radius: 8px;">
+                    <h4 style="margin-bottom: 10px; font-size: 14px;">Legenda:</h4>
+                    <div style="display: flex; flex-direction: column; gap: 5px; font-size: 12px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div class="event event-own" style="width: 20px; height: 15px;"></div>
+                            <span>Vaši termini</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;" id="allTermsLegend" style="display: none;">
+                            <div class="event event-all" style="width: 20px; height: 15px;"></div>
+                            <span>Vsi termini</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Koledar -->
+        <div class="calendar-container">
+            <div class="calendar">
+                <div class="calendar-header">
+                    <h3 id="currentMonth">Nalaganje...</h3>
+                    <div class="calendar-nav">
+                        <button class="btn btn-primary" id="prevMonth">&larr; Prejšnji</button>
+                        <button class="btn btn-primary" id="nextMonth">Naslednji &rarr;</button>
+                    </div>
+                </div>
+                
+                <div class="calendar-grid" id="calendarGrid">
+                    <div class="calendar-day-header">Pon</div>
+                    <div class="calendar-day-header">Tor</div>
+                    <div class="calendar-day-header">Sre</div>
+                    <div class="calendar-day-header">Čet</div>
+                    <div class="calendar-day-header">Pet</div>
+                    <div class="calendar-day-header">Sob</div>
+                    <div class="calendar-day-header">Ned</div>
+                    
+                    <!-- Dnevi se bodo dodali z JS direktno sem -->
+                    <div class="loading" style="grid-column: 1 / -1; text-align: center; padding: 20px;">
+                        Nalaganje koledarja...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🏊‍♂️ MODAL ZA PRISOTNOST PLAVALCEV -->
+        <div id="swimmerAttendanceModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modalTitle">Prisotnost plavalcev</h3>
+                    <span class="close" id="closeModal">&times;</span>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="term-info">
+                        <div class="term-details">
+                            <strong>Termin:</strong> <span id="modalTermId">-</span><br>
+                            <strong>Čas:</strong> <span id="modalTermTime">-</span><br>
+                            <strong>Datum:</strong> <span id="modalTermDate">-</span>
+                        </div>
+                    </div>
+                    
+                    <div class="swimmers-list" id="swimmersList">
+                        <div class="loading">Nalaganje plavalcev...</div>
+                    </div>
+                    
+                    <div class="attendance-summary">
+                        <div class="summary-item">
+                            <span class="label">Skupaj:</span>
+                            <span class="value" id="totalSwimmers">0</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="label">Prisotni:</span>
+                            <span class="value present" id="presentSwimmers">0</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="label">Odsotni:</span>
+                            <span class="value absent" id="absentSwimmers">0</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="label">Ni nastavljeno:</span>
+                            <span class="value not-set" id="notSetSwimmers">0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" id="cancelBtn">Prekliči</button>
+                    <button class="btn btn-primary" id="saveAttendanceBtn">Shrani prisotnost</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config-auth.js"></script>
+    <script src="trainer-auth.js"></script>
+    <script src="trainer-calendar.js"></script>
+    <script>
+        let currentDate = new Date();
+        let viewAllMode = false;
+        let currentTrainerSession = null;
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initializeDashboard();
+            setupEventListeners();
+        });
+        
+        async function initializeDashboard() {
+            try {
+                console.log('🔍 DEBUG: Dashboard - inicializacija');
+                
+                // Preveri lokalni session
+                const localSession = JSON.parse(localStorage.getItem('trainer_session') || 'null');
+                console.log('🔍 DEBUG: Lokalni session:', localSession);
+                
+                if (!localSession || localSession.expiresAt <= Date.now()) {
+                    console.log('🔍 DEBUG: Ni veljavnega sessiona, preusmerjam na login');
+                    window.location.href = 'trainer-login.html';
+                    return;
+                }
+                
+                console.log('🔍 DEBUG: Session je veljaven, preverjam podatke...');
+                console.log('🔍 DEBUG: userId:', localSession.userId);
+                console.log('🔍 DEBUG: trainerId:', localSession.trainerId);
+                console.log('🔍 DEBUG: trainerRole:', localSession.trainerRole);
+                console.log('🔍 DEBUG: firstName:', localSession.firstName);
+                console.log('🔍 DEBUG: lastName:', localSession.lastName);
+                console.log('🔍 DEBUG: email:', localSession.email);
+                
+                // Ustvari session objekt iz lokalnih podatkov
+                const session = {
+                    user: { id: localSession.userId, email: localSession.email || 'unknown' },
+                    trainer: {
+                        id: localSession.trainerId,
+                        first_name: localSession.firstName || 'Trener',
+                        last_name: localSession.lastName || 'Unknown',
+                        email: localSession.email || 'unknown',
+                        role: localSession.trainerRole
+                    },
+                    permissions: trainerAuth.calculatePermissions(localSession.trainerRole)
+                };
+                
+                console.log('🔍 DEBUG: Veljaven session iz localStorage:', session);
+                currentTrainerSession = session;
+                
+                // Nastavi UI
+                updateUserInterface();
+                await loadCalendarData();
+                await updateStats();
+                
+            } catch (error) {
+                console.log('🔍 DEBUG: Dashboard - napaka:', error);
+                showError('Napaka pri nalaganju dashboarda: ' + error.message);
+            }
+        }
+
+        // 🧪 Ustvari demo session
+        function createDemoSession(userType) {
+            const demoUsers = {
+                'super_admin': {
+                    trainer: {
+                        id: '8615f0eb-e1e9-4ce8-8d16-a7e677207da2',
+                        first_name: 'Uroš',
+                        last_name: 'Jedlovčnik',
+                        email: 'uros.jedlovcnik@gmail.com',
+                        role: 'super_admin'
+                    },
+                    permissions: {
+                        level: 'FULL_ACCESS',
+                        canViewAllTrainings: true,
+                        canEditAllTrainings: true,
+                        canManageTrainers: true,
+                        canManageTerms: true,
+                        description: 'Popoln dostop do sistema'
+                    }
+                },
+                'trainer_admin': {
+                    trainer: {
+                        id: '8f7c54c3-6cb4-4192-ab3d-7cb73a01c020',
+                        first_name: 'urke',
+                        last_name: 'prdurke',
+                        email: 'm4j0n3z4@gmail.com',
+                        role: 'trainer_admin'
+                    },
+                    permissions: {
+                        level: 'ALL_TRAININGS',
+                        canViewAllTrainings: true,
+                        canEditAllTrainings: true,
+                        canManageTrainers: false,
+                        canManageTerms: false,
+                        description: 'Dostop do vseh treningov'
+                    }
+                },
+                'trainer': {
+                    trainer: {
+                        id: '8615f0eb-e1e9-4ce8-8d16-a7e677207da2-fake',
+                        first_name: 'Urke',
+                        last_name: 'Care',
+                        email: 'uros@playworldgame.ocm',
+                        role: 'trainer'
+                    },
+                    permissions: {
+                        level: 'OWN_TRAININGS_ONLY',
+                        canViewAllTrainings: false,
+                        canEditAllTrainings: false,
+                        canManageTrainers: false,
+                        canManageTerms: false,
+                        description: 'Dostop samo do svojih treningov'
+                    }
+                }
+            };
+            
+            return demoUsers[userType] || null;
+        }
+        
+        function updateUserInterface() {
+            const { trainer, permissions } = currentTrainerSession;
+            
+            // Osnove informacije
+            document.getElementById('trainerName').textContent = 
+                `${trainer.first_name} ${trainer.last_name}`;
+            
+            // Vloga in dovoljenja
+            const roleBadge = document.getElementById('permissionBadge');
+            const roleDesc = document.getElementById('permissionDescription');
+            
+            switch (permissions.level) {
+                case AUTH_CONFIG.PERMISSIONS.FULL_ACCESS:
+                    roleBadge.textContent = 'Super Administrator';
+                    roleBadge.className = 'permission-badge permission-full';
+                    roleDesc.textContent = permissions.description;
+                    document.getElementById('adminLink').style.display = 'inline-block';
+                    break;
+                    
+                case AUTH_CONFIG.PERMISSIONS.ALL_TRAININGS:
+                    roleBadge.textContent = 'Trener Administrator';
+                    roleBadge.className = 'permission-badge permission-all-trainings';
+                    roleDesc.textContent = permissions.description;
+                    document.getElementById('viewAllBtn').style.display = 'block';
+                    document.getElementById('allTermsLegend').style.display = 'flex';
+                    break;
+                    
+                case AUTH_CONFIG.PERMISSIONS.OWN_TRAININGS_ONLY:
+                    roleBadge.textContent = 'Trener';
+                    roleBadge.className = 'permission-badge permission-own-only';
+                    roleDesc.textContent = permissions.description;
+                    break;
+            }
+            
+            document.getElementById('trainerRole').textContent = 
+                `Email: ${trainer.email}`;
+        }
+        
+        async function loadCalendarData() {
+            try {
+                // Počisti koledar
+                const calendarGrid = document.getElementById('calendarGrid');
+                
+                // Obdrži samo header elemente (prvi 7 elementov)
+                const headers = Array.from(calendarGrid.children).slice(0, 7);
+                calendarGrid.innerHTML = '';
+                headers.forEach(header => calendarGrid.appendChild(header));
+                
+                // Ustvari TrainerCalendar in generiraj dneve
+                const calendar = new TrainerCalendar(currentTrainerSession);
+                await calendar.loadData();
+                
+                // Generiraj koledar
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth();
+                const firstDay = new Date(year, month, 1);
+                const startDate = new Date(firstDay);
+                const startDayOfWeek = firstDay.getDay();
+                
+                // Nastavi začetek na ponedeljek
+                startDate.setDate(startDate.getDate() - (startDayOfWeek === 0 ? 6 : startDayOfWeek - 1));
+
+                // Generiraj 6 tednov (42 dni)
+                for (let i = 0; i < 42; i++) {
+                    const currentCalendarDate = new Date(startDate);
+                    currentCalendarDate.setDate(startDate.getDate() + i);
+                    
+                    const dayElement = createDayElement(currentCalendarDate, month, calendar, viewAllMode);
+                    calendarGrid.appendChild(dayElement);
+                }
+                
+                // Posodobi naslov
+                document.getElementById('currentMonth').textContent = 
+                    currentDate.toLocaleDateString('sl-SI', { 
+                        month: 'long', 
+                        year: 'numeric' 
+                    });
+                    
+            } catch (error) {
+                showError('Napaka pri nalaganju koledarja: ' + error.message);
+            }
+        }
+
+                 // Ustvari element dneva
+         function createDayElement(date, currentMonth, calendar, showAllTerms) {
+             const dayDiv = document.createElement('div');
+             dayDiv.className = 'calendar-day';
+             
+             // Označi dneve drugih mesecev
+             if (date.getMonth() !== currentMonth) {
+                 dayDiv.classList.add('other-month');
+             }
+             
+             // Označi danes
+             const today = new Date();
+             if (date.toDateString() === today.toDateString()) {
+                 dayDiv.classList.add('today');
+             }
+ 
+             // Številka dneva
+             const dayNumber = document.createElement('div');
+             dayNumber.className = 'day-number';
+             dayNumber.textContent = date.getDate();
+             dayDiv.appendChild(dayNumber);
+ 
+             // Kontejner za dogodke
+             const eventsContainer = document.createElement('div');
+             eventsContainer.className = 'day-events';
+             
+             // Pridobi termine za ta dan
+             const dayTerms = getTermsForDate(date, calendar, showAllTerms);
+             
+             dayTerms.forEach(term => {
+                 const eventElement = createEventElement(term, date);
+                 eventsContainer.appendChild(eventElement);
+             });
+ 
+             // Dodaj prisotnost za ta dan (če ima termine)
+             if (dayTerms.length > 0) {
+                 const attendanceElement = createAttendanceElement(date);
+                 eventsContainer.appendChild(attendanceElement);
+             }
+ 
+             dayDiv.appendChild(eventsContainer);
+             return dayDiv;
+         }
+
+        // Pridobi termine za datum
+        function getTermsForDate(date, calendar, showAllTerms) {
+            const dayOfWeek = date.getDay() === 0 ? 7 : date.getDay();
+            const isoDate = formatDateISO(date);
+            
+            return calendar.terms.filter(term => 
+                term.day === dayOfWeek && 
+                isoDate >= term.date_from && 
+                isoDate <= term.date_to
+            ).sort((a, b) => a.start_time.localeCompare(b.start_time));
+        }
+
+                          // Ustvari element dogodka
+         function createEventElement(term, date) {
+             const eventDiv = document.createElement('div');
+             eventDiv.className = 'event';
+             
+             // Določi tip dogodka glede na vlogo
+             if (currentTrainerSession.permissions.canViewAllTrainings && !viewAllMode) {
+                 eventDiv.classList.add('event-all');
+             } else {
+                 eventDiv.classList.add('event-own');
+             }
+
+             // Vsebina dogodka
+             const timeText = `${term.start_time.slice(0, 5)}-${term.end_time.slice(0, 5)}`;
+             eventDiv.innerHTML = `
+                 <div style="font-weight: 600;">${timeText}</div>
+                 <div style="font-size: 10px; opacity: 0.8;">${term.id}</div>
+             `;
+
+             // Klik na dogodek - odpri modal za prisotnost plavalcev
+             eventDiv.addEventListener('click', (e) => {
+                 e.stopPropagation();
+                 openSwimmerAttendanceModal(term, date);
+             });
+
+             return eventDiv;
+         }
+
+         // 🏊‍♂️ Ustvari element prisotnosti
+         function createAttendanceElement(date) {
+             const attendanceDiv = document.createElement('div');
+             attendanceDiv.className = 'attendance-control';
+             attendanceDiv.setAttribute('data-date', formatDateISO(date));
+             
+             // Preveri trenutno prisotnost
+             checkAttendanceStatus(date).then(status => {
+                 updateAttendanceDisplay(attendanceDiv, status);
+             });
+             
+             // Klik na prisotnost
+             attendanceDiv.addEventListener('click', async (e) => {
+                 e.stopPropagation();
+                 await toggleAttendance(date, attendanceDiv);
+             });
+             
+             return attendanceDiv;
+         }
+
+        // Formatiranje datuma
+        function formatDateISO(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+        
+                 async function updateStats() {
+             try {
+                 const allTerms = await trainerAuth.getTrainerTerms();
+                 const todaysTerms = await trainerAuth.getCalendarTerms(new Date());
+                 
+                 // Ta teden
+                 const weekStart = new Date();
+                 weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
+                 const weekEnd = new Date(weekStart);
+                 weekEnd.setDate(weekStart.getDate() + 6);
+                 
+                 let weekTermsCount = 0;
+                 for (let d = new Date(weekStart); d <= weekEnd; d.setDate(d.getDate() + 1)) {
+                     const dayTerms = await trainerAuth.getCalendarTerms(d);
+                     weekTermsCount += dayTerms.length;
+                 }
+                 
+                 document.getElementById('totalTerms').textContent = allTerms.length;
+                 document.getElementById('todayTerms').textContent = todaysTerms.length;
+                 document.getElementById('weekTerms').textContent = weekTermsCount;
+                 
+                 // 🏊‍♂️ Statistika prisotnosti
+                 const attendanceStats = await trainerAuth.getAttendanceStats(weekStart, weekEnd);
+                 document.getElementById('attendancePercentage').textContent = `${attendanceStats.percentage}%`;
+                 
+             } catch (error) {
+                 console.error('Napaka pri nalaganju statistik:', error);
+             }
+         }
+
+         // 🏊‍♂️ PRISOTNOST FUNKCIJE
+         // Preveri status prisotnosti za določen datum
+         async function checkAttendanceStatus(date) {
+             try {
+                 const attendance = await trainerAuth.getTrainerAttendance(date);
+                 if (attendance) {
+                     return attendance.is_present ? 'present' : 'absent';
+                 }
+                 return 'not-set';
+             } catch (error) {
+                 console.error('Napaka pri preverjanju prisotnosti:', error);
+                 return 'error';
+             }
+         }
+
+         // Posodobi prikaz prisotnosti
+         function updateAttendanceDisplay(element, status) {
+             element.className = `attendance-control attendance-${status}`;
+             
+             switch (status) {
+                 case 'present':
+                     element.innerHTML = '✅ Prisoten';
+                     element.title = 'Kliknite za spremembo v odsoten';
+                     break;
+                 case 'absent':
+                     element.innerHTML = '❌ Odsoten';
+                     element.title = 'Kliknite za spremembo v prisoten';
+                     break;
+                 case 'not-set':
+                     element.innerHTML = '❓ Ni nastavljeno';
+                     element.title = 'Kliknite za nastavitev prisotnosti';
+                     break;
+                 case 'error':
+                     element.innerHTML = '⚠️ Napaka';
+                     element.title = 'Napaka pri preverjanju prisotnosti';
+                     break;
+             }
+         }
+
+         // Preklopi prisotnost
+         async function toggleAttendance(date, element) {
+             try {
+                 const currentStatus = await checkAttendanceStatus(date);
+                 let newStatus;
+                 
+                 if (currentStatus === 'present') {
+                     newStatus = false; // Odsoten
+                 } else if (currentStatus === 'absent') {
+                     newStatus = true; // Prisoten
+                 } else {
+                     newStatus = true; // Privzeto prisoten
+                 }
+                 
+                 // Posodobi v bazi
+                 await trainerAuth.updateTrainerAttendance(date, newStatus);
+                 
+                 // Posodobi prikaz
+                 updateAttendanceDisplay(element, newStatus ? 'present' : 'absent');
+                 
+                 // Osveži statistike
+                 await updateStats();
+                 
+                 // Prikaži potrdilo
+                 const message = newStatus ? 'Prisotnost nastavljena na PRISOTEN' : 'Prisotnost nastavljena na ODSOTEN';
+                 showSuccess(message);
+                 
+             } catch (error) {
+                 console.error('Napaka pri posodabljanju prisotnosti:', error);
+                 showError('Napaka pri posodabljanju prisotnosti: ' + error.message);
+             }
+         }
+        
+        function setupEventListeners() {
+            // Navigacija po mesecih
+            document.getElementById('prevMonth').addEventListener('click', () => {
+                currentDate.setMonth(currentDate.getMonth() - 1);
+                loadCalendarData();
+            });
+            
+            document.getElementById('nextMonth').addEventListener('click', () => {
+                currentDate.setMonth(currentDate.getMonth() + 1);
+                loadCalendarData();
+            });
+            
+            // Odjava
+            document.getElementById('logoutBtn').addEventListener('click', async () => {
+                if (confirm('Ali se želite odjaviti?')) {
+                    await trainerAuth.logout();
+                    window.location.href = AUTH_CONFIG.PAGES.LOGIN;
+                }
+            });
+
+            // 🏊‍♂️ MODAL EVENT LISTENERJI
+            // Zapri modal
+            document.getElementById('closeModal').addEventListener('click', closeSwimmerAttendanceModal);
+            document.getElementById('cancelBtn').addEventListener('click', closeSwimmerAttendanceModal);
+            
+            // Shrani prisotnost
+            document.getElementById('saveAttendanceBtn').addEventListener('click', saveSwimmersAttendance);
+            
+            // Zapri modal s klikom zunaj
+            document.getElementById('swimmerAttendanceModal').addEventListener('click', (e) => {
+                if (e.target === e.currentTarget) {
+                    closeSwimmerAttendanceModal();
+                }
+            });
+        }
+        
+        function toggleViewMode() {
+            viewAllMode = !viewAllMode;
+            const btn = document.getElementById('viewModeText');
+            btn.textContent = viewAllMode ? 'Prikaži samo svoje' : 'Prikaži vse treninge';
+            loadCalendarData();
+        }
+        
+        function goToToday() {
+            currentDate = new Date();
+            loadCalendarData();
+        }
+        
+        function refreshData() {
+            loadCalendarData();
+            updateStats();
+        }
+        
+                 function showError(message) {
+             const errorDiv = document.getElementById('errorMessage');
+             errorDiv.textContent = message;
+             errorDiv.style.display = 'block';
+             setTimeout(() => {
+                 errorDiv.style.display = 'none';
+             }, 5000);
+         }
+
+         function showSuccess(message) {
+             const errorDiv = document.getElementById('errorMessage');
+             errorDiv.textContent = message;
+             errorDiv.style.display = 'block';
+             errorDiv.className = 'success';
+             setTimeout(() => {
+                 errorDiv.style.display = 'none';
+                 errorDiv.className = 'error';
+             }, 3000);
+         }
+
+         // 🏊‍♂️ FUNKCIJE ZA PRISOTNOST PLAVALCEV
+         let currentModalData = null;
+         let swimmersAttendanceData = {};
+
+         // Odpri modal za prisotnost plavalcev
+         async function openSwimmerAttendanceModal(term, date) {
+             try {
+                 currentModalData = { term, date };
+                 
+                 // Nastavi podatke o terminu
+                 document.getElementById('modalTermId').textContent = term.id;
+                 document.getElementById('modalTermTime').textContent = `${term.start_time.slice(0, 5)}-${term.end_time.slice(0, 5)}`;
+                 document.getElementById('modalTermDate').textContent = formatDateISO(date);
+                 
+                 // Prikaži modal
+                 document.getElementById('swimmerAttendanceModal').style.display = 'flex';
+                 
+                 // Naloži plavalce in prisotnost
+                 await loadSwimmersForTerm(term, date);
+                 
+             } catch (error) {
+                 console.error('Napaka pri odpiranju modalnega okna:', error);
+                 showError('Napaka pri odpiranju modalnega okna: ' + error.message);
+             }
+         }
+
+         // Naloži plavalce za termin
+         async function loadSwimmersForTerm(term, date) {
+             try {
+                 const swimmersList = document.getElementById('swimmersList');
+                 swimmersList.innerHTML = '<div class="loading">Nalaganje plavalcev...</div>';
+                 
+                 // 🧪 DEMO MODE - Simulacija plavalcev
+                 const demoMode = true;
+                 
+                 if (demoMode) {
+                     // Demo plavalci (v pravi implementaciji bi bili iz baze)
+                     const demoSwimmers = [
+                         { id: 'swimmer_1', first_name: 'Ana', last_name: 'Novak', age: 12, group: 'Začetniki' },
+                         { id: 'swimmer_2', first_name: 'Marko', last_name: 'Kovač', age: 14, group: 'Napredni' },
+                         { id: 'swimmer_3', first_name: 'Lara', last_name: 'Horvat', age: 11, group: 'Začetniki' },
+                         { id: 'swimmer_4', first_name: 'Tine', last_name: 'Mlakar', age: 13, group: 'Srednji' },
+                         { id: 'swimmer_5', first_name: 'Eva', last_name: 'Žagar', age: 15, group: 'Napredni' }
+                     ];
+                     
+                     // Naloži obstoječo prisotnost iz localStorage
+                     const existingAttendance = JSON.parse(localStorage.getItem(`demo_swimmer_attendance_${term.id}_${formatDateISO(date)}`) || '{}');
+                     
+                     // Ustvari seznam plavalcev
+                     swimmersList.innerHTML = '';
+                     demoSwimmers.forEach(swimmer => {
+                         const swimmerElement = createSwimmerElement(swimmer, existingAttendance[swimmer.id] || 'not-set');
+                         swimmersList.appendChild(swimmerElement);
+                     });
+                     
+                     // Posodobi statistiko
+                     updateAttendanceSummary();
+                     
+                 } else {
+                     // PRAVI NAČIN - Naloži iz baze
+                     // TODO: Implementiraj pravo nalaganje plavalcev
+                     swimmersList.innerHTML = '<div class="error">Funkcija še ni implementirana</div>';
+                 }
+                 
+             } catch (error) {
+                 console.error('Napaka pri nalaganju plavalcev:', error);
+                 swimmersList.innerHTML = '<div class="error">Napaka pri nalaganju plavalcev</div>';
+             }
+         }
+
+         // Ustvari element plavalca
+         function createSwimmerElement(swimmer, attendanceStatus) {
+             const swimmerDiv = document.createElement('div');
+             swimmerDiv.className = 'swimmer-item';
+             
+             // Shrani podatke o prisotnosti
+             swimmersAttendanceData[swimmer.id] = attendanceStatus;
+             
+             swimmerDiv.innerHTML = `
+                 <div class="swimmer-info">
+                     <div class="swimmer-name">${swimmer.first_name} ${swimmer.last_name}</div>
+                     <div class="swimmer-details">Starost: ${swimmer.age}, Skupina: ${swimmer.group}</div>
+                 </div>
+                 <div class="swimmer-attendance">
+                     <button class="attendance-btn present ${attendanceStatus === 'present' ? 'active' : ''}" 
+                             onclick="setSwimmerAttendance('${swimmer.id}', 'present')">
+                         ✅ Prisoten
+                     </button>
+                     <button class="attendance-btn absent ${attendanceStatus === 'absent' ? 'active' : ''}" 
+                             onclick="setSwimmerAttendance('${swimmer.id}', 'absent')">
+                         ❌ Odsoten
+                     </button>
+                     <button class="attendance-btn not-set ${attendanceStatus === 'not-set' ? 'active' : ''}" 
+                             onclick="setSwimmerAttendance('${swimmer.id}', 'not-set')">
+                         ❓ Ni nastavljeno
+                     </button>
+                 </div>
+             `;
+             
+             return swimmerDiv;
+         }
+
+         // Nastavi prisotnost plavalca
+         function setSwimmerAttendance(swimmerId, status) {
+             // Posodobi podatke
+             swimmersAttendanceData[swimmerId] = status;
+             
+             // Posodobi gumbe
+             const swimmerItem = document.querySelector(`[onclick*="${swimmerId}"]`).closest('.swimmer-item');
+             const buttons = swimmerItem.querySelectorAll('.attendance-btn');
+             
+             buttons.forEach(btn => btn.classList.remove('active'));
+             
+             // Označi aktivni gumb
+             if (status === 'present') {
+                 swimmerItem.querySelector('.attendance-btn.present').classList.add('active');
+             } else if (status === 'absent') {
+                 swimmerItem.querySelector('.attendance-btn.absent').classList.add('active');
+             } else {
+                 swimmerItem.querySelector('.attendance-btn.not-set').classList.add('active');
+             }
+             
+             // Posodobi statistiko
+             updateAttendanceSummary();
+         }
+
+         // Posodobi statistiko prisotnosti
+         function updateAttendanceSummary() {
+             const total = Object.keys(swimmersAttendanceData).length;
+             const present = Object.values(swimmersAttendanceData).filter(status => status === 'present').length;
+             const absent = Object.values(swimmersAttendanceData).filter(status => status === 'absent').length;
+             const notSet = total - present - absent;
+             
+             document.getElementById('totalSwimmers').textContent = total;
+             document.getElementById('presentSwimmers').textContent = present;
+             document.getElementById('absentSwimmers').textContent = absent;
+             document.getElementById('notSetSwimmers').textContent = notSet;
+         }
+
+         // Shrani prisotnost plavalcev
+         async function saveSwimmersAttendance() {
+             try {
+                 if (!currentModalData) return;
+                 
+                 const { term, date } = currentModalData;
+                 const dateKey = formatDateISO(date);
+                 
+                 // 🧪 DEMO MODE - Shrani v localStorage
+                 const demoMode = true;
+                 
+                 if (demoMode) {
+                     // Shrani v localStorage
+                     const storageKey = `demo_swimmer_attendance_${term.id}_${dateKey}`;
+                     localStorage.setItem(storageKey, JSON.stringify(swimmersAttendanceData));
+                     
+                     console.log('🔍 DEBUG: Prisotnost plavalcev shranjena v localStorage:', swimmersAttendanceData);
+                     
+                     showSuccess('Prisotnost plavalcev uspešno shranjena!');
+                     
+                     // Zapri modal
+                     closeSwimmerAttendanceModal();
+                     
+                 } else {
+                     // PRAVI NAČIN - Shrani v bazo
+                     // TODO: Implementiraj pravo shranjevanje
+                     showError('Funkcija še ni implementirana');
+                 }
+                 
+             } catch (error) {
+                 console.error('Napaka pri shranjevanju prisotnosti:', error);
+                 showError('Napaka pri shranjevanju prisotnosti: ' + error.message);
+             }
+         }
+
+         // Zapri modal
+         function closeSwimmerAttendanceModal() {
+             document.getElementById('swimmerAttendanceModal').style.display = 'none';
+             currentModalData = null;
+             swimmersAttendanceData = {};
+         }
+    </script>
+</body>
+</html>

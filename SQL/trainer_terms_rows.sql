@@ -1,0 +1,1 @@
+INSERT INTO "public"."trainer_terms" ("id", "trainer_id", "term_id", "created_at") VALUES ('0b2a33a9-bc00-4f77-88b8-fa33f9d24a3f', '75f9dc2b-24c3-4bd1-ae39-b6aba63d3dc1', 'čet-20:00-21:00', '2025-08-27 16:20:05.074571+00'), ('fd9c8c7d-2174-40a6-8952-29d895a607f2', '75f9dc2b-24c3-4bd1-ae39-b6aba63d3dc1', 'sre-20:00-21:00', '2025-08-27 16:19:57.502037+00');
