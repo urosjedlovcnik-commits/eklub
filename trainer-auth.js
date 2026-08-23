@@ -199,6 +199,12 @@ class TrainerAuthManager {
         sessionStorage.removeItem(CALENDAR_VIEW_KEY);
         this.viewMode = null;
     }
+
+    async changePassword(newPassword) {
+        if (!this.supabase) throw new Error('Povezava s strežnikom ni na voljo.');
+        const { error } = await this.supabase.auth.updateUser({ password: newPassword });
+        if (error) throw new Error(mapAuthErrorMessage(error.message));
+    }
 }
 
 window.trainerAuth = new TrainerAuthManager();

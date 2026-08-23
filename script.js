@@ -300,6 +300,10 @@ document.addEventListener('DOMContentLoaded', () => {
           window.location.href = 'login.html';
         });
       }
+
+      if (typeof setupChangePasswordButton === 'function') {
+        setupChangePasswordButton('changePasswordBtn');
+      }
     }
 
     async function requireAuth() {

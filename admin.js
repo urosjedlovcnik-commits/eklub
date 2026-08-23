@@ -21,6 +21,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         adminInfo.textContent = `Pozdravljeni, ${trainerAuth.getDisplayName() || ctx.trainer?.email} (super admin)`;
     }
 
+    if (typeof setupChangePasswordButton === 'function') {
+        setupChangePasswordButton('changePasswordBtn');
+    }
+
     const supabase = trainerAuth.supabase;
     if (!supabase) {
         console.error('❌ Napaka: Ne morem vzpostaviti povezave z bazo podatkov.');
