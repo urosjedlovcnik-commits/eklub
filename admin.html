@@ -81,6 +81,87 @@
   display: block;
 }
 
+.admin-tab-season-context {
+  font-size: 13px;
+  margin: 0 0 14px 0;
+  padding: 8px 12px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  color: #1e40af;
+}
+
+.finance-sub-month-nav {
+  display: none !important;
+}
+
+.season-setup-checklist {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.season-setup-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.season-setup-item.done {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+.season-setup-item label {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  cursor: pointer;
+  flex: 1;
+  margin: 0;
+}
+
+.season-setup-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.season-setup-progress {
+  padding: 10px 12px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.season-setup-progress.complete {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+.admin-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-table-scroll table th:first-child,
+.admin-table-scroll table td:first-child {
+  position: sticky;
+  left: 0;
+  background: #fff;
+  z-index: 1;
+  box-shadow: 2px 0 4px rgba(0,0,0,0.04);
+}
+
 /* Stili za termine kot "chips" */
 .chip {
   display: inline-block;
@@ -387,6 +468,7 @@
 
   <!-- Sekcija za upravljanje plavalcev -->
   <div class="admin-section active" id="swimmers-section">
+    <p class="admin-tab-season-context" data-season-context></p>
     <div class="grid">
       <div class="card">
         <h3>Dodaj novega plavalca</h3>
@@ -443,6 +525,10 @@
               <option value="two_installments">2 obroka (oktober + februar)</option>
             </select>
             <button type="button" class="btn pri" id="bulkApplyPaymentPlanBtn">Uporabi za vse v sezoni</button>
+            <button type="button" class="btn" id="bulkApplyMembershipBtn" title="Obračun v trenutnem mesecu Finance; posameznike odznačite v poročilu za računovodstvo">Skupinsko — članarina (30 €)</button>
+          </div>
+          <div style="margin-bottom:14px">
+            <input type="search" id="swimmersTableSearchInput" placeholder="Išči v tabeli (ime, priimek, email, telefon)…" style="width:100%;max-width:420px;padding:8px 10px;border:1px solid var(--border);border-radius:8px">
           </div>
           <div id="swimmersList"></div>
         </div>
@@ -488,6 +574,7 @@
 
   <!-- Sekcija za upravljanje terminov -->
   <div class="admin-section" id="terms-section">
+    <p class="admin-tab-season-context" data-season-context></p>
     <div class="grid">
       <div class="card">
         <h3>Upravljanje terminov</h3>
@@ -578,6 +665,22 @@
           <p class="muted" style="margin-top:12px;font-size:13px"><strong>Plavalci</strong> imajo dodeljene termine v polju <code>terms</code>. <strong>Termini</strong> so lahko vezani na sezono (<code>season_id</code>). Brisanje sezone počisti to vezavo pri terminih (termini ostanejo).</p>
         </div>
       </div>
+      <div class="card" id="seasonSetupCard">
+        <h3>Priprava sezone — checklist</h3>
+        <div class="inner">
+          <p class="muted" style="font-size:13px;margin-bottom:12px">
+            Ob začetku nove sezone preverite osnovne nastavitve. Kljukice lahko označite ročno ali jih sistem predlaga glede na podatke v bazi.
+          </p>
+          <div class="row" style="flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:8px">
+            <label>Sezona:
+              <select id="seasonSetupSelect" style="min-width:280px"></select>
+            </label>
+          </div>
+          <div id="seasonSetupChecklist">
+            <p class="muted">Izberite sezono …</p>
+          </div>
+        </div>
+      </div>
       <div class="card">
         <h3>Kopiraj termine v drugo sezono</h3>
         <div class="inner">
@@ -624,6 +727,7 @@
 
   <!-- Sekcija za upravljanje trenerjev -->
   <div class="admin-section" id="trainers-section">
+    <p class="admin-tab-season-context" data-season-context></p>
     <div class="grid">
       <div class="card">
         <h3>Dodaj novega trenerja</h3>
@@ -722,6 +826,7 @@
 
   <!-- Sekcija za Finance -->
   <div class="admin-section" id="finance-section">
+    <p class="admin-tab-season-context" data-season-context></p>
     <div class="grid">
       <!-- Glavni del strani (leva stran) -->
       <div class="main-content">
@@ -744,7 +849,7 @@
               </button>
             </div>
             <p style="margin-top: 10px; font-size: 0.9em; color: #d0d0d0;">
-              <strong>Opomba:</strong> Funkcija se izvede avtomatsko ob nalaganju strani, če trenutne vadnine ne obstajajo.
+              <strong>Opomba:</strong> Kopiranje zahteva potrditev. Vadnine se kopirajo za mesec, izbran v spodnjem pregledu stroškov.
             </p>
           </div>
         </div>
@@ -752,6 +857,7 @@
         <div class="card">
           <h3>Mesečna vadnina - Pregled stroškov</h3>
           <div class="inner">
+            <p class="muted" style="font-size:13px;margin-bottom:12px">En mesec velja za celoten zavihek Finance (vadnine, trenerji, računovodstvo …).</p>
             <div class="summary-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
               <button class="btn" id="prevMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Prejšnji mesec">←</button>
               <div style="text-align: center; min-width: 200px; cursor: pointer; padding: 10px; border-radius: 8px; transition: background-color 0.2s;" id="monthYearContainer" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
@@ -762,6 +868,7 @@
               <button class="btn" id="currentMonthBtn" style="background: #007bff; color: white; padding: 8px 12px; cursor: pointer;" title="Pojdi na trenutni mesec">Trenutni mesec</button>
               <input type="month" id="monthYearInput" style="display: none;">
             </div>
+            <div id="financeMonthSummary"></div>
             <div id="financeSummaryBox">Nalaganje podatkov...</div>
           </div>
         </div>
@@ -781,7 +888,7 @@
         <div class="card">
           <h3>Nastavitve postavk trenerjev (na termin)</h3>
           <div class="inner">
-            <div class="summary-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+            <div class="summary-controls finance-sub-month-nav" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
               <button class="btn" id="prevTrainerRatesMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Prejšnji mesec">←</button>
               <div style="text-align: center; min-width: 200px; cursor: pointer; padding: 10px; border-radius: 8px; transition: background-color 0.2s;" id="trainerRatesMonthYearContainer" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
                 <div id="currentTrainerRatesMonthYear" style="font-size: 18px; font-weight: bold; color: #333;"></div>
@@ -808,7 +915,7 @@
         <div class="card">
           <h3>Upravljanje mesečnih pristojbin plavalcev</h3>
           <div class="inner">
-            <div class="summary-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+            <div class="summary-controls finance-sub-month-nav" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
               <button class="btn" id="prevSwimmerFeesMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Prejšnji mesec">←</button>
               <div style="text-align: center; min-width: 200px; cursor: pointer; padding: 10px; border-radius: 8px; transition: background-color 0.2s;" id="swimmerFeesMonthYearContainer" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
                 <div id="currentSwimmerFeesMonthYear" style="font-size: 18px; font-weight: bold; color: #333;"></div>
@@ -836,7 +943,8 @@
               Plavalci z 0 € so označeni rdeče in v PDF niso vključeni.
             </p>
             <div id="accountingReportSummary"></div>
-            <div class="summary-controls" style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+            <p class="muted" style="font-size:13px;margin-bottom:8px">Obračunski mesec: <strong id="accountingReportMonthVisibleLabel"></strong> (enako kot v «Pregled stroškov» zgoraj)</p>
+            <div class="summary-controls finance-sub-month-nav" style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
               <button type="button" class="btn" id="prevAccountingReportMonthBtn" title="Prejšnji mesec">←</button>
               <div id="accountingReportMonthYearLabel" style="font-weight:bold;min-width:160px;text-align:center"></div>
               <button type="button" class="btn" id="nextAccountingReportMonthBtn" title="Naslednji mesec">→</button>
@@ -903,9 +1011,6 @@ Maja,Kovač,maja.kovac@email.com,+386 41 234 567,Prešernova 5,1000 Ljubljana,75
                 Uvozi vadnine
                 <input type="file" id="csvFeesInput" accept=".csv" style="display:none">
               </label>
-              <button class="btn" onclick="debugSwimmerFees()" style="margin-left: 8px;">Debug pristojbine</button>
-              <button class="btn" onclick="clearInvalidFees()" style="margin-left: 8px; background-color: #dc3545;">Počisti neveljavne vadnine</button>
-              <button class="btn" onclick="checkDatabaseIntegrity().then(result => console.log('Integriteta baze:', result))" style="margin-left: 8px; background-color: #17a2b8;">Preveri integriteto baze</button>
             </div>
           </div>
         </div>
@@ -929,6 +1034,7 @@ Maja,Kovač,maja.kovac@email.com,+386 41 234 567,Prešernova 5,1000 Ljubljana,75
 
   <!-- Sekcija za Mailing liste -->
   <div class="admin-section" id="mailing-section">
+    <p class="admin-tab-season-context" data-season-context></p>
     <div class="grid">
       <div class="card">
         <h3>Mailing liste</h3>
@@ -963,6 +1069,7 @@ Maja,Kovač,maja.kovac@email.com,+386 41 234 567,Prešernova 5,1000 Ljubljana,75
 
   <!-- Sekcija za CSV uvoz/izvoz -->
   <div class="admin-section" id="csv-section">
+    <p class="admin-tab-season-context" data-season-context></p>
     <div class="card csv-options">
       <h3>Uvoz in izvoz CSV</h3>
       <div class="inner">

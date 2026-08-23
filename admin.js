@@ -47,6 +47,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, 5000);
     }
 
+    window.alert = function(message) {
+        showMessage(String(message), 'info');
+    };
+
     // Stanja bodo naložena asinhrono
     let TERMS = [];
     let swimmers = [];
@@ -150,6 +154,68 @@ document.addEventListener('DOMContentLoaded', async () => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return emailRegex.test(email);
     }
+
+    function calcTrainerCostFromSessions(sessions, ratePerSession) {
+        return sessions * (parseFloat(ratePerSession) || 0);
+    }
+
+    function countTrainerSessionsInMonth(trainer, month, year, seasonId) {
+        const lastDay = new Date(year, month, 0).getDate();
+        const startDate = new Date(year, month - 1, 1);
+        const endDate = new Date(year, month - 1, lastDay);
+        const assignedTermIds = new Set(trainer.terms || []);
+        let sessions = 0;
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+            const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
+            const isoDate = iso(d);
+            TERMS.forEach(term => {
+                if (!assignedTermIds.has(term.id)) return;
+                if (seasonId && term.season_id !== seasonId) return;
+                if (term.day !== dayOfWeek || isoDate < term.date_from || isoDate > term.date_to) return;
+                const ts = getTermStatus(d, term.id);
+                if (ts.status !== 'inactive') sessions += 1;
+            });
+        }
+        return sessions;
+    }
+
+    function syncAllFinanceMonthDisplays() {
+        updateFinanceMonthDisplay();
+        updateSwimmerFeesMonthDisplay();
+        updateTrainerRatesMonthDisplay();
+        updateAccountingReportMonthDisplay();
+    }
+
+    function setAdminFinanceMonth(month, year, options = {}) {
+        const { refresh = true, updateHash = false } = options;
+        if (month < 1 || month > 12 || !year) return;
+        currentFinanceMonth = month;
+        currentFinanceYear = year;
+        currentSwimmerFeesMonth = month;
+        currentSwimmerFeesYear = year;
+        currentTrainerRatesMonth = month;
+        currentTrainerRatesYear = year;
+        currentAccountingReportMonth = month;
+        currentAccountingReportYear = year;
+        syncAllFinanceMonthDisplays();
+        if (updateHash && currentSection === 'finance') setAdminSectionHash('finance');
+        if (refresh) refreshAllFinanceViews();
+    }
+
+    async function refreshAllFinanceViews() {
+        calculateFinanceData();
+        refreshSwimmerFees();
+        await renderTrainerRatesSettings();
+        refreshAccountingReportEditor();
+    }
+
+    function updateAdminSeasonContextLabels() {
+        const seasonName = getSeasonNameById(getAdminSeasonFilterId());
+        const label = seasonName ? `Velja za: ${seasonName}` : 'Izberite sezono v pasu zgoraj.';
+        document.querySelectorAll('[data-season-context]').forEach(el => {
+            el.textContent = label;
+        });
+    }
     
     // Funkcije za navigacijo skozi mesece
     function updateFinanceMonthDisplay() {
@@ -213,84 +279,47 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     function navigateTrainerRatesMonth(direction) {
+        let m = currentTrainerRatesMonth;
+        let y = currentTrainerRatesYear;
         if (direction === 'prev') {
-            currentTrainerRatesMonth--;
-            if (currentTrainerRatesMonth < 1) {
-                currentTrainerRatesMonth = 12;
-                currentTrainerRatesYear--;
-            }
+            m--;
+            if (m < 1) { m = 12; y--; }
         } else if (direction === 'next') {
-            currentTrainerRatesMonth++;
-            if (currentTrainerRatesMonth > 12) {
-                currentTrainerRatesMonth = 1;
-                currentTrainerRatesYear++;
-            }
+            m++;
+            if (m > 12) { m = 1; y++; }
         }
-        updateTrainerRatesMonthDisplay();
-        renderTrainerRatesSettings();
+        setAdminFinanceMonth(m, y);
     }
     
     function goToCurrentTrainerRatesMonth() {
         const now = new Date();
-        currentTrainerRatesMonth = now.getMonth() + 1;
-        currentTrainerRatesYear = now.getFullYear();
-        updateTrainerRatesMonthDisplay();
-        renderTrainerRatesSettings();
+        setAdminFinanceMonth(now.getMonth() + 1, now.getFullYear());
     }
     
     function navigateFinanceMonth(direction) {
-// console.log('🔄 navigateFinanceMonth - smer:', direction, 'trenutni mesec:', currentFinanceMonth, 'leto:', currentFinanceYear);
+        let m = currentFinanceMonth;
+        let y = currentFinanceYear;
         if (direction === 'prev') {
-            currentFinanceMonth--;
-            if (currentFinanceMonth < 1) {
-                currentFinanceMonth = 12;
-                currentFinanceYear--;
-            }
+            m--;
+            if (m < 1) { m = 12; y--; }
         } else if (direction === 'next') {
-            currentFinanceMonth++;
-            if (currentFinanceMonth > 12) {
-                currentFinanceMonth = 1;
-                currentFinanceYear++;
-            }
+            m++;
+            if (m > 12) { m = 1; y++; }
         }
-// console.log('🔄 navigateFinanceMonth - novi mesec:', currentFinanceMonth, 'leto:', currentFinanceYear);
-        updateFinanceMonthDisplay();
-        calculateFinanceData();
+        setAdminFinanceMonth(m, y, { updateHash: true });
     }
     
     function navigateSwimmerFeesMonth(direction) {
-        if (direction === 'prev') {
-            currentSwimmerFeesMonth--;
-            if (currentSwimmerFeesMonth < 1) {
-                currentSwimmerFeesMonth = 12;
-                currentSwimmerFeesYear--;
-            }
-        } else if (direction === 'next') {
-            currentSwimmerFeesMonth++;
-            if (currentSwimmerFeesMonth > 12) {
-                currentSwimmerFeesMonth = 1;
-                currentSwimmerFeesYear++;
-            }
-        }
-        updateSwimmerFeesMonthDisplay();
-        refreshSwimmerFees();
+        navigateFinanceMonth(direction);
     }
     
     function goToCurrentFinanceMonth() {
         const now = new Date();
-        currentFinanceMonth = now.getMonth() + 1;
-        currentFinanceYear = now.getFullYear();
-// console.log('🔄 goToCurrentFinanceMonth - nastavljam na:', currentFinanceMonth, currentFinanceYear);
-        updateFinanceMonthDisplay();
-        calculateFinanceData();
+        setAdminFinanceMonth(now.getMonth() + 1, now.getFullYear(), { updateHash: true });
     }
     
     function goToCurrentSwimmerFeesMonth() {
-        const now = new Date();
-        currentSwimmerFeesMonth = now.getMonth() + 1;
-        currentSwimmerFeesYear = now.getFullYear();
-        updateSwimmerFeesMonthDisplay();
-        refreshSwimmerFees();
+        goToCurrentFinanceMonth();
     }
     
     // Funkcije za prikaz mesecev - trainer summary
@@ -776,6 +805,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     function getAdminSeasonTermIds() {
         const seasonId = getAdminSeasonFilterId();
         if (!seasonId) return null;
+        return getAdminSeasonTermIdsForSeason(seasonId);
+    }
+
+    function getAdminSeasonTermIdsForSeason(seasonId) {
+        if (!seasonId) return null;
         return new Set(TERMS.filter(t => t.season_id === seasonId).map(t => t.id));
     }
 
@@ -1188,22 +1222,37 @@ document.addEventListener('DOMContentLoaded', async () => {
             refreshAccountingReportEditor();
         }
         renderTrainerRatesSettings();
+        updateAdminSeasonContextLabels();
     }
 
     // ===== Navigacija med sekcijami (URL: admin.html#finance) =====
     const ADMIN_SECTIONS = ['swimmers', 'terms', 'seasons', 'trainers', 'finance', 'csv', 'mailing'];
 
+    function parseAdminHash() {
+        const raw = (location.hash || '').replace(/^#/, '').trim();
+        const sectionPart = raw.split(/[/?&]/)[0].toLowerCase();
+        const queryPart = raw.includes('?') ? raw.slice(raw.indexOf('?') + 1) : '';
+        const params = new URLSearchParams(queryPart);
+        const m = parseInt(params.get('m'), 10);
+        const y = parseInt(params.get('y'), 10);
+        return {
+            section: ADMIN_SECTIONS.includes(sectionPart) ? sectionPart : null,
+            month: m >= 1 && m <= 12 ? m : null,
+            year: y >= 2000 && y <= 2100 ? y : null
+        };
+    }
+
     function getAdminSectionFromHash() {
-        const raw = (location.hash || '').replace(/^#/, '').trim().toLowerCase();
-        const section = raw.split(/[/?&]/)[0];
-        return ADMIN_SECTIONS.includes(section) ? section : null;
+        return parseAdminHash().section;
     }
 
     function setAdminSectionHash(section) {
         if (!ADMIN_SECTIONS.includes(section)) return;
-        const next = `#${section}`;
-        if (location.hash === next) return;
-        history.replaceState(null, '', next);
+        let next = `#${section}`;
+        if (section === 'finance') {
+            next += `?m=${currentFinanceMonth}&y=${currentFinanceYear}`;
+        }
+        if (location.hash !== next) history.replaceState(null, '', next);
     }
 
     function showAdminSection(section, options = {}) {
@@ -1226,10 +1275,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (seasonBar) {
             seasonBar.style.display = section === 'seasons' ? 'none' : 'flex';
         }
+        updateAdminSeasonContextLabels();
 
         if (section === 'seasons') {
             renderSeasonsAdminList();
             populateSeasonSelects();
+            renderSeasonSetupChecklist();
         }
         if (section === 'terms') {
             populateSeasonSelects();
@@ -1238,22 +1289,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateTermList();
         }
         if (section === 'finance') {
-            setTimeout(() => {
-                refreshSwimmerFees();
-                refreshAccountingReportEditor();
-            }, 100);
-            setTimeout(async () => {
-                const status = await checkFeesStatus();
-                if (status.status === 'incomplete' && status.missingMonths.length > 0) {
-                    await copyPreviousMonthFees();
-                }
-            }, 500);
+            refreshAllFinanceViews();
         }
     }
 
     function applyAdminSectionFromHash() {
-        const fromHash = getAdminSectionFromHash();
-        showAdminSection(fromHash || currentSection || 'swimmers', { updateHash: !!fromHash });
+        const { section, month, year } = parseAdminHash();
+        if (section === 'finance' && month && year) {
+            setAdminFinanceMonth(month, year, { refresh: false, updateHash: false });
+        }
+        showAdminSection(section || currentSection || 'swimmers', { updateHash: !!section });
     }
 
     document.querySelectorAll('.admin-nav .btn').forEach(btn => {
@@ -1264,9 +1309,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     window.addEventListener('hashchange', () => {
-        const fromHash = getAdminSectionFromHash();
-        if (fromHash && fromHash !== currentSection) {
-            showAdminSection(fromHash, { updateHash: false });
+        const { section, month, year } = parseAdminHash();
+        if (section === 'finance' && month && year) {
+            setAdminFinanceMonth(month, year, { refresh: false, updateHash: false });
+        }
+        if (section && section !== currentSection) {
+            showAdminSection(section, { updateHash: false });
+        } else if (section === 'finance') {
+            refreshAllFinanceViews();
         }
     });
 
@@ -1495,6 +1545,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             applyAdminSectionFromHash();
+            updateAdminSeasonContextLabels();
 
         } catch (error) {
             console.error('❌ Napaka pri nalaganju podatkov:', error);
@@ -1815,6 +1866,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const tbody = table.querySelector('tbody');
         
         const showSwimmersWithoutTerms = document.getElementById('showSwimmersWithoutTerms')?.checked === true;
+        const searchQ = (document.getElementById('swimmersTableSearchInput')?.value || '').trim().toLowerCase();
 
         // Sortiraj plavalce po abecedi po priimku, nato po imenu
         const activeSwimmers = swimmers
@@ -1825,6 +1877,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return term && term.season_id === seasonFilterId;
                 });
                 if (!showSwimmersWithoutTerms && !hasTermsInSeason) return false;
+                if (searchQ) {
+                    const hay = `${swimmer.first_name} ${swimmer.last_name} ${swimmer.email || ''} ${swimmer.phone || ''}`.toLowerCase();
+                    if (!hay.includes(searchQ)) return false;
+                }
                 return true;
             })
             .sort((a, b) => {
@@ -1877,7 +1933,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             row.innerHTML = `
                 <td>${swimmer.first_name} ${swimmer.is_deleted ? '<span class="badge warn">Izbrisan</span>' : ''}</td>
                 <td>${swimmer.last_name}</td>
-                <td>${swimmer.email || '<span class="muted">Brez email naslova</span>'}</td>
+                <td>${swimmer.email || '<span class="muted" title="Manjka email">⚠ brez email</span>'}</td>
                 <td>${swimmer.phone || '<span class="muted">Brez telefona</span>'}</td>
                 <td class="terms-cell">${swimmer.is_deleted ? '<span class="muted">Izbrisan</span>' : termsHtml}</td>
                 <td>${paymentPlanCell}</td>
@@ -1900,6 +1956,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         elSwimmersList.appendChild(table);
+        elSwimmersList.classList.add('admin-table-scroll');
 // console.log('✅ Seznam plavalcev uspešno posodobljen');
     }
 
@@ -2641,6 +2698,45 @@ document.addEventListener('DOMContentLoaded', async () => {
         applyAdminSeasonFilter(e.target.value, e.target);
     });
     document.getElementById('showSwimmersWithoutTerms')?.addEventListener('change', () => updateSwimmersList());
+    document.getElementById('swimmersTableSearchInput')?.addEventListener('input', () => updateSwimmersList());
+
+    if (elDeleteSwimmerBtn) {
+        elDeleteSwimmerBtn.addEventListener('click', () => {
+            const id = elSwimmerSelect?.value;
+            if (!id) {
+                showMessage('Izberite plavalca v spustnem seznamu «Dodeli termine plavalcem».', 'warning');
+                return;
+            }
+            deleteSwimmer(id);
+        });
+    }
+
+    if (elDeleteTrainerBtn) {
+        elDeleteTrainerBtn.addEventListener('click', () => {
+            const id = elTrainerSelect?.value;
+            if (!id) {
+                showMessage('Izberite trenerja v spustnem seznamu «Dodeli termine trenerjem».', 'warning');
+                return;
+            }
+            deleteTrainer(id);
+        });
+    }
+
+    document.getElementById('bulkApplyMembershipBtn')?.addEventListener('click', async () => {
+        const seasonId = getAdminSeasonFilterId();
+        if (!seasonId) {
+            showMessage('Izberite sezono v pasu zgoraj.', 'warning');
+            return;
+        }
+        const monthLabel = new Date(currentFinanceYear, currentFinanceMonth - 1, 1)
+            .toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
+        if (!confirm(`Obračunam članarino (30 €) vsem plavalkam v sezoni za mesec ${monthLabel}?\n\nPosameznike lahko kasneje odznačite v Finance → Poročilo za računovodstvo.`)) return;
+        setAdminFinanceMonth(currentFinanceMonth, currentFinanceYear, { refresh: false });
+        const { rows } = await buildAccountingReportRows(currentFinanceMonth, currentFinanceYear);
+        accountingReportWorkingOrder = rows;
+        await applyGlobalMembershipFeeToReport(true);
+        showMessage('Skupinska članarina je nastavljena. Posamezne odznačitve naredite v poročilu za računovodstvo.', 'success');
+    });
 
     function updateBulkPaymentPlanSelect() {
         const sel = document.getElementById('bulkPaymentPlanSelect');
@@ -2847,6 +2943,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error(e);
             alert('Napaka pri posodabljanju sezone: ' + (e.message || e));
         }
+    });
+
+    document.getElementById('seasonSetupSelect')?.addEventListener('change', () => {
+        renderSeasonSetupChecklist();
+    });
+
+    document.getElementById('seasonSetupCard')?.addEventListener('click', e => {
+        const btn = e.target.closest('[data-goto-section]');
+        if (btn) showAdminSection(btn.getAttribute('data-goto-section'), { updateHash: true });
     });
 
     document.getElementById('seasons-section')?.addEventListener('click', async e => {
@@ -5069,12 +5174,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Event listener za spremembo meseca in leta pri postavkah trenerjev
     if (elTrainerRatesMonthYearInput) {
-        elTrainerRatesMonthYearInput.addEventListener('change', async (e) => {
+        elTrainerRatesMonthYearInput.addEventListener('change', (e) => {
             const [year, month] = e.target.value.split('-');
-            currentTrainerRatesMonth = parseInt(month, 10);
-            currentTrainerRatesYear = parseInt(year, 10);
-            updateTrainerRatesMonthDisplay();
-            await renderTrainerRatesSettings();
+            setAdminFinanceMonth(parseInt(month, 10), parseInt(year, 10), { updateHash: true });
         });
     }
     
@@ -5105,10 +5207,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             event.stopPropagation();
             
             createCustomDatePicker(currentFinanceMonth, currentFinanceYear, (month, year) => {
-                currentFinanceMonth = month;
-                currentFinanceYear = year;
-                updateFinanceMonthDisplay();
-                calculateFinanceData();
+                setAdminFinanceMonth(month, year, { updateHash: true });
             });
         });
     } else {
@@ -5117,10 +5216,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (elMonthYearInput) {
         elMonthYearInput.addEventListener('change', (e) => {
             const [year, month] = e.target.value.split('-');
-            currentFinanceYear = parseInt(year);
-            currentFinanceMonth = parseInt(month);
-            updateFinanceMonthDisplay();
-            calculateFinanceData();
+            setAdminFinanceMonth(parseInt(month, 10), parseInt(year, 10), { updateHash: true });
         });
     }
     
@@ -5142,20 +5238,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             event.stopPropagation();
             
             createCustomDatePicker(currentSwimmerFeesMonth, currentSwimmerFeesYear, (month, year) => {
-                currentSwimmerFeesMonth = month;
-                currentSwimmerFeesYear = year;
-                updateSwimmerFeesMonthDisplay();
-                refreshSwimmerFees();
+                setAdminFinanceMonth(month, year, { updateHash: true });
             });
         });
     }
     if (elSwimmerFeesMonthYearInput) {
         elSwimmerFeesMonthYearInput.addEventListener('change', (e) => {
             const [year, month] = e.target.value.split('-');
-            currentSwimmerFeesYear = parseInt(year);
-            currentSwimmerFeesMonth = parseInt(month);
-            updateSwimmerFeesMonthDisplay();
-            refreshSwimmerFees();
+            setAdminFinanceMonth(parseInt(month, 10), parseInt(year, 10), { updateHash: true });
         });
     }
     
@@ -5169,36 +5259,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function updateAccountingReportMonthDisplay() {
         const el = document.getElementById('accountingReportMonthYearLabel');
-        if (!el) return;
+        const visible = document.getElementById('accountingReportMonthVisibleLabel');
         const monthNames = ['Januar', 'Februar', 'Marec', 'April', 'Maj', 'Junij',
             'Julij', 'Avgust', 'September', 'Oktober', 'November', 'December'];
-        el.textContent = `${monthNames[currentAccountingReportMonth - 1]} ${currentAccountingReportYear}`;
+        const label = `${monthNames[currentAccountingReportMonth - 1]} ${currentAccountingReportYear}`;
+        if (el) el.textContent = label;
+        if (visible) visible.textContent = label;
     }
 
     function navigateAccountingReportMonth(dir) {
-        if (dir === 'prev') {
-            currentAccountingReportMonth--;
-            if (currentAccountingReportMonth < 1) {
-                currentAccountingReportMonth = 12;
-                currentAccountingReportYear--;
-            }
-        } else {
-            currentAccountingReportMonth++;
-            if (currentAccountingReportMonth > 12) {
-                currentAccountingReportMonth = 1;
-                currentAccountingReportYear++;
-            }
-        }
-        updateAccountingReportMonthDisplay();
-        refreshAccountingReportEditor();
+        navigateFinanceMonth(dir === 'prev' ? 'prev' : 'next');
     }
 
     function goToCurrentAccountingReportMonth() {
-        const d = new Date();
-        currentAccountingReportMonth = d.getMonth() + 1;
-        currentAccountingReportYear = d.getFullYear();
-        updateAccountingReportMonthDisplay();
-        refreshAccountingReportEditor();
+        goToCurrentFinanceMonth();
     }
 
     document.getElementById('prevAccountingReportMonthBtn')?.addEventListener('click', () => navigateAccountingReportMonth('prev'));
@@ -6037,8 +6111,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         let totalHours = 0;
         
         Object.values(trainerStats).forEach(stat => {
-            const trainerHourlyRate = trainerRates[stat.trainer.id] || 25; // Default 25€/uro
-            stat.cost = stat.totalHours * trainerHourlyRate;
+            const ratePerSession = trainerRates[stat.trainer.id] || 25;
+            stat.cost = calcTrainerCostFromSessions(stat.sessions, ratePerSession);
             totalCost += stat.cost;
             totalSessions += stat.sessions;
             totalHours += stat.totalHours;
@@ -6059,13 +6133,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // Prikaži rezultate
         sortedTrainerStats.forEach(stat => {
-            const trainerHourlyRate = trainerRates[stat.trainer.id] || 25;
+            const ratePerSession = trainerRates[stat.trainer.id] || 25;
             summary += `
                 <tr>
                     <td>${stat.trainer.first_name} ${stat.trainer.last_name}</td>
                     <td class="trainer-hours-hours">${stat.sessions}</td>
                     <td class="trainer-hours-hours"><span class="trainer-hours-clickable" data-trainer-id="${stat.trainer.id}" style="cursor: pointer; text-decoration: underline; color: #007bff;" title="Klikni za prikaz detajlov">${stat.totalHours.toFixed(2)}h</span></td>
-                    <td>${trainerHourlyRate.toFixed(2)}€/h</td>
+                    <td>${ratePerSession.toFixed(2)}€/termin</td>
                     <td class="trainer-hours-cost">${stat.cost.toFixed(2)}€</td>
                 </tr>
             `;
@@ -7052,6 +7126,206 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (prev && seasons.some(s => s.id === prev)) browseSel.value = prev;
             renderSeasonTermsForSeason(browseSel.value || '');
         }
+        const setupSel = document.getElementById('seasonSetupSelect');
+        if (setupSel) {
+            const prev = setupSel.value;
+            setupSel.innerHTML = seasons.length
+                ? optHtml
+                : '<option value="">Ni sezon</option>';
+            if (prev && seasons.some(s => s.id === prev)) {
+                setupSel.value = prev;
+            } else {
+                const activeS = seasons.find(s => s.is_active);
+                setupSel.value = activeS ? activeS.id : (seasons[0]?.id || '');
+            }
+        }
+    }
+
+    /** Ročno označene kljukice priprave sezone: season_id → { item_id: bool } */
+    const SEASON_SETUP_STORAGE_KEY = 'eklub_season_setup_checks';
+    const SEASON_SETUP_ITEMS = [
+        {
+            id: 'payment_plans',
+            label: 'Načini plačila',
+            detail: 'Mesečno / enkratno (oktober) / 2 obroka (okt. + feb.)',
+            linkSection: 'swimmers',
+            linkLabel: 'Plavalci'
+        },
+        {
+            id: 'fee_amounts',
+            label: 'Zneski vadnin po terminih',
+            detail: '55 / 75 / 90 € ali ročno — za prvi mesec sezone',
+            linkSection: 'finance',
+            linkLabel: 'Finance → Vadnine'
+        },
+        {
+            id: 'membership',
+            label: 'Članarina (30 €)',
+            detail: 'Mesec obračuna za vsakega plavalca (enkrat na sezono)',
+            linkSection: 'finance',
+            linkLabel: 'Finance → Računovodstvo'
+        },
+        {
+            id: 'report_order',
+            label: 'Vrstni red poročila za računovodstvo',
+            detail: 'Shrani vrstni red v poročilu za računovodstvo',
+            linkSection: 'finance',
+            linkLabel: 'Finance → Računovodstvo'
+        }
+    ];
+
+    function getSwimmersInSeason(seasonId) {
+        if (!seasonId) return [];
+        return swimmers.filter(s => {
+            if (s.is_deleted) return false;
+            return (s.terms || []).some(tid => {
+                const term = TERMS.find(t => t.id === tid);
+                return term && term.season_id === seasonId;
+            });
+        });
+    }
+
+    function getSeasonSetupManualChecks() {
+        try {
+            return JSON.parse(localStorage.getItem(SEASON_SETUP_STORAGE_KEY) || '{}');
+        } catch {
+            return {};
+        }
+    }
+
+    function getSeasonSetupChecked(seasonId, itemId, autoOk) {
+        const manual = getSeasonSetupManualChecks()[seasonId];
+        if (manual && Object.prototype.hasOwnProperty.call(manual, itemId)) {
+            return !!manual[itemId];
+        }
+        return !!autoOk;
+    }
+
+    window.setSeasonSetupChecked = function(seasonId, itemId, checked) {
+        const all = getSeasonSetupManualChecks();
+        if (!all[seasonId]) all[seasonId] = {};
+        all[seasonId][itemId] = checked === true;
+        localStorage.setItem(SEASON_SETUP_STORAGE_KEY, JSON.stringify(all));
+        renderSeasonSetupChecklist();
+    };
+
+    async function evaluateSeasonSetupStatus(seasonId) {
+        const inSeason = getSwimmersInSeason(seasonId);
+        const n = inSeason.length;
+        const season = seasons.find(s => s.id === seasonId);
+        const result = {};
+
+        if (n === 0) {
+            SEASON_SETUP_ITEMS.forEach(item => {
+                result[item.id] = { ok: false, hint: 'Ni plavalcev z dodeljenimi termini v tej sezoni.' };
+            });
+            return result;
+        }
+
+        const withBillingRecord = inSeason.filter(s => !!swimmerSeasonBilling[`${s.id}|${seasonId}`]).length;
+        result.payment_plans = {
+            ok: withBillingRecord === n,
+            hint: withBillingRecord === n
+                ? `Vsi ${n} plavalci imajo shranjen način plačila.`
+                : `${withBillingRecord}/${n} plavalcev ima eksplicitno shranjen način (preostali: privzeto mesečno).`
+        };
+
+        let feeHint = 'Ni podatkov o vadninah.';
+        let feeOk = false;
+        if (season) {
+            const tuples = getSeasonMonthTuples(season);
+            if (tuples.length > 0) {
+                const { month, year } = tuples[0];
+                const monthLabel = new Date(year, month - 1, 1).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
+                const ids = inSeason.map(s => s.id);
+                const { data: fees, error } = await supabase
+                    .from('swimmer_monthly_fees')
+                    .select('swimmer_id, monthly_fee')
+                    .eq('month', month)
+                    .eq('year', year)
+                    .in('swimmer_id', ids);
+                if (!error) {
+                    const withFee = (fees || []).filter(f => parseFloat(f.monthly_fee || 0) > 0).length;
+                    feeOk = withFee === n;
+                    feeHint = feeOk
+                        ? `Vsi ${n} plavalci imajo vadnino za ${monthLabel}.`
+                        : `${withFee}/${n} plavalcev ima vnesen znesek vadnine za ${monthLabel}.`;
+                }
+            }
+        }
+        result.fee_amounts = { ok: feeOk, hint: feeHint };
+
+        const withMembership = inSeason.filter(s => !!getMembershipChargedPeriod(s.id, seasonId)).length;
+        result.membership = {
+            ok: withMembership === n,
+            hint: withMembership === n
+                ? `Vsem ${n} plavalkam je določen mesec obračuna članarine.`
+                : `${withMembership}/${n} plavalcev ima določen mesec obračuna članarine.`
+        };
+
+        const savedOrder = (accountingReportOrderBySeason[seasonId] || []).length;
+        result.report_order = {
+            ok: savedOrder > 0,
+            hint: savedOrder > 0
+                ? `Shranjen vrstni red (${savedOrder} vnosov).`
+                : 'Vrstni red še ni shranjen — uredite in shranite v Finance.'
+        };
+
+        return result;
+    }
+
+    async function renderSeasonSetupChecklist() {
+        const box = document.getElementById('seasonSetupChecklist');
+        const sel = document.getElementById('seasonSetupSelect');
+        if (!box) return;
+
+        const seasonId = sel?.value || '';
+        if (!seasonId) {
+            box.innerHTML = '<p class="muted">Izberite sezono za prikaz checkliste.</p>';
+            return;
+        }
+
+        const season = seasons.find(s => s.id === seasonId);
+        box.innerHTML = '<p class="muted">Preverjam stanje …</p>';
+
+        const status = await evaluateSeasonSetupStatus(seasonId);
+        let doneCount = 0;
+        let itemsHtml = '';
+
+        SEASON_SETUP_ITEMS.forEach(item => {
+            const st = status[item.id] || { ok: false, hint: '' };
+            const checked = getSeasonSetupChecked(seasonId, item.id, st.ok);
+            if (checked) doneCount++;
+            const autoBadge = st.ok
+                ? '<span style="color:#166534;font-size:12px">✓ zaznano v bazi</span>'
+                : '<span style="color:#b45309;font-size:12px">⚠ preverite</span>';
+            itemsHtml += `
+                <div class="season-setup-item${checked ? ' done' : ''}">
+                    <label>
+                        <input type="checkbox"
+                               ${checked ? 'checked' : ''}
+                               onchange="setSeasonSetupChecked('${seasonId}', '${item.id}', this.checked)">
+                        <span>
+                            <strong>${escapeHtml(item.label)}</strong><br>
+                            <span class="muted" style="font-size:12px">${escapeHtml(item.detail)}</span><br>
+                            <span style="font-size:12px">${autoBadge} — ${escapeHtml(st.hint || '')}</span><br>
+                            <button type="button" class="btn" style="margin-top:6px;padding:2px 8px;font-size:12px"
+                                    data-goto-section="${item.linkSection}">${escapeHtml(item.linkLabel)} →</button>
+                        </span>
+                    </label>
+                </div>`;
+        });
+
+        const allDone = doneCount === SEASON_SETUP_ITEMS.length;
+        const progressClass = allDone ? 'season-setup-progress complete' : 'season-setup-progress';
+        const seasonLabel = season ? escapeHtml(season.name) : 'sezona';
+
+        box.innerHTML = `
+            <div class="${progressClass}">
+                <strong>${seasonLabel}:</strong> ${doneCount}/${SEASON_SETUP_ITEMS.length} opravljenih korakov
+                ${allDone ? ' — sezona je pripravljena za obračun.' : ' — dokončajte preostale korake pred prvim obračunom.'}
+            </div>
+            <div class="season-setup-checklist">${itemsHtml}</div>`;
     }
 
     function escapeHtml(text) {
@@ -7075,6 +7349,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         html += '</tbody></table>';
         box.innerHTML = html;
+        renderSeasonSetupChecklist();
     }
 
     /**
@@ -7274,19 +7549,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         return out;
     }
 
-    /** Izračun stroškov trenerjev in objektov za en mesec (kot Finance, brez filtra »samo aktivni termini«). */
-    async function computeCalculatedCostsForMonth(year, month) {
+    /** Izračun stroškov trenerjev in objektov za en mesec (kot Finance). */
+    async function computeCalculatedCostsForMonth(year, month, seasonId = null) {
         const startDate = new Date(year, month - 1, 1);
         const endDate = new Date(year, month, 0);
         const trainerRates = await getTrainerRatesFromDB(month, year);
         const termCosts = await getTermCostsFromDB();
         const trainerCosts = {};
+        const seasonTermIds = seasonId ? getAdminSeasonTermIdsForSeason(seasonId) : null;
 
         for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
             const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
             const isoDate = iso(d);
 
             TERMS.forEach(term => {
+                if (seasonTermIds && !seasonTermIds.has(term.id)) return;
                 if (term.day !== dayOfWeek || isoDate < term.date_from || isoDate > term.date_to) return;
 
                 const trainersForTerm = trainers.filter(t =>
@@ -7355,13 +7632,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         for (const trainerCost of Object.values(trainerCosts)) {
-            const trainerHourlyRate = trainerRates[trainerCost.trainer.id] || 25;
-            trainerCost.cost = trainerCost.totalHours * trainerHourlyRate;
+            const ratePerSession = trainerRates[trainerCost.trainer.id] || 25;
+            trainerCost.cost = calcTrainerCostFromSessions(trainerCost.sessions, ratePerSession);
         }
         const totalTrainerCost = Object.values(trainerCosts).reduce((sum, tc) => sum + tc.cost, 0);
 
         let totalFacilityCost = 0;
         for (const term of TERMS) {
+            if (seasonTermIds && !seasonTermIds.has(term.id)) continue;
             const termHourlyCost = termCosts[term.id] || 50;
             if (termHourlyCost <= 0) continue;
             const termStartDate = new Date(term.date_from);
@@ -7400,7 +7678,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             let t = manual?.trainerCost;
             let m = manual?.managementCost;
             if (f === undefined || t === undefined) {
-                const calc = await computeCalculatedCostsForMonth(year, month);
+                const calc = await computeCalculatedCostsForMonth(year, month, season.id);
                 if (f === undefined) f = calc.totalFacilityCost;
                 if (t === undefined) t = calc.totalTrainerCost;
             }
@@ -7786,10 +8064,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             }
             
-            // Izračunaj stroške trenerjev - na podlagi ur
+            // Izračunaj stroške trenerjev - na podlagi terminov (€/termin)
             for (const trainerCost of Object.values(trainerCosts)) {
-                const trainerHourlyRate = trainerRates[trainerCost.trainer.id] || 25; // Default 25€/uro
-                trainerCost.cost = trainerCost.totalHours * trainerHourlyRate;
+                const ratePerSession = trainerRates[trainerCost.trainer.id] || 25;
+                trainerCost.cost = calcTrainerCostFromSessions(trainerCost.sessions, ratePerSession);
             }
             
             const totalTrainerCost = Object.values(trainerCosts).reduce((sum, tc) => sum + tc.cost, 0);
@@ -7929,6 +8207,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const manualTotalRevenue = monthlyFee + olyContributions + membershipFee;
             const manualTotalCosts = trainerCost + managementCost + facilityCost;
             const manualProfit = manualTotalRevenue - manualTotalCosts;
+
+            updateFinanceMonthSummaryBar(manualTotalRevenue, manualTotalCosts, manualProfit, month, year);
             
             // Prikaži podrobnosti stroškov z urejnimi polji
             let detailedCosts = `
@@ -7986,7 +8266,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <span> €</span>
                                 ${trainerCost !== calculatedTrainerCost ? `<span style="color: #999; font-size: 11px; margin-left: 5px;">(izračunano: ${calculatedTrainerCost.toFixed(2)}€)</span>` : ''}
                             </td>
-                            <td>${totalTrainerHours.toFixed(2)}h opravljenih ur (individualne postavke na uro)</td>
+                            <td>${totalTrainerSessions} terminov (individualne postavke na termin)</td>
                         </tr>
                         <tr>
                             <td>Stroški vodenja</td>
@@ -8048,20 +8328,38 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
     
+    function updateFinanceMonthSummaryBar(revenue, costs, profit, month, year) {
+        const el = document.getElementById('financeMonthSummary');
+        if (!el) return;
+        const monthLabel = new Date(year, month - 1, 1).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
+        el.innerHTML = `<div style="display:flex;gap:16px;flex-wrap:wrap;padding:10px 12px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;margin-bottom:12px;font-size:14px">
+            <span><strong>${escapeHtml(monthLabel)}</strong></span>
+            <span>Prihodki: <strong>${revenue.toFixed(2)} €</strong></span>
+            <span>Stroški: <strong>${costs.toFixed(2)} €</strong></span>
+            <span>${profit >= 0 ? 'Dobiček' : 'Izguba'}: <strong style="color:${profit >= 0 ? '#166534' : '#991b1b'}">${profit.toFixed(2)} €</strong></span>
+        </div>`;
+    }
+
     // Funkcija za shranjevanje nastavitev cen
-    function saveCostSettings() {
+    async function saveCostSettings() {
         const managementCostPerMonth = parseFloat(elManagementCostPerMonth.value);
-        
-        // Shrani v localStorage
         localStorage.setItem('managementCostPerMonth', managementCostPerMonth);
-        
-        alert('Nastavitve cen so bile shranjene!');
+        await saveManualCost('managementCost', managementCostPerMonth, currentFinanceMonth, currentFinanceYear);
+        showMessage('Nastavitve cen so bile shranjene!', 'success');
     }
     
     // Funkcija za nalaganje nastavitev cen
-    function loadCostSettings() {
-        const managementCostPerMonth = localStorage.getItem('managementCostPerMonth') || 500;
-        
+    async function loadCostSettings() {
+        const fromLocal = localStorage.getItem('managementCostPerMonth');
+        let managementCostPerMonth = fromLocal ? parseFloat(fromLocal) : 500;
+        try {
+            const db = await getManualCostsFromDB(currentFinanceMonth, currentFinanceYear);
+            if (db?.managementCost !== undefined && db?.managementCost !== null) {
+                managementCostPerMonth = db.managementCost;
+            }
+        } catch (e) {
+            console.warn('Napaka pri nalaganju stroškov vodenja iz baze:', e);
+        }
         if (elManagementCostPerMonth) elManagementCostPerMonth.value = managementCostPerMonth;
     }
     
@@ -8520,7 +8818,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <strong>${missingFeeCount}</strong> ${missingFeeCount === 1 ? 'plavalec nima' : 'plavalcev nima'} vnesenega zneska vadnine za ta mesec (0 €). V PDF ne bodo vključeni – zneske vnesite v «Upravljanje mesečnih pristojbin».
             </p>`;
         }
-        let html = header + `<table class="trainer-hours-table" style="width:100%"><thead><tr>
+        let html = header + `<div class="admin-table-scroll"><table class="trainer-hours-table" style="width:100%"><thead><tr>
             <th style="width:70px">Vrstni red</th>
             <th>Ime in priimek</th>
             <th>E-pošta</th>
@@ -8555,15 +8853,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <button type="button" class="btn" style="padding:2px 8px;font-size:12px" data-acc-order-down="${i}" title="Premakni dol">↓</button>
                 </td>
                 <td>${escapeHtml(swimmerDisplayName(s))}</td>
-                <td>${escapeHtml(s.email || '')}</td>
-                <td>${escapeHtml(s.address || '')}</td>
-                <td>${escapeHtml(s.postal_code || '')}</td>
+                <td>${s.email ? escapeHtml(s.email) : '<span title="Manjka email">⚠</span>'}</td>
+                <td>${s.address ? escapeHtml(s.address) : '<span title="Manjka naslov">⚠</span>'}</td>
+                <td>${s.postal_code ? escapeHtml(s.postal_code) : '<span title="Manjka pošta">⚠</span>'}</td>
                 <td style="text-align:right">${noFee ? '<span style="color:#991b1b">0</span>' : formatAccountingFeeAmount(row.netFee)}</td>
                 <td style="text-align:center">${membershipCell}</td>
                 <td style="text-align:right"><strong>${formatAccountingFeeAmount(total)}</strong></td>
             </tr>`;
         });
-        html += '</tbody></table>';
+        html += '</tbody></table></div>';
         box.innerHTML = html;
         updateAccountingReportSummary(rows, month, year);
         syncGlobalMembershipCheckbox();
@@ -8774,7 +9072,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         try {
             const swimmerFees = await getSwimmerFees(month, year);
-            const activeSwimmers = swimmers.filter(swimmerHasAssignedTerms);
+            const activeSwimmers = swimmers.filter(s => !s.is_deleted && entityHasTermsInAdminSeason(s));
             
             // Ustvari CSV vsebino z imenom, priimkom, emailom, naslovom, pošto in zneskom vadnine
             let csv = 'first_name,last_name,email,address,postal_code,monthly_fee\n';
@@ -8817,11 +9115,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.body.removeChild(link);
             
             console.log('✅ CSV izvoz vadnin uspešno končan');
-            alert(`Izvoženih ${sortedActiveSwimmers.length} vadnin za ${monthName}`);
+            showMessage(`Izvoženih ${sortedActiveSwimmers.length} vadnin za ${monthName}`, 'success');
             
         } catch (error) {
             console.error('❌ Napaka pri izvozu vadnin:', error);
-            alert('Napaka pri izvozu vadnin: ' + error.message);
+            showMessage('Napaka pri izvozu vadnin: ' + error.message, 'error');
         }
     };
     
@@ -9355,10 +9653,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 seasonId
             );
             const termCount = activeTerms.length;
+            const sessionCount = countTrainerSessionsInMonth(trainer, currentTrainerRatesMonth, currentTrainerRatesYear, seasonId);
+            const estimatedCost = calcTrainerCostFromSessions(sessionCount, rate);
             const termLabels = activeTerms.map(t => formatTermTimeLabel(t)).join(', ');
             const termHint = termCount > 0
                 ? termLabels
-                : 'Ni aktivnih terminov v tem mesecu — preverite dodelitev v zavihku Trenerji ali izberite drug mesec/sezono';
+                : 'Ni dodeljenih terminov v tej sezoni — preverite zavihek Trenerji ali izberite drug mesec/sezono';
+            const estimateHint = sessionCount > 0
+                ? `${sessionCount} ${sessionCount === 1 ? 'termin' : sessionCount === 2 ? 'termina' : 'terminov'} × ${parseFloat(rate).toFixed(2)} € = ${estimatedCost.toFixed(2)} €/mesec (ocena)`
+                : (termCount === 0 ? '' : '0 terminov v tem mesecu');
             
             html += `
                 <div class="trainer-rate-row" style="display: flex; align-items: center; gap: 15px; padding: 12px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
@@ -9370,6 +9673,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             ${termCount} termin${termCount === 1 ? '' : termCount === 2 ? 'a' : 'ov'} na teden
                         </span>
                         <div style="font-size: 11px; color: #6c757d; margin-top: 2px;">${escapeHtml(termHint)}</div>
+                        ${estimateHint ? `<div style="font-size: 12px; color: #2563eb; margin-top: 4px; font-weight: 500;">${escapeHtml(estimateHint)}</div>` : ''}
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <input type="number" 
@@ -9844,37 +10148,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     // Funkcija za kopiranje vadnin iz prejšnega meseca v trenutni mesec
-    async function copyPreviousMonthFees() {
+    async function copyPreviousMonthFees(targetMonth, targetYear) {
         try {
-            const currentDate = new Date();
-            const currentMonth = currentDate.getMonth();
-            const currentYear = currentDate.getFullYear();
-            
-            // Dodatna validacija meseca
-            if (currentMonth < 0 || currentMonth > 11) {
-                console.error(`❌ Neveljaven trenutni mesec: ${currentMonth}`);
-                showMessage('Napaka: Neveljaven trenutni mesec!', 'error');
+            const currentMonth1Based = targetMonth ?? currentFinanceMonth;
+            const currentYear = targetYear ?? currentFinanceYear;
+
+            if (currentMonth1Based < 1 || currentMonth1Based > 12) {
+                showMessage('Napaka: Neveljaven mesec!', 'error');
                 return false;
             }
-            
-            // Izračunaj prejšnji mesec
-            let previousMonth = currentMonth - 1;
+
+            let previousMonth1Based = currentMonth1Based - 1;
             let previousYear = currentYear;
-            if (previousMonth < 0) {
-                previousMonth = 11; // December
+            if (previousMonth1Based < 1) {
+                previousMonth1Based = 12;
                 previousYear = currentYear - 1;
             }
-            
-            // Dodatna validacija prejšnjega meseca
-            if (previousMonth < 0 || previousMonth > 11) {
-                console.error(`❌ Neveljaven prejšnji mesec: ${previousMonth}`);
-                showMessage('Napaka: Neveljaven prejšnji mesec!', 'error');
-                return false;
-            }
-            
-            // Baza uporablja mesece 1–12
-            const currentMonth1Based = currentMonth + 1;
-            const previousMonth1Based = previousMonth + 1;
             
 // console.log(`🔄 Začenjam kopiranje vadnin iz ${previousMonth + 1}/${previousYear} v ${currentMonth + 1}/${currentYear}...`);
             
@@ -9942,9 +10231,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 // console.log('✅ Uspešno kopirane vadnine:', insertedFees);
             showMessage(`Uspešno kopiranih ${insertedFees.length} vadnin iz ${previousMonth1Based}/${previousYear} v ${currentMonth1Based}/${currentYear} (obstoječe so bile prepisane).`, 'success');
             
-            // Osveži finance sekcijo, če je prikazana in če se vadnine kopirajo za isti mesec/leto kot prikazan finance summary
-            if (currentSection === 'finance' && currentMonth1Based === currentFinanceMonth && currentYear === currentFinanceYear) {
-                calculateFinanceData();
+            // Osveži finance sekcijo
+            if (currentSection === 'finance') {
+                refreshAllFinanceViews();
+            } else {
+                refreshSwimmerFees();
             }
             
             return true;
@@ -10007,10 +10298,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         const checkButton = document.getElementById('checkFeesStatusBtn');
         
         if (copyButton) {
-            copyButton.onclick = copyPreviousMonthFees;
-// console.log('✅ Gumb za kopiranje vadnin je povezan');
-        } else {
-            console.warn('⚠️ Gumb za kopiranje vadnin ni bil najden');
+            copyButton.onclick = async () => {
+                const monthLabel = new Date(currentFinanceYear, currentFinanceMonth - 1, 1)
+                    .toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
+                if (!confirm(`Kopiram vadnine iz prejšnjega meseca v ${monthLabel}?\n\nObstoječe vadnine za ta mesec bodo prepisane. Po kopiranju jih lahko še urejate.`)) return;
+                await copyPreviousMonthFees();
+            };
         }
         
         if (copyNextYearButton) {
@@ -10409,18 +10702,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     if (elCopyMailingListBtn) {
-        elCopyMailingListBtn.addEventListener('click', () => {
+        elCopyMailingListBtn.addEventListener('click', async () => {
             const textarea = document.getElementById('mailingEmailsTextarea');
-            if (textarea) {
-                textarea.select();
-                textarea.setSelectionRange(0, 99999); // Za mobilne naprave
-                try {
+            if (!textarea) return;
+            const text = textarea.value;
+            try {
+                if (navigator.clipboard?.writeText) {
+                    await navigator.clipboard.writeText(text);
+                } else {
+                    textarea.select();
+                    textarea.setSelectionRange(0, text.length);
                     document.execCommand('copy');
-                    showMessage('Email naslovi so bili kopirani v odložišče', 'success');
-                } catch (err) {
-                    console.error('Napaka pri kopiranju:', err);
-                    showMessage('Napaka pri kopiranju email naslovov', 'error');
                 }
+                showMessage('Email naslovi so bili kopirani v odložišče', 'success');
+            } catch (err) {
+                console.error('Napaka pri kopiranju:', err);
+                showMessage('Kopiranje ni uspelo — označite besedilo ročno in kopirajte.', 'warning');
             }
         });
     }
@@ -10428,25 +10725,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ===== Inicializacija =====
     try {
         loadData();
-        loadCostSettings(); // Naloži nastavitve cen
-        
-        // Po nalaganju podatkov nastavi gumb za kopiranje vadnin in preveri avtomatsko kopiranje
-        setTimeout(() => {
-            try {
-                setupCopyFeesButton();
-                // Dodaj dodatno zakasnitev za avtomatsko kopiranje, da se izognemo konfliktom
-                setTimeout(() => {
-                    try {
-// console.log('🚀 Začenjam avtomatsko kopiranje vadnin...');
-                        autoCopyFeesIfNeeded();
-                    } catch (error) {
-                        console.error('❌ Napaka pri avtomatskem kopiranju vadnin:', error);
-                    }
-                }, 3000); // Počakaj dodatne 3 sekunde (skupaj 5 sekund)
-            } catch (error) {
-                console.error('❌ Napaka pri nastavljanju gumbov za kopiranje vadnin:', error);
-            }
-        }, 2000); // Počakaj 2 sekundi, da se podatki naložijo
+        loadCostSettings();
+        setupCopyFeesButton();
     } catch (error) {
         console.error('❌ Napaka pri inicializaciji:', error);
     }
