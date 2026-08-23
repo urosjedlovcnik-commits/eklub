@@ -33,7 +33,8 @@ class TrainerAuthManager {
     }
 
     calculatePermissions(role) {
-        switch (role) {
+        const normalized = (role || TRAINER_ROLES.TRAINER).trim().toLowerCase();
+        switch (normalized) {
             case TRAINER_ROLES.SUPER_ADMIN:
                 return {
                     role,

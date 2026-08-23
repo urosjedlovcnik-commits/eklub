@@ -2,7 +2,7 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     // Uporabi centralizirano konfiguracijo
-    const supabase = createSupabaseClient();
+    let supabase = createSupabaseClient();
     if (!supabase) {
         alert('Napaka: Ne morem vzpostaviti povezave z bazo podatkov.');
         return;
@@ -11,7 +11,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Uporaba Supabase namesto localStorage
     const useLocalStorage = false;
 
-    // Stanja bodo naložena asinhrono
     let ALL_TERMS = [];
     let TERMS = [];
     let swimmers = [];
@@ -202,6 +201,48 @@ document.addEventListener('DOMContentLoaded', () => {
       return `${String(d).padStart(2, '0')} / ${String(m).padStart(2, '0')} / ${y}`;
     }
 
+    function updateCalendarStatusBanner() {
+      const el = document.getElementById('calendarStatusBanner');
+      if (!el) return;
+
+      if (ALL_TERMS.length === 0) {
+        el.hidden = false;
+        el.className = 'calendar-status-banner warn';
+        el.textContent = 'Termini se niso naložili. V Supabase poženite SQL/phase1_authenticated_rls.sql (RLS za prijavljene uporabnike).';
+        return;
+      }
+
+      if (TERMS.length === 0 && trainerAuth?.permissions?.canViewAllTrainings) {
+        el.hidden = false;
+        el.className = 'calendar-status-banner info';
+        el.innerHTML = 'Trenutno prikazujete samo svoje termine, a jih nimate dodeljenih. '
+          + '<button type="button" class="btn" id="switchToAllTermsBtn">Prikaži vse termine</button>';
+        const btn = document.getElementById('switchToAllTermsBtn');
+        if (btn && !btn.dataset.bound) {
+          btn.dataset.bound = '1';
+          btn.addEventListener('click', () => {
+            trainerAuth.setViewMode('all');
+            const sel = document.getElementById('viewModeSelect');
+            if (sel) sel.value = 'all';
+            applyVisibleTermsFilter();
+            renderMonth();
+            updateCalendarStatusBanner();
+          });
+        }
+        return;
+      }
+
+      if (TERMS.length === 0) {
+        el.hidden = false;
+        el.className = 'calendar-status-banner warn';
+        el.textContent = 'Nimate dodeljenih terminov. Kontaktirajte administratorja kluba.';
+        return;
+      }
+
+      el.hidden = true;
+      el.textContent = '';
+    }
+
     function applyVisibleTermsFilter() {
       if (typeof trainerAuth !== 'undefined' && trainerAuth.filterTerms) {
         TERMS = trainerAuth.filterTerms(ALL_TERMS);
@@ -231,6 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
           trainerAuth.setViewMode(viewSelect.value);
           applyVisibleTermsFilter();
           renderMonth();
+          updateCalendarStatusBanner();
         });
       }
 
@@ -254,6 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return false;
       }
       setupAuthBar();
+      supabase = trainerAuth.supabase || supabase;
       return true;
     }
     
@@ -1855,9 +1898,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Uporaba Supabase (ko bo CORS problem rešen)
         try {
           const { data, error } = await supabase.from('terms').select('*');
-          if (error) console.error('Napaka pri nalaganju terminov:', error);
-          else {
-            ALL_TERMS = data.map(t => ({
+          if (error) {
+            console.error('Napaka pri nalaganju terminov:', error);
+          } else {
+            ALL_TERMS = (data || []).map(t => ({
               ...t,
               label: `${DAY_SHORT_NAME[t.day]} ${t.start_time.slice(0, 5)}–${t.end_time.slice(0, 5)}`
             }));
@@ -2126,6 +2170,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Renderaj mesec PO tem, ko so podatki naloženi in cache osvežen
       renderMonth();
+      updateCalendarStatusBanner();
     }
 
 
