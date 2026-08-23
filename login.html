@@ -122,9 +122,18 @@
             const params = new URLSearchParams(window.location.search);
             const returnTo = params.get('return') || 'index.html';
 
+            function redirectAfterLogin() {
+                const target = returnTo.startsWith('/') ? returnTo : './' + returnTo.replace(/^\.\//, '');
+                if (returnTo.includes('admin') && !trainerAuth.permissions?.canAccessAdmin) {
+                    window.location.href = './index.html';
+                    return;
+                }
+                window.location.href = target;
+            }
+
             const existing = await trainerAuth.restoreSession();
             if (existing) {
-                window.location.href = returnTo.startsWith('/') ? returnTo : './' + returnTo.replace(/^\.\//, '');
+                redirectAfterLogin();
                 return;
             }
 
@@ -137,7 +146,7 @@
 
                 try {
                     await trainerAuth.login(emailInput.value.trim(), passwordInput.value);
-                    window.location.href = returnTo.startsWith('/') ? returnTo : './' + returnTo.replace(/^\.\//, '');
+                    redirectAfterLogin();
                 } catch (err) {
                     loginError.textContent = err.message || 'Prijava ni uspela.';
                     loginError.style.display = 'block';

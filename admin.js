@@ -2,21 +2,22 @@
 document.addEventListener('DOMContentLoaded', async () => {
     //// console.log('🚀 Admin stran se nalaga...');
     
-    const session = await authManager.ensureAuthenticated();
-    if (!session) {
-        window.location.href = 'admin-login.html';
+    const ctx = await trainerAuth.restoreSession();
+    if (!ctx) {
+        window.location.href = 'login.html?return=admin.html';
         return;
     }
-    
-    // Prikaži informacije o sessiona
-    const adminInfo = document.getElementById('adminInfo');
-    if (adminInfo) {
-        const remainingDays = authManager.getSessionDaysRemaining();
-        adminInfo.textContent = `Pozdravljeni, ${session.email} (login velja še ${remainingDays} dni)`;
+    if (!ctx.permissions?.canAccessAdmin) {
+        window.location.href = 'index.html';
+        return;
     }
 
-    // Uporabi centralizirano konfiguracijo
-    const supabase = createSupabaseClient();
+    const adminInfo = document.getElementById('adminInfo');
+    if (adminInfo) {
+        adminInfo.textContent = `Pozdravljeni, ${trainerAuth.getDisplayName() || ctx.trainer?.email} (super admin)`;
+    }
+
+    const supabase = trainerAuth.supabase;
     if (!supabase) {
         console.error('❌ Napaka: Ne morem vzpostaviti povezave z bazo podatkov.');
         alert('Napaka: Ne morem vzpostaviti povezave z bazo podatkov.');
@@ -5379,10 +5380,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ===== Odjava =====
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
+        logoutBtn.addEventListener('click', async () => {
             if (confirm('Ali se res želite odjaviti?')) {
-                authManager.logoutAdmin();
-                window.location.href = 'admin-login.html';
+                await trainerAuth.logout();
+                window.location.href = 'login.html';
             }
         });
     }
