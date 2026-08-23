@@ -64,6 +64,15 @@ document.addEventListener('DOMContentLoaded', () => {
     /** Zapomni si izbiro filtra sezone na zavihku Termini (vse sezone = prazen niz) */
     const TERM_LIST_SEASON_STORAGE_KEY = 'eklub_admin_termListSeason';
 
+    /** Načini plačila: swimmer_id|season_id -> payment_plan */
+    let swimmerSeasonBilling = {};
+
+    const PAYMENT_PLAN_LABELS = {
+        monthly: 'Mesečno',
+        lump_sum: 'Enkratno (oktober)',
+        two_installments: '2 obroka (okt. + feb.)'
+    };
+
     // Trenutni mesec in leto za finance sekcijo
     const now = new Date();
     let currentFinanceMonth = now.getMonth() + 1; // 1-12 (September = 9)
@@ -794,6 +803,96 @@ document.addEventListener('DOMContentLoaded', () => {
         return (termIds || []).filter(tid => seasonTermIds.has(tid)).length;
     }
 
+    /** Obračunska obdobja: 1. obrok/enkratno = oktober, 2. obrok = februar (leto za februar = leto oktobra + 1) */
+    function getSeasonBillingSchedule(season) {
+        const df = season?.date_from || '';
+        const parts = df.split('-').map(Number);
+        const startYear = parts[0] || new Date().getFullYear();
+        const startMonth = parts[1] || 9;
+        const billing1Year = startMonth <= 9 ? startYear : startYear + 1;
+        return {
+            billing1: { month: 10, year: billing1Year },
+            billing2: { month: 2, year: billing1Year + 1 }
+        };
+    }
+
+    function isBillingMonthForPlan(paymentPlan, month, year, season) {
+        if (!paymentPlan || paymentPlan === 'monthly') return true;
+        if (!season) return paymentPlan === 'monthly';
+        const { billing1, billing2 } = getSeasonBillingSchedule(season);
+        const matches = (b) => month === b.month && year === b.year;
+        if (paymentPlan === 'lump_sum') return matches(billing1);
+        if (paymentPlan === 'two_installments') return matches(billing1) || matches(billing2);
+        return true;
+    }
+
+    function getSwimmerPaymentPlan(swimmerId, seasonId) {
+        const sid = seasonId || getAdminSeasonFilterId();
+        if (!sid) return 'monthly';
+        return swimmerSeasonBilling[`${swimmerId}|${sid}`] || 'monthly';
+    }
+
+    function buildPaymentPlanSelectHtml(swimmerId, selectedPlan, disabled) {
+        const opts = Object.entries(PAYMENT_PLAN_LABELS).map(([value, label]) =>
+            `<option value="${value}"${value === selectedPlan ? ' selected' : ''}>${label}</option>`
+        ).join('');
+        const dis = disabled ? ' disabled' : '';
+        return `<select class="payment-plan-select" onchange="updateSwimmerPaymentPlan('${swimmerId}', this.value)"${dis} style="font-size:12px;max-width:180px">${opts}</select>`;
+    }
+
+    function getPaymentPlanBillingHint(paymentPlan, season) {
+        if (!paymentPlan || paymentPlan === 'monthly') return '';
+        const { billing1, billing2 } = getSeasonBillingSchedule(season);
+        const fmt = (b) => new Date(b.year, b.month - 1, 1).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
+        if (paymentPlan === 'lump_sum') return `Obračun: ${fmt(billing1)}`;
+        if (paymentPlan === 'two_installments') return `Obroka: ${fmt(billing1)}, ${fmt(billing2)}`;
+        return '';
+    }
+
+    async function loadSwimmerSeasonBilling() {
+        swimmerSeasonBilling = {};
+        try {
+            const { data, error } = await supabase.from('swimmer_season_billing').select('swimmer_id, season_id, payment_plan');
+            if (error) throw error;
+            (data || []).forEach(row => {
+                swimmerSeasonBilling[`${row.swimmer_id}|${row.season_id}`] = row.payment_plan;
+            });
+        } catch (e) {
+            console.warn('Načini plačila niso naloženi (poženite SQL/create_swimmer_season_billing.sql):', e.message || e);
+        }
+    }
+
+    async function setSwimmerPaymentPlan(swimmerId, seasonId, paymentPlan) {
+        const sid = seasonId || getAdminSeasonFilterId();
+        if (!sid) {
+            showMessage('Izberite sezono v pasu zgoraj.', 'warning');
+            return false;
+        }
+        if (!PAYMENT_PLAN_LABELS[paymentPlan]) return false;
+        try {
+            const { error } = await supabase.from('swimmer_season_billing').upsert({
+                swimmer_id: swimmerId,
+                season_id: sid,
+                payment_plan: paymentPlan
+            }, { onConflict: 'swimmer_id,season_id' });
+            if (error) throw error;
+            swimmerSeasonBilling[`${swimmerId}|${sid}`] = paymentPlan;
+            updateSwimmersList();
+            refreshSwimmerFees();
+            if (typeof refreshAccountingReportEditor === 'function') refreshAccountingReportEditor();
+            if (typeof calculateFinanceData === 'function') calculateFinanceData();
+            return true;
+        } catch (e) {
+            console.error(e);
+            showMessage('Napaka pri shranjevanju načina plačila: ' + (e.message || e), 'error');
+            return false;
+        }
+    }
+
+    window.updateSwimmerPaymentPlan = async function(swimmerId, paymentPlan) {
+        await setSwimmerPaymentPlan(swimmerId, getAdminSeasonFilterId(), paymentPlan);
+    };
+
     function getTermsForAdminSeason(options = {}) {
         const { excludeTermIds = [] } = options;
         const seasonId = getAdminSeasonFilterId();
@@ -1062,6 +1161,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             await loadSeasons();
             await loadAccountingReportOrders();
+            await loadSwimmerSeasonBilling();
             populateSeasonSelects();
 
             // Posodobi UI
@@ -1431,6 +1531,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const table = document.createElement('table');
+        const seasonName = getSeasonNameById(seasonFilterId);
         table.innerHTML = `
             <thead>
                 <tr>
@@ -1439,6 +1540,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <th>Email</th>
                     <th>Telefon</th>
                     <th>Sezone / Termini</th>
+                    <th>Način plačila${seasonName ? ` (${escapeHtml(seasonName)})` : ''}</th>
                     <th>Akcije</th>
                 </tr>
             </thead>
@@ -1485,6 +1587,15 @@ document.addEventListener('DOMContentLoaded', () => {
         sortedSwimmers.forEach(swimmer => {
             const row = document.createElement('tr');
             const termsHtml = buildSwimmerTermsHtml(swimmer);
+            const hasTermsInSeason = (swimmer.terms || []).some(termId => {
+                const term = TERMS.find(t => t.id === termId);
+                return term && term.season_id === seasonFilterId;
+            });
+            const paymentPlan = getSwimmerPaymentPlan(swimmer.id, seasonFilterId);
+            let paymentPlanCell = '<span class="muted">—</span>';
+            if (!swimmer.is_deleted && hasTermsInSeason && seasonFilterId) {
+                paymentPlanCell = buildPaymentPlanSelectHtml(swimmer.id, paymentPlan, false);
+            }
 
             // Določi stil vrstice glede na status
             if (swimmer.is_deleted) {
@@ -1498,6 +1609,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${swimmer.email || '<span class="muted">Brez email naslova</span>'}</td>
                 <td>${swimmer.phone || '<span class="muted">Brez telefona</span>'}</td>
                 <td class="terms-cell">${swimmer.is_deleted ? '<span class="muted">Izbrisan</span>' : termsHtml}</td>
+                <td>${paymentPlanCell}</td>
                 <td>
                     ${swimmer.is_deleted ? 
                         `<button class="btn success" onclick="restoreSwimmer('${swimmer.id}')" style="font-size: 12px; padding: 4px 8px;">
@@ -7208,13 +7320,22 @@ document.addEventListener('DOMContentLoaded', () => {
 // console.log('🔍 calculateFinanceData - swimmerFees za mesec:', month, 'leto:', year);
 
             
+            const seasonId = getAdminSeasonFilterId();
+            const season = seasons.find(s => s.id === seasonId);
             let totalRevenue = 0;
 // console.log('🔍 calculateFinanceData - začenjam izračun prihodkov...');
             
             // Preštej OLY plavalce in dodaj njihove prispevke
             let olyContributions = 0;
             activeSwimmers.forEach(swimmer => {
-                const feeData = swimmerFees[swimmer.id] || { fee: 80, discount: 0, is_oly: false };
+                const plan = getSwimmerPaymentPlan(swimmer.id, seasonId);
+                if (!isBillingMonthForPlan(plan, month, year, season)) return;
+
+                let feeData = swimmerFees[swimmer.id];
+                if (!feeData) {
+                    if (plan !== 'monthly') return;
+                    feeData = { fee: 80, discount: 0, is_oly: false };
+                }
                 
                 // Če je OLY plavalec, dodaj prispevek (enako kot letno poročilo)
                 if (feeData.is_oly) {
@@ -7670,6 +7791,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const seasonName = getSeasonNameById(getAdminSeasonFilterId());
+        const seasonId = getAdminSeasonFilterId();
+        const season = seasons.find(s => s.id === seasonId);
         const swimmerFees = await getSwimmerFeesFromDB(month, year);
 
         const sortedSwimmers = swimmers
@@ -7698,13 +7821,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const isPastMonth = requestedDate < currentDate;
         const monthLabel = new Date(year, month - 1, 1).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
 
-        let html = `<p class="muted" style="font-size:13px;margin-bottom:10px">Sezona: <strong>${escapeHtml(seasonName) || '—'}</strong> · ${sortedSwimmers.length} plavalcev · ${monthLabel}</p>`;
+        let html = `<p class="muted" style="font-size:13px;margin-bottom:10px">Sezona: <strong>${escapeHtml(seasonName) || '—'}</strong> · ${sortedSwimmers.length} plavalcev · ${monthLabel}<br>
+            <span style="font-size:12px">Enkratno in 1. obrok: <strong>oktober</strong> · 2. obrok: <strong>februar</strong> · Zneske vnašate ročno.</span></p>`;
         html += `
             <table class="swimmer-fees-table">
                 <thead>
                     <tr>
                         <th>Plavalec</th>
                         <th>Termini (sezona)</th>
+                        <th>Način plačila</th>
                         <th>Mesečna vadnina (€)</th>
                         <th>Popust (€)</th>
                         <th>Končna vadnina (€)</th>
@@ -7720,32 +7845,43 @@ document.addEventListener('DOMContentLoaded', () => {
             const termsDisplay = termLabels.length > 0 ? termLabels.join(', ') : 'Brez terminov';
             const defaultFee = getDefaultSwimmerFeeByTermCount(termLabels.length);
             const feeData = swimmerFees[swimmer.id];
+            const paymentPlan = getSwimmerPaymentPlan(swimmer.id, seasonId);
+            const planLabel = PAYMENT_PLAN_LABELS[paymentPlan] || PAYMENT_PLAN_LABELS.monthly;
+            const isBillingMonth = isBillingMonthForPlan(paymentPlan, month, year, season);
+            const billingHint = getPaymentPlanBillingHint(paymentPlan, season);
 
             if (!feeData && isPastMonth) continue;
+            if (!feeData && !isBillingMonth && paymentPlan !== 'monthly') continue;
 
-            let fee = feeData?.fee ?? defaultFee;
+            let fee = feeData?.fee ?? (paymentPlan === 'monthly' ? defaultFee : 0);
             let discount = feeData?.discount || 0;
             const isOly = feeData?.is_oly || false;
             const effectiveFee = isOly ? 0 : fee;
             const finalFee = Math.max(0, effectiveFee - discount);
             const canCheckOly = olyCount < 15 || isOly;
-            const rowStyle = (finalFee === 0 && !isOly) ? 'style="background-color: #ffe0e0;"' : '';
+            const rowStyle = (finalFee === 0 && !isOly && isBillingMonth) ? 'style="background-color: #ffe0e0;"' : (!isBillingMonth ? 'style="opacity:0.65"' : '');
+            const inputsDisabled = !isBillingMonth || isOly;
+            const planDisplay = billingHint
+                ? `${escapeHtml(planLabel)}<br><span style="font-size:11px;color:#666">${escapeHtml(billingHint)}</span>`
+                : escapeHtml(planLabel);
+            const notBillingNote = !isBillingMonth ? '<br><span style="font-size:11px;color:#999">Ni mesec obračuna</span>' : '';
 
             rowCount++;
             html += `
                 <tr ${rowStyle}>
                     <td>${swimmer.first_name} ${swimmer.last_name}</td>
                     <td>${termsDisplay}</td>
+                    <td>${planDisplay}${notBillingNote}</td>
                     <td>
-                        <input type="number" id="fee-${swimmer.id}" value="${effectiveFee}" min="0" step="0.01" style="width: 80px;" onchange="updateSwimmerFee('${swimmer.id}', this.value, ${month}, ${year})" ${isOly ? 'disabled' : ''}>
+                        <input type="number" id="fee-${swimmer.id}" value="${effectiveFee}" min="0" step="0.01" style="width: 80px;" onchange="updateSwimmerFee('${swimmer.id}', this.value, ${month}, ${year})" ${inputsDisabled ? 'disabled' : ''}>
                     </td>
                     <td>
-                        <input type="number" id="discount-${swimmer.id}" value="${discount}" min="0" step="0.01" style="width: 80px;" onchange="updateSwimmerDiscount('${swimmer.id}', this.value, ${month}, ${year})" ${isOly ? 'disabled' : ''}>
+                        <input type="number" id="discount-${swimmer.id}" value="${discount}" min="0" step="0.01" style="width: 80px;" onchange="updateSwimmerDiscount('${swimmer.id}', this.value, ${month}, ${year})" ${inputsDisabled ? 'disabled' : ''}>
                     </td>
-                    <td><strong>${finalFee.toFixed(2)}€</strong></td>
+                    <td><strong>${isBillingMonth ? finalFee.toFixed(2) + '€' : '—'}</strong></td>
                     <td style="text-align: center;">
-                        <input type="checkbox" id="oly-${swimmer.id}" ${isOly ? 'checked' : ''} ${canCheckOly ? '' : 'disabled'} onchange="updateSwimmerOly('${swimmer.id}', this.checked, ${month}, ${year})" style="cursor: pointer; width: 20px; height: 20px;">
-                        ${!canCheckOly && !isOly ? '<span style="font-size: 10px; color: #999; display: block;">Max 15</span>' : ''}
+                        <input type="checkbox" id="oly-${swimmer.id}" ${isOly ? 'checked' : ''} ${canCheckOly && isBillingMonth ? '' : 'disabled'} onchange="updateSwimmerOly('${swimmer.id}', this.checked, ${month}, ${year})" style="cursor: pointer; width: 20px; height: 20px;">
+                        ${!canCheckOly && !isOly ? '<span style="font-size: 11px; color: #999; display: block;">Max 15</span>' : ''}
                     </td>
                 </tr>
             `;
@@ -7858,8 +7994,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return getSeasonForMonthYear(month, year);
     }
 
-    /** Plavalci z zapisom vadnine v bazi za mesec, brez OLY — samo izbrana sezona */
+    /** Plavalci z zapisom vadnine v bazi za mesec, brez OLY — samo izbrana sezona in mesec obračuna */
     async function fetchAccountingReportFeeRows(month, year) {
+        const season = getAccountingReportSeason(month, year);
+        const seasonId = season?.id || getAdminSeasonFilterId();
         const { data, error } = await supabase
             .from('swimmer_monthly_fees')
             .select('swimmer_id, monthly_fee, discount, is_oly')
@@ -7872,6 +8010,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const swimmer = swimmers.find(s => s.id === row.swimmer_id && !s.is_deleted);
             if (!swimmer) return;
             if (!entityHasTermsInAdminSeason(swimmer)) return;
+            const plan = getSwimmerPaymentPlan(swimmer.id, seasonId);
+            if (!isBillingMonthForPlan(plan, month, year, season)) return;
             const fee = parseFloat(row.monthly_fee || 0);
             const discount = parseFloat(row.discount || 0);
             const net = fee - discount;
