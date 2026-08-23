@@ -515,7 +515,7 @@
     <div class="admin-season-bar" id="adminSeasonBar">
       <label for="adminSeasonFilter">Sezona:</label>
       <select id="adminSeasonFilter"></select>
-      <span class="season-bar-hint">Podatki na vseh zavihkih (razen Sezone) veljajo za izbrano sezono.</span>
+      <span class="season-bar-hint" id="adminSeasonBarHint">Podatki na vseh zavihkih (razen Sezone) veljajo za izbrano sezono.</span>
     </div>
   </div>
 
@@ -935,6 +935,36 @@
               <span>€</span>
             </div>
             <button class="btn pri" id="saveCostsBtn">Shrani nastavitve</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Privzete vadnine (PKL cenik)</h3>
+          <div class="inner">
+            <p class="muted" style="font-size:13px;margin-bottom:12px">
+              Privzete vrednosti za predloge in prazna polja — <strong>ne prepisujejo</strong> ročno vnesenih zneskov ali popustov po plavalcu.
+              Vir: <a href="https://www.plavalniklub-ljubljana.si/plavanje-odraslih/" target="_blank" rel="noopener">plavalniklub-ljubljana.si/plavanje-odraslih</a> (sezona 2026/27).
+            </p>
+            <p style="font-size:13px;font-weight:600;margin-bottom:8px">Mesečno plačilo</p>
+            <div class="row" style="flex-wrap:wrap;gap:12px;margin-bottom:12px">
+              <label>1× tedensko <input type="number" id="defaultFeeMonthly1" min="0" step="0.01" style="width:80px;margin-left:6px"> €</label>
+              <label>2× tedensko <input type="number" id="defaultFeeMonthly2" min="0" step="0.01" style="width:80px;margin-left:6px"> €</label>
+              <label>3× tedensko <input type="number" id="defaultFeeMonthly3" min="0" step="0.01" style="width:80px;margin-left:6px"> €</label>
+              <label>Članarina <input type="number" id="defaultFeeMembership" min="0" step="0.01" style="width:80px;margin-left:6px"> €</label>
+            </div>
+            <p style="font-size:13px;font-weight:600;margin-bottom:8px">Enkratno (9 mesecev)</p>
+            <div class="row" style="flex-wrap:wrap;gap:12px;margin-bottom:12px">
+              <label>1× <input type="number" id="defaultFeeLump1" min="0" step="0.01" style="width:80px;margin-left:6px"> €</label>
+              <label>2× <input type="number" id="defaultFeeLump2" min="0" step="0.01" style="width:80px;margin-left:6px"> €</label>
+              <label>3× <input type="number" id="defaultFeeLump3" min="0" step="0.01" style="width:80px;margin-left:6px"> €</label>
+            </div>
+            <p style="font-size:13px;font-weight:600;margin-bottom:8px">2 obroka (oktober + februar)</p>
+            <div class="row" style="flex-wrap:wrap;gap:12px;margin-bottom:12px">
+              <label>1× <input type="number" id="defaultFeeInstallment1" min="0" step="0.01" style="width:80px;margin-left:6px"> € / obrok</label>
+              <label>2× <input type="number" id="defaultFeeInstallment2" min="0" step="0.01" style="width:80px;margin-left:6px"> € / obrok</label>
+              <label>3× <input type="number" id="defaultFeeInstallment3" min="0" step="0.01" style="width:80px;margin-left:6px"> € / obrok</label>
+            </div>
+            <button type="button" class="btn pri" id="saveDefaultFeeSettingsBtn">Shrani privzete vadnine</button>
           </div>
         </div>
 
