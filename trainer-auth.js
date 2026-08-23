@@ -8,6 +8,30 @@ const TRAINER_ROLES = {
 
 const CALENDAR_VIEW_KEY = 'eklub_calendar_view';
 
+/** Ali URL kaže na callback za ponastavitev gesla (hash ali PKCE code). */
+function isRecoveryUrl(locationObj) {
+    const loc = locationObj || window.location;
+    const hash = (loc.hash || '').replace(/^#/, '');
+    const hashParams = new URLSearchParams(hash);
+    if (hashParams.get('type') === 'recovery') return true;
+    const searchParams = new URLSearchParams(loc.search || '');
+    if (searchParams.get('type') === 'recovery') return true;
+    if (searchParams.has('code')) return true;
+    return false;
+}
+
+/** Preusmeri na stran za novo geslo, če Supabase pristane na koledarju/adminu. */
+function redirectRecoveryToResetPage() {
+    if (!isRecoveryUrl()) return false;
+    const path = (window.location.pathname || '').toLowerCase();
+    if (path.includes('reset-password.html') || path.includes('login.html')) return false;
+    window.location.replace('./reset-password.html' + window.location.search + window.location.hash);
+    return true;
+}
+
+window.isRecoveryUrl = isRecoveryUrl;
+window.redirectRecoveryToResetPage = redirectRecoveryToResetPage;
+
 function mapAuthErrorMessage(message) {
     const msg = (message || '').toLowerCase();
     if (msg.includes('invalid login credentials')) {

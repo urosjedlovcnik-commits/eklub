@@ -1,6 +1,10 @@
 // Admin stran za upravljanje plavalne šole
 document.addEventListener('DOMContentLoaded', async () => {
     //// console.log('🚀 Admin stran se nalaga...');
+
+    if (typeof redirectRecoveryToResetPage === 'function' && redirectRecoveryToResetPage()) {
+        return;
+    }
     
     const ctx = await trainerAuth.restoreSession();
     if (!ctx) {

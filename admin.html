@@ -3,6 +3,15 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<script>
+(function () {
+  var h = window.location.hash || '';
+  var s = window.location.search || '';
+  if (h.indexOf('type=recovery') !== -1 || s.indexOf('type=recovery') !== -1 || (s.indexOf('code=') !== -1 && s.indexOf('return=') === -1)) {
+    window.location.replace('./reset-password.html' + s + h);
+  }
+})();
+</script>
 <title>Admin - Upravljanje plavalne šole</title>
 <link rel="stylesheet" href="style.css">
 <style>

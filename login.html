@@ -75,23 +75,9 @@
 <body class="login-page">
     <div class="login-card">
         <h1>🏊 eKlub</h1>
-        <p class="subtitle" id="loginSubtitle">Prijava za trenerje</p>
+        <p class="subtitle">Prijava za trenerje</p>
 
         <div id="loginError" class="login-error"></div>
-
-        <div id="recoveryFormWrap" hidden>
-            <form id="recoveryForm">
-                <div class="login-field">
-                    <label for="newPassword">Novo geslo</label>
-                    <input type="password" id="newPassword" required minlength="8" autocomplete="new-password" placeholder="Vsaj 8 znakov">
-                </div>
-                <div class="login-field">
-                    <label for="confirmPassword">Ponovite geslo</label>
-                    <input type="password" id="confirmPassword" required minlength="8" autocomplete="new-password" placeholder="••••••••">
-                </div>
-                <button type="submit" class="btn pri login-submit" id="recoveryBtn">Shrani novo geslo</button>
-            </form>
-        </div>
 
         <form id="loginForm">
             <div class="login-field">
@@ -132,30 +118,13 @@
             const loginError = document.getElementById('loginError');
             const loginSuccess = document.getElementById('loginSuccess');
             const forgotBtn = document.getElementById('forgotPasswordBtn');
-            const recoveryWrap = document.getElementById('recoveryFormWrap');
-            const recoveryForm = document.getElementById('recoveryForm');
-            const recoveryBtn = document.getElementById('recoveryBtn');
-            const loginSubtitle = document.getElementById('loginSubtitle');
-            const loginHint = document.querySelector('.login-hint');
 
             const params = new URLSearchParams(window.location.search);
             const returnTo = params.get('return') || 'index.html';
-            let passwordRecoveryMode = false;
 
-            function isRecoveryUrl() {
-                const hash = (window.location.hash || '').replace(/^#/, '');
-                const hashParams = new URLSearchParams(hash);
-                if (hashParams.get('type') === 'recovery') return true;
-                return params.get('type') === 'recovery';
-            }
-
-            function showRecoveryForm() {
-                passwordRecoveryMode = true;
-                form.hidden = true;
-                if (forgotBtn) forgotBtn.closest('p').hidden = true;
-                if (loginHint) loginHint.hidden = true;
-                recoveryWrap.hidden = false;
-                if (loginSubtitle) loginSubtitle.textContent = 'Nastavite novo geslo';
+            if (typeof isRecoveryUrl === 'function' && isRecoveryUrl()) {
+                window.location.replace('./reset-password.html' + window.location.search + window.location.hash);
+                return;
             }
 
             function redirectAfterLogin() {
@@ -167,62 +136,10 @@
                 window.location.href = target;
             }
 
-            trainerAuth.supabase.auth.onAuthStateChange((event) => {
-                if (event === 'PASSWORD_RECOVERY') {
-                    showRecoveryForm();
-                }
-            });
-
-            if (isRecoveryUrl()) {
-                showRecoveryForm();
-            }
-
             const existing = await trainerAuth.restoreSession();
-            if (existing && !passwordRecoveryMode) {
+            if (existing) {
                 redirectAfterLogin();
                 return;
-            }
-
-            if (recoveryForm) {
-                recoveryForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    loginError.style.display = 'none';
-                    loginSuccess.style.display = 'none';
-
-                    const newPassword = document.getElementById('newPassword').value;
-                    const confirmPassword = document.getElementById('confirmPassword').value;
-
-                    if (newPassword.length < 8) {
-                        loginError.textContent = 'Geslo mora imeti vsaj 8 znakov.';
-                        loginError.style.display = 'block';
-                        return;
-                    }
-                    if (newPassword !== confirmPassword) {
-                        loginError.textContent = 'Gesli se ne ujemata.';
-                        loginError.style.display = 'block';
-                        return;
-                    }
-
-                    recoveryBtn.disabled = true;
-                    recoveryBtn.textContent = 'Shranjevanje …';
-
-                    try {
-                        const { error } = await trainerAuth.supabase.auth.updateUser({ password: newPassword });
-                        if (error) throw error;
-
-                        history.replaceState(null, '', window.location.pathname + window.location.search);
-                        await trainerAuth.restoreSession();
-
-                        loginSuccess.textContent = 'Novo geslo je shranjeno. Preusmerjam …';
-                        loginSuccess.style.display = 'block';
-                        setTimeout(() => redirectAfterLogin(), 800);
-                    } catch (err) {
-                        loginError.textContent = err.message || 'Shranjevanje gesla ni uspelo.';
-                        loginError.style.display = 'block';
-                        recoveryBtn.disabled = false;
-                        recoveryBtn.textContent = 'Shrani novo geslo';
-                    }
-                });
             }
 
             form.addEventListener('submit', async (e) => {
@@ -255,7 +172,7 @@
                     forgotBtn.disabled = true;
                     try {
                         const { error } = await trainerAuth.supabase.auth.resetPasswordForEmail(email, {
-                            redirectTo: window.location.origin + '/login.html'
+                            redirectTo: window.location.origin + '/reset-password.html'
                         });
                         if (error) throw error;
                         loginSuccess.textContent = 'Poslali smo povezavo za novo geslo na ' + email + '. Preverite tudi mapo vsiljena.';

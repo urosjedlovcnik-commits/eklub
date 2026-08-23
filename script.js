@@ -303,6 +303,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function requireAuth() {
+      if (typeof redirectRecoveryToResetPage === 'function' && redirectRecoveryToResetPage()) {
+        return false;
+      }
       const ctx = await trainerAuth.restoreSession();
       if (!ctx) {
         const returnPath = window.location.pathname.split('/').pop() || 'index.html';
