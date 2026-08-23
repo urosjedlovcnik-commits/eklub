@@ -61,6 +61,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let seasons = []; // Sezone (tabela seasons v bazi)
     /** Mesečni OLY prispevek na plavalca (enako kot v Finance / calculateFinanceData) */
     const OLY_MONTHLY_CONTRIBUTION_EUR = 40;
+    /** Fiksna članarina v poročilu za računovodstvo (opcijsko) */
+    const MEMBERSHIP_FEE_EUR = 30;
+    const PAYMENT_PLAN_GROUP_ORDER = ['monthly', 'two_installments', 'lump_sum'];
     /** Zapomni si izbiro filtra sezone na zavihku Termini (vse sezone = prazen niz) */
     const TERM_LIST_SEASON_STORAGE_KEY = 'eklub_admin_termListSeason';
 
@@ -71,6 +74,12 @@ document.addEventListener('DOMContentLoaded', () => {
         monthly: 'Mesečno',
         lump_sum: 'Enkratno (oktober)',
         two_installments: '2 obroka (okt. + feb.)'
+    };
+
+    const PAYMENT_PLAN_REPORT_GROUP_LABELS = {
+        monthly: 'Mesečno plačilo',
+        two_installments: 'Plačilo dvakrat letno',
+        lump_sum: 'Plačilo enkrat letno'
     };
 
     // Trenutni mesec in leto za finance sekcijo
@@ -4911,6 +4920,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('saveAccountingReportOrderBtn')?.addEventListener('click', () => saveAccountingReportOrder());
     document.getElementById('sortAccountingReportAlphaBtn')?.addEventListener('click', () => sortAccountingReportAlphabetically());
     document.getElementById('printAccountingReportBtn')?.addEventListener('click', () => downloadAccountingReportPdf());
+    document.getElementById('accountingIncludeMembershipFee')?.addEventListener('change', () => {
+        const season = getAccountingReportSeason(currentAccountingReportMonth, currentAccountingReportYear);
+        renderAccountingReportEditorTable(accountingReportWorkingOrder, season);
+    });
 
     document.getElementById('accountingReportEditorBox')?.addEventListener('click', e => {
         const up = e.target.closest('[data-acc-order-up]');
@@ -7830,7 +7843,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <th>Plavalec</th>
                         <th>Termini (sezona)</th>
                         <th>Način plačila</th>
-                        <th>Mesečna vadnina (€)</th>
+                        <th>Znesek vadnine (€)</th>
                         <th>Popust (€)</th>
                         <th>Končna vadnina (€)</th>
                         <th>OLY</th>
@@ -7994,7 +8007,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return getSeasonForMonthYear(month, year);
     }
 
-    /** Plavalci z zapisom vadnine v bazi za mesec, brez OLY — samo izbrana sezona in mesec obračuna */
+    /** Plavalci za obračun v izbranem mesecu — glede na način plačila in sezono */
     async function fetchAccountingReportFeeRows(month, year) {
         const season = getAccountingReportSeason(month, year);
         const seasonId = season?.id || getAdminSeasonFilterId();
@@ -8004,26 +8017,60 @@ document.addEventListener('DOMContentLoaded', () => {
             .eq('month', month)
             .eq('year', year);
         if (error) throw error;
-        const rows = [];
+
+        const feesBySwimmer = {};
         (data || []).forEach(row => {
-            if (row.is_oly === true) return;
-            const swimmer = swimmers.find(s => s.id === row.swimmer_id && !s.is_deleted);
-            if (!swimmer) return;
-            if (!entityHasTermsInAdminSeason(swimmer)) return;
-            const plan = getSwimmerPaymentPlan(swimmer.id, seasonId);
-            if (!isBillingMonthForPlan(plan, month, year, season)) return;
-            const fee = parseFloat(row.monthly_fee || 0);
-            const discount = parseFloat(row.discount || 0);
-            const net = fee - discount;
-            if (net <= 0 && fee <= 0) return;
-            rows.push({
-                swimmer,
-                netFee: net > 0 ? net : fee,
-                fee,
-                discount
-            });
+            feesBySwimmer[row.swimmer_id] = row;
         });
+
+        const rows = [];
+        swimmers
+            .filter(s => !s.is_deleted && entityHasTermsInAdminSeason(s))
+            .forEach(swimmer => {
+                const plan = getSwimmerPaymentPlan(swimmer.id, seasonId);
+                if (!isBillingMonthForPlan(plan, month, year, season)) return;
+
+                const feeRow = feesBySwimmer[swimmer.id];
+                if (feeRow?.is_oly === true) return;
+
+                const fee = feeRow ? parseFloat(feeRow.monthly_fee || 0) : 0;
+                const discount = feeRow ? parseFloat(feeRow.discount || 0) : 0;
+                const net = Math.max(0, fee - discount);
+
+                rows.push({
+                    swimmer,
+                    netFee: net,
+                    fee,
+                    discount,
+                    paymentPlan: plan
+                });
+            });
         return rows;
+    }
+
+    function isAccountingMembershipIncluded() {
+        return document.getElementById('accountingIncludeMembershipFee')?.checked === true;
+    }
+
+    function getAccountingRowTotal(row) {
+        const base = Number(row.netFee) || 0;
+        return base + (isAccountingMembershipIncluded() ? MEMBERSHIP_FEE_EUR : 0);
+    }
+
+    function groupAndSortAccountingRows(feeRows, orderedIds, seasonId) {
+        const byPlan = { monthly: [], two_installments: [], lump_sum: [] };
+        feeRows.forEach(r => {
+            const plan = r.paymentPlan || getSwimmerPaymentPlan(r.swimmer.id, seasonId);
+            r.paymentPlan = plan;
+            (byPlan[plan] || byPlan.monthly).push(r);
+        });
+        const result = [];
+        PAYMENT_PLAN_GROUP_ORDER.forEach(plan => {
+            const group = byPlan[plan];
+            if (!group.length) return;
+            applyOrderToAccountingRows(group, orderedIds).forEach(r => result.push(r));
+        });
+        return result;
     }
 
     function sortSwimmersAlpha(list) {
@@ -8049,9 +8096,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function buildAccountingReportRows(month, year) {
         const season = getAccountingReportSeason(month, year);
+        const seasonId = season?.id || getAdminSeasonFilterId();
         const feeRows = await fetchAccountingReportFeeRows(month, year);
         if (!season) {
-            return { season: null, rows: sortSwimmersAlpha(feeRows) };
+            return { season: null, rows: groupAndSortAccountingRows(feeRows, [], seasonId) };
         }
         await ensureAccountingReportSeedForSeason(season);
         const orderRows = accountingReportOrderBySeason[season.id] || [];
@@ -8060,7 +8108,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .map(r => r.swimmer_id);
         return {
             season,
-            rows: applyOrderToAccountingRows(feeRows, orderedIds)
+            rows: groupAndSortAccountingRows(feeRows, orderedIds, seasonId)
         };
     }
 
@@ -8078,10 +8126,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function sortAccountingReportAlphabetically() {
         if (!accountingReportWorkingOrder.length) return;
-        accountingReportWorkingOrder = sortSwimmersAlpha(accountingReportWorkingOrder);
+        const seasonId = getAdminSeasonFilterId();
+        const byPlan = { monthly: [], two_installments: [], lump_sum: [] };
+        accountingReportWorkingOrder.forEach(r => {
+            const plan = r.paymentPlan || getSwimmerPaymentPlan(r.swimmer.id, seasonId);
+            (byPlan[plan] || byPlan.monthly).push(r);
+        });
+        accountingReportWorkingOrder = [
+            ...sortSwimmersAlpha(byPlan.monthly),
+            ...sortSwimmersAlpha(byPlan.two_installments),
+            ...sortSwimmersAlpha(byPlan.lump_sum)
+        ];
         const season = getAccountingReportSeason(currentAccountingReportMonth, currentAccountingReportYear);
         renderAccountingReportEditorTable(accountingReportWorkingOrder, season);
-        showMessage('Vrstni red po abecedi (shrani gumb, če želite obdržati za sezono).', 'info');
+        showMessage('Vrstni red po abecedi znotraj skupin (shrani gumb, če želite obdržati).', 'info');
     }
 
     function renderAccountingReportEditorTable(rows, season) {
@@ -8089,26 +8147,47 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!box) return;
         if (!rows.length) {
             const seasonLabel = season?.name || getSeasonNameById(getAdminSeasonFilterId()) || 'izbrani sezoni';
-            box.innerHTML = `<p class="muted">Za izbrani mesec ni plavalcev z zabeleženo vadnino (brez OLY) v sezoni <strong>${escapeHtml(seasonLabel)}</strong>.</p>`;
+            const month = currentAccountingReportMonth;
+            const year = currentAccountingReportYear;
+            const monthLabel = new Date(year, month - 1, 1).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
+            box.innerHTML = `<p class="muted">Za <strong>${escapeHtml(monthLabel)}</strong> v sezoni <strong>${escapeHtml(seasonLabel)}</strong> ni plavalcev za obračun (mesečni vsak mesec; enkratno/dvakratno le v mesecih obračuna).</p>`;
             return;
         }
+        const includeMembership = isAccountingMembershipIncluded();
         let header = '';
         if (season) {
             const nSaved = (accountingReportOrderBySeason[season.id] || []).length;
-            header = `<p class="muted" style="font-size:13px;margin-bottom:10px">Sezona: <strong>${escapeHtml(season.name)}</strong> · ${rows.length} plavalcev · ${nSaved ? 'shranjen vrstni red' : 'privzeti vrstni red (2025/26)'} · premakni z ↑ ↓, nato <strong>Shrani vrstni red</strong></p>`;
+            header = `<p class="muted" style="font-size:13px;margin-bottom:10px">Sezona: <strong>${escapeHtml(season.name)}</strong> · ${rows.length} plavalcev · ${nSaved ? 'shranjen vrstni red znotraj skupin' : 'po abecedi znotraj skupin'} · premakni z ↑ ↓, nato <strong>Shrani vrstni red</strong></p>`;
         } else {
-            header = `<p class="muted" style="font-size:13px;margin-bottom:10px">${rows.length} plavalcev · po abecedi (ni sezone za ta mesec)</p>`;
+            header = `<p class="muted" style="font-size:13px;margin-bottom:10px">${rows.length} plavalcev · po skupinah načina plačila</p>`;
         }
+        const amountHeaders = includeMembership
+            ? `<th style="text-align:right">Vadnina (€)</th><th style="text-align:right">Članarina (€)</th><th style="text-align:right">Skupaj (€)</th>`
+            : `<th style="text-align:right">Znesek vadnine (€)</th>`;
         let html = header + `<table class="trainer-hours-table" style="width:100%"><thead><tr>
             <th style="width:70px">Vrstni red</th>
             <th>Ime in priimek</th>
             <th>E-pošta</th>
             <th>Naslov</th>
             <th>Pošta</th>
-            <th style="text-align:right">Vadnina (€)</th>
+            ${amountHeaders}
         </tr></thead><tbody>`;
+
+        let lastPlan = null;
         rows.forEach((row, i) => {
+            const plan = row.paymentPlan || 'monthly';
+            if (plan !== lastPlan) {
+                const colSpan = includeMembership ? 8 : 7;
+                html += `<tr style="background:#eef2ff"><td colspan="${colSpan}"><strong>${escapeHtml(PAYMENT_PLAN_REPORT_GROUP_LABELS[plan] || plan)}</strong></td></tr>`;
+                lastPlan = plan;
+            }
             const s = row.swimmer;
+            const total = getAccountingRowTotal(row);
+            const amountCells = includeMembership
+                ? `<td style="text-align:right">${formatAccountingFeeAmount(row.netFee)}</td>
+                   <td style="text-align:right">${formatAccountingFeeAmount(MEMBERSHIP_FEE_EUR)}</td>
+                   <td style="text-align:right"><strong>${formatAccountingFeeAmount(total)}</strong></td>`
+                : `<td style="text-align:right">${formatAccountingFeeAmount(row.netFee)}</td>`;
             html += `<tr>
                 <td style="white-space:nowrap">
                     <button type="button" class="btn" style="padding:2px 8px;font-size:12px" data-acc-order-up="${i}" title="Premakni gor">↑</button>
@@ -8118,7 +8197,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${escapeHtml(s.email || '')}</td>
                 <td>${escapeHtml(s.address || '')}</td>
                 <td>${escapeHtml(s.postal_code || '')}</td>
-                <td style="text-align:right">${formatAccountingFeeAmount(row.netFee)}</td>
+                ${amountCells}
             </tr>`;
         });
         html += '</tbody></table>';
@@ -8223,38 +8302,82 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const monthLabel = new Date(year, month - 1, 1).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
             const fileSlug = `${String(month).padStart(2, '0')}_${year}`;
-            const tableBody = [
-                [
+            const includeMembership = isAccountingMembershipIncluded();
+            const headerRow = includeMembership
+                ? [
+                    { text: 'Št.', style: 'tableHeader', alignment: 'center' },
+                    { text: 'Ime priimek', style: 'tableHeader' },
+                    { text: 'Mail', style: 'tableHeader' },
+                    { text: 'Naslov', style: 'tableHeader' },
+                    { text: 'Pošta', style: 'tableHeader' },
+                    { text: 'Vadnina', style: 'tableHeader', alignment: 'right' },
+                    { text: 'Član.', style: 'tableHeader', alignment: 'right' },
+                    { text: 'Skupaj', style: 'tableHeader', alignment: 'right' }
+                ]
+                : [
                     { text: 'Št.', style: 'tableHeader', alignment: 'center' },
                     { text: 'Ime priimek', style: 'tableHeader' },
                     { text: 'Mail', style: 'tableHeader' },
                     { text: 'Naslov', style: 'tableHeader' },
                     { text: 'Pošta', style: 'tableHeader' },
                     { text: 'Znesek', style: 'tableHeader', alignment: 'right' }
-                ],
-                ...rows.map((row, index) => {
-                    const s = row.swimmer;
-                    return [
-                        accountingPdfCell(String(index + 1), 'center'),
+                ];
+            const tableBody = [headerRow];
+            let lastPlan = null;
+            let rowIndex = 0;
+            rows.forEach(row => {
+                const plan = row.paymentPlan || 'monthly';
+                if (plan !== lastPlan) {
+                    const groupLabel = PAYMENT_PLAN_REPORT_GROUP_LABELS[plan] || plan;
+                    tableBody.push([
+                        { text: groupLabel, bold: true, colSpan: headerRow.length, fillColor: '#eef2ff', margin: [0, 4, 0, 2] },
+                        ...Array(headerRow.length - 1).fill({})
+                    ]);
+                    lastPlan = plan;
+                }
+                rowIndex++;
+                const s = row.swimmer;
+                const total = getAccountingRowTotal(row);
+                if (includeMembership) {
+                    tableBody.push([
+                        accountingPdfCell(String(rowIndex), 'center'),
+                        accountingPdfCell(swimmerDisplayName(s)),
+                        accountingPdfCell(s.email || ''),
+                        accountingPdfCell(s.address || ''),
+                        accountingPdfCell(s.postal_code || ''),
+                        accountingPdfCell(formatAccountingFeeAmount(row.netFee), 'right'),
+                        accountingPdfCell(formatAccountingFeeAmount(MEMBERSHIP_FEE_EUR), 'right'),
+                        accountingPdfCell(formatAccountingFeeAmount(total), 'right')
+                    ]);
+                } else {
+                    tableBody.push([
+                        accountingPdfCell(String(rowIndex), 'center'),
                         accountingPdfCell(swimmerDisplayName(s)),
                         accountingPdfCell(s.email || ''),
                         accountingPdfCell(s.address || ''),
                         accountingPdfCell(s.postal_code || ''),
                         accountingPdfCell(formatAccountingFeeAmount(row.netFee), 'right')
-                    ];
-                })
-            ];
+                    ]);
+                }
+            });
+            const colWidths = includeMembership
+                ? ['4%', '14%', '22%', '28%', '12%', '7%', '6%', '7%']
+                : ['4%', '15%', '26%', '33%', '14%', '8%'];
             const docDefinition = {
                 pageSize: 'A4',
                 pageOrientation: 'landscape',
                 pageMargins: [22, 32, 22, 24],
                 defaultStyle: { font: 'Roboto', fontSize: 7.5 },
                 content: [
-                    { text: `Razpored PKL – vadnine (${monthLabel})`, fontSize: 11, margin: [0, 0, 0, 10] },
+                    {
+                        text: `Razpored PKL – vadnine (${monthLabel})${includeMembership ? ' + članarina' : ''}`,
+                        fontSize: 11,
+                        margin: [0, 0, 0, 10]
+                    },
                     {
                         table: {
                             headerRows: 1,
-                            widths: ['4%', '15%', '26%', '33%', '14%', '8%'],
+                            widths: colWidths,
                             body: tableBody
                         },
                         layout: {

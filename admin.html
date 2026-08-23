@@ -819,15 +819,19 @@
           <h3>Poročilo za računovodstvo (mesečni seznam vadnin)</h3>
           <div class="inner">
             <p class="muted" style="font-size:13px;margin-bottom:12px">
-              Seznam plavalcev z <strong>zabeleženo vadnino</strong> za izbrani mesec in <strong>vsaj enim dodeljenim terminom</strong>.
-              Brez termina (npr. bivši vadeči) se ne prikažejo, tudi če imajo še stari zapis vadnine.
-              Plavalci z oznako <strong>OLY</strong> se ne prikažejo. Vrstni red velja za celotno sezono.
+              Seznam plavalcev iz izbrane sezone za <strong>obračun izbranega meseca</strong>:
+              mesečni plačniki vsak mesec; enkratni in dvakratni le v mesecih obračuna (oktober, februar).
+              Vrstni red: zgoraj mesečno, nato dvakrat letno, spodaj enkrat letno. Plavalci z <strong>OLY</strong> se ne prikažejo.
             </p>
             <div class="summary-controls" style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
               <button type="button" class="btn" id="prevAccountingReportMonthBtn" title="Prejšnji mesec">←</button>
               <div id="accountingReportMonthYearLabel" style="font-weight:bold;min-width:160px;text-align:center"></div>
               <button type="button" class="btn" id="nextAccountingReportMonthBtn" title="Naslednji mesec">→</button>
               <button type="button" class="btn" id="currentAccountingReportMonthBtn" style="background:#007bff;color:#fff">Trenutni mesec</button>
+              <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer">
+                <input type="checkbox" id="accountingIncludeMembershipFee" style="width:18px;height:18px;cursor:pointer">
+                Obračunaj članarino (30 €)
+              </label>
               <button type="button" class="btn ok" id="printAccountingReportBtn">Prenesi PDF</button>
               <button type="button" class="btn pri" id="saveAccountingReportOrderBtn">Shrani vrstni red</button>
               <button type="button" class="btn" id="sortAccountingReportAlphaBtn">Po abecedi</button>
