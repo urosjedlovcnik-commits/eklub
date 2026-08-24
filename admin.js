@@ -2142,6 +2142,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    async function saveTrainerProfileToDb(trainerId, data, { isInsert = false } = {}) {
+        const payload = { ...data };
+        const phone = payload.phone;
+        const table = supabase.from('trainers');
+        let result = isInsert
+            ? await table.insert([payload]).select()
+            : await table.update(payload).eq('id', trainerId);
+
+        if (result.error && phone != null && (result.error.message?.includes('phone') || result.error.code === '42703')) {
+            const fallback = { ...payload };
+            delete fallback.phone;
+            result = isInsert
+                ? await table.insert([fallback]).select()
+                : await table.update(fallback).eq('id', trainerId);
+            if (!result.error) {
+                showMessage('Telefon ni shranjen — poženite SQL/add_trainer_phone.sql v Supabase.', 'warning');
+            }
+        }
+        return result;
+    }
+
     function buildTrainerTermsHtml(trainer, seasonFilterId) {
         return buildAssignedTermsHtml(trainer, seasonFilterId, 'removeTermFromTrainer');
     }
@@ -2557,15 +2578,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         try {
-            const { data, error } = await supabase
-                .from('trainers')
-                .insert([{
-                    first_name: first,
-                    last_name: last,
-                    email: email,
-                    phone: phone || null
-                }])
-                .select();
+            const insertData = {
+                first_name: first,
+                last_name: last,
+                email: email,
+                phone: phone || null
+            };
+            const { data, error } = await saveTrainerProfileToDb(null, insertData, { isInsert: true });
 
             if (error) {
                 console.error('Napaka pri dodajanju trenerja:', error);
@@ -3992,13 +4011,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 role
             };
 
-            const { error } = await supabase
-                .from('trainers')
-                .update(updateData)
-                .eq('id', trainerId);
+            const { error } = await saveTrainerProfileToDb(trainerId, updateData);
 
             if (error) {
-                elEditTrainerInfo.textContent = 'Napaka pri shranjevanju: ' + error.message;
+                elEditTrainerInfo.textContent = 'Napaka pri shranjevanju podatkov: ' + error.message;
                 elEditTrainerInfo.style.color = '#dc3545';
                 return;
             }
@@ -4021,7 +4037,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (rateVal !== '' && rateVal != null) {
                 const trainerRates = await getTrainerRatesFromDB(currentFinanceMonth, currentFinanceYear);
                 trainerRates[trainerId] = parseFloat(rateVal);
-                await saveTrainerRatesToDB(trainerRates, currentFinanceMonth, currentFinanceYear);
+                const rateSaved = await saveTrainerRatesToDB(trainerRates, currentFinanceMonth, currentFinanceYear);
+                if (!rateSaved) {
+                    elEditTrainerInfo.textContent = 'Podatki trenerja shranjeni, urna postavka pa ne — preverite Finance / pravice.';
+                    elEditTrainerInfo.style.color = '#dc3545';
+                    updateTrainersList();
+                    updateTrainerSelects();
+                    return;
+                }
             }
 
             updateTrainersList();
