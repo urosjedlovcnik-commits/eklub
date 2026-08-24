@@ -152,9 +152,39 @@
   font-size: 14px;
 }
 
-#editSwimmerPastSeasons {
+#editSwimmerPastSeasons,
+#editTrainerPastSeasons {
   font-size: 13px;
   line-height: 1.5;
+}
+
+#editTrainerModal .edit-swimmer-box {
+  max-width: 920px;
+}
+
+#editTrainerTermsBox {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+#editTrainerTermsBox label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+#editTrainerTermsBox label.disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .season-setup-checklist {
@@ -1572,6 +1602,66 @@ date,term_id,swimmer_id,status
         <div id="swimmerAttendanceContent">
           Nalaganje podatkov...
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal za urejanje trenerja -->
+  <div class="modal" id="editTrainerModal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="box edit-swimmer-box">
+      <div class="box-header">
+        <strong id="editTrainerModalTitle">Uredi trenerja</strong>
+        <button class="btn" id="closeEditTrainerModalBtn">Zapri</button>
+      </div>
+      <div class="box-body">
+        <div class="edit-swimmer-grid">
+          <div class="row">
+            <label for="editTrainerFirst">Ime:</label>
+            <input type="text" id="editTrainerFirst" placeholder="Ime" required>
+          </div>
+          <div class="row">
+            <label for="editTrainerLast">Priimek:</label>
+            <input type="text" id="editTrainerLast" placeholder="Priimek" required>
+          </div>
+          <div class="row">
+            <label for="editTrainerEmail">Email:</label>
+            <input type="email" id="editTrainerEmail" placeholder="Email">
+          </div>
+          <div class="row">
+            <label for="editTrainerPhone">Telefon:</label>
+            <input type="tel" id="editTrainerPhone" placeholder="Telefon (opcijsko)">
+          </div>
+          <div class="row">
+            <label for="editTrainerRole">Vloga:</label>
+            <select id="editTrainerRole" style="flex:1;max-width:320px">
+              <option value="trainer">Trener (samo koledar)</option>
+              <option value="super_admin">Super admin (koledar + admin)</option>
+            </select>
+          </div>
+        </div>
+        <p class="muted" id="editTrainerAuthHint" style="font-size:12px;margin:10px 0 0"></p>
+
+        <hr class="edit-swimmer-divider">
+        <h4 class="edit-swimmer-section-title">Termini</h4>
+        <p class="muted" id="editTrainerSeasonLabel" style="font-size:13px;margin-bottom:8px"></p>
+        <div id="editTrainerTermsBox">
+          <p class="muted" style="margin:0">Nalaganje …</p>
+        </div>
+
+        <hr class="edit-swimmer-divider">
+        <h4 class="edit-swimmer-section-title">Urna postavka</h4>
+        <p class="muted" id="editTrainerRateMonthLabel" style="font-size:13px;margin-bottom:8px"></p>
+        <div class="row" style="align-items:center;gap:8px;margin-top:4px">
+          <input type="number" id="editTrainerRate" min="0" step="0.01" style="width:120px;padding:8px;border:1px solid #ced4da;border-radius:4px">
+          <span class="muted">€/termin</span>
+        </div>
+
+        <hr class="edit-swimmer-divider">
+        <h4 class="edit-swimmer-section-title">Prejšnje sezone</h4>
+        <div id="editTrainerPastSeasons" class="muted">—</div>
+
+        <div id="editTrainerInfo" class="muted" style="margin-top: 14px;"></div>
+        <button class="btn pri" id="saveEditTrainerBtn" style="margin-top:12px">Shrani spremembe</button>
       </div>
     </div>
   </div>

@@ -793,6 +793,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     const elCloseEditSwimmerModalBtn = document.getElementById("closeEditSwimmerModalBtn");
     const elEditSwimmerInfo = document.getElementById("editSwimmerInfo");
 
+    // Elementi za modal urejanja trenerja
+    const elEditTrainerModal = document.getElementById("editTrainerModal");
+    const elEditTrainerModalTitle = document.getElementById("editTrainerModalTitle");
+    const elEditTrainerFirst = document.getElementById("editTrainerFirst");
+    const elEditTrainerLast = document.getElementById("editTrainerLast");
+    const elEditTrainerEmail = document.getElementById("editTrainerEmail");
+    const elEditTrainerPhone = document.getElementById("editTrainerPhone");
+    const elEditTrainerRole = document.getElementById("editTrainerRole");
+    const elEditTrainerAuthHint = document.getElementById("editTrainerAuthHint");
+    const elEditTrainerTermsBox = document.getElementById("editTrainerTermsBox");
+    const elEditTrainerSeasonLabel = document.getElementById("editTrainerSeasonLabel");
+    const elEditTrainerRate = document.getElementById("editTrainerRate");
+    const elEditTrainerRateMonthLabel = document.getElementById("editTrainerRateMonthLabel");
+    const elEditTrainerPastSeasons = document.getElementById("editTrainerPastSeasons");
+    const elSaveEditTrainerBtn = document.getElementById("saveEditTrainerBtn");
+    const elCloseEditTrainerModalBtn = document.getElementById("closeEditTrainerModalBtn");
+    const elEditTrainerInfo = document.getElementById("editTrainerInfo");
+
     // ===== Pomožne funkcije =====
     function mkSwimmer(first,last,terms=[]){ return { first_name:first, last_name:last, terms:[...new Set(terms)] }; }
     function iso(d){ 
@@ -1941,6 +1959,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    function getTrainerTermIdsInSeason(trainer, seasonId) {
+        if (!trainer?.terms?.length) return [];
+        return trainer.terms.filter(tid => {
+            const term = TERMS.find(t => t.id === tid);
+            return term && term.season_id === seasonId;
+        });
+    }
+
+    function getTrainerIdForTerm(termId, excludeTrainerId = null) {
+        for (const t of trainers) {
+            if (t.is_deleted || t.id === excludeTrainerId) continue;
+            if (t.terms?.includes(termId)) return t.id;
+        }
+        return null;
+    }
+
+    function getTrainerSeasonHistory(trainer) {
+        return getSwimmerSeasonHistory(trainer);
+    }
+
     function getSwimmerSeasonHistory(swimmer) {
         const bySeason = new Map();
         (swimmer?.terms || []).forEach(termId => {
@@ -2106,6 +2144,137 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function buildTrainerTermsHtml(trainer, seasonFilterId) {
         return buildAssignedTermsHtml(trainer, seasonFilterId, 'removeTermFromTrainer');
+    }
+
+    function renderEditTrainerPastSeasons(trainer, currentSeasonId) {
+        if (!elEditTrainerPastSeasons) return;
+        const history = getTrainerSeasonHistory(trainer).filter(h =>
+            h.seasonId !== currentSeasonId && h.seasonId !== '__none__'
+        );
+        if (history.length === 0) {
+            elEditTrainerPastSeasons.innerHTML = '<span class="muted">Ni zgodovine dodeljenih terminov v prejšnjih sezonah.</span>';
+            return;
+        }
+        elEditTrainerPastSeasons.innerHTML = history.map(h => {
+            const labels = h.terms.map(t => formatTermTimeLabel(t)).join(', ');
+            const dates = h.dateFrom ? ` <span style="color:#64748b">(${escapeHtml(h.dateFrom.slice(0, 4))})</span>` : '';
+            return `<div style="margin-bottom:8px"><strong>${escapeHtml(h.seasonName)}</strong>${dates}: ${escapeHtml(labels)}</div>`;
+        }).join('');
+    }
+
+    function renderEditTrainerTermsCheckboxes(trainer, seasonId) {
+        if (!elEditTrainerTermsBox) return;
+        if (!seasonId) {
+            elEditTrainerTermsBox.innerHTML = '<p class="muted" style="margin:0">Izberite sezono v pasu zgoraj.</p>';
+            return;
+        }
+        const seasonTerms = TERMS.filter(t => t.season_id === seasonId).sort((a, b) => {
+            if (a.day !== b.day) return a.day - b.day;
+            return a.start_time.localeCompare(b.start_time);
+        });
+        if (seasonTerms.length === 0) {
+            elEditTrainerTermsBox.innerHTML = '<p class="muted" style="margin:0">V tej sezoni ni terminov.</p>';
+            return;
+        }
+        const assigned = new Set(getTrainerTermIdsInSeason(trainer, seasonId));
+        elEditTrainerTermsBox.innerHTML = seasonTerms.map(t => {
+            const isMine = assigned.has(t.id);
+            const otherTrainerId = getTrainerIdForTerm(t.id, trainer.id);
+            const otherTrainer = otherTrainerId ? trainers.find(tr => tr.id === otherTrainerId) : null;
+            const disabled = !isMine && !!otherTrainerId;
+            const otherLabel = otherTrainer
+                ? ` <span class="muted" style="font-size:12px">(${escapeHtml(otherTrainer.first_name + ' ' + otherTrainer.last_name)})</span>`
+                : '';
+            return `
+                <label class="${disabled ? 'disabled' : ''}">
+                    <input type="checkbox" class="edit-trainer-term-cb" value="${t.id}"
+                        ${isMine ? 'checked' : ''} ${disabled ? 'disabled' : ''}>
+                    ${escapeHtml(formatTermTimeLabel(t))}${otherLabel}
+                </label>
+            `;
+        }).join('');
+    }
+
+    async function populateEditTrainerModal(trainerId) {
+        const trainer = trainers.find(t => t.id === trainerId);
+        if (!trainer) return;
+
+        const seasonId = getAdminSeasonFilterId();
+        elEditTrainerModalTitle.textContent = `Uredi trenerja — ${trainer.first_name} ${trainer.last_name}`;
+
+        elEditTrainerFirst.value = trainer.first_name || '';
+        elEditTrainerLast.value = trainer.last_name || '';
+        elEditTrainerEmail.value = trainer.email || '';
+        elEditTrainerPhone.value = trainer.phone || '';
+        if (elEditTrainerRole) {
+            elEditTrainerRole.value = trainer.role === 'super_admin' ? 'super_admin' : 'trainer';
+        }
+        if (elEditTrainerAuthHint) {
+            elEditTrainerAuthHint.textContent = trainer.user_id
+                ? '✓ Povezan z računom za prijavo v koledar.'
+                : '⚠ Ni povezan z Auth računom — trener se ne more prijaviti, dokler ne nastavite user_id v Supabase.';
+            elEditTrainerAuthHint.style.color = trainer.user_id ? '#059669' : '#b45309';
+        }
+
+        const seasonName = getSeasonNameById(seasonId);
+        if (elEditTrainerSeasonLabel) {
+            elEditTrainerSeasonLabel.textContent = seasonId
+                ? `Sezona: ${seasonName || '—'} · obkljukajte termine, ki jih vodi ta trener`
+                : 'Izberite sezono v pasu zgoraj.';
+        }
+
+        renderEditTrainerTermsCheckboxes(trainer, seasonId);
+        renderEditTrainerPastSeasons(trainer, seasonId);
+
+        const month = currentFinanceMonth;
+        const year = currentFinanceYear;
+        const monthLabel = new Date(year, month - 1, 1).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
+        if (elEditTrainerRateMonthLabel) {
+            elEditTrainerRateMonthLabel.textContent = `Postavka velja za ${monthLabel} (isti mesec kot Finance).`;
+        }
+        try {
+            const rate = await getTrainerRate(trainerId, month, year);
+            if (elEditTrainerRate) elEditTrainerRate.value = rate;
+        } catch (e) {
+            console.warn('Postavka trenerja ni naložena:', e);
+            if (elEditTrainerRate) elEditTrainerRate.value = 25;
+        }
+
+        if (elEditTrainerInfo) elEditTrainerInfo.textContent = '';
+    }
+
+    async function removeTermFromTrainerQuiet(trainerId, termId) {
+        const trainer = trainers.find(t => t.id === trainerId);
+        if (!trainer) return false;
+        const updatedTerms = trainer.terms.filter(t => t !== termId);
+        const { error } = await supabase
+            .from('trainer_terms')
+            .delete()
+            .eq('trainer_id', trainerId)
+            .eq('term_id', termId);
+        if (error) throw error;
+        trainer.terms = updatedTerms;
+        return true;
+    }
+
+    async function syncTrainerTermsForSeason(trainerId, seasonId, desiredTermIds) {
+        const trainer = trainers.find(t => t.id === trainerId);
+        if (!trainer || !seasonId) return;
+
+        const current = getTrainerTermIdsInSeason(trainer, seasonId);
+        const toAdd = desiredTermIds.filter(id => !current.includes(id));
+        const toRemove = current.filter(id => !desiredTermIds.includes(id));
+
+        for (const termId of toRemove) {
+            await removeTermFromTrainerQuiet(trainerId, termId);
+        }
+        for (const termId of toAdd) {
+            const owner = getTrainerIdForTerm(termId, trainerId);
+            if (owner) {
+                throw new Error(`Termin ${formatTermLabelById(termId)} je že dodeljen drugemu trenerju.`);
+            }
+            await assignTermToTrainer(trainerId, termId);
+        }
     }
 
     function updateSwimmersList() {
@@ -2283,8 +2452,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <td>${trainer.phone || '<span class="muted">Brez telefona</span>'}</td>
                     <td class="terms-cell">${termsHtml}</td>
                     <td>
+                        <button class="btn pri" onclick="editTrainer('${trainer.id}')" style="font-size: 12px; padding: 4px 8px; margin-right: 4px;">
+                            Uredi
+                        </button>
                         <button class="btn warn" onclick="deleteTrainer('${trainer.id}')" style="font-size: 12px; padding: 4px 8px;">
-                            Zbriši trenerja
+                            Zbriši
                         </button>
                     </td>
                 `;
@@ -3749,6 +3921,138 @@ document.addEventListener('DOMContentLoaded', async () => {
     elCloseEditSwimmerModalBtn.addEventListener('click', () => {
         elEditSwimmerModal.style.display = 'none';
         elEditSwimmerInfo.textContent = '';
+    });
+
+    // ===== Funkcionalnost urejanja trenerjev =====
+    window.editTrainer = async function(trainerId) {
+        const trainer = trainers.find(t => t.id === trainerId);
+        if (!trainer) {
+            showMessage('Trener ne obstaja.', 'warning');
+            return;
+        }
+        if (trainer.is_deleted) {
+            showMessage('Izbrisanega trenerja ni mogoče urediti.', 'warning');
+            return;
+        }
+
+        elEditTrainerModal.setAttribute('data-trainer-id', trainerId);
+        elEditTrainerModal.style.display = 'flex';
+        await populateEditTrainerModal(trainerId);
+    };
+
+    elSaveEditTrainerBtn?.addEventListener('click', async () => {
+        const trainerId = elEditTrainerModal.getAttribute('data-trainer-id');
+        if (!trainerId) {
+            showMessage('Napaka: ID trenerja ni najden.', 'error');
+            return;
+        }
+
+        const first = elEditTrainerFirst.value.trim();
+        const last = elEditTrainerLast.value.trim();
+        const email = elEditTrainerEmail.value.trim() || null;
+        const phone = elEditTrainerPhone.value.trim() || null;
+        const role = elEditTrainerRole?.value === 'super_admin' ? 'super_admin' : 'trainer';
+        const seasonId = getAdminSeasonFilterId();
+
+        if (!first || !last) {
+            elEditTrainerInfo.textContent = 'Ime in priimek sta obvezna polja.';
+            elEditTrainerInfo.style.color = '#dc3545';
+            return;
+        }
+
+        if (email && !isValidEmail(email)) {
+            elEditTrainerInfo.textContent = 'Vnesite veljaven email naslov.';
+            elEditTrainerInfo.style.color = '#dc3545';
+            return;
+        }
+
+        if (phone && !isValidPhone(phone)) {
+            elEditTrainerInfo.textContent = 'Vnesite veljavno telefonsko številko.';
+            elEditTrainerInfo.style.color = '#dc3545';
+            return;
+        }
+
+        const rateVal = elEditTrainerRate?.value;
+        if (rateVal !== '' && rateVal != null && (isNaN(parseFloat(rateVal)) || parseFloat(rateVal) < 0)) {
+            elEditTrainerInfo.textContent = 'Urna postavka mora biti nenegativno število.';
+            elEditTrainerInfo.style.color = '#dc3545';
+            return;
+        }
+
+        elEditTrainerInfo.textContent = 'Shranjevanje...';
+        elEditTrainerInfo.style.color = '#666';
+        elSaveEditTrainerBtn.disabled = true;
+
+        try {
+            const updateData = {
+                first_name: first,
+                last_name: last,
+                email,
+                phone,
+                role
+            };
+
+            const { error } = await supabase
+                .from('trainers')
+                .update(updateData)
+                .eq('id', trainerId);
+
+            if (error) {
+                elEditTrainerInfo.textContent = 'Napaka pri shranjevanju: ' + error.message;
+                elEditTrainerInfo.style.color = '#dc3545';
+                return;
+            }
+
+            const trainer = trainers.find(t => t.id === trainerId);
+            if (trainer) {
+                trainer.first_name = first;
+                trainer.last_name = last;
+                trainer.email = email;
+                trainer.phone = phone;
+                trainer.role = role;
+            }
+
+            if (seasonId && elEditTrainerTermsBox) {
+                const desiredTerms = [...elEditTrainerTermsBox.querySelectorAll('.edit-trainer-term-cb:checked')]
+                    .map(cb => cb.value);
+                await syncTrainerTermsForSeason(trainerId, seasonId, desiredTerms);
+            }
+
+            if (rateVal !== '' && rateVal != null) {
+                const trainerRates = await getTrainerRatesFromDB(currentFinanceMonth, currentFinanceYear);
+                trainerRates[trainerId] = parseFloat(rateVal);
+                await saveTrainerRatesToDB(trainerRates, currentFinanceMonth, currentFinanceYear);
+            }
+
+            updateTrainersList();
+            updateTrainerSelects();
+            renderTermCheckboxesForTrainer(trainerId);
+            if (typeof renderTrainerRatesSettings === 'function') await renderTrainerRatesSettings();
+            if (typeof calculateTrainerHoursCostsData === 'function') calculateTrainerHoursCostsData();
+            if (typeof calculateFinanceData === 'function') calculateFinanceData();
+
+            elEditTrainerModal.style.display = 'none';
+            elEditTrainerInfo.textContent = '';
+            showMessage('Trener je posodobljen.', 'success');
+        } catch (err) {
+            console.error('Napaka pri shranjevanju trenerja:', err);
+            elEditTrainerInfo.textContent = 'Napaka pri shranjevanju: ' + (err.message || err);
+            elEditTrainerInfo.style.color = '#dc3545';
+        } finally {
+            elSaveEditTrainerBtn.disabled = false;
+        }
+    });
+
+    elCloseEditTrainerModalBtn?.addEventListener('click', () => {
+        elEditTrainerModal.style.display = 'none';
+        if (elEditTrainerInfo) elEditTrainerInfo.textContent = '';
+    });
+
+    elEditTrainerModal?.addEventListener('click', (e) => {
+        if (e.target === elEditTrainerModal) {
+            elEditTrainerModal.style.display = 'none';
+            if (elEditTrainerInfo) elEditTrainerInfo.textContent = '';
+        }
     });
 
     // Event listenerji za modal z detajli ur
