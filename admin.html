@@ -994,6 +994,10 @@
               <input type="tel" id="newTrainerPhone" placeholder="Telefon (opcijsko)">
               <button class="btn ok" id="addTrainerBtn" style="width:auto">Dodaj</button>
             </div>
+            <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:14px;cursor:pointer">
+              <input type="checkbox" id="newTrainerSendInvite" checked>
+              Pošlji povabilo za prijavo na e-pošto (trener sam nastavi geslo)
+            </label>
             <div class="row" style="width:100%;align-items:stretch;gap:4px">
               <button id="deleteTrainerBtn" class="btn warn">Zbriši trenerja</button>
             </div>
@@ -1021,6 +1025,11 @@
       <div class="card">
         <h3>Seznam trenerjev</h3>
         <div class="inner">
+          <p class="muted" style="font-size:13px;margin:0 0 10px">
+            Za prijavo v koledar ni treba odpirati Supabase Dashboard.
+            Kliknite <strong>Pošlji prijavo</strong> — trener dobi e-pošto in si nastavi geslo.
+          </p>
+          <button class="btn pri" id="inviteAllTrainersBtn" style="margin-bottom:12px;width:auto">Pošlji prijavo vsem brez računa</button>
           <div id="trainersList"></div>
         </div>
       </div>
@@ -1640,6 +1649,7 @@ date,term_id,swimmer_id,status
           </div>
         </div>
         <p class="muted" id="editTrainerAuthHint" style="font-size:12px;margin:10px 0 0"></p>
+        <button type="button" class="btn pri" id="inviteTrainerFromModalBtn" style="margin-top:8px;width:auto">Pošlji prijavo na e-pošto</button>
 
         <hr class="edit-swimmer-divider">
         <h4 class="edit-swimmer-section-title">Termini</h4>

@@ -810,6 +810,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const elSaveEditTrainerBtn = document.getElementById("saveEditTrainerBtn");
     const elCloseEditTrainerModalBtn = document.getElementById("closeEditTrainerModalBtn");
     const elEditTrainerInfo = document.getElementById("editTrainerInfo");
+    const elInviteTrainerFromModalBtn = document.getElementById("inviteTrainerFromModalBtn");
+    const elInviteAllTrainersBtn = document.getElementById("inviteAllTrainersBtn");
 
     // ===== Pomožne funkcije =====
     function mkSwimmer(first,last,terms=[]){ return { first_name:first, last_name:last, terms:[...new Set(terms)] }; }
@@ -2232,9 +2234,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         if (elEditTrainerAuthHint) {
             elEditTrainerAuthHint.textContent = trainer.user_id
-                ? '✓ Povezan z računom za prijavo v koledar.'
-                : '⚠ Ni povezan z Auth računom — trener se ne more prijaviti, dokler ne nastavite user_id v Supabase.';
+                ? '✓ Povezan z računom za prijavo. Če je pozabil geslo, kliknite »Pošlji prijavo na e-pošto«.'
+                : '⚠ Še nima računa. Kliknite »Pošlji prijavo na e-pošto« — Dashboard in SQL nista potrebna.';
             elEditTrainerAuthHint.style.color = trainer.user_id ? '#059669' : '#b45309';
+        }
+        if (elInviteTrainerFromModalBtn) {
+            elInviteTrainerFromModalBtn.textContent = trainer.user_id
+                ? 'Ponovno pošlji e-pošto za geslo'
+                : 'Pošlji prijavo na e-pošto';
         }
 
         const seasonName = getSeasonNameById(seasonId);
@@ -2439,7 +2446,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <th>Ime</th>
                     <th>Priimek</th>
                     <th>Email</th>
-                    <th>Telefon</th>
+                    <th>Prijava</th>
                     <th>Termini</th>
                     <th>Akcije</th>
                 </tr>
@@ -2466,15 +2473,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const row = document.createElement('tr');
                 const termsHtml = buildTrainerTermsHtml(trainer);
 
+                const loginBadge = trainer.user_id
+                    ? '<span class="badge ok" style="font-size:11px">Račun OK</span>'
+                    : '<span class="badge warn" style="font-size:11px">Brez računa</span>';
+                const inviteLabel = trainer.user_id ? 'Ponovno pošlji' : 'Pošlji prijavo';
+
                 row.innerHTML = `
                     <td>${trainer.first_name}</td>
                     <td>${trainer.last_name}</td>
-                    <td>${trainer.email || ''}</td>
-                    <td>${trainer.phone || '<span class="muted">Brez telefona</span>'}</td>
+                    <td>${trainer.email || '<span class="muted">Brez email</span>'}</td>
+                    <td>${loginBadge}</td>
                     <td class="terms-cell">${termsHtml}</td>
-                    <td>
+                    <td style="white-space:nowrap">
                         <button class="btn pri" onclick="editTrainer('${trainer.id}')" style="font-size: 12px; padding: 4px 8px; margin-right: 4px;">
                             Uredi
+                        </button>
+                        <button class="btn" onclick="inviteTrainer('${trainer.id}')" style="font-size: 12px; padding: 4px 8px; margin-right: 4px;">
+                            ${inviteLabel}
                         </button>
                         <button class="btn warn" onclick="deleteTrainer('${trainer.id}')" style="font-size: 12px; padding: 4px 8px;">
                             Zbriši
@@ -4075,6 +4090,115 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (e.target === elEditTrainerModal) {
             elEditTrainerModal.style.display = 'none';
             if (elEditTrainerInfo) elEditTrainerInfo.textContent = '';
+        }
+    });
+
+    async function inviteTrainerById(trainerId, { quiet = false } = {}) {
+        const trainer = trainers.find(t => t.id === trainerId);
+        if (!trainer || trainer.is_deleted) {
+            showMessage('Trener ni najden.', 'warning');
+            return false;
+        }
+        const email = (trainer.email || '').trim();
+        if (!email || !email.includes('@')) {
+            showMessage('Najprej vnesite veljaven email in shranite trenerja.', 'warning');
+            return false;
+        }
+
+        const redirectTo = `${window.location.origin.replace(/\/$/, '')}/reset-password.html`;
+        const { data, error } = await supabase.functions.invoke('invite-trainer', {
+            body: { trainerId, redirectTo }
+        });
+
+        const errMsg = data?.error || error?.message;
+        if (error || !data?.ok) {
+            throw new Error(errMsg || 'Pošiljanje prijave ni uspelo.');
+        }
+
+        const { data: fresh } = await supabase
+            .from('trainers')
+            .select('user_id, email')
+            .eq('id', trainerId)
+            .maybeSingle();
+        if (fresh) {
+            trainer.user_id = fresh.user_id;
+            trainer.email = fresh.email || trainer.email;
+        }
+
+        updateTrainersList();
+        if (elEditTrainerModal?.getAttribute('data-trainer-id') === trainerId) {
+            await populateEditTrainerModal(trainerId);
+        }
+        if (!quiet) {
+            showMessage(data.message || `Prijavo smo poslali na ${email}.`, 'success');
+        }
+        return true;
+    }
+
+    window.inviteTrainer = async function(trainerId) {
+        try {
+            await inviteTrainerById(trainerId);
+        } catch (err) {
+            console.error('Povabilo trenerja:', err);
+            showMessage(err.message || 'Pošiljanje prijave ni uspelo.', 'error');
+        }
+    };
+
+    elInviteTrainerFromModalBtn?.addEventListener('click', async () => {
+        const trainerId = elEditTrainerModal?.getAttribute('data-trainer-id');
+        if (!trainerId) return;
+        const typedEmail = elEditTrainerEmail?.value.trim();
+        const trainer = trainers.find(t => t.id === trainerId);
+        if (typedEmail && trainer && typedEmail.toLowerCase() !== String(trainer.email || '').toLowerCase()) {
+            const { error } = await saveTrainerProfileToDb(trainerId, {
+                first_name: (elEditTrainerFirst.value || trainer.first_name || '').trim(),
+                last_name: (elEditTrainerLast.value || trainer.last_name || '').trim(),
+                email: typedEmail
+            });
+            if (error) {
+                showMessage('Email ni shranjen: ' + error.message, 'error');
+                return;
+            }
+            trainer.email = typedEmail;
+        }
+        elInviteTrainerFromModalBtn.disabled = true;
+        try {
+            await inviteTrainerById(trainerId);
+        } catch (err) {
+            showMessage(err.message || 'Pošiljanje prijave ni uspelo.', 'error');
+        } finally {
+            elInviteTrainerFromModalBtn.disabled = false;
+        }
+    });
+
+    elInviteAllTrainersBtn?.addEventListener('click', async () => {
+        const pending = trainers.filter(t =>
+            !t.is_deleted && !t.user_id && (t.email || '').includes('@')
+        );
+        if (pending.length === 0) {
+            showMessage('Vsi trenerji z emailom že imajo račun (ali nimate koga povabiti).', 'info');
+            return;
+        }
+        if (!confirm(`Poslati prijavo ${pending.length} trenerjem brez računa?`)) return;
+        elInviteAllTrainersBtn.disabled = true;
+        let ok = 0;
+        const failures = [];
+        try {
+            for (const t of pending) {
+                try {
+                    await inviteTrainerById(t.id, { quiet: true });
+                    ok++;
+                } catch (err) {
+                    failures.push(`${t.first_name} ${t.last_name}: ${err.message || 'napaka'}`);
+                }
+            }
+            if (failures.length) {
+                showMessage(`Poslano: ${ok}. Napake: ${failures.join(' | ')}`, 'warning');
+            } else {
+                showMessage(`Prijavo smo poslali ${ok} trenerjem. Naj preverijo e-pošto (tudi vsiljeno pošto).`, 'success');
+            }
+        } finally {
+            elInviteAllTrainersBtn.disabled = false;
         }
     });
 
