@@ -2234,13 +2234,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         if (elEditTrainerAuthHint) {
             elEditTrainerAuthHint.textContent = trainer.user_id
-                ? '✓ Povezan z računom za prijavo. Če je pozabil geslo, kliknite »Pošlji prijavo na e-pošto«.'
+                ? '✓ Povezan z računom za prijavo. Če je pozabil geslo, kliknite »Ponastavi geslo«.'
                 : '⚠ Še nima računa. Kliknite »Pošlji prijavo na e-pošto« — Dashboard in SQL nista potrebna.';
             elEditTrainerAuthHint.style.color = trainer.user_id ? '#059669' : '#b45309';
         }
         if (elInviteTrainerFromModalBtn) {
             elInviteTrainerFromModalBtn.textContent = trainer.user_id
-                ? 'Ponovno pošlji e-pošto za geslo'
+                ? 'Ponastavi geslo'
                 : 'Pošlji prijavo na e-pošto';
         }
 
@@ -2476,7 +2476,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const loginBadge = trainer.user_id
                     ? '<span class="badge ok" style="font-size:11px">Račun OK</span>'
                     : '<span class="badge warn" style="font-size:11px">Brez računa</span>';
-                const inviteLabel = trainer.user_id ? 'Ponovno pošlji' : 'Pošlji prijavo';
+                const inviteLabel = trainer.user_id ? 'Ponastavi geslo' : 'Pošlji prijavo';
 
                 row.innerHTML = `
                     <td>${trainer.first_name}</td>
