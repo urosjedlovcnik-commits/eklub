@@ -3520,16 +3520,50 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         try {
+            const oldSeason = seasons.find(s => s.id === id);
             const { error } = await supabase
                 .from('seasons')
                 .update({ name, date_from: df, date_to: dt, is_active: active })
                 .eq('id', id);
             if (error) throw error;
-            showMessage('Sezona je posodobljena.', 'success');
+
+            let termsUpdated = 0;
+            if (oldSeason && (oldSeason.date_from !== df || oldSeason.date_to !== dt)) {
+                const seasonTerms = TERMS.filter(t => t.season_id === id);
+                const oldFrom = String(oldSeason.date_from || '').slice(0, 10);
+                const oldTo = String(oldSeason.date_to || '').slice(0, 10);
+                for (const term of seasonTerms) {
+                    const termFrom = String(term.date_from || '').slice(0, 10);
+                    const termTo = String(term.date_to || '').slice(0, 10);
+                    const nextFrom = termFrom === oldFrom ? df : term.date_from;
+                    const nextTo = termTo === oldTo ? dt : term.date_to;
+                    if (String(nextFrom).slice(0, 10) === termFrom && String(nextTo).slice(0, 10) === termTo) continue;
+                    const { error: termError } = await supabase
+                        .from('terms')
+                        .update({ date_from: nextFrom, date_to: nextTo })
+                        .eq('id', term.id);
+                    if (termError) {
+                        console.error('Posodobitev datuma termina:', term.id, termError);
+                        continue;
+                    }
+                    term.date_from = nextFrom;
+                    term.date_to = nextTo;
+                    termsUpdated++;
+                }
+            }
+
+            showMessage(
+                termsUpdated > 0
+                    ? `Sezona je posodobljena. Usklajenih ${termsUpdated} terminov z novim obdobjem.`
+                    : 'Sezona je posodobljena.',
+                'success'
+            );
             closeEditSeasonModal();
             await loadSeasons();
             populateSeasonSelects();
             renderSeasonsAdminList();
+            updateTermList();
+            updateTermSelects();
             const browseSel = document.getElementById('seasonTermsBrowseSelect');
             if (browseSel) renderSeasonTermsForSeason(browseSel.value || '');
         } catch (e) {
