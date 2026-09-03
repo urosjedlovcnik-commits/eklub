@@ -2704,6 +2704,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 updateSwimmersList();
                 renderTermCheckboxesForSwimmer(swimmerId);
+                updateTermList();
                 elSwimmerInfo.textContent = `Dodeljenih ${assigned} terminov plavalcu ${swimmer.first_name} ${swimmer.last_name}`;
             }
             
@@ -2753,6 +2754,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 swimmer.terms = updatedTerms;
                 updateSwimmersList();
                 renderTermCheckboxesForSwimmer(swimmerId);
+                updateTermList();
                 
                 // Osveži prikaz koledarja - pošlji event preko localStorage (za druga okna)
                 // in window.postMessage (za ista okna)
@@ -3124,7 +3126,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (assignedSwimmers.length > 0) {
                     swimmersList = assignedSwimmers.map(s => `
                         <span class="chip" data-term-id="${term.id}" data-swimmer-id="${s.id}">
-                            ${s.first_name} ${s.last_name}
+                            ${escapeHtml(s.first_name)} ${escapeHtml(s.last_name)}
                             <button class="remove-term-btn" onclick="removeTermFromSwimmer('${s.id}', '${term.id}')" title="Odstrani iz termina">✖</button>
                         </span>
                     `).join(' ');
@@ -3157,7 +3159,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                     </div>
                     <div class="term-swimmers">
-                        <strong>Dodeljeni plavalci:</strong>
+                        <div class="term-swimmers-head">
+                            <strong>Dodeljeni plavalci:</strong>
+                            <div class="term-add-swimmer">
+                                <input type="search" class="term-add-swimmer-input" data-term-id="${term.id}"
+                                    placeholder="Dodaj plavalca (išči ime)…" autocomplete="off">
+                                <div class="term-add-swimmer-results" hidden></div>
+                            </div>
+                        </div>
                         <div class="swimmers-chips">
                             ${swimmersList}
                         </div>
@@ -3170,6 +3179,110 @@ document.addEventListener('DOMContentLoaded', async () => {
             elTermList.appendChild(daySection);
         });
     }
+
+    function getSwimmersAvailableForTerm(termId, query) {
+        const q = (query || '').trim().toLowerCase();
+        return swimmers
+            .filter(s => !s.is_deleted && !(s.terms || []).includes(termId))
+            .filter(s => !q || personMatchesSearch(s, q))
+            .sort((a, b) => `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`, 'sl'))
+            .slice(0, 12);
+    }
+
+    function renderTermAddSwimmerResults(input) {
+        const box = input?.closest('.term-add-swimmer')?.querySelector('.term-add-swimmer-results');
+        const termId = input?.dataset.termId;
+        if (!box || !termId) return;
+
+        const matches = getSwimmersAvailableForTerm(termId, input.value);
+        if (matches.length === 0) {
+            box.hidden = false;
+            box.innerHTML = `<div class="muted" style="padding:8px 12px;font-size:13px">${
+                (input.value || '').trim() ? 'Ni zadetkov.' : 'Vsi plavalci so že na tem terminu.'
+            }</div>`;
+            return;
+        }
+
+        box.hidden = false;
+        box.innerHTML = matches.map((s, i) => `
+            <button type="button" class="term-add-swimmer-item${i === 0 ? ' active' : ''}"
+                data-add-swimmer-to-term data-swimmer-id="${s.id}" data-term-id="${termId}">
+                ${escapeHtml(s.last_name)} ${escapeHtml(s.first_name)}${s.email ? ` <span class="muted">(${escapeHtml(s.email)})</span>` : ''}
+            </button>
+        `).join('');
+    }
+
+    function closeTermAddSwimmerResults(exceptInput) {
+        elTermList?.querySelectorAll('.term-add-swimmer-results').forEach(box => {
+            const input = box.parentElement?.querySelector('.term-add-swimmer-input');
+            if (input !== exceptInput) box.hidden = true;
+        });
+    }
+
+    async function addSwimmerToTermQuick(swimmerId, termId) {
+        const swimmer = swimmers.find(s => s.id === swimmerId);
+        if (!swimmer) {
+            showMessage('Plavalec ni najden.', 'warning');
+            return;
+        }
+        const scrollY = window.scrollY;
+        try {
+            const added = await assignTermToSwimmer(swimmerId, termId);
+            if (!added) {
+                showMessage(`${swimmer.first_name} ${swimmer.last_name} je že na tem terminu.`, 'info');
+                return;
+            }
+            updateSwimmersList();
+            renderTermCheckboxesForSwimmer(swimmerId);
+            updateTermList();
+            window.scrollTo(0, scrollY);
+            showMessage(`${swimmer.first_name} ${swimmer.last_name} je dodan na termin.`, 'success');
+        } catch (error) {
+            console.error('Napaka pri dodajanju plavalca na termin:', error);
+            showMessage('Napaka pri dodajanju plavalca na termin.', 'error');
+        }
+    }
+
+    window.addSwimmerToTerm = addSwimmerToTermQuick;
+
+    elTermList?.addEventListener('input', (e) => {
+        const input = e.target.closest('.term-add-swimmer-input');
+        if (!input) return;
+        renderTermAddSwimmerResults(input);
+    });
+
+    elTermList?.addEventListener('focusin', (e) => {
+        const input = e.target.closest('.term-add-swimmer-input');
+        if (!input) return;
+        closeTermAddSwimmerResults(input);
+        renderTermAddSwimmerResults(input);
+    });
+
+    elTermList?.addEventListener('keydown', (e) => {
+        const input = e.target.closest('.term-add-swimmer-input');
+        if (!input) return;
+        if (e.key === 'Escape') {
+            const box = input.closest('.term-add-swimmer')?.querySelector('.term-add-swimmer-results');
+            if (box) box.hidden = true;
+            return;
+        }
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        const first = input.closest('.term-add-swimmer')?.querySelector('[data-add-swimmer-to-term]');
+        if (first) addSwimmerToTermQuick(first.dataset.swimmerId, first.dataset.termId);
+    });
+
+    elTermList?.addEventListener('mousedown', (e) => {
+        const item = e.target.closest('[data-add-swimmer-to-term]');
+        if (!item) return;
+        e.preventDefault();
+        addSwimmerToTermQuick(item.dataset.swimmerId, item.dataset.termId);
+    });
+
+    document.addEventListener('mousedown', (e) => {
+        if (!elTermList || elTermList.contains(e.target)) return;
+        closeTermAddSwimmerResults();
+    });
 
     document.getElementById('termListSeasonFilter')?.addEventListener('change', e => {
         applyAdminSeasonFilter(e.target.value, e.target);
