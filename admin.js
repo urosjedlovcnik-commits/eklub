@@ -9732,6 +9732,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <thead>
                     <tr>
                         <th>Plavalec</th>
+                        <th title="Število terminov na teden (določa privzeto višino vadnine)">×/teden</th>
                         <th>Termini (sezona)</th>
                         <th>Način plačila</th>
                         <th>Znesek vadnine (€)</th>
@@ -9746,9 +9747,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         let rowCount = 0;
         for (const swimmer of sortedSwimmers) {
             const termLabels = getSwimmerSeasonTermLabels(swimmer);
+            const termCount = termLabels.length;
+            const termCountLabel = termCount > 0 ? `${termCount}×` : '0';
             const termsDisplay = termLabels.length > 0 ? termLabels.join(', ') : 'Brez terminov';
             const paymentPlan = getSwimmerPaymentPlan(swimmer.id, seasonId);
-            const defaultFee = getDefaultSwimmerFeeByTermCount(termLabels.length, paymentPlan);
+            const defaultFee = getDefaultSwimmerFeeByTermCount(termCount, paymentPlan);
             const feeData = swimmerFees[swimmer.id];
             const planLabel = PAYMENT_PLAN_LABELS[paymentPlan] || PAYMENT_PLAN_LABELS.monthly;
             const isBillingMonth = shouldIncludeSwimmerInBillingMonth(swimmer.id, month, year, season, seasonId);
@@ -9777,6 +9780,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             html += `
                 <tr ${rowStyle}>
                     <td>${swimmer.first_name} ${swimmer.last_name}</td>
+                    <td class="swimmer-fees-term-count" title="${termCount} ${termCount === 1 ? 'termin' : 'terminov'} na teden">${termCountLabel}</td>
                     <td>${termsDisplay}</td>
                     <td>${planDisplay}${notBillingNote}</td>
                     <td>
