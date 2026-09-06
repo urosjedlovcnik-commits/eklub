@@ -28,6 +28,79 @@ function isAllowedRedirect(url: string) {
   }
 }
 
+function isRateLimitError(message: string) {
+  return /rate limit|over_email_send_rate_limit|429/i.test(message || "");
+}
+
+function isAlreadyRegisteredError(message: string) {
+  return /already|registered|exists/i.test(message || "");
+}
+
+async function findAuthUserIdByEmail(
+  admin: ReturnType<typeof createClient>,
+  email: string,
+): Promise<string | null> {
+  for (let page = 1; page <= 10; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({
+      page,
+      perPage: 200,
+    });
+    if (error) throw error;
+    const found = (data.users || []).find(
+      (u) => (u.email || "").toLowerCase() === email,
+    );
+    if (found) return found.id;
+    if (!data.users || data.users.length < 200) break;
+  }
+  return null;
+}
+
+async function ensureAuthUser(
+  admin: ReturnType<typeof createClient>,
+  email: string,
+  firstName: string | null,
+  lastName: string | null,
+): Promise<{ userId: string; created: boolean }> {
+  const existingId = await findAuthUserIdByEmail(admin, email);
+  if (existingId) return { userId: existingId, created: false };
+
+  const { data, error } = await admin.auth.admin.createUser({
+    email,
+    email_confirm: true,
+    user_metadata: {
+      first_name: firstName,
+      last_name: lastName,
+    },
+  });
+
+  if (error) {
+    if (isAlreadyRegisteredError(error.message || "")) {
+      const id = await findAuthUserIdByEmail(admin, email);
+      if (id) return { userId: id, created: false };
+    }
+    throw error;
+  }
+
+  const userId = data.user?.id;
+  if (!userId) throw new Error("Auth uporabnik ni bil ustvarjen.");
+  return { userId, created: true };
+}
+
+async function makeActionLink(
+  admin: ReturnType<typeof createClient>,
+  email: string,
+  redirectTo: string,
+  type: "invite" | "recovery",
+) {
+  const { data, error } = await admin.auth.admin.generateLink({
+    type,
+    email,
+    options: { redirectTo },
+  });
+  if (error) throw error;
+  return data.properties?.action_link || null;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -101,81 +174,112 @@ Deno.serve(async (req: Request) => {
   }
 
   let authUserId = trainer.user_id as string | null;
+  let emailed = false;
   let invited = false;
   let resent = false;
+  let actionLink: string | null = null;
+  let rateLimited = false;
 
-  if (!authUserId) {
-    const { data: invitedUser, error: inviteError } = await admin.auth.admin
-      .inviteUserByEmail(email, {
-        data: {
-          first_name: trainer.first_name,
-          last_name: trainer.last_name,
-        },
-        redirectTo,
-      });
-
-    if (inviteError) {
-      const already =
-        /already|registered|exists/i.test(inviteError.message || "");
-      if (!already) {
-        return json({ error: inviteError.message }, 400);
-      }
-
-      const { data: list, error: listError } = await admin.auth.admin.listUsers({
-        page: 1,
-        perPage: 1000,
-      });
-      if (listError) {
-        return json({ error: listError.message }, 400);
-      }
-      const existing = list.users.find(
-        (u) => (u.email || "").toLowerCase() === email,
-      );
-      if (!existing) {
-        return json({
-          error: "Račun že obstaja, a ga ni bilo mogoče najti. Poskusite znova.",
-        }, 400);
-      }
-      authUserId = existing.id;
-    } else {
-      authUserId = invitedUser.user?.id ?? null;
-      invited = true;
-    }
-
+  try {
     if (!authUserId) {
-      return json({ error: "Auth uporabnik ni bil ustvarjen." }, 500);
+      const { data: invitedUser, error: inviteError } = await admin.auth.admin
+        .inviteUserByEmail(email, {
+          data: {
+            first_name: trainer.first_name,
+            last_name: trainer.last_name,
+          },
+          redirectTo,
+        });
+
+      if (!inviteError && invitedUser.user?.id) {
+        authUserId = invitedUser.user.id;
+        invited = true;
+        emailed = true;
+      } else {
+        const msg = inviteError?.message || "";
+        if (inviteError && !isAlreadyRegisteredError(msg) && !isRateLimitError(msg)) {
+          return json({ error: msg }, 400);
+        }
+        if (isRateLimitError(msg)) rateLimited = true;
+
+        const ensured = await ensureAuthUser(
+          admin,
+          email,
+          trainer.first_name,
+          trainer.last_name,
+        );
+        authUserId = ensured.userId;
+      }
+
+      const { error: linkError } = await admin
+        .from("trainers")
+        .update({ user_id: authUserId, email })
+        .eq("id", trainerId);
+
+      if (linkError) {
+        return json({
+          error:
+            "Račun je ustvarjen, povezava v trainers pa ni uspela: " +
+            linkError.message,
+        }, 500);
+      }
     }
 
-    const { error: linkError } = await admin
-      .from("trainers")
-      .update({ user_id: authUserId, email })
-      .eq("id", trainerId);
+    if (!emailed) {
+      const { error: resetError } = await admin.auth.resetPasswordForEmail(
+        email,
+        { redirectTo },
+      );
+      if (!resetError) {
+        emailed = true;
+        resent = true;
+      } else if (isRateLimitError(resetError.message || "")) {
+        rateLimited = true;
+      }
+    }
 
-    if (linkError) {
-      return json({ error: "Račun je ustvarjen, povezava v trainers pa ni uspela: " + linkError.message }, 500);
+    if (!emailed) {
+      actionLink = await makeActionLink(admin, email, redirectTo, "recovery");
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (isRateLimitError(message)) {
+      rateLimited = true;
+    } else {
+      return json({ error: message }, 400);
     }
   }
 
-  if (!invited) {
-    const { error: resetError } = await admin.auth.resetPasswordForEmail(email, {
-      redirectTo,
-    });
-    if (resetError) {
+  if (!emailed && !actionLink) {
+    try {
+      actionLink = await makeActionLink(admin, email, redirectTo, "recovery");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
       return json({
-        error: "Račun je povezan, pošiljanje e-pošte pa ni uspelo: " + resetError.message,
-        linked: true,
+        error: rateLimited
+          ? "Preveč e-pošt v kratkem času (Supabase omejitev). Počakajte približno 1 uro in poskusite znova."
+          : message,
+        rateLimited,
       }, 400);
     }
-    resent = true;
   }
+
+  const message = emailed
+    ? (invited
+      ? `Povabilo je poslano na ${email}. Trener nastavi geslo prek povezave v e-pošti.`
+      : `Na ${email} smo poslali povezavo za geslo.`)
+    : (rateLimited
+      ? `E-pošta je začasno omejena (preveč pošiljanj). Račun je pripravljen — spodaj kopirajte povezavo in jo pošljite trenerju (npr. WhatsApp).`
+      : `Račun je pripravljen. Spodaj kopirajte povezavo in jo pošljite na ${email}.`);
 
   return json({
     ok: true,
     email,
     invited,
     resent,
-    message: invited
-      ? `Povabilo je poslano na ${email}. Trener nastavi geslo prek povezave v e-pošti.`
-      : `Račun je že obstajal — na ${email} smo poslali povezavo za geslo.`,
+    emailed,
+    rateLimited,
+    actionLink,
+    message,
   });
 });

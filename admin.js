@@ -4257,9 +4257,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             body: { trainerId, redirectTo }
         });
 
-        const errMsg = data?.error || error?.message;
-        if (error || !data?.ok) {
-            throw new Error(errMsg || 'Pošiljanje prijave ni uspelo.');
+        let payload = data;
+        if ((!payload || !payload.ok) && error?.context) {
+            try {
+                payload = await error.context.json();
+            } catch (_) {
+                /* ignore */
+            }
+        }
+
+        if (!payload?.ok) {
+            const errMsg = payload?.error || error?.message || 'Pošiljanje prijave ni uspelo.';
+            throw new Error(errMsg);
         }
 
         const { data: fresh } = await supabase
@@ -4276,10 +4285,44 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (elEditTrainerModal?.getAttribute('data-trainer-id') === trainerId) {
             await populateEditTrainerModal(trainerId);
         }
-        if (!quiet) {
-            showMessage(data.message || `Prijavo smo poslali na ${email}.`, 'success');
+
+        if (payload.actionLink) {
+            showTrainerInviteLink(payload.actionLink, payload.message || `Povezava za ${email}`);
+        } else if (!quiet) {
+            showMessage(payload.message || `Prijavo smo poslali na ${email}.`, 'success');
         }
         return true;
+    }
+
+    function showTrainerInviteLink(actionLink, message) {
+        showMessage(message, 'warning');
+        const existing = document.getElementById('trainerInviteLinkBox');
+        if (existing) existing.remove();
+
+        const box = document.createElement('div');
+        box.id = 'trainerInviteLinkBox';
+        box.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:9999;max-width:min(480px,calc(100vw - 32px));background:#fff;border:1px solid #f59e0b;border-radius:10px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.15)';
+        box.innerHTML = `
+            <div style="font-weight:600;margin-bottom:8px;color:#92400e">Povezava za geslo (kopiraj)</div>
+            <p class="muted" style="font-size:12px;margin:0 0 8px">${escapeHtml(message || '')}</p>
+            <textarea readonly id="trainerInviteLinkText" style="width:100%;min-height:72px;font-size:12px;padding:8px;border:1px solid #ddd;border-radius:6px">${escapeHtml(actionLink)}</textarea>
+            <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+                <button type="button" class="btn pri" id="copyTrainerInviteLinkBtn" style="width:auto">Kopiraj povezavo</button>
+                <button type="button" class="btn" id="closeTrainerInviteLinkBtn" style="width:auto">Zapri</button>
+            </div>
+        `;
+        document.body.appendChild(box);
+        document.getElementById('copyTrainerInviteLinkBtn')?.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(actionLink);
+                showMessage('Povezava je kopirana.', 'success');
+            } catch (_) {
+                const ta = document.getElementById('trainerInviteLinkText');
+                ta?.select();
+                showMessage('Označite povezavo in jo kopirajte ročno (Ctrl+C).', 'warning');
+            }
+        });
+        document.getElementById('closeTrainerInviteLinkBtn')?.addEventListener('click', () => box.remove());
     }
 
     window.inviteTrainer = async function(trainerId) {
