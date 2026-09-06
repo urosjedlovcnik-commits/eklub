@@ -9457,6 +9457,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const feeData = swimmerFees[swimmer.id];
             const planLabel = PAYMENT_PLAN_LABELS[paymentPlan] || PAYMENT_PLAN_LABELS.monthly;
             const isBillingMonth = shouldIncludeSwimmerInBillingMonth(swimmer.id, month, year, season, seasonId);
+            const monthInSeason = isMonthInSeason(month, year, season);
             const billingHint = getPaymentPlanBillingHint(paymentPlan, season);
 
             if (!feeData && isPastMonth) continue;
@@ -9468,12 +9469,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             const effectiveFee = isOly ? 0 : fee;
             const finalFee = Math.max(0, effectiveFee - discount);
             const canCheckOly = olyCount < 15 || isOly;
+            // OLY je mesečni prispevek — ne veže se na mesec obračuna (enkratno / obroki)
+            const canEditOly = canCheckOly && monthInSeason;
             const rowStyle = (finalFee === 0 && !isOly && isBillingMonth) ? 'style="background-color: #ffe0e0;"' : (!isBillingMonth ? 'style="opacity:0.65"' : '');
             const inputsDisabled = !isBillingMonth || isOly;
             const planDisplay = billingHint
                 ? `${escapeHtml(planLabel)}<br><span style="font-size:11px;color:#666">${escapeHtml(billingHint)}</span>`
                 : escapeHtml(planLabel);
-            const notBillingNote = !isBillingMonth ? '<br><span style="font-size:11px;color:#999">Ni mesec obračuna</span>' : '';
+            const notBillingNote = !isBillingMonth ? '<br><span style="font-size:11px;color:#999">Ni mesec obračuna vadnine</span>' : '';
 
             rowCount++;
             html += `
@@ -9489,7 +9492,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </td>
                     <td><strong>${isBillingMonth ? finalFee.toFixed(2) + '€' : '—'}</strong></td>
                     <td style="text-align: center;">
-                        <input type="checkbox" id="oly-${swimmer.id}" ${isOly ? 'checked' : ''} ${canCheckOly && isBillingMonth ? '' : 'disabled'} onchange="updateSwimmerOly('${swimmer.id}', this.checked, ${month}, ${year})" style="cursor: pointer; width: 20px; height: 20px;">
+                        <input type="checkbox" id="oly-${swimmer.id}" ${isOly ? 'checked' : ''} ${canEditOly ? '' : 'disabled'} onchange="updateSwimmerOly('${swimmer.id}', this.checked, ${month}, ${year})" style="cursor: pointer; width: 20px; height: 20px;">
                         ${!canCheckOly && !isOly ? '<span style="font-size: 11px; color: #999; display: block;">Max 15</span>' : ''}
                     </td>
                 </tr>
@@ -9507,6 +9510,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div style="margin-top: 10px; padding: 10px; background: #f0f0f0; border-radius: 6px;">
                 <strong>OLY opcija:</strong> Maksimalno 15 plavalcev lahko ima obkljukljeno OLY opcijo.
                 Plavalci z OLY imajo znesek vadnine 0€, vendar mesečno prispevajo 40€.
+                OLY lahko označite v vsakem mesecu sezone (tudi pri enkratnem plačilu / obrokih).
                 Trenutno: <strong>${olyCount}/15</strong> OLY plavalcev.
             </div>
         `;
