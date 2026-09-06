@@ -11537,11 +11537,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     // Funkcija za pridobitev email naslovov glede na filtre
-    function getMailingListEmails() {
+    async function getMailingListEmails() {
         const filterType = elMailingFilterType ? elMailingFilterType.value : '';
         
         if (!filterType) {
             return [];
+        }
+
+        if (filterType === 'oly') {
+            const seasonId = getAdminSeasonFilterId();
+            const season = seasons.find(s => s.id === seasonId);
+            if (!season) return [];
+            const olyIds = await getOlySwimmerIdsForSeason(season);
+            const targetSwimmers = swimmers.filter(swimmer =>
+                !swimmer.is_deleted && olyIds.has(swimmer.id)
+            );
+            const emailSet = new Set();
+            const emailList = [];
+            targetSwimmers
+                .sort((a, b) => `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`, 'sl'))
+                .forEach(swimmer => {
+                    if (swimmer.email && swimmer.email.trim() && isValidEmail(swimmer.email.trim())) {
+                        const email = swimmer.email.trim().toLowerCase();
+                        if (!emailSet.has(email)) {
+                            emailSet.add(email);
+                            emailList.push({
+                                email: swimmer.email.trim(),
+                                name: `${swimmer.first_name} ${swimmer.last_name}`
+                            });
+                        }
+                    }
+                });
+            return emailList;
         }
         
         let targetTermIds = [];
@@ -11600,10 +11627,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     // Funkcija za prikaz email naslovov
-    function displayMailingList() {
+    async function displayMailingList() {
         if (!elMailingListBox) return;
         
         const filterType = elMailingFilterType ? elMailingFilterType.value : '';
+        const olyHint = document.getElementById('mailingOlyHint');
+        if (olyHint) olyHint.style.display = filterType === 'oly' ? 'block' : 'none';
         
         if (!filterType) {
             elMailingListBox.innerHTML = '<p class="muted">Izberite tip filtra</p>';
@@ -11619,11 +11648,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
         }
+
+        if (filterType === 'oly' && !getAdminSeasonFilterId()) {
+            elMailingListBox.innerHTML = '<p class="muted">Izberite sezono v pasu zgoraj.</p>';
+            elCopyMailingListBtn.style.display = 'none';
+            return;
+        }
+
+        elMailingListBox.innerHTML = '<p class="muted">Nalaganje …</p>';
+        elCopyMailingListBtn.style.display = 'none';
         
-        const emailList = getMailingListEmails();
+        const emailList = await getMailingListEmails();
         
         if (emailList.length === 0) {
-            elMailingListBox.innerHTML = '<p class="muted">Ni email naslovov za prikazano skupino</p>';
+            elMailingListBox.innerHTML = filterType === 'oly'
+                ? '<p class="muted">Ni OLY plavalcev z emailom v izbrani sezoni (preverite Finance → OLY).</p>'
+                : '<p class="muted">Ni email naslovov za prikazano skupino</p>';
             elCopyMailingListBtn.style.display = 'none';
             return;
         }
@@ -11641,6 +11681,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return termId;
             });
             selectedTermsInfo = `<div style="margin-bottom: 10px; padding: 8px; background: #e8f5e9; border-radius: 4px;"><strong>Izbrani termini:</strong> ${selectedTermNames.join(', ')}</div>`;
+        } else if (filterType === 'oly') {
+            const seasonName = getSeasonNameById(getAdminSeasonFilterId()) || 'izbrana sezona';
+            selectedTermsInfo = `<div style="margin-bottom: 10px; padding: 8px; background: #eef2ff; border-radius: 4px;"><strong>OLY plavalci</strong> · sezona ${escapeHtml(seasonName)}</div>`;
         }
         
         // Prikaži seznam email naslovov
@@ -11648,9 +11691,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         html += `<div style="margin-bottom: 15px;"><strong>Najdenih email naslovov: ${emailList.length}</strong></div>`;
         html += '<div style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 6px; background: #f9f9f9;">';
         
-        emailList.forEach((item, index) => {
+        emailList.forEach((item) => {
             html += `<div style="padding: 5px; border-bottom: 1px solid #eee;">
-                <strong>${item.name}</strong>: ${item.email}
+                <strong>${escapeHtml(item.name)}</strong>: ${escapeHtml(item.email)}
             </div>`;
         });
         
@@ -11671,6 +11714,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (elMailingTermSelectRow) {
                 elMailingTermSelectRow.style.display = filterType === 'term' ? 'flex' : 'none';
             }
+            const olyHint = document.getElementById('mailingOlyHint');
+            if (olyHint) olyHint.style.display = filterType === 'oly' ? 'block' : 'none';
             // Počisti izbrane checkboxe
             if (elMailingTermsCheckboxes) {
                 const checkboxes = elMailingTermsCheckboxes.querySelectorAll('input[type="checkbox"]');
