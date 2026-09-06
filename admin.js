@@ -11627,8 +11627,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         let targetTermIds = [];
         
-        if (filterType === 'term') {
-            // Določeni termini (več izbranih)
+        if (filterType === 'term' || filterType === 'trainer_term') {
             if (!elMailingTermsCheckboxes) {
                 return [];
             }
@@ -11652,6 +11651,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 })
                 .map(term => term.id);
         }
+
+        if (filterType === 'trainer_term') {
+            return collectEmailsFromPeople(trainers.filter(trainer => {
+                if (trainer.is_deleted) return false;
+                if (!trainer.terms || trainer.terms.length === 0) return false;
+                return trainer.terms.some(termId => targetTermIds.includes(termId));
+            }));
+        }
         
         // Pridobi vse plavalce, ki imajo vsaj enega od ciljnih terminov
         const targetSwimmers = swimmers.filter(swimmer => {
@@ -11670,8 +11677,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const filterType = elMailingFilterType ? elMailingFilterType.value : '';
         const olyHint = document.getElementById('mailingOlyHint');
         const trainersHint = document.getElementById('mailingTrainersHint');
+        const trainerTermHint = document.getElementById('mailingTrainerTermHint');
         if (olyHint) olyHint.style.display = filterType === 'oly' ? 'block' : 'none';
         if (trainersHint) trainersHint.style.display = filterType === 'trainers' ? 'block' : 'none';
+        if (trainerTermHint) trainerTermHint.style.display = filterType === 'trainer_term' ? 'block' : 'none';
         
         if (!filterType) {
             elMailingListBox.innerHTML = '<p class="muted">Izberite tip filtra</p>';
@@ -11679,7 +11688,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         
-        if (filterType === 'term') {
+        if (filterType === 'term' || filterType === 'trainer_term') {
             const checkedCheckboxes = elMailingTermsCheckboxes ? elMailingTermsCheckboxes.querySelectorAll('input[type="checkbox"][data-term-id]:checked') : [];
             if (checkedCheckboxes.length === 0) {
                 elMailingListBox.innerHTML = '<p class="muted">Izberite vsaj en termin</p>';
@@ -11704,7 +11713,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ? '<p class="muted">Ni OLY plavalcev z emailom v izbrani sezoni (preverite Finance → OLY).</p>'
                 : filterType === 'trainers'
                     ? '<p class="muted">Ni trenerjev z veljavnim emailom.</p>'
-                    : '<p class="muted">Ni email naslovov za prikazano skupino</p>';
+                    : filterType === 'trainer_term'
+                        ? '<p class="muted">Ni učiteljev z emailom na izbranih terminih.</p>'
+                        : '<p class="muted">Ni email naslovov za prikazano skupino</p>';
             elMailingListBox.innerHTML = emptyMsg;
             elCopyMailingListBtn.style.display = 'none';
             return;
@@ -11712,7 +11723,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // Pridobi informacije o izbranih terminih za prikaz
         let selectedTermsInfo = '';
-        if (filterType === 'term' && elMailingTermsCheckboxes) {
+        if ((filterType === 'term' || filterType === 'trainer_term') && elMailingTermsCheckboxes) {
             const checkedCheckboxes = elMailingTermsCheckboxes.querySelectorAll('input[type="checkbox"][data-term-id]:checked');
             const selectedTermNames = Array.from(checkedCheckboxes).map(cb => {
                 const termId = cb.value;
@@ -11722,12 +11733,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 return termId;
             });
-            selectedTermsInfo = `<div style="margin-bottom: 10px; padding: 8px; background: #e8f5e9; border-radius: 4px;"><strong>Izbrani termini:</strong> ${selectedTermNames.join(', ')}</div>`;
+            const who = filterType === 'trainer_term' ? 'Učitelji na terminih' : 'Plavalci na terminih';
+            selectedTermsInfo = `<div style="margin-bottom: 10px; padding: 8px; background: #e8f5e9; border-radius: 4px;"><strong>${who}:</strong> ${selectedTermNames.join(', ')}</div>`;
         } else if (filterType === 'oly') {
             const seasonName = getSeasonNameById(getAdminSeasonFilterId()) || 'izbrana sezona';
             selectedTermsInfo = `<div style="margin-bottom: 10px; padding: 8px; background: #eef2ff; border-radius: 4px;"><strong>OLY plavalci</strong> · sezona ${escapeHtml(seasonName)}</div>`;
         } else if (filterType === 'trainers') {
-            selectedTermsInfo = `<div style="margin-bottom: 10px; padding: 8px; background: #fef3c7; border-radius: 4px;"><strong>Vaditelji / učitelji</strong></div>`;
+            selectedTermsInfo = `<div style="margin-bottom: 10px; padding: 8px; background: #fef3c7; border-radius: 4px;"><strong>Vsi vaditelji / učitelji</strong></div>`;
         }
         
         // Prikaži seznam email naslovov
@@ -11756,12 +11768,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         elMailingFilterType.addEventListener('change', () => {
             const filterType = elMailingFilterType.value;
             if (elMailingTermSelectRow) {
-                elMailingTermSelectRow.style.display = filterType === 'term' ? 'flex' : 'none';
+                elMailingTermSelectRow.style.display =
+                    (filterType === 'term' || filterType === 'trainer_term') ? 'flex' : 'none';
             }
             const olyHint = document.getElementById('mailingOlyHint');
             const trainersHint = document.getElementById('mailingTrainersHint');
+            const trainerTermHint = document.getElementById('mailingTrainerTermHint');
             if (olyHint) olyHint.style.display = filterType === 'oly' ? 'block' : 'none';
             if (trainersHint) trainersHint.style.display = filterType === 'trainers' ? 'block' : 'none';
+            if (trainerTermHint) trainerTermHint.style.display = filterType === 'trainer_term' ? 'block' : 'none';
             // Počisti izbrane checkboxe
             if (elMailingTermsCheckboxes) {
                 const checkboxes = elMailingTermsCheckboxes.querySelectorAll('input[type="checkbox"]');

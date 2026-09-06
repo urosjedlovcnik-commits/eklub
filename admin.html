@@ -1424,11 +1424,12 @@ Maja,Kovač,maja.kovac@email.com,+386 41 234 567,Prešernova 5,1000 Ljubljana,75
             <div class="row" style="width:100%;align-items:stretch;gap:4px;margin-bottom:15px">
               <label for="mailingFilterType" style="min-width:150px;text-align:right;padding-top:8px">Tip filtra:</label>
               <select id="mailingFilterType" style="flex:1">
-                <option value="term">Določen termin</option>
+                <option value="term">Plavalci — določen termin</option>
                 <option value="afternoon">Popoldanske skupine (pred 18:00)</option>
                 <option value="evening">Večerne skupine (od 18:00 naprej)</option>
                 <option value="oly">OLY plavalci</option>
-                <option value="trainers">Vaditelji / učitelji</option>
+                <option value="trainers">Vsi vaditelji / učitelji</option>
+                <option value="trainer_term">Učitelji — določen termin</option>
               </select>
             </div>
             <p class="muted" id="mailingOlyHint" style="font-size:13px;margin:-6px 0 12px 154px;display:none">
@@ -1436,6 +1437,9 @@ Maja,Kovač,maja.kovac@email.com,+386 41 234 567,Prešernova 5,1000 Ljubljana,75
             </p>
             <p class="muted" id="mailingTrainersHint" style="font-size:13px;margin:-6px 0 12px 154px;display:none">
               Vsi aktivni trenerji z veljavnim emailom (iz zavihka Trenerji).
+            </p>
+            <p class="muted" id="mailingTrainerTermHint" style="font-size:13px;margin:-6px 0 12px 154px;display:none">
+              Učitelji, ki imajo dodeljen vsaj enega od izbranih terminov.
             </p>
             <div class="row" style="width:100%;align-items:flex-start;gap:4px;margin-bottom:15px" id="mailingTermSelectRow">
               <label style="min-width:150px;text-align:right;padding-top:8px">Izberi termine:</label>
