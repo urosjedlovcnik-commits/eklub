@@ -12,7 +12,7 @@
   }
 })();
 </script>
-<title>Admin - Upravljanje plavalne šole</title>
+<title>eKlub Admin – Upravljanje plavalne šole</title>
 <link rel="stylesheet" href="style.css">
 <style>
 .admin-header {
@@ -100,8 +100,124 @@
   color: #1e40af;
 }
 
-.finance-sub-month-nav {
+.finance-sub-month-nav,
+.trainer-sub-month-nav {
   display: none !important;
+}
+
+.month-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  background: #fff;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 12px;
+}
+
+.month-nav .btn.month-nav-arrow,
+.btn.month-nav-arrow {
+  background: #64748b;
+  color: #fff;
+  border-color: #64748b;
+  padding: 8px 12px;
+}
+
+.month-nav .btn.month-nav-today,
+.btn.month-nav-today {
+  background: var(--pri, #2563eb);
+  color: #fff;
+  border-color: var(--pri, #2563eb);
+  padding: 8px 12px;
+}
+
+.month-nav-label {
+  text-align: center;
+  min-width: 180px;
+  cursor: pointer;
+  padding: 8px 10px;
+  border-radius: 8px;
+  transition: background-color 0.15s;
+}
+
+.month-nav-label:hover {
+  background: #f8fafc;
+}
+
+.month-nav-value {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.month-nav-hint {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.kpi-card {
+  background: #fff;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+
+.kpi-card .kpi-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.kpi-card .kpi-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.kpi-card .kpi-value.is-good { color: #16a34a; }
+.kpi-card .kpi-value.is-warn { color: #b45309; }
+.kpi-card .kpi-value.is-bad { color: #dc2626; }
+
+.kpi-card .kpi-hint {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 6px;
+  line-height: 1.35;
+}
+
+.overview-note {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0 0 8px;
+}
+
+#finance-copy-fees.copy-fees-card {
+  background: #fff;
+  color: inherit;
+  border: 1px solid var(--border, #e5e7eb);
+}
+
+#finance-copy-fees.copy-fees-card h3 {
+  color: #0f172a;
+}
+
+#finance-copy-fees.copy-fees-card .copy-fees-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
 }
 
 #editSwimmerModal .edit-swimmer-box {
@@ -757,9 +873,10 @@
   </div>
 
   <div class="admin-header">
-    <h1>Admin - Upravljanje plavalne šole</h1>
-    <p id="adminInfo" style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;">Pozdravljeni, administrator</p>
+    <h1>eKlub Admin</h1>
+    <p id="adminInfo" style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;">Upravljanje plavalne šole</p>
     <div class="admin-nav">
+      <button class="btn" data-section="overview">Pregled</button>
       <button class="btn active" data-section="swimmers">Plavalci</button>
       <button class="btn" data-section="terms">Termini</button>
       <button class="btn" data-section="seasons">Sezone</button>
@@ -772,6 +889,53 @@
       <label for="adminSeasonFilter">Sezona:</label>
       <select id="adminSeasonFilter"></select>
       <span class="season-bar-hint" id="adminSeasonBarHint">Podatki na vseh zavihkih veljajo za izbrano sezono.</span>
+    </div>
+  </div>
+
+  <!-- KPI Pregled -->
+  <div class="admin-section" id="overview-section">
+    <p class="admin-tab-season-context" data-season-context></p>
+    <p class="overview-note">Ključni kazalniki za izbrano sezono in mesec (obračunski saldo = pričakovane vadnine − stroški; ne stanje plačil).</p>
+    <div class="month-nav" id="overviewMonthNav">
+      <button type="button" class="btn month-nav-arrow" id="prevOverviewMonthBtn" title="Prejšnji mesec">←</button>
+      <div class="month-nav-label" id="overviewMonthYearContainer" title="Klikni za izbiro meseca">
+        <div class="month-nav-value" id="currentOverviewMonthYear"></div>
+        <div class="month-nav-hint">Klikni za izbiro meseca</div>
+      </div>
+      <button type="button" class="btn month-nav-arrow" id="nextOverviewMonthBtn" title="Naslednji mesec">→</button>
+      <button type="button" class="btn month-nav-today" id="currentOverviewMonthBtn" title="Trenutni mesec">Trenutni mesec</button>
+      <input type="month" id="overviewMonthYearInput" style="display:none">
+    </div>
+    <div class="kpi-grid" id="overviewKpiGrid">
+      <div class="kpi-card">
+        <div class="kpi-label">Vnos prisotnosti</div>
+        <div class="kpi-value" id="kpiAttendanceComplete">–</div>
+        <div class="kpi-hint" id="kpiAttendanceCompleteHint">treningov z vneseno prisotnostjo</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Udeležba plavalcev</div>
+        <div class="kpi-value" id="kpiSwimmerAttendance">–</div>
+        <div class="kpi-hint" id="kpiSwimmerAttendanceHint">prisotni / vsi vnosi v mesecu</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Prijava trenerjev</div>
+        <div class="kpi-value" id="kpiTrainerAuth">–</div>
+        <div class="kpi-hint" id="kpiTrainerAuthHint">trenerjev s povezanim računom</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Obračunski saldo</div>
+        <div class="kpi-value" id="kpiFinanceMargin">–</div>
+        <div class="kpi-hint" id="kpiFinanceMarginHint">pričakovane vadnine − stroški</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Hitre povezave</h3>
+      <div class="inner" style="display:flex;flex-wrap:wrap;gap:8px">
+        <button type="button" class="btn" data-goto-section="trainers">Trenerji</button>
+        <button type="button" class="btn" data-goto-section="finance">Finance</button>
+        <button type="button" class="btn" data-goto-section="mailing">Mailing</button>
+        <a class="btn" href="index.html">Koledar prisotnosti</a>
+      </div>
     </div>
   </div>
 
@@ -1041,6 +1205,17 @@
   <!-- Sekcija za upravljanje trenerjev -->
   <div class="admin-section" id="trainers-section">
     <p class="admin-tab-season-context" data-season-context></p>
+    <p class="overview-note">En mesec velja za prisotnost, ure/stroške in opombe spodaj.</p>
+    <div class="month-nav" id="trainersMonthNav">
+      <button type="button" class="btn month-nav-arrow" id="prevTrainersMonthBtn" title="Prejšnji mesec">←</button>
+      <div class="month-nav-label" id="trainersMonthYearContainer" title="Klikni za izbiro meseca">
+        <div class="month-nav-value" id="currentTrainersMonthYear"></div>
+        <div class="month-nav-hint">Klikni za izbiro meseca</div>
+      </div>
+      <button type="button" class="btn month-nav-arrow" id="nextTrainersMonthBtn" title="Naslednji mesec">→</button>
+      <button type="button" class="btn month-nav-today" id="currentTrainersMonthBtn" title="Trenutni mesec">Trenutni mesec</button>
+      <input type="month" id="trainersMonthYearInput" style="display:none">
+    </div>
     <div class="grid">
       <div class="card">
         <h3>Dodaj novega trenerja</h3>
@@ -1096,7 +1271,7 @@
       <div class="card">
         <h3>Povzetek prisotnosti trenerjev (za prikazani mesec)</h3>
         <div class="inner">
-          <div class="summary-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+          <div class="summary-controls trainer-sub-month-nav" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
             <button class="btn" id="prevTrainerSummaryMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Prejšnji mesec">←</button>
             <div style="text-align: center; min-width: 200px; cursor: pointer; padding: 10px; border-radius: 8px; transition: background-color 0.2s;" id="trainerSummaryMonthYearContainer" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
               <div id="currentTrainerSummaryMonthYear" style="font-size: 18px; font-weight: bold; color: #333;"></div>
@@ -1113,7 +1288,7 @@
       <div class="card">
         <h3>Izračun ur in stroškov trenerjev (za prikazani mesec)</h3>
         <div class="inner">
-          <div class="summary-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+          <div class="summary-controls trainer-sub-month-nav" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
             <button class="btn" id="prevTrainerHoursMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Prejšnji mesec">←</button>
             <div style="text-align: center; min-width: 200px; cursor: pointer; padding: 10px; border-radius: 8px; transition: background-color 0.2s;" id="trainerHoursMonthYearContainer" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
               <div id="currentTrainerHoursMonthYear" style="font-size: 18px; font-weight: bold; color: #333;"></div>
@@ -1130,7 +1305,7 @@
       <div class="card">
         <h3>Opombe o odsotnosti trenerjev</h3>
         <div class="inner">
-          <div class="summary-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+          <div class="summary-controls trainer-sub-month-nav" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
             <button class="btn" id="prevTrainerNotesMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Prejšnji mesec">←</button>
             <div style="text-align: center; min-width: 200px; cursor: pointer; padding: 10px; border-radius: 8px; transition: background-color 0.2s;" id="trainerNotesMonthYearContainer" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
               <div id="currentTrainerNotesMonthYear" style="font-size: 18px; font-weight: bold; color: #333;"></div>
@@ -1165,13 +1340,13 @@
           <div class="inner">
             <p class="muted" style="font-size:13px;margin-bottom:12px">En mesec velja za celoten zavihek Finance (vadnine, trenerji, računovodstvo …).</p>
             <div class="summary-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
-              <button class="btn" id="prevMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Prejšnji mesec">←</button>
-              <div style="text-align: center; min-width: 200px; cursor: pointer; padding: 10px; border-radius: 8px; transition: background-color 0.2s;" id="monthYearContainer" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
-                <div id="currentMonthYear" style="font-size: 18px; font-weight: bold; color: #333;"></div>
-                <div style="font-size: 12px; color: #666;">Klikni za izbiro datuma</div>
+              <button class="btn month-nav-arrow" id="prevMonthBtn" title="Prejšnji mesec">←</button>
+              <div class="month-nav-label" id="monthYearContainer" title="Klikni za izbiro meseca">
+                <div class="month-nav-value" id="currentMonthYear"></div>
+                <div class="month-nav-hint">Klikni za izbiro meseca</div>
               </div>
-              <button class="btn" id="nextMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Naslednji mesec">→</button>
-              <button class="btn" id="currentMonthBtn" style="background: #007bff; color: white; padding: 8px 12px; cursor: pointer;" title="Pojdi na trenutni mesec">Trenutni mesec</button>
+              <button class="btn month-nav-arrow" id="nextMonthBtn" title="Naslednji mesec">→</button>
+              <button class="btn month-nav-today" id="currentMonthBtn" title="Pojdi na trenutni mesec">Trenutni mesec</button>
               <input type="month" id="monthYearInput" style="display: none;">
             </div>
             <div id="financeMonthSummary"></div>
@@ -1270,25 +1445,19 @@
           </div>
         </div>
 
-        <div class="card" id="finance-copy-fees" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-          <h3 style="color: white;">🔄 Kopiranje vadnin iz prejšnega meseca</h3>
+        <div class="card copy-fees-card" id="finance-copy-fees">
+          <h3>Kopiranje vadnin iz prejšnega meseca</h3>
           <div class="inner">
-            <p style="margin-bottom: 15px; color: #e8e8e8;">
-              Ta funkcija bo avtomatsko kopirala vse vadnine iz prejšnega meseca v trenutni mesec.
+            <p class="muted" style="margin-bottom: 15px;">
+              Avtomatsko kopira vadnine iz prejšnega meseca v trenutni mesec (enako kot v pregledu stroškov zgoraj).
             </p>
-            <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
-              <button class="btn" id="copyFeesBtn" style="background: white; color: #667eea; border: none; font-weight: bold;">
-                🔄 Kopiraj vadnine iz prejšnega meseca
-              </button>
-              <button class="btn" id="copyFeesNextYearBtn" style="background: #ff6b35; color: white; border: none; font-weight: bold;">
-                📅 Kopiraj vadnine za naslednje leto
-              </button>
-              <button class="btn" id="checkFeesStatusBtn" style="background: #28a745; color: white; border: none; font-weight: bold;">
-                🔍 Preveri stanje vadnin
-              </button>
+            <div class="copy-fees-actions">
+              <button class="btn pri" id="copyFeesBtn">Kopiraj vadnine iz prejšnega meseca</button>
+              <button class="btn" id="copyFeesNextYearBtn">Kopiraj vadnine za naslednje leto</button>
+              <button class="btn ok" id="checkFeesStatusBtn">Preveri stanje vadnin</button>
             </div>
-            <p style="margin-top: 10px; font-size: 0.9em; color: #d0d0d0;">
-              <strong>Opomba:</strong> Kopiranje zahteva potrditev. Vadnine se kopirajo za izbrani mesec (enako kot v pregledu stroškov zgoraj).
+            <p class="muted" style="margin-top: 10px; font-size: 0.9em;">
+              <strong>Opomba:</strong> Kopiranje zahteva potrditev.
             </p>
           </div>
         </div>

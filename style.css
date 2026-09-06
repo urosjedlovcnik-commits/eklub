@@ -2,10 +2,15 @@
   --pri:#2563eb; --ok:#16a34a; --warn:#dc2626; --mut:#6b7280; --bg:#f5f7fa; --border:#e5e7eb;
   --unfilled:#fecaca; --complete:#bbf7d0;
   --partial:#ff9800;
+  --surface:#ffffff;
+  --text:#0f172a;
+  --brand:#1d4ed8;
 }
 *{box-sizing:border-box}
-body{font-family:system-ui, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); color:#0f172a; margin:30px 18px 18px;}
-.auth-bar{max-width:1200px;margin:0 auto 14px;padding:10px 14px;background:#fff;border:1px solid var(--border);border-radius:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+body{font-family:system-ui, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); color:var(--text); margin:30px 18px 18px;}
+.auth-bar{max-width:1200px;margin:0 auto 14px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.auth-brand{font-size:18px;font-weight:800;letter-spacing:-0.02em;color:var(--brand);text-decoration:none;margin-right:4px}
+.auth-brand:hover{color:#1e40af}
 .auth-bar-user{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .auth-role-badge{font-size:12px;font-weight:600;color:#1d4ed8;background:#eff6ff;border:1px solid #bfdbfe;border-radius:999px;padding:3px 10px}
 .auth-bar-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
