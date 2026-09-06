@@ -9732,9 +9732,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <thead>
                     <tr>
                         <th>Plavalec</th>
-                        <th title="Število terminov na teden (določa privzeto višino vadnine)">×/teden</th>
                         <th>Termini (sezona)</th>
                         <th>Način plačila</th>
+                        <th title="Število terminov na teden (določa privzeto višino vadnine)">×/teden</th>
                         <th>Znesek vadnine (€)</th>
                         <th>Popust (€)</th>
                         <th>Končna vadnina (€)</th>
@@ -9780,9 +9780,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             html += `
                 <tr ${rowStyle}>
                     <td>${swimmer.first_name} ${swimmer.last_name}</td>
-                    <td class="swimmer-fees-term-count" title="${termCount} ${termCount === 1 ? 'termin' : 'terminov'} na teden">${termCountLabel}</td>
                     <td>${termsDisplay}</td>
                     <td>${planDisplay}${notBillingNote}</td>
+                    <td class="swimmer-fees-term-count" title="${termCount} ${termCount === 1 ? 'termin' : 'terminov'} na teden">${termCountLabel}</td>
                     <td>
                         <input type="number" id="fee-${swimmer.id}" value="${effectiveFee}" min="0" step="0.01" style="width: 80px;" onchange="updateSwimmerFee('${swimmer.id}', this.value, ${month}, ${year})" ${inputsDisabled ? 'disabled' : ''}>
                     </td>
