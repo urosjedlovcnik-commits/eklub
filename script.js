@@ -663,6 +663,46 @@ document.addEventListener('DOMContentLoaded', () => {
       }).length;
     }
 
+    function isValidAttendanceStatus(status) {
+      return status !== null &&
+        status !== undefined &&
+        (status === true || status === false ||
+          status === 'true' || status === 'false' ||
+          status === 1 || status === 0);
+    }
+
+    function isPresentAttendanceStatus(status) {
+      return status === true || status === 'true' || status === 1;
+    }
+
+    /** Število dodeljenih / prisotnih / označenih za termin na dan. */
+    function getAttendanceCountSummary(date, termId) {
+      const ymd = iso(date);
+      const termAtt = attendance[ymd]?.[termId] || {};
+      const assigned = swimmers.filter(s => {
+        if (!s.terms?.includes(termId) || s.is_deleted) return false;
+        return isSwimmerAssignedToTermOnDate(s.id, termId, date);
+      });
+      let present = 0;
+      let marked = 0;
+      assigned.forEach(s => {
+        const status = termAtt[s.id];
+        if (!isValidAttendanceStatus(status)) return;
+        marked += 1;
+        if (isPresentAttendanceStatus(status)) present += 1;
+      });
+      return { assigned: assigned.length, present, marked };
+    }
+
+    function formatEventSwimmerCountHtml(date, termId, isTrainingFinished) {
+      const summary = getAttendanceCountSummary(date, termId);
+      if (summary.assigned <= 0) return '';
+      if (isTrainingFinished && summary.marked > 0) {
+        return `<span class="event-count" title="${summary.present} prisotnih od ${summary.assigned} dodeljenih">${summary.present}/${summary.assigned}</span>`;
+      }
+      return `<span class="event-count" title="${summary.assigned} plavalcev">${summary.assigned}</span>`;
+    }
+
     async function loadAttendanceForViewMonth() {
       const { start, end } = getViewMonthRange();
       const startIso = iso(start);
@@ -885,12 +925,9 @@ document.addEventListener('DOMContentLoaded', () => {
               e.classList.add("disabled");
           }
 
-          const swimmerCount = countAssignedSwimmers(date, t.id);
-          const countHtml = swimmerCount > 0
-            ? `<span class="event-count" title="${swimmerCount} plavalcev">${swimmerCount}</span>`
-            : '';
+          const swimmerCountHtml = formatEventSwimmerCountHtml(date, t.id, isTrainingFinished);
           
-          e.innerHTML = `<span class="time">${t.start_time.slice(0, 5)}<span class="end-time">–${t.end_time.slice(0, 5)}</span></span>${countHtml}`;
+          e.innerHTML = `<span class="time">${t.start_time.slice(0, 5)}<span class="end-time">–${t.end_time.slice(0, 5)}</span></span>${swimmerCountHtml}`;
           e.title = t.label;
           e.dataset.termId = t.id;
           day.appendChild(e);
@@ -956,7 +993,8 @@ document.addEventListener('DOMContentLoaded', () => {
               e.classList.add("disabled");
           }
 
-          e.innerHTML = `<span class="time">${t.start_time.slice(0, 5)}<span class="end-time">–${t.end_time.slice(0, 5)}</span></span>`;
+          const swimmerCountHtml = formatEventSwimmerCountHtml(date, t.id, isTrainingFinished);
+          e.innerHTML = `<span class="time">${t.start_time.slice(0, 5)}<span class="end-time">–${t.end_time.slice(0, 5)}</span></span>${swimmerCountHtml}`;
           
           e.addEventListener("click", () => {
             closeDayModal();
