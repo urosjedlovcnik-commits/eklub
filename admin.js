@@ -1159,15 +1159,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         return (termIds || []).filter(tid => seasonTermIds.has(tid)).length;
     }
 
-    /** Obračunska obdobja glede na začetek sezone + zamik prvega računa.
-     * Npr. sezona od septembra, zamik 1 → 1. obrok oktober, 2. obrok (+4 mesece) februar. */
+    /** Obračunska obdobja glede na začetek sezone.
+     * 1. obračun = mesec začetka (npr. september), 2. obrok = +4 mesece (npr. januar).
+     * Zamik položnic računovodstvo ureja posebej — tukaj šteje mesečni pregled. */
     function getSeasonInvoiceOffsetMonths(season) {
-        if (!season) return 1;
+        // Ohraneno za nastavitve sezone; obračun uporablja začetek sezone (glej getSeasonBillingSchedule).
+        if (!season) return 0;
         if (season.first_invoice_offset_months != null && season.first_invoice_offset_months !== '') {
             const n = parseInt(season.first_invoice_offset_months, 10);
             if (Number.isFinite(n) && n >= 0 && n <= 6) return n;
         }
-        // Fallback brez stolpca v bazi (localStorage)
         try {
             const saved = localStorage.getItem(`eklub_season_invoice_offset_${season.id}`);
             if (saved != null && saved !== '') {
@@ -1175,7 +1176,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (Number.isFinite(n) && n >= 0 && n <= 6) return n;
             }
         } catch { /* ignore */ }
-        return 1;
+        return 0;
     }
 
     function addCalendarMonths(month, year, delta) {
@@ -1196,8 +1197,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const parts = df.split('-').map(Number);
         const startYear = parts[0] || new Date().getFullYear();
         const startMonth = parts[1] || 9;
-        const offset = getSeasonInvoiceOffsetMonths(season);
-        const billing1 = addCalendarMonths(startMonth, startYear, offset);
+        // Vedno mesec začetka sezone + 4 mesece (ne zamik položnic)
+        const billing1 = { month: startMonth, year: startYear };
         const billing2 = addCalendarMonths(billing1.month, billing1.year, 4);
         return { billing1, billing2 };
     }
@@ -1206,7 +1207,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return Number(year) * 12 + Number(month);
     }
 
-    /** Prvi mesec računov v sezoni — pred tem ni obračuna vadnine/članarine */
+    /** Prvi obračunski mesec sezone (začetek sezone) */
     function getSeasonFirstInvoiceMonth(season) {
         return getSeasonBillingSchedule(season).billing1;
     }
@@ -1328,7 +1329,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     /**
      * Članarina: pri kasnejšem začetku plavalca → njegov mesec začetka;
-     * sicer mesec prvega računa sezone (npr. oktober).
+     * sicer prvi obračunski mesec sezone (npr. september).
      */
     function resolveMembershipChargePeriod(season, viewingMonth, viewingYear, swimmerId = null) {
         if (!season || isShortSeason(season)) {
@@ -1368,7 +1369,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return ok;
     }
 
-    /** Prestavi članarine, ki so pred prvim računom, na mesec prvega računa */
+    /** Prestavi članarine na prvi obračunski mesec sezone (razen pri kasnejšem začetku plavalca) */
     async function migrateMembershipToFirstInvoiceMonth(seasonId) {
         const season = seasons.find(s => s.id === seasonId);
         if (!season || isShortSeason(season)) return { moved: 0 };
@@ -1380,15 +1381,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!rec.membership_charged_month || !rec.membership_charged_year) return;
             if (rec.billing_start_month && rec.billing_start_year) return; // kasnejši začetek — ne premikaj
             if (rec.membership_charged_month === first.month && rec.membership_charged_year === first.year) return;
-            // Prestavi samo tiste PRED prvim računom (npr. september → oktober)
-            if (yearMonthValue(rec.membership_charged_year, rec.membership_charged_month)
-                < yearMonthValue(first.year, first.month)) {
-                entries.push({
-                    swimmerId,
-                    membership_charged_month: first.month,
-                    membership_charged_year: first.year
-                });
-            }
+            // Prestavi na prvi obračunski mesec (npr. oktober → september)
+            entries.push({
+                swimmerId,
+                membership_charged_month: first.month,
+                membership_charged_year: first.year
+            });
         });
         if (!entries.length) return { moved: 0, first };
         const ok = await bulkUpsertSeasonBilling(entries, seasonId);
@@ -1781,7 +1779,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (typeof calculateFinanceData === 'function') calculateFinanceData();
     }
 
-    /** Obkljuka = članarina se obračuna v mesecu prvega računa (oktober), če ste pred tem; sicer v odprtem mesecu */
+    /** Obkljuka = članarina se obračuna v prvem obračunskem mesecu sezone (ali mesecu začetka plavalca) */
     window.updateSwimmerMembershipFee = async function(swimmerId, included, month, year) {
         const seasonId = getAdminSeasonFilterId();
         const season = seasons.find(s => s.id === seasonId);
@@ -1794,7 +1792,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (charge.month !== viewM || charge.year !== viewY) {
                 const label = new Date(charge.year, charge.month - 1, 1)
                     .toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
-                showMessage(`Članarina se obračuna z prvimi računi: ${label}.`, 'info');
+                showMessage(`Članarina se obračuna z 1. obračunom: ${label}.`, 'info');
             }
         } else {
             patch = { membership_charged_month: null, membership_charged_year: null };
@@ -1821,7 +1819,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (checked && (seasonDefault.month !== viewM || seasonDefault.year !== viewY)) {
             const label = new Date(seasonDefault.year, seasonDefault.month - 1, 1)
                 .toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
-            showMessage(`Članarine se obračunajo z prvimi računi (${label}), razen pri kasnejšem začetku plavalca.`, 'info');
+            showMessage(`Članarine se obračunajo z 1. obračunom (${label}), razen pri kasnejšem začetku plavalca.`, 'info');
         }
         const entries = [];
         accountingReportWorkingOrder.forEach(row => {
@@ -2196,7 +2194,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             await loadSeasons();
             await loadAccountingReportOrders();
             await loadSwimmerSeasonBilling();
-            // Članarine pred prvim računom (npr. september) → mesec prvega računa (oktober)
+            // Članarine, napačno shranjene pred prvim obračunskim mesecem, prestavi nanj
             for (const s of seasons) {
                 if (s?.id) await migrateMembershipToFirstInvoiceMonth(s.id);
             }
@@ -3993,7 +3991,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const monthLabel = new Date(charge.year, charge.month - 1, 1)
             .toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
         const note = (charge.month !== currentFinanceMonth || charge.year !== currentFinanceYear)
-            ? `\n\n(Prvi računi grejo ven ${monthLabel} — članarina se obračuna takrat, ne v trenutnem mesecu.)`
+            ? `\n\n(1. obračun je ${monthLabel} — članarina se obračuna takrat.)`
             : '';
         if (!confirm(`Obračunam članarino (${getMembershipFeeAmount()} €) vsem plavalkam v sezoni za mesec ${monthLabel}?${note}\n\nPosameznike lahko kasneje odznačite v Finance → Poročilo za računovodstvo.`)) return;
         setAdminFinanceMonth(charge.month, charge.year, { refresh: false });
@@ -4140,7 +4138,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     date_from: df,
                     date_to: dt,
                     is_active: active,
-                    first_invoice_offset_months: Number.isFinite(offset) ? offset : 1,
+                    first_invoice_offset_months: Number.isFinite(offset) ? offset : 0,
                     start_month_fee_factor: Number.isFinite(startFeeF) ? startFeeF : 1,
                     end_month_fee_factor: Number.isFinite(endFeeF) ? endFeeF : 1
                 };
@@ -4249,7 +4247,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 date_from: df,
                 date_to: dt,
                 is_active: active,
-                first_invoice_offset_months: Number.isFinite(offset) ? offset : 1,
+                first_invoice_offset_months: Number.isFinite(offset) ? offset : 0,
                 start_month_fee_factor: Number.isFinite(startFeeF) ? startFeeF : 1,
                 end_month_fee_factor: Number.isFinite(endFeeF) ? endFeeF : 1
             };
@@ -9719,7 +9717,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             let membershipRevenue = 0;
             let membershipCount = 0;
             activeSwimmers.forEach(swimmer => {
-                const plan = getSwimmerPaymentPlan(swimmer.id, seasonId);
                 const feeDataRaw = swimmerFees[swimmer.id];
                 const isOlySwimmer = feeDataRaw?.is_oly === true;
 
@@ -9730,23 +9727,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (!shouldIncludeSwimmerInBillingMonth(swimmer.id, month, year, season, seasonId)) return;
 
-                let feeData = feeDataRaw;
-                if (!feeData) {
-                    if (plan !== 'monthly') return;
-                    const termCount = getSwimmerSeasonTermLabels(swimmer).length;
-                    feeData = { fee: getDefaultSwimmerFeeByTermCount(termCount, plan), discount: 0, is_oly: false };
-                }
-                
-                // Če je OLY plavalec, dodaj prispevek (enako kot letno poročilo)
-                if (feeData.is_oly) {
+                const resolved = resolveSwimmerNetFee(
+                    swimmer,
+                    feeDataRaw
+                        ? {
+                            monthly_fee: feeDataRaw.fee,
+                            discount: feeDataRaw.discount,
+                            discount_is_percent: feeDataRaw.discount_is_percent,
+                            is_oly: feeDataRaw.is_oly
+                        }
+                        : null,
+                    seasonId,
+                    season,
+                    month,
+                    year
+                );
+                if (resolved.isOly) {
                     olyContributions += OLY_MONTHLY_CONTRIBUTION_EUR;
                 } else {
-                    // Če ni OLY, upoštevaj normalno vadnino
-                    const finalFee = applyDiscountToFee(feeData.fee, feeData.discount, feeData.discount_is_percent);
-                    totalRevenue += finalFee;
+                    totalRevenue += resolved.net;
                 }
-                //// console.log('🔍 calculateFinanceData - plavalec:', swimmer.first_name, swimmer.last_name, 'fee:', feeData.fee, 'discount:', feeData.discount, 'is_oly:', feeData.is_oly);
-
             });
             
             // Dodaj OLY prispevke skupnim prihodkom
@@ -10317,11 +10317,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             </label>
             <input type="number" id="swimmerFeesMonthFactorCustom" min="0.05" max="1" step="0.05" value="${monthFactor}" style="width:70px;display:none;padding:6px;border-radius:6px;border:1px solid var(--border)" title="Npr. 0.5 = polovica">
             <button type="button" class="btn" id="applyMonthFeeFactorBtn" title="Nastavi vadnine samo mesečnim plačnikom = privzeto × faktor (2×/enkratno se ne spremeni)">Uporabi 1/2 samo za mesečne</button>
-            <button type="button" class="btn" id="migrateMembershipToFirstInvoiceBtn" title="Vse članarine s septembra (pred prvim računom) prestavi na mesec prvega računa">Članarine → 1. račun</button>
+            <button type="button" class="btn" id="migrateMembershipToFirstInvoiceBtn" title="Članarine prestavi na prvi obračunski mesec sezone">Članarine → 1. obračun</button>
           </div>`;
         html += `<p class="muted" style="font-size:13px;margin-bottom:10px">Sezona: <strong>${escapeHtml(seasonName) || '—'}</strong> · ${sortedSwimmers.length} plavalcev · ${monthLabel}${factorHint}<br>
-            <span style="font-size:12px">Članarina gre z <strong>oktobrsko položnico</strong> (1. račun: ${escapeHtml(billing1Label)}), ki pokrije tudi septembersko vadbo.
-            2. obrok: <strong>${escapeHtml(billing2Label)}</strong>. Popust v € ali %. Faktor 1/2 velja <strong>samo za mesečne</strong>.
+            <span style="font-size:12px">Obračun: <strong>1. mesec = ${escapeHtml(billing1Label)}</strong> (mesečni = polovica, če je faktor 1/2; enkrat/2× = polni znesek),
+            2. obrok: <strong>${escapeHtml(billing2Label)}</strong>. Članarina gre z 1. obračunom. Popust v € ali %.
             Kasnejši začetek: Uredi plavalca → Začetek obračuna.</span></p>`;
         html += `
             <table class="swimmer-fees-table">
@@ -10485,7 +10485,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 showMessage(`Prestavljenih ${moved} članarin na ${formatBillingMonthLabel(first)}.`, 'success');
                 await refreshAfterMembershipChange();
             } else {
-                showMessage('Ni članarin pred mesecem prvega računa za prestaviti.', 'info');
+                showMessage('Ni članarin za prestaviti na 1. obračunski mesec.', 'info');
             }
         });
     }

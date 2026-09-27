@@ -1153,11 +1153,11 @@
             <input type="text" id="newSeasonName" placeholder="Naziv (npr. 2026/27)" style="min-width:200px">
             <label style="display:flex;align-items:center;gap:6px">Od <input type="date" id="newSeasonDateFrom"></label>
             <label style="display:flex;align-items:center;gap:6px">Do <input type="date" id="newSeasonDateTo"></label>
-            <label style="display:flex;align-items:center;gap:6px" title="0 = prvi račun v mesecu začetka; 1 = mesec kasneje (npr. sept→okt)">
-              Zamik 1. računa
+            <label style="display:flex;align-items:center;gap:6px" title="Obračunski meseci so vedno začetek sezone in +4 mesece; to polje je informativno">
+              Zamik (info)
               <select id="newSeasonInvoiceOffset" style="padding:4px 6px">
-                <option value="0">0 (isti mesec)</option>
-                <option value="1" selected>1 mesec</option>
+                <option value="0" selected>0 (isti mesec)</option>
+                <option value="1">1 mesec</option>
                 <option value="2">2 meseca</option>
               </select>
             </label>
@@ -1180,7 +1180,7 @@
             <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="newSeasonIsActive"> Aktivna</label>
             <button type="button" class="btn pri" id="addSeasonBtn">Shrani sezono</button>
           </div>
-          <p class="muted" style="margin-top:12px;font-size:13px">Sezona lahko začne v <strong>poljubnem mesecu</strong>. Zamik določa, kdaj grejo prvi računi (vadnina + članarina). 2. obrok je 4 mesece po prvem.</p>
+          <p class="muted" style="margin-top:12px;font-size:13px">Sezona lahko začne v <strong>poljubnem mesecu</strong>. Obračun: 1. mesec = začetek sezone (mesečni lahko 1/2), 2. obrok = 4 mesece kasneje. Članarina gre z 1. obračunom.</p>
         </div>
       </div>
       <div class="card" id="seasonSetupCard">
@@ -1528,10 +1528,9 @@
           <div class="inner">
             <p class="muted" style="font-size:13px;margin-bottom:12px">
               Seznam plavalcev za <strong>obračun izbranega meseca</strong>.
-              Članarina gre z <strong>mesecem prvega računa</strong> (npr. oktober) — nikoli s septembrom;
-              oktobrska položnica pokrije tudi septembersko vadbo.
-              Polovična (ali delna) vadnina velja <strong>samo za mesečne</strong> plačnike — faktor 1/2 pri upravljanju vadnin.
-              Kasnejši začetek plavalca: v Uredi plavalca → »Začetek obračuna«.
+              1. obračun = mesec začetka sezone (npr. september): mesečni = polovica, enkrat letno = celota, 2× = 1. obrok + članarina.
+              2. obrok = 4 mesece kasneje (npr. januar).
+              Polovična vadnina samo za mesečne. Kasnejši začetek: Uredi plavalca → »Začetek obračuna«.
               Filter: mesečno / 2× letno / enkrat letno.
               Vrstni red: mesečno → dvakrat letno → enkrat; znotraj skupine vračajoči (modro) zgoraj.
               Plavalci z <strong>OLY</strong> se ne prikažejo. Znesek 0 € = rdeče, ni v PDF.
@@ -1552,9 +1551,9 @@
                   <option value="lump_sum">Enkrat letno</option>
                 </select>
               </label>
-              <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer" title="Članarina gre z prvimi računi. Če ste pred prvim mesecem računov, se shrani na tisti mesec.">
+              <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer" title="Članarina gre z 1. obračunskim mesecem sezone (ali začetkom plavalca).">
                 <input type="checkbox" id="accountingIncludeMembershipFee" style="width:18px;height:18px;cursor:pointer">
-                Obračunaj članarino vsem (prvi računi)
+                Obračunaj članarino vsem (1. obračun)
               </label>
               <button type="button" class="btn ok" id="printAccountingReportBtn">Prenesi PDF</button>
               <button type="button" class="btn pri" id="saveAccountingReportOrderBtn">Shrani vrstni red</button>
@@ -1853,10 +1852,10 @@ date,term_id,swimmer_id,status
           <input type="date" id="editSeasonDateTo">
         </div>
         <div class="row">
-          <label for="editSeasonInvoiceOffset">Zamik 1. računa:</label>
+          <label for="editSeasonInvoiceOffset">Zamik (info):</label>
           <select id="editSeasonInvoiceOffset" style="max-width:220px">
             <option value="0">0 — isti mesec kot začetek</option>
-            <option value="1">1 mesec kasneje (npr. sept→okt)</option>
+            <option value="1">1 mesec kasneje</option>
             <option value="2">2 meseca kasneje</option>
           </select>
         </div>
@@ -1879,7 +1878,7 @@ date,term_id,swimmer_id,status
         <div class="row">
           <label for="editSeasonIsActive" style="min-width:auto"><input type="checkbox" id="editSeasonIsActive"> Aktivna</label>
         </div>
-        <p class="muted" style="font-size:13px;margin:4px 0 10px">Če spremenite od–do, se uskladijo tudi termini te sezone, ki so imeli enake datume. 2. obrok = 4 mesece po prvem računu.</p>
+        <p class="muted" style="font-size:13px;margin:4px 0 10px">Obračun: 1. mesec = začetek sezone, 2. obrok = +4 mesece. Če spremenite od–do, se uskladijo tudi termini te sezone z enakimi datumi.</p>
         <div class="row" style="gap:8px">
           <button type="button" class="btn pri" id="saveEditSeasonBtn">Shrani</button>
           <button type="button" class="btn" id="cancelEditSeasonModalBtn">Prekliči</button>
