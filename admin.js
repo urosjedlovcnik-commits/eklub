@@ -1293,6 +1293,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     let swimmerFeesPlanFilter = sessionStorage.getItem('eklub_fees_plan_filter') || '';
     let swimmerFeesOlyFilter = sessionStorage.getItem('eklub_fees_oly_filter') || '';
     let accountingPlanFilter = sessionStorage.getItem('eklub_accounting_plan_filter') || '';
+    /** OLY plavalci v trenutni admin sezoni — nikoli ne plačajo članarine */
+    let olySwimmerIdsForAdminSeason = new Set();
+
+    function isOlySwimmer(swimmerId) {
+        return !!swimmerId && olySwimmerIdsForAdminSeason.has(swimmerId);
+    }
+
+    async function refreshOlySwimmerIdsForAdminSeason(seasonId = null) {
+        const sid = seasonId || getAdminSeasonFilterId();
+        const season = seasons.find(s => s.id === sid);
+        if (!season) {
+            olySwimmerIdsForAdminSeason = new Set();
+            return olySwimmerIdsForAdminSeason;
+        }
+        olySwimmerIdsForAdminSeason = await getOlySwimmerIdsForSeason(season);
+        // Počisti morebitne shranjene članarine za OLY
+        const clearEntries = [];
+        olySwimmerIdsForAdminSeason.forEach(swimmerId => {
+            const rec = getSwimmerSeasonBillingRecord(swimmerId, sid);
+            if (rec.membership_charged_month || rec.membership_charged_year) {
+                clearEntries.push({
+                    swimmerId,
+                    membership_charged_month: null,
+                    membership_charged_year: null
+                });
+            }
+        });
+        if (clearEntries.length) await bulkUpsertSeasonBilling(clearEntries, sid);
+        return olySwimmerIdsForAdminSeason;
+    }
 
     /** Ali mesec/leto spada v koledarsko obdobje sezone */
     function isMonthInSeason(month, year, season) {
@@ -1358,7 +1388,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             ? { billing_start_month: Number(month), billing_start_year: Number(year) }
             : { billing_start_month: null, billing_start_year: null };
         const ok = await upsertSwimmerSeasonBilling(swimmerId, sid, patch);
-        if (ok && month && year) {
+        if (ok && month && year && !isOlySwimmer(swimmerId)) {
             const period = getMembershipChargedPeriod(swimmerId, sid);
             if (!period) {
                 await upsertSwimmerSeasonBilling(swimmerId, sid, {
@@ -1381,6 +1411,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (sid !== seasonId) return;
             if (!rec.membership_charged_month || !rec.membership_charged_year) return;
             if (rec.billing_start_month && rec.billing_start_year) return; // kasnejši začetek — ne premikaj
+            if (isOlySwimmer(swimmerId)) return; // OLY ne plača članarine
             if (rec.membership_charged_month === first.month && rec.membership_charged_year === first.year) return;
             // Prestavi na prvi obračunski mesec (npr. oktober → september)
             entries.push({
@@ -1458,14 +1489,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         return plan;
     }
 
-    /** Mesec/leto obračuna članarine za sezono, ali null če je plavalec ne plača */
+    /** Mesec/leto obračuna članarine za sezono, ali null če plavalec ne plača (tudi OLY) */
     function getMembershipChargedPeriod(swimmerId, seasonId) {
+        if (isOlySwimmer(swimmerId)) return null;
         const rec = getSwimmerSeasonBillingRecord(swimmerId, seasonId);
         if (!rec.membership_charged_month || !rec.membership_charged_year) return null;
         return { month: rec.membership_charged_month, year: rec.membership_charged_year };
     }
 
     function isMembershipChargedInMonth(swimmerId, seasonId, month, year) {
+        if (isOlySwimmer(swimmerId)) return false;
         const p = getMembershipChargedPeriod(swimmerId, seasonId);
         return !!p && p.month === month && p.year === year;
     }
@@ -1783,6 +1816,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     /** Obkljuka = članarina se obračuna v prvem obračunskem mesecu sezone (ali mesecu začetka plavalca) */
     window.updateSwimmerMembershipFee = async function(swimmerId, included, month, year) {
         const seasonId = getAdminSeasonFilterId();
+        if (isOlySwimmer(swimmerId) || (await ensureOlyKnown(swimmerId, seasonId))) {
+            showMessage('OLY plavalci ne plačujejo članarine.', 'info');
+            await upsertSwimmerSeasonBilling(swimmerId, seasonId, {
+                membership_charged_month: null,
+                membership_charged_year: null
+            });
+            await refreshAfterMembershipChange();
+            return;
+        }
         const season = seasons.find(s => s.id === seasonId);
         const viewM = month != null ? Number(month) : currentAccountingReportMonth;
         const viewY = year != null ? Number(year) : currentAccountingReportYear;
@@ -1801,6 +1843,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         const ok = await upsertSwimmerSeasonBilling(swimmerId, seasonId, patch);
         if (ok) await refreshAfterMembershipChange();
     };
+
+    /** Če Set še ni naložen, preveri OLY v bazi za ta mesec/sezono */
+    async function ensureOlyKnown(swimmerId, seasonId) {
+        if (isOlySwimmer(swimmerId)) return true;
+        const season = seasons.find(s => s.id === seasonId);
+        if (!season) return false;
+        const ids = await getOlySwimmerIdsForSeason(season);
+        olySwimmerIdsForAdminSeason = ids;
+        return ids.has(swimmerId);
+    }
 
     window.clearSwimmerMembershipFee = async function(swimmerId) {
         const ok = await upsertSwimmerSeasonBilling(swimmerId, getAdminSeasonFilterId(), {
@@ -1824,6 +1876,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         const entries = [];
         accountingReportWorkingOrder.forEach(row => {
+            if (isOlySwimmer(row.swimmer.id)) return;
             const period = getMembershipChargedPeriod(row.swimmer.id, seasonId);
             if (checked) {
                 // Ne premikaj članarine, ki je bila že obračunana v drugem mesecu
@@ -1908,18 +1961,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         calculateTrainerSummaryData();
         calculateTrainerHoursCostsData();
         calculateTrainerNotesData();
-        refreshSwimmerFees();
         renderTermCostsSettings();
         updateMailingTermSelect();
-        if (typeof calculateFinanceData === 'function') {
-            calculateFinanceData();
-        }
-        if (typeof refreshAccountingReportEditor === 'function') {
-            refreshAccountingReportEditor();
-        }
         renderTrainerRatesSettings();
         updateAdminSeasonContextLabels();
         updateAdminSeasonBarHint();
+        refreshOlySwimmerIdsForAdminSeason().then(() => {
+            refreshSwimmerFees();
+            if (typeof calculateFinanceData === 'function') calculateFinanceData();
+            if (typeof refreshAccountingReportEditor === 'function') refreshAccountingReportEditor();
+            updateSwimmersList();
+        });
         if (currentSection === 'seasons') {
             renderSeasonSetupChecklist();
         }
@@ -2195,6 +2247,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             await loadSeasons();
             await loadAccountingReportOrders();
             await loadSwimmerSeasonBilling();
+            await refreshOlySwimmerIdsForAdminSeason();
             // Članarine, napačno shranjene pred prvim obračunskim mesecem, prestavi nanj
             for (const s of seasons) {
                 if (s?.id) await migrateMembershipToFirstInvoiceMonth(s.id);
@@ -9487,11 +9540,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Zgodovinski ročni vnosi članarine (nove se štejejo iz swimmer_season_billing spodaj)
             membership += parseFloat(manual?.membershipFee || 0);
         }
-        // Članarine, obračunane plavalcem te sezone (30 € na plavalca, enkrat na sezono)
+        // Članarine, obračunane plavalcem te sezone (30 € na plavalca, enkrat na sezono) — OLY izključeni
         if (season?.id) {
             const monthsInSeason = new Set(tuples.map(t => `${t.year}-${t.month}`));
             Object.entries(swimmerSeasonBilling).forEach(([key, rec]) => {
                 if (!key.endsWith(`|${season.id}`)) return;
+                const swimmerId = key.split('|')[0];
+                if (isOlySwimmer(swimmerId)) return;
                 if (!rec.membership_charged_month || !rec.membership_charged_year) return;
                 if (!monthsInSeason.has(`${rec.membership_charged_year}-${rec.membership_charged_month}`)) return;
                 membership += getMembershipFeeAmount();
@@ -9719,9 +9774,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             let membershipCount = 0;
             activeSwimmers.forEach(swimmer => {
                 const feeDataRaw = swimmerFees[swimmer.id];
-                const isOlySwimmer = feeDataRaw?.is_oly === true;
+                const olyThisMonth = feeDataRaw?.is_oly === true;
 
-                if (!isOlySwimmer && isMembershipChargedInMonth(swimmer.id, seasonId, month, year)) {
+                // OLY (v sezoni ali ta mesec) nikoli ne plača članarine
+                if (!olyThisMonth && !isOlySwimmer(swimmer.id) && isMembershipChargedInMonth(swimmer.id, seasonId, month, year)) {
                     membershipRevenue += getMembershipFeeAmount();
                     membershipCount++;
                 }
@@ -9743,7 +9799,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     month,
                     year
                 );
-                if (resolved.isOly) {
+                if (resolved.isOly || olyThisMonth) {
                     olyContributions += OLY_MONTHLY_CONTRIBUTION_EUR;
                 } else {
                     totalRevenue += resolved.net;
@@ -10401,6 +10457,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const membershipElsewhere = !!membershipPeriod && !membershipHere;
             const membershipCell = !seasonId
                 ? '<span class="muted">—</span>'
+                : isOly
+                    ? '<span class="muted" style="font-size:11px" title="OLY ne plača članarine">OLY</span>'
                 : membershipElsewhere
                     ? `<span class="muted" style="font-size:11px" title="Članarina je za to sezono že obračunana">✓ ${escapeHtml(formatMembershipPeriod(membershipPeriod))}</span>
                        <button type="button" class="btn" style="padding:1px 6px;font-size:11px;margin-left:4px" onclick="clearSwimmerMembershipFee('${swimmer.id}')" title="Prekliči obračun članarine">×</button>`
@@ -11299,6 +11357,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     .from('swimmer_monthly_fees')
                     .upsert(rows, { onConflict: 'swimmer_id,month,year' });
                 if (feeError) throw feeError;
+                olySwimmerIdsForAdminSeason.add(swimmerId);
+                // OLY nikoli ne plača članarine
+                await upsertSwimmerSeasonBilling(swimmerId, getAdminSeasonFilterId(), {
+                    membership_charged_month: null,
+                    membership_charged_year: null
+                });
             } else {
                 const rows = targets.map(t => ({
                     swimmer_id: swimmerId,
@@ -11310,6 +11374,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     .from('swimmer_monthly_fees')
                     .upsert(rows, { onConflict: 'swimmer_id,month,year' });
                 if (olyError) throw olyError;
+                await refreshOlySwimmerIdsForAdminSeason();
             }
 
             if (targets.length > 1) {
