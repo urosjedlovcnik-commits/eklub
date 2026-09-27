@@ -1418,17 +1418,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function refreshAfterMembershipChange() {
         updateSwimmersList();
+        if (typeof refreshSwimmerFees === 'function') refreshSwimmerFees();
         const season = getAccountingReportSeason(currentAccountingReportMonth, currentAccountingReportYear);
         renderAccountingReportEditorTable(accountingReportWorkingOrder, season);
         syncGlobalMembershipCheckbox();
         if (typeof calculateFinanceData === 'function') calculateFinanceData();
     }
 
-    /** Obkljuka = članarina se obračuna v mesecu, ki je odprt v poročilu (enkrat na sezono) */
-    window.updateSwimmerMembershipFee = async function(swimmerId, included) {
+    /** Obkljuka = članarina se obračuna v podanem mesecu (privzeto odprt mesec Finance), enkrat na sezono */
+    window.updateSwimmerMembershipFee = async function(swimmerId, included, month, year) {
         const seasonId = getAdminSeasonFilterId();
+        const m = month != null ? Number(month) : currentAccountingReportMonth;
+        const y = year != null ? Number(year) : currentAccountingReportYear;
         const patch = included === true
-            ? { membership_charged_month: currentAccountingReportMonth, membership_charged_year: currentAccountingReportYear }
+            ? { membership_charged_month: m, membership_charged_year: y }
             : { membership_charged_month: null, membership_charged_year: null };
         const ok = await upsertSwimmerSeasonBilling(swimmerId, seasonId, patch);
         if (ok) await refreshAfterMembershipChange();
@@ -9733,7 +9736,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const monthLabel = new Date(year, month - 1, 1).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
 
         let html = `<p class="muted" style="font-size:13px;margin-bottom:10px">Sezona: <strong>${escapeHtml(seasonName) || '—'}</strong> · ${sortedSwimmers.length} plavalcev · ${monthLabel}<br>
-            <span style="font-size:12px">Enkratno in 1. obrok: <strong>oktober</strong> · 2. obrok: <strong>februar</strong> · Zneske vnašate ročno.</span></p>`;
+            <span style="font-size:12px">Enkratno in 1. obrok: <strong>oktober</strong> · 2. obrok: <strong>februar</strong> · Zneske vnašate ročno.
+            Članarina (${getMembershipFeeAmount()} €) se obračuna <strong>enkrat na sezono</strong> v izbranem mesecu.</span></p>`;
         html += `
             <table class="swimmer-fees-table">
                 <thead>
@@ -9745,6 +9749,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <th>Znesek vadnine (€)</th>
                         <th>Popust (€)</th>
                         <th>Končna vadnina (€)</th>
+                        <th style="text-align:center" title="Članarina enkrat na sezono">Član. (${getMembershipFeeAmount()} €)</th>
                         <th>OLY</th>
                     </tr>
                 </thead>
@@ -9785,6 +9790,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 : '';
             const notBillingNote = !isBillingMonth ? '<br><span style="font-size:11px;color:#999">Ni mesec obračuna vadnine</span>' : '';
 
+            const membershipPeriod = seasonId ? getMembershipChargedPeriod(swimmer.id, seasonId) : null;
+            const membershipHere = !!membershipPeriod && membershipPeriod.month === month && membershipPeriod.year === year;
+            const membershipElsewhere = !!membershipPeriod && !membershipHere;
+            const membershipCell = !seasonId
+                ? '<span class="muted">—</span>'
+                : membershipElsewhere
+                    ? `<span class="muted" style="font-size:11px" title="Članarina je za to sezono že obračunana">✓ ${escapeHtml(formatMembershipPeriod(membershipPeriod))}</span>
+                       <button type="button" class="btn" style="padding:1px 6px;font-size:11px;margin-left:4px" onclick="clearSwimmerMembershipFee('${swimmer.id}')" title="Prekliči obračun članarine">×</button>`
+                    : `<input type="checkbox" ${membershipHere ? 'checked' : ''} onchange="updateSwimmerMembershipFee('${swimmer.id}', this.checked, ${month}, ${year})" style="width:18px;height:18px;cursor:pointer" title="Obračunaj članarino v tem mesecu">`;
+
             rowCount++;
             html += `
                 <tr ${rowStyle}>
@@ -9799,6 +9814,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <input type="number" id="discount-${swimmer.id}" value="${discount}" min="0" step="0.01" style="width: 80px;" onchange="updateSwimmerDiscount('${swimmer.id}', this.value, ${month}, ${year})" ${inputsDisabled ? 'disabled' : ''}>
                     </td>
                     <td><strong>${isBillingMonth ? finalFee.toFixed(2) + '€' : '—'}</strong></td>
+                    <td style="text-align:center">${membershipCell}</td>
                     <td style="text-align: center;">
                         <input type="checkbox" id="oly-${swimmer.id}" ${isOly ? 'checked' : ''} ${canEditOly ? '' : 'disabled'} onchange="updateSwimmerOly('${swimmer.id}', this.checked, ${month}, ${year})" style="cursor: pointer; width: 20px; height: 20px;">
                         ${!canCheckOly && !isOly ? '<span style="font-size: 11px; color: #999; display: block;">Max 15</span>' : ''}
