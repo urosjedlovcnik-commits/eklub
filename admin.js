@@ -10446,7 +10446,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div style="margin-top: 10px; padding: 10px; background: #f0f0f0; border-radius: 6px;">
                 <strong>OLY opcija:</strong> Maksimalno 15 plavalcev lahko ima obkljukljeno OLY opcijo.
                 Plavalci z OLY imajo znesek vadnine 0€, vendar mesečno prispevajo 40€.
-                OLY lahko označite v vsakem mesecu sezone (tudi pri enkratnem plačilu / obrokih).
+                OLY velja <strong>od izbranega meseca do konca sezone</strong> (tudi čez novo leto).
                 Trenutno: <strong>${olyCount}/15</strong> OLY plavalcev.
             </div>
         `;
@@ -11267,55 +11267,58 @@ document.addEventListener('DOMContentLoaded', async () => {
         await updateSwimmerDiscount(swimmerId, converted, month, year, toUnit === 'pct');
     };
     
-    // Funkcija za posodobitev OLY statusa plavalca
+    // Funkcija za posodobitev OLY statusa plavalca (velja od izbranega meseca do konca sezone)
     async function updateSwimmerOly(swimmerId, isOly, month, year) {
         try {
-            // Če je OLY obkljukljeno, nastavi znesek vadnine na 0
+            const seasonId = getAdminSeasonFilterId();
+            const season = seasons.find(s => s.id === seasonId) || getSeasonForMonthYear(month, year);
+            const seasonMonths = getMonthsInSeason(season);
+            const fromVal = yearMonthValue(year, month);
+            const targets = seasonMonths.length
+                ? seasonMonths.filter(t => yearMonthValue(t.year, t.month) >= fromVal)
+                : [{ month, year }];
+
             if (isOly) {
+                const rows = targets.map(t => ({
+                    swimmer_id: swimmerId,
+                    month: t.month,
+                    year: t.year,
+                    monthly_fee: 0,
+                    is_oly: true
+                }));
                 const { error: feeError } = await supabase
                     .from('swimmer_monthly_fees')
-                    .upsert({
-                        swimmer_id: swimmerId,
-                        month: month,
-                        year: year,
-                        monthly_fee: 0,
-                        is_oly: true
-                    }, { onConflict: 'swimmer_id,month,year' });
-                
+                    .upsert(rows, { onConflict: 'swimmer_id,month,year' });
                 if (feeError) throw feeError;
             } else {
-                // Če je OLY odkljukljeno, nastavi is_oly na false, vendar ohrani znesek vadnine
+                const rows = targets.map(t => ({
+                    swimmer_id: swimmerId,
+                    month: t.month,
+                    year: t.year,
+                    is_oly: false
+                }));
                 const { error: olyError } = await supabase
                     .from('swimmer_monthly_fees')
-                    .upsert({
-                        swimmer_id: swimmerId,
-                        month: month,
-                        year: year,
-                        is_oly: false
-                    }, { onConflict: 'swimmer_id,month,year' });
-                
+                    .upsert(rows, { onConflict: 'swimmer_id,month,year' });
                 if (olyError) throw olyError;
-                
-                // Osveži znesek vadnine (uporabi default ali obstoječo vrednost)
-                await refreshSwimmerFees();
-                // Osveži finance summary, če se sprememba nanaša na isti mesec/leto kot prikazan finance summary
-                if (currentSection === 'finance' && currentFinanceMonth === month && currentFinanceYear === year) {
-                    calculateFinanceData();
-                }
-                return;
             }
-            
-            // Osveži prikaz
-            // Osveži finance summary, če se sprememba nanaša na isti mesec/leto kot prikazan finance summary
-            if (currentSection === 'finance' && currentFinanceMonth === month && currentFinanceYear === year) {
+
+            if (targets.length > 1) {
+                showMessage(
+                    isOly
+                        ? `OLY vklopljen od ${formatBillingMonthLabel({ month, year })} do konca sezone.`
+                        : `OLY izklopljen od ${formatBillingMonthLabel({ month, year })} do konca sezone.`,
+                    'info'
+                );
+            }
+
+            if (currentSection === 'finance') {
                 calculateFinanceData();
             }
             refreshSwimmerFees();
-            
         } catch (error) {
             console.error('Napaka pri posodobitvi OLY statusa:', error);
             showMessage('Napaka pri posodobitvi OLY statusa!', 'error');
-            // Osveži, da se checkbox vrne na prejšnje stanje
             refreshSwimmerFees();
         }
     }
