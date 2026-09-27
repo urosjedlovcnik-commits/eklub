@@ -1291,6 +1291,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     let swimmerFeesPlanFilter = sessionStorage.getItem('eklub_fees_plan_filter') || '';
+    let swimmerFeesOlyFilter = sessionStorage.getItem('eklub_fees_oly_filter') || '';
     let accountingPlanFilter = sessionStorage.getItem('eklub_accounting_plan_filter') || '';
 
     /** Ali mesec/leto spada v koledarsko obdobje sezone */
@@ -10261,32 +10262,41 @@ document.addEventListener('DOMContentLoaded', async () => {
                 getSwimmerPaymentPlan(s.id, seasonId) === swimmerFeesPlanFilter
             );
         }
+        if (swimmerFeesOlyFilter === 'oly') {
+            sortedSwimmers = sortedSwimmers.filter(s => swimmerFees[s.id]?.is_oly === true);
+        } else if (swimmerFeesOlyFilter === 'non_oly') {
+            sortedSwimmers = sortedSwimmers.filter(s => swimmerFees[s.id]?.is_oly !== true);
+        }
+
+        const planFilterOptsHtml = [
+            ['', 'Vsi načini'],
+            ['monthly', 'Mesečno'],
+            ['two_installments', '2× letno'],
+            ['lump_sum', 'Enkrat letno']
+        ].map(([v, l]) => `<option value="${v}"${swimmerFeesPlanFilter === v ? ' selected' : ''}>${l}</option>`).join('');
+        const olyFilterOptsHtml = [
+            ['', 'Vsi'],
+            ['oly', 'Samo OLY'],
+            ['non_oly', 'Brez OLY']
+        ].map(([v, l]) => `<option value="${v}"${swimmerFeesOlyFilter === v ? ' selected' : ''}>${l}</option>`).join('');
+        const feesFilterBarHtml = `<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:12px">
+            <label style="font-size:14px;display:flex;align-items:center;gap:6px">Način plačila:
+              <select id="swimmerFeesPlanFilter" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border)">${planFilterOptsHtml}</select>
+            </label>
+            <label style="font-size:14px;display:flex;align-items:center;gap:6px">OLY:
+              <select id="swimmerFeesOlyFilter" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border)">${olyFilterOptsHtml}</select>
+            </label>`;
 
         if (sortedSwimmers.length === 0) {
-            const planFilterOptsEmpty = [
-                ['', 'Vsi načini'],
-                ['monthly', 'Mesečno'],
-                ['two_installments', '2× letno'],
-                ['lump_sum', 'Enkrat letno']
-            ].map(([v, l]) => `<option value="${v}"${swimmerFeesPlanFilter === v ? ' selected' : ''}>${l}</option>`).join('');
-            elSwimmerFeesBox.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:12px">
-                <label style="font-size:14px;display:flex;align-items:center;gap:6px">Način plačila:
-                  <select id="swimmerFeesPlanFilter" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border)">${planFilterOptsEmpty}</select>
-                </label>
-              </div>
-              <p class="muted">Ni plavalcev z dodeljenimi termini v sezoni <strong>${escapeHtml(seasonName) || '—'}</strong>${swimmerFeesPlanFilter ? ' za izbran način plačila' : ''}. Dodelite termine v zavihku Plavalci.</p>`;
-            document.getElementById('swimmerFeesPlanFilter')?.addEventListener('change', e => {
-                swimmerFeesPlanFilter = e.target.value || '';
-                sessionStorage.setItem('eklub_fees_plan_filter', swimmerFeesPlanFilter);
-                refreshSwimmerFees();
-            });
+            elSwimmerFeesBox.innerHTML = `${feesFilterBarHtml}</div>
+              <p class="muted">Ni plavalcev z dodeljenimi termini v sezoni <strong>${escapeHtml(seasonName) || '—'}</strong>${swimmerFeesPlanFilter || swimmerFeesOlyFilter ? ' za izbran filter' : ''}. Dodelite termine v zavihku Plavalci.</p>`;
+            bindSwimmerFeesFilters();
             return;
         }
 
         let olyCount = 0;
-        sortedSwimmers.forEach(swimmer => {
-            const feeData = swimmerFees[swimmer.id];
-            if (feeData && feeData.is_oly) olyCount++;
+        swimmers.filter(s => !s.is_deleted && entityHasTermsInAdminSeason(s)).forEach(swimmer => {
+            if (swimmerFees[swimmer.id]?.is_oly) olyCount++;
         });
 
         const requestedDate = new Date(year, month - 1, 1);
@@ -10296,17 +10306,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const isPastMonth = requestedDate < currentDate;
         const monthLabel = new Date(year, month - 1, 1).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
 
-        const planFilterOpts = [
-            ['', 'Vsi načini'],
-            ['monthly', 'Mesečno'],
-            ['two_installments', '2× letno'],
-            ['lump_sum', 'Enkrat letno']
-        ].map(([v, l]) => `<option value="${v}"${swimmerFeesPlanFilter === v ? ' selected' : ''}>${l}</option>`).join('');
-
-        let html = `<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:12px">
-            <label style="font-size:14px;display:flex;align-items:center;gap:6px">Način plačila:
-              <select id="swimmerFeesPlanFilter" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border)">${planFilterOpts}</select>
-            </label>
+        let html = `${feesFilterBarHtml}
             <label style="font-size:14px;display:flex;align-items:center;gap:6px" title="Samo mesečni plačniki — za delni mesec (npr. od 15. do konca)">Faktor (mesečni):
               <select id="swimmerFeesMonthFactor" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border)">
                 <option value="1">1 (polna)</option>
@@ -10451,11 +10451,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             </div>
         `;
         elSwimmerFeesBox.innerHTML = html;
-        document.getElementById('swimmerFeesPlanFilter')?.addEventListener('change', e => {
-            swimmerFeesPlanFilter = e.target.value || '';
-            sessionStorage.setItem('eklub_fees_plan_filter', swimmerFeesPlanFilter);
-            refreshSwimmerFees();
-        });
+        bindSwimmerFeesFilters();
         const factorSel = document.getElementById('swimmerFeesMonthFactor');
         const factorCustom = document.getElementById('swimmerFeesMonthFactorCustom');
         factorSel?.addEventListener('change', () => {
@@ -10487,6 +10483,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 showMessage('Ni članarin za prestaviti na 1. obračunski mesec.', 'info');
             }
+        });
+    }
+
+    function bindSwimmerFeesFilters() {
+        document.getElementById('swimmerFeesPlanFilter')?.addEventListener('change', e => {
+            swimmerFeesPlanFilter = e.target.value || '';
+            sessionStorage.setItem('eklub_fees_plan_filter', swimmerFeesPlanFilter);
+            refreshSwimmerFees();
+        });
+        document.getElementById('swimmerFeesOlyFilter')?.addEventListener('change', e => {
+            swimmerFeesOlyFilter = e.target.value || '';
+            sessionStorage.setItem('eklub_fees_oly_filter', swimmerFeesOlyFilter);
+            refreshSwimmerFees();
         });
     }
 
