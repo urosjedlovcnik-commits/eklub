@@ -11293,18 +11293,47 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     }
 
+    /** Plavalci z vsaj eno prisotnostjo (status true) v mesecu */
+    function getSwimmersWhoAttendedInMonth(month, year) {
+        const ids = new Set();
+        const start = new Date(year, month - 1, 1);
+        const end = new Date(year, month, 0);
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            const dayAtt = attendance[iso(d)];
+            if (!dayAtt) continue;
+            Object.values(dayAtt).forEach(termAtt => {
+                Object.entries(termAtt || {}).forEach(([swimmerId, status]) => {
+                    if (status === true || status === 'true' || status === 1) ids.add(swimmerId);
+                });
+            });
+        }
+        return ids;
+    }
+
     async function downloadAccountingReportPdf() {
-        const btn = document.getElementById('printAccountingReportBtn');
+        const btns = [
+            document.getElementById('printAccountingReportBtn'),
+            document.getElementById('financeOverviewPdfBtn'),
+            document.getElementById('financeTocPdfBtn')
+        ].filter(Boolean);
         if (typeof pdfMake === 'undefined') {
             showMessage('PDF knjižnica ni naložena. Osvežite stran (Ctrl+F5).', 'error');
             return;
         }
-        if (btn) {
+        btns.forEach(btn => {
             btn.disabled = true;
-            btn.textContent = 'Pripravljam PDF …';
-        }
+            if (btn.id === 'printAccountingReportBtn' || btn.id === 'financeOverviewPdfBtn' || btn.id === 'financeTocPdfBtn') {
+                btn.dataset.prevLabel = btn.textContent;
+                btn.textContent = 'Pripravljam PDF …';
+            }
+        });
         try {
             const { month, year, rows: allRows } = await getAccountingReportExportRows();
+            const monthStart = iso(new Date(year, month - 1, 1));
+            const monthEnd = iso(new Date(year, month, 0));
+            await loadAttendanceForDateRange(monthStart, monthEnd);
+            const attendedIds = getSwimmersWhoAttendedInMonth(month, year);
+
             const rows = filterAccountingRowsForExport(allRows, month, year);
             if (!rows.length) {
                 showMessage('Ni podatkov za PDF (vsi plavalci imajo 0 €).', 'warning');
@@ -11314,9 +11343,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             const monthLabel = new Date(year, month - 1, 1).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
             const fileSlug = `${String(month).padStart(2, '0')}_${year}`;
             const hasAnyMembership = accountingReportHasAnyMembership(rows, month, year);
+            const attendedInPdf = rows.filter(r => attendedIds.has(r.swimmer.id)).length;
             const headerRow = [
                 { text: 'Št.', style: 'tableHeader', alignment: 'center' },
                 { text: 'Ime priimek', style: 'tableHeader' },
+                { text: 'Obisk', style: 'tableHeader', alignment: 'center' },
                 { text: 'Mail', style: 'tableHeader' },
                 { text: 'Naslov', style: 'tableHeader' },
                 { text: 'Pošta', style: 'tableHeader' },
@@ -11341,11 +11372,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 rowIndex++;
                 const s = row.swimmer;
+                const didAttend = attendedIds.has(s.id);
                 const membershipAmount = rowIncludesMembership(row, month, year) ? getMembershipFeeAmount() : 0;
                 const total = getAccountingRowTotal(row, month, year);
-                tableBody.push([
+                const nameCell = {
+                    text: swimmerDisplayName(s),
+                    noWrap: true,
+                    fontSize: 7.5,
+                    bold: didAttend
+                };
+                const attendCell = {
+                    text: didAttend ? '✓' : '—',
+                    alignment: 'center',
+                    fontSize: 9,
+                    bold: didAttend,
+                    color: didAttend ? '#166534' : '#94a3b8'
+                };
+                const rowFill = didAttend ? '#dcfce7' : undefined;
+                const cells = [
                     accountingPdfCell(String(rowIndex), 'center'),
-                    accountingPdfCell(swimmerDisplayName(s)),
+                    nameCell,
+                    attendCell,
                     accountingPdfCell(s.email || ''),
                     accountingPdfCell(s.address || ''),
                     accountingPdfCell(s.postal_code || ''),
@@ -11354,9 +11401,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     accountingPdfCell(formatAccountingFeeAmount(row.netFee), 'right'),
                     accountingPdfCell(membershipAmount ? formatAccountingFeeAmount(membershipAmount) : '—', 'right'),
                     accountingPdfCell(formatAccountingFeeAmount(total), 'right')
-                ]);
+                ];
+                if (rowFill) cells.forEach(c => { c.fillColor = rowFill; });
+                tableBody.push(cells);
             });
-            const colWidths = ['3.5%', '12%', '18%', '22%', '10%', '7%', '7%', '7.5%', '6%', '7%'];
+            const colWidths = ['3%', '12%', '5%', '16%', '20%', '9%', '7%', '6%', '7%', '6%', '9%'];
             const docDefinition = {
                 pageSize: 'A4',
                 pageOrientation: 'landscape',
@@ -11366,6 +11415,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     {
                         text: `Razpored PKL – vadnine (${monthLabel})${hasAnyMembership ? ' + članarina' : ''}`,
                         fontSize: 11,
+                        margin: [0, 0, 0, 4]
+                    },
+                    {
+                        text: `Zeleno / ✓ = plavalec je v tem mesecu že obiskoval vadbo (vsaj 1× prisoten). Označenih: ${attendedInPdf} / ${rows.length}.`,
+                        fontSize: 8,
+                        color: '#166534',
                         margin: [0, 0, 0, 10]
                     },
                     {
@@ -11397,16 +11452,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
             pdfMake.createPdf(docDefinition).download(`Razpored_PKL_vadnine_${fileSlug}.pdf`);
             showMessage(skipped > 0
-                ? `PDF je prenesen (izpuščenih ${skipped} plavalcev z 0 €).`
-                : 'PDF je prenesen.', 'success');
+                ? `PDF je prenesen (${attendedInPdf} z obiskom; izpuščenih ${skipped} z 0 €).`
+                : `PDF je prenesen (${attendedInPdf} plavalcev z obiskom v mesecu).`, 'success');
         } catch (e) {
             console.error('PDF poročilo:', e);
             showMessage('Napaka pri ustvarjanju PDF: ' + (e.message || e), 'error');
         } finally {
-            if (btn) {
+            btns.forEach(btn => {
                 btn.disabled = false;
-                btn.textContent = 'Prenesi PDF';
-            }
+                btn.textContent = btn.dataset.prevLabel || 'Prenesi PDF';
+            });
         }
     }
 
