@@ -10983,9 +10983,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         return (rows || accountingReportWorkingOrder).some(r => rowIncludesMembership(r, month, year));
     }
 
-    /** Vrstice za PDF: brez plavalcev, ki nimajo česa obračunati */
+    /** Vrstice za PDF: brez plavalcev z vadnino 0 € (tudi če imajo članarino) */
     function filterAccountingRowsForExport(rows, month, year) {
-        return (rows || []).filter(r => getAccountingRowTotal(r, month, year) > 0);
+        return (rows || []).filter(r => (Number(r.netFee) || 0) > 0);
     }
 
     function groupAndSortAccountingRows(feeRows, orderedIds, seasonId) {
@@ -11293,23 +11293,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     }
 
-    /** Plavalci z vsaj eno prisotnostjo (status true) v mesecu */
-    function getSwimmersWhoAttendedInMonth(month, year) {
-        const ids = new Set();
-        const start = new Date(year, month - 1, 1);
-        const end = new Date(year, month, 0);
-        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-            const dayAtt = attendance[iso(d)];
-            if (!dayAtt) continue;
-            Object.values(dayAtt).forEach(termAtt => {
-                Object.entries(termAtt || {}).forEach(([swimmerId, status]) => {
-                    if (status === true || status === 'true' || status === 1) ids.add(swimmerId);
-                });
-            });
-        }
-        return ids;
-    }
-
     async function downloadAccountingReportPdf() {
         const btns = [
             document.getElementById('printAccountingReportBtn'),
@@ -11322,32 +11305,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         btns.forEach(btn => {
             btn.disabled = true;
-            if (btn.id === 'printAccountingReportBtn' || btn.id === 'financeOverviewPdfBtn' || btn.id === 'financeTocPdfBtn') {
-                btn.dataset.prevLabel = btn.textContent;
-                btn.textContent = 'Pripravljam PDF …';
-            }
+            btn.dataset.prevLabel = btn.textContent;
+            btn.textContent = 'Pripravljam PDF …';
         });
         try {
             const { month, year, rows: allRows } = await getAccountingReportExportRows();
-            const monthStart = iso(new Date(year, month - 1, 1));
-            const monthEnd = iso(new Date(year, month, 0));
-            await loadAttendanceForDateRange(monthStart, monthEnd);
-            const attendedIds = getSwimmersWhoAttendedInMonth(month, year);
-
+            const seasonId = getAdminSeasonFilterId();
+            // Samo plavalci z vadnino > 0 (OLY / 0 € niso v PDF)
             const rows = filterAccountingRowsForExport(allRows, month, year);
             if (!rows.length) {
-                showMessage('Ni podatkov za PDF (vsi plavalci imajo 0 €).', 'warning');
+                showMessage('Ni podatkov za PDF (vsi plavalci imajo vadnino 0 €).', 'warning');
                 return;
             }
             const skipped = allRows.length - rows.length;
             const monthLabel = new Date(year, month - 1, 1).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
             const fileSlug = `${String(month).padStart(2, '0')}_${year}`;
             const hasAnyMembership = accountingReportHasAnyMembership(rows, month, year);
-            const attendedInPdf = rows.filter(r => attendedIds.has(r.swimmer.id)).length;
+            const returningInPdf = rows.filter(r => isReturningSwimmer(r.swimmer, seasonId)).length;
             const headerRow = [
                 { text: 'Št.', style: 'tableHeader', alignment: 'center' },
                 { text: 'Ime priimek', style: 'tableHeader' },
-                { text: 'Obisk', style: 'tableHeader', alignment: 'center' },
+                { text: 'Ponov.', style: 'tableHeader', alignment: 'center' },
                 { text: 'Mail', style: 'tableHeader' },
                 { text: 'Naslov', style: 'tableHeader' },
                 { text: 'Pošta', style: 'tableHeader' },
@@ -11372,27 +11350,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 rowIndex++;
                 const s = row.swimmer;
-                const didAttend = attendedIds.has(s.id);
+                const returning = isReturningSwimmer(s, seasonId);
                 const membershipAmount = rowIncludesMembership(row, month, year) ? getMembershipFeeAmount() : 0;
                 const total = getAccountingRowTotal(row, month, year);
                 const nameCell = {
                     text: swimmerDisplayName(s),
                     noWrap: true,
                     fontSize: 7.5,
-                    bold: didAttend
+                    bold: returning
                 };
-                const attendCell = {
-                    text: didAttend ? '✓' : '—',
+                const returningCell = {
+                    text: returning ? '✓' : '—',
                     alignment: 'center',
                     fontSize: 9,
-                    bold: didAttend,
-                    color: didAttend ? '#166534' : '#94a3b8'
+                    bold: returning,
+                    color: returning ? '#1e40af' : '#94a3b8'
                 };
-                const rowFill = didAttend ? '#dcfce7' : undefined;
+                const rowFill = returning ? '#dbeafe' : undefined;
                 const cells = [
                     accountingPdfCell(String(rowIndex), 'center'),
                     nameCell,
-                    attendCell,
+                    returningCell,
                     accountingPdfCell(s.email || ''),
                     accountingPdfCell(s.address || ''),
                     accountingPdfCell(s.postal_code || ''),
@@ -11418,9 +11396,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         margin: [0, 0, 0, 4]
                     },
                     {
-                        text: `Zeleno / ✓ = plavalec je v tem mesecu že obiskoval vadbo (vsaj 1× prisoten). Označenih: ${attendedInPdf} / ${rows.length}.`,
+                        text: `Modro / ✓ (Ponov.) = ponavljajoči plavalec (že v prejšnji sezoni). Označenih: ${returningInPdf} / ${rows.length}. Plavalci z vadnino 0 € niso v seznamu.`,
                         fontSize: 8,
-                        color: '#166534',
+                        color: '#1e40af',
                         margin: [0, 0, 0, 10]
                     },
                     {
@@ -11452,8 +11430,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
             pdfMake.createPdf(docDefinition).download(`Razpored_PKL_vadnine_${fileSlug}.pdf`);
             showMessage(skipped > 0
-                ? `PDF je prenesen (${attendedInPdf} z obiskom; izpuščenih ${skipped} z 0 €).`
-                : `PDF je prenesen (${attendedInPdf} plavalcev z obiskom v mesecu).`, 'success');
+                ? `PDF je prenesen (${returningInPdf} ponavljajočih; izpuščenih ${skipped} z vadnino 0 €).`
+                : `PDF je prenesen (${returningInPdf} ponavljajočih plavalcev).`, 'success');
         } catch (e) {
             console.error('PDF poročilo:', e);
             showMessage('Napaka pri ustvarjanju PDF: ' + (e.message || e), 'error');
