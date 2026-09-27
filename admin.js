@@ -10769,32 +10769,94 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Funkcija za pridobivanje postavk trenerjev iz baze
+    /** Vsi meseci sezone (vključno začetni in končni) */
+    function getMonthsInSeason(season) {
+        if (!season?.date_from || !season?.date_to) return [];
+        const out = [];
+        let y = parseInt(season.date_from.slice(0, 4), 10);
+        let m = parseInt(season.date_from.slice(5, 7), 10);
+        const endY = parseInt(season.date_to.slice(0, 4), 10);
+        const endM = parseInt(season.date_to.slice(5, 7), 10);
+        if (!y || !m || !endY || !endM) return [];
+        while (y < endY || (y === endY && m <= endM)) {
+            out.push({ month: m, year: y });
+            m += 1;
+            if (m > 12) {
+                m = 1;
+                y += 1;
+            }
+            if (out.length > 36) break;
+        }
+        return out;
+    }
+
+    function resolveSeasonForTrainerRates(month, year) {
+        const seasonId = getAdminSeasonFilterId();
+        if (seasonId) {
+            const fromFilter = seasons.find(s => s.id === seasonId);
+            if (fromFilter) return fromFilter;
+        }
+        return getSeasonForMonthYear(month, year);
+    }
+
     async function getTrainerRatesFromDB(month = null, year = null) {
         try {
-            // Uporabi trenutni mesec in leto, če nista podana
             const targetMonth = month || currentTrainerRatesMonth;
             const targetYear = year || currentTrainerRatesYear;
-            
-// console.log('🔍 Nalagam urne postavke trenerjev iz baze za mesec', targetMonth, 'in leto', targetYear);
+
             const { data, error } = await supabase
                 .from('trainer_rates')
                 .select('*')
                 .eq('month', targetMonth)
                 .eq('year', targetYear);
-            
+
             if (error) {
                 console.error('❌ Napaka pri nalaganju urnih postavk trenerjev:', error);
                 throw error;
             }
-            
-// console.log('✅ Naloženih urnih postavk trenerjev:', data.length, data);
-            
-            // Pretvori v obliko, ki jo pričakuje aplikacija
+
             const trainerRates = {};
-            data.forEach(item => {
+            (data || []).forEach(item => {
                 trainerRates[item.trainer_id] = item.rate_per_session;
             });
-            
+
+            // Če za mesec ni zapisov: uporabi zadnje znane postavke v sezoni (veljajo do zamenjave)
+            if (Object.keys(trainerRates).length === 0) {
+                const season = resolveSeasonForTrainerRates(targetMonth, targetYear);
+                const months = getMonthsInSeason(season);
+                if (months.length) {
+                    const { data: seasonData, error: seasonErr } = await supabase
+                        .from('trainer_rates')
+                        .select('*')
+                        .in('year', [...new Set(months.map(x => x.year))]);
+                    if (!seasonErr && seasonData?.length) {
+                        const monthSet = new Set(months.map(x => `${x.year}-${x.month}`));
+                        const targetVal = yearMonthValue(targetYear, targetMonth);
+                        const byTrainer = {};
+                        seasonData.forEach(row => {
+                            if (!monthSet.has(`${row.year}-${row.month}`)) return;
+                            const val = yearMonthValue(row.year, row.month);
+                            const prev = byTrainer[row.trainer_id];
+                            // Preferiraj zadnji mesec ≤ ciljni; sicer katerikoli v sezoni (npr. prihodnji, če je bil shranjen za celo sezono)
+                            if (!prev) {
+                                byTrainer[row.trainer_id] = { val, rate: row.rate_per_session };
+                                return;
+                            }
+                            const prevOk = prev.val <= targetVal;
+                            const curOk = val <= targetVal;
+                            if (curOk && (!prevOk || val >= prev.val)) {
+                                byTrainer[row.trainer_id] = { val, rate: row.rate_per_session };
+                            } else if (!prevOk && !curOk && val <= prev.val) {
+                                byTrainer[row.trainer_id] = { val, rate: row.rate_per_session };
+                            }
+                        });
+                        Object.entries(byTrainer).forEach(([id, info]) => {
+                            trainerRates[id] = info.rate;
+                        });
+                    }
+                }
+            }
+
             return trainerRates;
         } catch (error) {
             console.error('Napaka pri pridobivanju postavk trenerjev:', error);
@@ -10802,26 +10864,41 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // Funkcija za shranjevanje postavk trenerjev v bazo
+    // Funkcija za shranjevanje postavk trenerjev v bazo (za vse mesece sezone)
     async function saveTrainerRatesToDB(trainerRates, month = null, year = null) {
         try {
-            // Uporabi trenutni mesec in leto, če nista podana
             const targetMonth = month || currentTrainerRatesMonth;
             const targetYear = year || currentTrainerRatesYear;
-            
-            const updates = Object.entries(trainerRates).map(([trainerId, rate]) => ({
-                trainer_id: trainerId,
-                rate_per_session: parseFloat(rate),
-                month: targetMonth,
-                year: targetYear
-            }));
+            const season = resolveSeasonForTrainerRates(targetMonth, targetYear);
+            const months = getMonthsInSeason(season);
+            const targets = months.length
+                ? months
+                : [{ month: targetMonth, year: targetYear }];
 
-            const { error } = await supabase
-                .from('trainer_rates')
-                .upsert(updates, { onConflict: 'trainer_id,month,year' });
+            const updates = [];
+            targets.forEach(({ month: m, year: y }) => {
+                Object.entries(trainerRates).forEach(([trainerId, rate]) => {
+                    updates.push({
+                        trainer_id: trainerId,
+                        rate_per_session: parseFloat(rate),
+                        month: m,
+                        year: y
+                    });
+                });
+            });
 
-            if (error) throw error;
-            
+            if (!updates.length) return true;
+
+            // Upsert v kosih (Supabase / payload limiti)
+            const chunkSize = 200;
+            for (let i = 0; i < updates.length; i += chunkSize) {
+                const chunk = updates.slice(i, i + chunkSize);
+                const { error } = await supabase
+                    .from('trainer_rates')
+                    .upsert(chunk, { onConflict: 'trainer_id,month,year' });
+                if (error) throw error;
+            }
+
             return true;
         } catch (error) {
             console.error('Napaka pri shranjevanju postavk trenerjev:', error);
@@ -11131,16 +11208,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Posodobljena funkcija za renderiranje nastavitev urnih postavk
     async function renderTrainerRatesSettings() {
         if (!elTrainerRatesSettings) return;
-        
-        // Avtomatično kopiraj postavke iz prejšnjega meseca, če za trenutni mesec še ne obstajajo
-        await copyPreviousMonthTrainerRates(currentTrainerRatesMonth, currentTrainerRatesYear);
-        
+
         const trainerRates = await getTrainerRatesFromDB(currentTrainerRatesMonth, currentTrainerRatesYear);
         const seasonId = getAdminSeasonFilterId();
-        const seasonName = getSeasonNameById(seasonId) || 'izbrana sezona';
+        const season = seasons.find(s => s.id === seasonId) || resolveSeasonForTrainerRates(currentTrainerRatesMonth, currentTrainerRatesYear);
+        const seasonName = season?.name || getSeasonNameById(seasonId) || 'izbrana sezona';
         const monthLabel = new Date(currentTrainerRatesYear, currentTrainerRatesMonth - 1, 1)
             .toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
-        
+
         // Sortiraj trenerje po priimku (in nato po imenu, če so priimki enaki)
         const sortedTrainers = [...trainers]
             .filter(trainer => !trainer.is_deleted)
@@ -11151,8 +11226,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 return (a.first_name || '').localeCompare(b.first_name || '', 'sl');
             });
-        
-        let html = `<p class="muted" style="font-size:13px;margin-bottom:12px">Sezona: <strong>${escapeHtml(seasonName)}</strong> · ${monthLabel} · prikazani so samo termini, ki v tem mesecu dejansko tečejo.</p>`;
+
+        let html = `<p class="muted" style="font-size:13px;margin-bottom:12px">Sezona: <strong>${escapeHtml(seasonName)}</strong> · ${monthLabel}<br>
+            <span style="font-size:12px">Postavke veljajo za <strong>celo sezono</strong> (dokler jih ne spremenite). Ob shrambi se zapišejo v vse mesece sezone.</span></p>`;
         html += '<div class="trainer-rates-list" style="display: flex; flex-direction: column; gap: 12px;">';
         
         for (const trainer of sortedTrainers) {
@@ -11245,7 +11321,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const success = await saveTrainerRatesToDB(trainerRates);
         
         if (success) {
-            showMessage('Urne postavke so bile uspešno shranjene!', 'success');
+            const season = resolveSeasonForTrainerRates(currentTrainerRatesMonth, currentTrainerRatesYear);
+            const seasonLabel = season?.name ? ` za sezono «${season.name}»` : '';
+            showMessage(`Urne postavke so shranjene${seasonLabel} (vsi meseci).`, 'success');
             if (currentSection === 'finance') {
                 calculateFinanceData();
             }
@@ -11300,11 +11378,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Funkcija za posodobitev urni postavki posameznega trenerja
     async function updateTrainerRate(trainerId, rate) {
         const trainerRates = await getTrainerRatesFromDB(currentTrainerRatesMonth, currentTrainerRatesYear);
+        // Vključi tudi vrednosti iz obrazca (ostali trenerji), da se celotna sezona uskladi
+        trainers.forEach(t => {
+            if (t.is_deleted) return;
+            const input = document.getElementById(`trainer-rate-${t.id}`);
+            if (input) trainerRates[t.id] = parseFloat(input.value) || 25;
+        });
         trainerRates[trainerId] = parseFloat(rate);
-        
+
         const success = await saveTrainerRatesToDB(trainerRates, currentTrainerRatesMonth, currentTrainerRatesYear);
-        if (success && currentSection === 'finance') {
-            calculateFinanceData();
+        if (success) {
+            if (typeof renderTrainerRatesSettings === 'function') await renderTrainerRatesSettings();
+            if (currentSection === 'finance') calculateFinanceData();
         }
     }
 

@@ -1435,6 +1435,9 @@
         <div class="card" id="finance-trainer-rates">
           <h3>Nastavitve postavk trenerjev (na termin)</h3>
           <div class="inner">
+            <p class="muted" style="font-size:13px;margin-bottom:12px">
+              Postavke veljajo za <strong>celo izbrano sezono</strong>. Enkrat jih nastavite — veljajo v vseh mesecih, dokler jih ne spremenite.
+            </p>
             <div class="summary-controls finance-sub-month-nav" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
               <button class="btn" id="prevTrainerRatesMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Prejšnji mesec">←</button>
               <div style="text-align: center; min-width: 200px; cursor: pointer; padding: 10px; border-radius: 8px; transition: background-color 0.2s;" id="trainerRatesMonthYearContainer" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
@@ -1448,7 +1451,7 @@
             <div id="trainerRatesSettings">
               <p class="muted">Nalaganje trenerjev...</p>
             </div>
-            <button class="btn pri" id="saveTrainerRatesBtn">Shrani postavke trenerjev</button>
+            <button class="btn pri" id="saveTrainerRatesBtn">Shrani postavke za celo sezono</button>
           </div>
         </div>
 
