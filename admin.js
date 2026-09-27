@@ -10755,9 +10755,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function sortSwimmersAlpha(list) {
-        return [...list].sort((a, b) =>
-            swimmerDisplayName(a.swimmer).localeCompare(swimmerDisplayName(b.swimmer), 'sl')
-        );
+        return [...list].sort((a, b) => {
+            const aLast = (a.swimmer?.last_name || '').trim();
+            const bLast = (b.swimmer?.last_name || '').trim();
+            const byLast = aLast.localeCompare(bLast, 'sl');
+            if (byLast !== 0) return byLast;
+            return (a.swimmer?.first_name || '').localeCompare(b.swimmer?.first_name || '', 'sl');
+        });
     }
 
     /** Znotraj skupine: najprej vračajoči (že v prejšnjih sezonah), nato novinci — ohrani relativni vrstni red znotraj vsake podskupine */
@@ -10835,7 +10839,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         ];
         const season = getAccountingReportSeason(currentAccountingReportMonth, currentAccountingReportYear);
         renderAccountingReportEditorTable(accountingReportWorkingOrder, season);
-        showMessage('Vrstni red: vračajoči zgoraj, nato po abecedi znotraj skupin (shrani gumb, če želite obdržati).', 'info');
+        showMessage('Vrstni red: vračajoči zgoraj, nato abecedno po priimkih znotraj skupin (shrani gumb, če želite obdržati).', 'info');
     }
 
     function updateAccountingReportSummary(rows, month, year) {
