@@ -702,6 +702,11 @@ input[type="text"], input[type="date"], input[type="time"], select, textarea{pad
   position: sticky;
   top: 8px;
   z-index: 20;
+  align-items: center;
+}
+
+.finance-toc .btn.ok {
+  white-space: nowrap;
 }
 
 .finance-toc a {

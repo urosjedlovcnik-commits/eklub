@@ -7025,6 +7025,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('saveAccountingReportOrderBtn')?.addEventListener('click', () => saveAccountingReportOrder());
     document.getElementById('sortAccountingReportAlphaBtn')?.addEventListener('click', () => sortAccountingReportAlphabetically());
     document.getElementById('printAccountingReportBtn')?.addEventListener('click', () => downloadAccountingReportPdf());
+    document.getElementById('financeOverviewPdfBtn')?.addEventListener('click', () => downloadAccountingReportPdf());
+    document.getElementById('financeTocPdfBtn')?.addEventListener('click', () => downloadAccountingReportPdf());
+
+    // Finance TOC: ohrani #finance?m=&y= in samo pomakni do kartice (ne zlomi hash)
+    document.querySelector('.finance-toc')?.addEventListener('click', e => {
+        const a = e.target.closest('a[data-finance-scroll]');
+        if (!a) return;
+        e.preventDefault();
+        const targetId = a.getAttribute('data-finance-scroll');
+        if (currentSection !== 'finance') showAdminSection('finance', { updateHash: true });
+        else setAdminSectionHash('finance');
+        setTimeout(() => {
+            document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 60);
+    });
     document.getElementById('accountingIncludeMembershipFee')?.addEventListener('change', async (e) => {
         await applyGlobalMembershipFeeToReport(e.target.checked === true);
     });

@@ -1364,12 +1364,13 @@
   <div class="admin-section" id="finance-section">
     <p class="admin-tab-season-context" data-season-context></p>
     <nav class="finance-toc" aria-label="Finance navigacija">
-      <a href="#finance-overview">Pregled</a>
-      <a href="#finance-prices">Cenik</a>
-      <a href="#finance-trainer-rates">Trenerji</a>
-      <a href="#finance-copy-fees">Kopiranje</a>
-      <a href="#finance-swimmer-fees">Vadnine</a>
-      <a href="#finance-accounting">Računovodstvo</a>
+      <a href="#finance-overview" data-finance-scroll="finance-overview">Pregled</a>
+      <a href="#finance-prices" data-finance-scroll="finance-prices">Cenik</a>
+      <a href="#finance-trainer-rates" data-finance-scroll="finance-trainer-rates">Trenerji</a>
+      <a href="#finance-copy-fees" data-finance-scroll="finance-copy-fees">Kopiranje</a>
+      <a href="#finance-swimmer-fees" data-finance-scroll="finance-swimmer-fees">Vadnine</a>
+      <a href="#finance-accounting" data-finance-scroll="finance-accounting">Računovodstvo / PDF</a>
+      <button type="button" class="btn ok" id="financeTocPdfBtn" style="margin-left:auto;font-weight:700">Prenesi PDF</button>
     </nav>
     <div class="grid">
       <!-- Glavni del strani (leva stran) -->
@@ -1378,7 +1379,7 @@
           <h3>Mesečna vadnina - Pregled stroškov</h3>
           <div class="inner">
             <p class="muted" style="font-size:13px;margin-bottom:12px">En mesec velja za celoten zavihek Finance (vadnine, trenerji, računovodstvo …).</p>
-            <div class="summary-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+            <div class="summary-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
               <button class="btn month-nav-arrow" id="prevMonthBtn" title="Prejšnji mesec">←</button>
               <div class="month-nav-label" id="monthYearContainer" title="Klikni za izbiro meseca">
                 <div class="month-nav-value" id="currentMonthYear"></div>
@@ -1387,6 +1388,7 @@
               <button class="btn month-nav-arrow" id="nextMonthBtn" title="Naslednji mesec">→</button>
               <button class="btn month-nav-today" id="currentMonthBtn" title="Pojdi na trenutni mesec">Trenutni mesec</button>
               <input type="month" id="monthYearInput" style="display: none;">
+              <button type="button" class="btn ok" id="financeOverviewPdfBtn" title="Prenesi PDF poročila za računovodstvo za ta mesec" style="font-weight:700">Prenesi PDF</button>
             </div>
             <div id="financeMonthSummary"></div>
             <div id="financeSummaryBox">Nalaganje podatkov...</div>
@@ -1556,7 +1558,7 @@
                 <input type="checkbox" id="accountingIncludeMembershipFee" style="width:18px;height:18px;cursor:pointer">
                 Obračunaj članarino vsem (1. obračun)
               </label>
-              <button type="button" class="btn ok" id="printAccountingReportBtn">Prenesi PDF</button>
+              <button type="button" class="btn ok" id="printAccountingReportBtn" style="font-weight:700;padding:10px 16px;font-size:15px">Prenesi PDF</button>
               <button type="button" class="btn pri" id="saveAccountingReportOrderBtn">Shrani vrstni red</button>
               <button type="button" class="btn" id="sortAccountingReportAlphaBtn">Po priimkih</button>
             </div>
