@@ -1377,12 +1377,84 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         const ok = await upsertSwimmerSeasonBilling(swimmerId, sid, { payment_plan: paymentPlan });
         if (ok) {
+            const applied = await applyDefaultFeesForPaymentPlan(swimmerId, sid, paymentPlan);
             updateSwimmersList();
             refreshSwimmerFees();
             if (typeof refreshAccountingReportEditor === 'function') refreshAccountingReportEditor();
             if (typeof calculateFinanceData === 'function') calculateFinanceData();
+            if (applied?.fee != null) {
+                const monthsHint = applied.monthsLabel ? ` (${applied.monthsLabel})` : '';
+                showMessage(`${PAYMENT_PLAN_LABELS[paymentPlan]}: znesek ${applied.fee} €${monthsHint}.`, 'success');
+            }
         }
         return ok;
+    }
+
+    /**
+     * Ob menjavi načina plačila shrani privzeti znesek v ustrezne mesece obračuna
+     * (mesečno → odprt mesec; enkratno → oktober; 2 obroka → oktober + februar).
+     */
+    async function applyDefaultFeesForPaymentPlan(swimmerId, seasonId, paymentPlan) {
+        const swimmer = swimmers.find(s => s.id === swimmerId);
+        const season = seasons.find(s => s.id === seasonId);
+        if (!swimmer || !season) return null;
+        const termCount = getSwimmerSeasonTermLabels(swimmer).length;
+        const fee = getDefaultSwimmerFeeByTermCount(termCount, paymentPlan);
+        const targets = getFeeMonthsForPaymentPlan(paymentPlan, season);
+        if (!targets.length) return { fee, monthsLabel: '' };
+
+        for (const { month, year } of targets) {
+            await upsertSwimmerFeePreservingMeta(swimmerId, fee, month, year);
+        }
+        const monthsLabel = targets
+            .map(({ month, year }) => new Date(year, month - 1, 1).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' }))
+            .join(', ');
+        return { fee, monthsLabel };
+    }
+
+    function getFeeMonthsForPaymentPlan(paymentPlan, season) {
+        if (!season) return [];
+        if (paymentPlan === 'two_installments') {
+            const { billing1, billing2 } = getSeasonBillingSchedule(season);
+            return [billing1, billing2];
+        }
+        if (paymentPlan === 'lump_sum') {
+            const { billing1 } = getSeasonBillingSchedule(season);
+            return [billing1];
+        }
+        if (isMonthInSeason(currentFinanceMonth, currentFinanceYear, season)) {
+            return [{ month: currentFinanceMonth, year: currentFinanceYear }];
+        }
+        return [];
+    }
+
+    /** Posodobi znesek vadnine, ohrani popust; OLY pusti pri 0 € */
+    async function upsertSwimmerFeePreservingMeta(swimmerId, fee, month, year) {
+        try {
+            const { data: existing } = await supabase
+                .from('swimmer_monthly_fees')
+                .select('discount, is_oly')
+                .eq('swimmer_id', swimmerId)
+                .eq('month', month)
+                .eq('year', year)
+                .maybeSingle();
+            if (existing?.is_oly === true) return true;
+            const { error } = await supabase
+                .from('swimmer_monthly_fees')
+                .upsert({
+                    swimmer_id: swimmerId,
+                    month,
+                    year,
+                    monthly_fee: parseFloat(fee) || 0,
+                    discount: existing?.discount || 0,
+                    is_oly: false
+                }, { onConflict: 'swimmer_id,month,year' });
+            if (error) throw error;
+            return true;
+        } catch (e) {
+            console.error('Napaka pri shranjevanju privzete vadnine:', e);
+            return false;
+        }
     }
 
     window.updateSwimmerPaymentPlan = async function(swimmerId, paymentPlan) {
@@ -1407,13 +1479,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         let ok = 0;
         for (const s of targets) {
-            if (await upsertSwimmerSeasonBilling(s.id, seasonId, { payment_plan: plan })) ok++;
+            if (await upsertSwimmerSeasonBilling(s.id, seasonId, { payment_plan: plan })) {
+                await applyDefaultFeesForPaymentPlan(s.id, seasonId, plan);
+                ok++;
+            }
         }
         updateSwimmersList();
         refreshSwimmerFees();
         if (typeof refreshAccountingReportEditor === 'function') refreshAccountingReportEditor();
         if (typeof calculateFinanceData === 'function') calculateFinanceData();
-        showMessage(`Način «${PAYMENT_PLAN_LABELS[plan]}» nastavljen pri ${ok} plavalcih.`, 'success');
+        showMessage(`Način «${PAYMENT_PLAN_LABELS[plan]}» nastavljen pri ${ok} plavalcih (zneski po ceniku).`, 'success');
     };
 
     async function refreshAfterMembershipChange() {
@@ -9656,9 +9731,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         const termLabels = getSwimmerSeasonTermLabels(swimmer);
         const plan = getSwimmerPaymentPlan(swimmer.id, seasonId);
         const defaultFee = getDefaultSwimmerFeeByTermCount(termLabels.length, plan);
-        const fee = feeRow
-            ? parseFloat(feeRow.monthly_fee || 0)
-            : (plan === 'monthly' ? defaultFee : 0);
+        let fee;
+        if (feeRow) {
+            fee = parseFloat(feeRow.monthly_fee || 0);
+            if (plan !== 'monthly' && feeRow.is_oly !== true) {
+                const monthlyDefault = getDefaultSwimmerFeeByTermCount(termLabels.length, 'monthly');
+                if (fee === 0 || fee === monthlyDefault) fee = defaultFee;
+            }
+        } else {
+            // Brez shranjenega zapisa: privzeti znesek načina (klicatelj že filtrira mesec obračuna)
+            fee = defaultFee;
+        }
         const discount = feeRow ? parseFloat(feeRow.discount || 0) : 0;
         if (feeRow?.is_oly === true) return { net: 0, fee: 0, discount: 0, isOly: true, hasRecord: !!feeRow };
         const net = Math.max(0, fee - discount);
@@ -9763,18 +9846,34 @@ document.addEventListener('DOMContentLoaded', async () => {
             const termCountLabel = termCount > 0 ? `${termCount}×` : '0';
             const termsDisplay = termLabels.length > 0 ? termLabels.join(', ') : 'Brez terminov';
             const paymentPlan = getSwimmerPaymentPlan(swimmer.id, seasonId);
-            const defaultFee = getDefaultSwimmerFeeByTermCount(termCount, paymentPlan);
             const feeData = swimmerFees[swimmer.id];
+            const isOly = feeData?.is_oly || false;
             const isBillingMonth = shouldIncludeSwimmerInBillingMonth(swimmer.id, month, year, season, seasonId);
             const monthInSeason = isMonthInSeason(month, year, season);
             const billingHint = getPaymentPlanBillingHint(paymentPlan, season);
+            const defaultFee = getDefaultSwimmerFeeByTermCount(termCount, paymentPlan);
 
             if (!feeData && isPastMonth) continue;
-            if (!feeData && !isBillingMonth && paymentPlan !== 'monthly') continue;
 
-            let fee = feeData?.fee ?? ((paymentPlan === 'monthly' || isBillingMonth) ? defaultFee : 0);
+            let fee;
+            if (isOly) {
+                fee = 0;
+            } else if (!isBillingMonth && paymentPlan !== 'monthly') {
+                // V mesecu, ki ni obračunski, pokaži znesek obroka/enkratnega (ne stare mesečne vadnine)
+                fee = defaultFee;
+            } else if (feeData) {
+                const stored = Number(feeData.fee);
+                const monthlyDefault = getDefaultSwimmerFeeByTermCount(termCount, 'monthly');
+                // Stara mesečna vadnina (ali 0) ob načinu obrokov/enkratno → zamenjaj s privzetim zneskom načina
+                if (paymentPlan !== 'monthly' && isBillingMonth && (stored === 0 || stored === monthlyDefault)) {
+                    fee = defaultFee;
+                } else {
+                    fee = stored;
+                }
+            } else {
+                fee = (paymentPlan === 'monthly' || isBillingMonth) ? defaultFee : 0;
+            }
             let discount = feeData?.discount || 0;
-            const isOly = feeData?.is_oly || false;
             const effectiveFee = isOly ? 0 : fee;
             const finalFee = Math.max(0, effectiveFee - discount);
             const canCheckOly = olyCount < 15 || isOly;
@@ -10686,9 +10785,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 };
             });
             
-            // Če nismo našli pristojbin za točen mesec/leto, poišči najnovejše pristojbine za vsakega plavalca
-            // VENDAR: Ne uporabi najnovejše vadnine za pretekle mesece - če plavalec ni imel vadnine za pretelek mesec,
-            // to pomeni, da takrat še ni bil plavalec ali ni obiskoval vadbe
+            // Če ni nobene vadnine za ta mesec, za sedanje/prihodnje mesece predlagaj zneske.
+            // Pri enkratnem / 2 obrokih NE podeduj mesečne vadnine — uporabi privzeti znesek načina.
             if (data.length === 0) {
                 const requestedDate = new Date(year, month - 1, 1); // Mesec za katerega iščemo vadnine (1-based)
                 const currentDate = new Date();
@@ -10699,20 +10797,29 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 if (isPastMonth) {
                     // Za pretekle mesece ne uporabljamo najnovejših vadnin
-                    // Če ni vadnine za pretelek mesec, plavalec verjetno takrat še ni bil dodan ali ni obiskoval vadbe
-                    return swimmerFees; // Vrni prazen objekt - ne prikaži vadnine
+                    return swimmerFees;
                 }
                 
-                // Pridobi vse plavalce, ki nimajo pristojbin za ta mesec
+                const seasonId = getAdminSeasonFilterId();
+                const season = seasons.find(s => s.id === seasonId);
                 const activeSwimmers = swimmers.filter(s => !s.is_deleted);
                 const swimmersWithoutFees = activeSwimmers.filter(s => !swimmerFees[s.id]);
                 
                 if (swimmersWithoutFees.length > 0) {
-// console.log(`Looking for recent fees for ${swimmersWithoutFees.length} swimmers...`);
-                    
-                    // Za vsakega plavalca poišči najnovejšo pristojbino
-                    // SAMO za sedanji ali prihodnji mesec (ne za pretekle!)
                     for (const swimmer of swimmersWithoutFees) {
+                        const plan = getSwimmerPaymentPlan(swimmer.id, seasonId);
+                        if (plan !== 'monthly') {
+                            if (isBillingMonthForPlan(plan, month, year, season)) {
+                                const termCount = getSwimmerSeasonTermLabels(swimmer).length;
+                                swimmerFees[swimmer.id] = {
+                                    fee: getDefaultSwimmerFeeByTermCount(termCount, plan),
+                                    discount: 0,
+                                    is_oly: false
+                                };
+                            }
+                            continue;
+                        }
+
                         const { data: recentData, error: recentError } = await supabase
                             .from('swimmer_monthly_fees')
                             .select('*')
@@ -10723,16 +10830,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                         
                         if (!recentError && recentData.length > 0) {
                             const recentFee = recentData[0];
-                            // Uporabi najnovejšo pristojbino samo če je iz preteklosti ali sedanjosti
                             const feeDate = new Date(recentFee.year, recentFee.month - 1, 1);
                             
                             if (feeDate <= requestedDate) {
                                 swimmerFees[swimmer.id] = {
                                     fee: recentFee.monthly_fee,
-                                    discount: 0, // Popusti se ne prenašajo na prihodnje mesece
+                                    discount: 0,
                                     is_oly: recentFee.is_oly || false
                                 };
-// console.log(`Using recent fee for ${swimmer.first_name} ${swimmer.last_name}: ${recentFee.monthly_fee}€ (from ${recentFee.month}/${recentFee.year})`);
                             }
                         }
                     }
