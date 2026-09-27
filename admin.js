@@ -1158,25 +1158,54 @@ document.addEventListener('DOMContentLoaded', async () => {
         return (termIds || []).filter(tid => seasonTermIds.has(tid)).length;
     }
 
-    /** Obračunska obdobja: 1. obrok/enkratno/članarina = oktober, 2. obrok = februar (leto za februar = leto oktobra + 1).
-     * Sezona se lahko začne septembra (vadba), prvi računi pa gredo ven šele oktobra. */
+    /** Obračunska obdobja glede na začetek sezone + zamik prvega računa.
+     * Npr. sezona od septembra, zamik 1 → 1. obrok oktober, 2. obrok (+4 mesece) februar. */
+    function getSeasonInvoiceOffsetMonths(season) {
+        if (!season) return 1;
+        if (season.first_invoice_offset_months != null && season.first_invoice_offset_months !== '') {
+            const n = parseInt(season.first_invoice_offset_months, 10);
+            if (Number.isFinite(n) && n >= 0 && n <= 6) return n;
+        }
+        // Fallback brez stolpca v bazi (localStorage)
+        try {
+            const saved = localStorage.getItem(`eklub_season_invoice_offset_${season.id}`);
+            if (saved != null && saved !== '') {
+                const n = parseInt(saved, 10);
+                if (Number.isFinite(n) && n >= 0 && n <= 6) return n;
+            }
+        } catch { /* ignore */ }
+        return 1;
+    }
+
+    function addCalendarMonths(month, year, delta) {
+        let m = Number(month) + Number(delta);
+        let y = Number(year);
+        while (m > 12) { m -= 12; y += 1; }
+        while (m < 1) { m += 12; y -= 1; }
+        return { month: m, year: y };
+    }
+
+    function formatBillingMonthLabel(b) {
+        if (!b) return '—';
+        return new Date(b.year, b.month - 1, 1).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
+    }
+
     function getSeasonBillingSchedule(season) {
         const df = season?.date_from || '';
         const parts = df.split('-').map(Number);
         const startYear = parts[0] || new Date().getFullYear();
         const startMonth = parts[1] || 9;
-        const billing1Year = startMonth <= 9 ? startYear : startYear + 1;
-        return {
-            billing1: { month: 10, year: billing1Year },
-            billing2: { month: 2, year: billing1Year + 1 }
-        };
+        const offset = getSeasonInvoiceOffsetMonths(season);
+        const billing1 = addCalendarMonths(startMonth, startYear, offset);
+        const billing2 = addCalendarMonths(billing1.month, billing1.year, 4);
+        return { billing1, billing2 };
     }
 
     function yearMonthValue(year, month) {
         return Number(year) * 12 + Number(month);
     }
 
-    /** Prvi mesec računov v sezoni (oktober) — pred tem ni obračuna vadnine/članarine */
+    /** Prvi mesec računov v sezoni — pred tem ni obračuna vadnine/članarine */
     function getSeasonFirstInvoiceMonth(season) {
         return getSeasonBillingSchedule(season).billing1;
     }
@@ -1200,6 +1229,43 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (paymentPlan === 'two_installments') return matches(billing1) || matches(billing2);
         return true;
     }
+
+    function applyDiscountToFee(fee, discount, isPercent) {
+        const f = Number(fee) || 0;
+        const d = Number(discount) || 0;
+        if (isPercent) return Math.max(0, f * (1 - d / 100));
+        return Math.max(0, f - d);
+    }
+
+    function convertDiscountUnit(fee, value, fromUnit, toUnit) {
+        const f = Number(fee) || 0;
+        const v = Number(value) || 0;
+        if (fromUnit === toUnit) return v;
+        if (fromUnit === 'eur' && toUnit === 'pct') return f > 0 ? Math.round((v / f) * 10000) / 100 : 0;
+        return Math.round(f * (v / 100) * 100) / 100;
+    }
+
+    const DISCOUNT_UNIT_STORAGE_KEY = 'eklub_discount_is_percent';
+    function getStoredDiscountIsPercent(swimmerId, month, year) {
+        try {
+            const map = JSON.parse(localStorage.getItem(DISCOUNT_UNIT_STORAGE_KEY) || '{}');
+            return !!map[`${swimmerId}|${month}|${year}`];
+        } catch {
+            return false;
+        }
+    }
+    function setStoredDiscountIsPercent(swimmerId, month, year, isPercent) {
+        try {
+            const map = JSON.parse(localStorage.getItem(DISCOUNT_UNIT_STORAGE_KEY) || '{}');
+            const key = `${swimmerId}|${month}|${year}`;
+            if (isPercent) map[key] = true;
+            else delete map[key];
+            localStorage.setItem(DISCOUNT_UNIT_STORAGE_KEY, JSON.stringify(map));
+        } catch { /* ignore */ }
+    }
+
+    let swimmerFeesPlanFilter = sessionStorage.getItem('eklub_fees_plan_filter') || '';
+    let accountingPlanFilter = sessionStorage.getItem('eklub_accounting_plan_filter') || '';
 
     /** Ali mesec/leto spada v koledarsko obdobje sezone */
     function isMonthInSeason(month, year, season) {
@@ -3838,6 +3904,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const df = document.getElementById('newSeasonDateFrom')?.value;
             const dt = document.getElementById('newSeasonDateTo')?.value;
             const active = document.getElementById('newSeasonIsActive')?.checked || false;
+            const offset = parseInt(document.getElementById('newSeasonInvoiceOffset')?.value ?? '1', 10);
             if (!name || !df || !dt) {
                 alert('Vnesite naziv in datuma od–do.');
                 return;
@@ -3847,16 +3914,34 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
             try {
-                const { error } = await supabase
-                    .from('seasons')
-                    .insert([{ name, date_from: df, date_to: dt, is_active: active }]);
+                const payload = {
+                    name,
+                    date_from: df,
+                    date_to: dt,
+                    is_active: active,
+                    first_invoice_offset_months: Number.isFinite(offset) ? offset : 1
+                };
+                let { error } = await supabase.from('seasons').insert([payload]);
+                if (error && /first_invoice_offset_months/i.test(error.message || '')) {
+                    delete payload.first_invoice_offset_months;
+                    ({ error } = await supabase.from('seasons').insert([payload]));
+                }
                 if (error) throw error;
+                // Če stolpca ni, shrani zamik lokalno po nalaganju
                 showMessage('Sezona je shranjena.', 'success');
                 document.getElementById('newSeasonName').value = '';
                 document.getElementById('newSeasonDateFrom').value = '';
                 document.getElementById('newSeasonDateTo').value = '';
                 document.getElementById('newSeasonIsActive').checked = false;
+                if (document.getElementById('newSeasonInvoiceOffset')) {
+                    document.getElementById('newSeasonInvoiceOffset').value = '1';
+                }
                 await loadSeasons();
+                // Poveži localStorage zamik, če DB stolpec manjka
+                const created = seasons.find(s => s.name === name && s.date_from === df && s.date_to === dt);
+                if (created && created.first_invoice_offset_months == null) {
+                    try { localStorage.setItem(`eklub_season_invoice_offset_${created.id}`, String(offset)); } catch { /* ignore */ }
+                }
                 populateSeasonSelects();
                 renderSeasonsAdminList();
                 const browseSel = document.getElementById('seasonTermsBrowseSelect');
@@ -3876,6 +3961,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('editSeasonDateFrom').value = s.date_from || '';
         document.getElementById('editSeasonDateTo').value = s.date_to || '';
         document.getElementById('editSeasonIsActive').checked = !!s.is_active;
+        const offsetEl = document.getElementById('editSeasonInvoiceOffset');
+        if (offsetEl) offsetEl.value = String(getSeasonInvoiceOffsetMonths(s));
         elEditSeasonModal.setAttribute('data-season-id', seasonId);
         elEditSeasonModal.style.display = 'flex';
         elEditSeasonModal.setAttribute('aria-hidden', 'false');
@@ -3898,6 +3985,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const df = document.getElementById('editSeasonDateFrom')?.value;
         const dt = document.getElementById('editSeasonDateTo')?.value;
         const active = document.getElementById('editSeasonIsActive')?.checked || false;
+        const offset = parseInt(document.getElementById('editSeasonInvoiceOffset')?.value ?? '1', 10);
         if (!name || !df || !dt) {
             alert('Vnesite naziv in datuma od–do.');
             return;
@@ -3908,10 +3996,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         try {
             const oldSeason = seasons.find(s => s.id === id);
-            const { error } = await supabase
-                .from('seasons')
-                .update({ name, date_from: df, date_to: dt, is_active: active })
-                .eq('id', id);
+            const payload = {
+                name,
+                date_from: df,
+                date_to: dt,
+                is_active: active,
+                first_invoice_offset_months: Number.isFinite(offset) ? offset : 1
+            };
+            let { error } = await supabase.from('seasons').update(payload).eq('id', id);
+            if (error && /first_invoice_offset_months/i.test(error.message || '')) {
+                delete payload.first_invoice_offset_months;
+                ({ error } = await supabase.from('seasons').update(payload).eq('id', id));
+                try { localStorage.setItem(`eklub_season_invoice_offset_${id}`, String(offset)); } catch { /* ignore */ }
+            } else if (!error) {
+                try { localStorage.setItem(`eklub_season_invoice_offset_${id}`, String(offset)); } catch { /* ignore */ }
+            }
+            if (error) throw error;
             if (error) throw error;
 
             let termsUpdated = 0;
@@ -6388,7 +6488,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             fee: getDefaultSwimmerFeeByTermCount(termCount, plan),
                             discount: 0
                         };
-                        const finalFee = Math.max(0, feeData.fee - feeData.discount);
+                        const finalFee = applyDiscountToFee(feeData.fee, feeData.discount, feeData.discount_is_percent);
                         feeAmount = finalFee.toFixed(2);
                         email = swimmer.email || '';
                         address = swimmer.address || '';
@@ -6616,6 +6716,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('accountingIncludeMembershipFee')?.addEventListener('change', async (e) => {
         await applyGlobalMembershipFeeToReport(e.target.checked === true);
     });
+    const elAccountingPlanFilter = document.getElementById('accountingPlanFilter');
+    if (elAccountingPlanFilter) {
+        elAccountingPlanFilter.value = accountingPlanFilter || '';
+        elAccountingPlanFilter.addEventListener('change', () => {
+            accountingPlanFilter = elAccountingPlanFilter.value || '';
+            sessionStorage.setItem('eklub_accounting_plan_filter', accountingPlanFilter);
+            refreshAccountingReportEditor();
+        });
+    }
 
     document.getElementById('accountingReportEditorBox')?.addEventListener('click', e => {
         const up = e.target.closest('[data-acc-order-up]');
@@ -8761,10 +8870,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             box.innerHTML = '<p class="muted">Ni sezon. Dodajte prvo sezono zgoraj ali poženite migracijo v SQL.</p>';
             return;
         }
-        let html = '<table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Naziv</th><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Od</th><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Do</th><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Aktivna</th><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Terminov</th><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Dejanja</th></tr></thead><tbody>';
+        let html = '<table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Naziv</th><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Od</th><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Do</th><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">1. račun</th><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Aktivna</th><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Terminov</th><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Dejanja</th></tr></thead><tbody>';
         seasons.forEach(s => {
             const nTerms = TERMS.filter(t => t.season_id === s.id).length;
-            html += `<tr><td style="padding:8px;border-bottom:1px solid #eee">${escapeHtml(s.name)}</td><td style="padding:8px;border-bottom:1px solid #eee">${s.date_from}</td><td style="padding:8px;border-bottom:1px solid #eee">${s.date_to}</td><td style="padding:8px;border-bottom:1px solid #eee">${s.is_active ? 'Da' : 'Ne'}</td><td style="padding:8px;border-bottom:1px solid #eee">${nTerms}</td><td style="padding:8px;border-bottom:1px solid #eee;white-space:nowrap"><button type="button" class="btn" data-edit-season="${s.id}">Uredi</button> <button type="button" class="btn warn" data-delete-season="${s.id}">Izbriši</button></td></tr>`;
+            const firstInv = formatBillingMonthLabel(getSeasonFirstInvoiceMonth(s));
+            html += `<tr><td style="padding:8px;border-bottom:1px solid #eee">${escapeHtml(s.name)}</td><td style="padding:8px;border-bottom:1px solid #eee">${s.date_from}</td><td style="padding:8px;border-bottom:1px solid #eee">${s.date_to}</td><td style="padding:8px;border-bottom:1px solid #eee">${escapeHtml(firstInv)}</td><td style="padding:8px;border-bottom:1px solid #eee">${s.is_active ? 'Da' : 'Ne'}</td><td style="padding:8px;border-bottom:1px solid #eee">${nTerms}</td><td style="padding:8px;border-bottom:1px solid #eee;white-space:nowrap"><button type="button" class="btn" data-edit-season="${s.id}">Uredi</button> <button type="button" class="btn warn" data-delete-season="${s.id}">Izbriši</button></td></tr>`;
         });
         html += '</tbody></table>';
         box.innerHTML = html;
@@ -8920,11 +9030,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         const fromY = new Date(season.date_from).getFullYear();
         const toY = new Date(season.date_to).getFullYear();
         try {
-            const { data, error } = await supabase
+            let { data, error } = await supabase
                 .from('swimmer_monthly_fees')
-                .select('swimmer_id, year, month, monthly_fee, discount, is_oly')
+                .select('swimmer_id, year, month, monthly_fee, discount, is_oly, discount_is_percent')
                 .gte('year', fromY)
                 .lte('year', toY);
+            if (error && /discount_is_percent/i.test(error.message || '')) {
+                ({ data, error } = await supabase
+                    .from('swimmer_monthly_fees')
+                    .select('swimmer_id, year, month, monthly_fee, discount, is_oly')
+                    .gte('year', fromY)
+                    .lte('year', toY));
+            }
             if (error) throw error;
             let total = 0;
             let rows = 0;
@@ -8940,7 +9057,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     fromOly += OLY_MONTHLY_CONTRIBUTION_EUR;
                     olyRows++;
                 } else {
-                    const part = parseFloat(row.monthly_fee || 0) - parseFloat(row.discount || 0);
+                    const isPct = row.discount_is_percent != null
+                        ? !!row.discount_is_percent
+                        : getStoredDiscountIsPercent(row.swimmer_id, row.month, row.year);
+                    const part = applyDiscountToFee(row.monthly_fee, row.discount, isPct);
                     total += part;
                     fromRegular += part;
                 }
@@ -9362,7 +9482,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     olyContributions += OLY_MONTHLY_CONTRIBUTION_EUR;
                 } else {
                     // Če ni OLY, upoštevaj normalno vadnino
-                    const finalFee = Math.max(0, feeData.fee - (feeData.discount || 0));
+                    const finalFee = applyDiscountToFee(feeData.fee, feeData.discount, feeData.discount_is_percent);
                     totalRevenue += finalFee;
                 }
                 //// console.log('🔍 calculateFinanceData - plavalec:', swimmer.first_name, swimmer.last_name, 'fee:', feeData.fee, 'discount:', feeData.discount, 'is_oly:', feeData.is_oly);
@@ -9801,19 +9921,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         const defaultFee = getDefaultSwimmerFeeByTermCount(termLabels.length, plan);
         let fee;
         if (feeRow) {
-            fee = parseFloat(feeRow.monthly_fee || 0);
+            fee = parseFloat(feeRow.monthly_fee != null ? feeRow.monthly_fee : feeRow.fee || 0);
             if (plan !== 'monthly' && feeRow.is_oly !== true) {
                 const monthlyDefault = getDefaultSwimmerFeeByTermCount(termLabels.length, 'monthly');
                 if (fee === 0 || fee === monthlyDefault) fee = defaultFee;
             }
         } else {
-            // Brez shranjenega zapisa: privzeti znesek načina (klicatelj že filtrira mesec obračuna)
             fee = defaultFee;
         }
         const discount = feeRow ? parseFloat(feeRow.discount || 0) : 0;
+        const isPercent = !!(feeRow?.discount_is_percent);
         if (feeRow?.is_oly === true) return { net: 0, fee: 0, discount: 0, isOly: true, hasRecord: !!feeRow };
-        const net = Math.max(0, fee - discount);
-        return { net, fee, discount, isOly: false, hasRecord: !!feeRow };
+        const net = applyDiscountToFee(fee, discount, isPercent);
+        return { net, fee, discount, isPercent, isOly: false, hasRecord: !!feeRow };
     }
     function getDefaultSwimmerFeeByTermCount(numberOfTerms, paymentPlan = 'monthly') {
         if (numberOfTerms === 0) return 0;
@@ -9859,17 +9979,41 @@ document.addEventListener('DOMContentLoaded', async () => {
         const seasonId = getAdminSeasonFilterId();
         const season = seasons.find(s => s.id === seasonId);
         const swimmerFees = await getSwimmerFeesFromDB(month, year);
+        const { billing1, billing2 } = getSeasonBillingSchedule(season);
+        const billing1Label = formatBillingMonthLabel(billing1);
+        const billing2Label = formatBillingMonthLabel(billing2);
 
-        const sortedSwimmers = swimmers
+        let sortedSwimmers = swimmers
             .filter(s => !s.is_deleted && entityHasTermsInAdminSeason(s))
             .sort((a, b) => {
                 const aName = `${a.last_name} ${a.first_name}`;
                 const bName = `${b.last_name} ${b.first_name}`;
                 return aName.localeCompare(bName, 'sl');
             });
+        if (swimmerFeesPlanFilter) {
+            sortedSwimmers = sortedSwimmers.filter(s =>
+                getSwimmerPaymentPlan(s.id, seasonId) === swimmerFeesPlanFilter
+            );
+        }
 
         if (sortedSwimmers.length === 0) {
-            elSwimmerFeesBox.innerHTML = `<p class="muted">Ni plavalcev z dodeljenimi termini v sezoni <strong>${escapeHtml(seasonName) || '—'}</strong>. Dodelite termine v zavihku Plavalci.</p>`;
+            const planFilterOptsEmpty = [
+                ['', 'Vsi načini'],
+                ['monthly', 'Mesečno'],
+                ['two_installments', '2× letno'],
+                ['lump_sum', 'Enkrat letno']
+            ].map(([v, l]) => `<option value="${v}"${swimmerFeesPlanFilter === v ? ' selected' : ''}>${l}</option>`).join('');
+            elSwimmerFeesBox.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:12px">
+                <label style="font-size:14px;display:flex;align-items:center;gap:6px">Način plačila:
+                  <select id="swimmerFeesPlanFilter" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border)">${planFilterOptsEmpty}</select>
+                </label>
+              </div>
+              <p class="muted">Ni plavalcev z dodeljenimi termini v sezoni <strong>${escapeHtml(seasonName) || '—'}</strong>${swimmerFeesPlanFilter ? ' za izbran način plačila' : ''}. Dodelite termine v zavihku Plavalci.</p>`;
+            document.getElementById('swimmerFeesPlanFilter')?.addEventListener('change', e => {
+                swimmerFeesPlanFilter = e.target.value || '';
+                sessionStorage.setItem('eklub_fees_plan_filter', swimmerFeesPlanFilter);
+                refreshSwimmerFees();
+            });
             return;
         }
 
@@ -9886,10 +10030,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         const isPastMonth = requestedDate < currentDate;
         const monthLabel = new Date(year, month - 1, 1).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
 
-        let html = `<p class="muted" style="font-size:13px;margin-bottom:10px">Sezona: <strong>${escapeHtml(seasonName) || '—'}</strong> · ${sortedSwimmers.length} plavalcev · ${monthLabel}<br>
-            <span style="font-size:12px">Vadba od septembra, <strong>prvi računi oktobra</strong>.
-            Enkratno in 1. obrok: <strong>oktober</strong> · 2. obrok: <strong>februar</strong> · mesečno od oktobra naprej.
-            Članarina (${getMembershipFeeAmount()} €) z prvimi računi (oktober), enkrat na sezono.</span></p>`;
+        const planFilterOpts = [
+            ['', 'Vsi načini'],
+            ['monthly', 'Mesečno'],
+            ['two_installments', '2× letno'],
+            ['lump_sum', 'Enkrat letno']
+        ].map(([v, l]) => `<option value="${v}"${swimmerFeesPlanFilter === v ? ' selected' : ''}>${l}</option>`).join('');
+
+        let html = `<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:12px">
+            <label style="font-size:14px;display:flex;align-items:center;gap:6px">Način plačila:
+              <select id="swimmerFeesPlanFilter" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border)">${planFilterOpts}</select>
+            </label>
+          </div>`;
+        html += `<p class="muted" style="font-size:13px;margin-bottom:10px">Sezona: <strong>${escapeHtml(seasonName) || '—'}</strong> · ${sortedSwimmers.length} plavalcev · ${monthLabel}<br>
+            <span style="font-size:12px">Prvi računi: <strong>${escapeHtml(billing1Label)}</strong>
+            · 2. obrok: <strong>${escapeHtml(billing2Label)}</strong>
+            · mesečno od prvega računa naprej.
+            Članarina (${getMembershipFeeAmount()} €) z prvimi računi, enkrat na sezono. Popust lahko vnesete v <strong>€</strong> ali <strong>%</strong>.</span></p>`;
         html += `
             <table class="swimmer-fees-table">
                 <thead>
@@ -9899,7 +10056,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <th>Način plačila</th>
                         <th title="Število terminov na teden (določa privzeto višino vadnine)">×/teden</th>
                         <th>Znesek vadnine (€)</th>
-                        <th>Popust (€)</th>
+                        <th>Popust</th>
                         <th>Končna vadnina (€)</th>
                         <th style="text-align:center" title="Članarina enkrat na sezono">Član. (${getMembershipFeeAmount()} €)</th>
                         <th>OLY</th>
@@ -9943,8 +10100,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 fee = (paymentPlan === 'monthly' || isBillingMonth) ? defaultFee : 0;
             }
             let discount = feeData?.discount || 0;
+            const discountIsPercent = !!(feeData?.discount_is_percent);
             const effectiveFee = isOly ? 0 : fee;
-            const finalFee = Math.max(0, effectiveFee - discount);
+            const finalFee = applyDiscountToFee(effectiveFee, discount, discountIsPercent);
             const canCheckOly = olyCount < 15 || isOly;
             // OLY je mesečni prispevek — ne veže se na mesec obračuna (enkratno / obroki)
             const canEditOly = canCheckOly && monthInSeason;
@@ -9968,6 +10126,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                        <button type="button" class="btn" style="padding:1px 6px;font-size:11px;margin-left:4px" onclick="clearSwimmerMembershipFee('${swimmer.id}')" title="Prekliči obračun članarine">×</button>`
                     : `<input type="checkbox" ${membershipHere ? 'checked' : ''} onchange="updateSwimmerMembershipFee('${swimmer.id}', this.checked, ${month}, ${year})" style="width:18px;height:18px;cursor:pointer" title="Obračunaj članarino v tem mesecu">`;
 
+            const discountUnitSelect = `<select id="discount-unit-${swimmer.id}" onchange="toggleSwimmerDiscountUnit('${swimmer.id}', ${month}, ${year})" ${inputsDisabled ? 'disabled' : ''} style="font-size:12px;padding:4px;max-width:52px" title="Enota popusta">
+                <option value="eur"${!discountIsPercent ? ' selected' : ''}>€</option>
+                <option value="pct"${discountIsPercent ? ' selected' : ''}>%</option>
+            </select>`;
+
             rowCount++;
             html += `
                 <tr ${rowStyle}>
@@ -9978,8 +10141,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <td>
                         <input type="number" id="fee-${swimmer.id}" value="${effectiveFee}" min="0" step="0.01" style="width: 80px;" onchange="updateSwimmerFee('${swimmer.id}', this.value, ${month}, ${year})" ${inputsDisabled ? 'disabled' : ''}>
                     </td>
-                    <td>
-                        <input type="number" id="discount-${swimmer.id}" value="${discount}" min="0" step="0.01" style="width: 80px;" onchange="updateSwimmerDiscount('${swimmer.id}', this.value, ${month}, ${year})" ${inputsDisabled ? 'disabled' : ''}>
+                    <td style="white-space:nowrap">
+                        <input type="number" id="discount-${swimmer.id}" value="${discount}" min="0" step="0.01" style="width: 64px;" onchange="updateSwimmerDiscount('${swimmer.id}', this.value, ${month}, ${year}, document.getElementById('discount-unit-${swimmer.id}')?.value === 'pct')" ${inputsDisabled ? 'disabled' : ''}>
+                        ${discountUnitSelect}
                     </td>
                     <td><strong>${isBillingMonth ? finalFee.toFixed(2) + '€' : '—'}</strong></td>
                     <td style="text-align:center">${membershipCell}</td>
@@ -10007,6 +10171,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             </div>
         `;
         elSwimmerFeesBox.innerHTML = html;
+        document.getElementById('swimmerFeesPlanFilter')?.addEventListener('change', e => {
+            swimmerFeesPlanFilter = e.target.value || '';
+            sessionStorage.setItem('eklub_fees_plan_filter', swimmerFeesPlanFilter);
+            refreshSwimmerFees();
+        });
     }
 
     // ===== POROČILO ZA RAČUNOVODSTVO =====
@@ -10105,14 +10274,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         const seasonId = season?.id || getAdminSeasonFilterId();
         const { data, error } = await supabase
             .from('swimmer_monthly_fees')
-            .select('swimmer_id, monthly_fee, discount, is_oly')
+            .select('swimmer_id, monthly_fee, discount, is_oly, discount_is_percent')
             .eq('month', month)
             .eq('year', year);
-        if (error) throw error;
+        if (error) {
+            // Starejša shema brez discount_is_percent
+            if (/discount_is_percent/i.test(error.message || '')) {
+                const retry = await supabase
+                    .from('swimmer_monthly_fees')
+                    .select('swimmer_id, monthly_fee, discount, is_oly')
+                    .eq('month', month)
+                    .eq('year', year);
+                if (retry.error) throw retry.error;
+                return buildAccountingFeeRowsFromData(retry.data, month, year, season, seasonId);
+            }
+            throw error;
+        }
+        return buildAccountingFeeRowsFromData(data, month, year, season, seasonId);
+    }
 
+    function buildAccountingFeeRowsFromData(data, month, year, season, seasonId) {
         const feesBySwimmer = {};
         (data || []).forEach(row => {
-            feesBySwimmer[row.swimmer_id] = row;
+            feesBySwimmer[row.swimmer_id] = {
+                ...row,
+                discount_is_percent: row.discount_is_percent != null
+                    ? !!row.discount_is_percent
+                    : getStoredDiscountIsPercent(row.swimmer_id, month, year)
+            };
         });
 
         const rows = [];
@@ -10120,6 +10309,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             .filter(s => !s.is_deleted && entityHasTermsInAdminSeason(s))
             .forEach(swimmer => {
                 const plan = getSwimmerPaymentPlan(swimmer.id, seasonId);
+                if (accountingPlanFilter && plan !== accountingPlanFilter) return;
                 if (!shouldIncludeSwimmerInBillingMonth(swimmer.id, month, year, season, seasonId)) return;
 
                 const feeRow = feesBySwimmer[swimmer.id];
@@ -10645,11 +10835,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     // Funkcija za posodobitev popusta plavalca
-    async function updateSwimmerDiscount(swimmerId, discount, month, year) {
-        const success = await updateSwimmerDiscountInDB(swimmerId, discount, month, year);
+    async function updateSwimmerDiscount(swimmerId, discount, month, year, isPercent = false) {
+        const success = await updateSwimmerDiscountInDB(swimmerId, discount, month, year, isPercent === true || isPercent === 'true' || isPercent === 'pct');
         
         if (success) {
-            // Osveži finance summary, če se sprememba nanaša na isti mesec/leto kot prikazan finance summary
             if (currentSection === 'finance' && currentFinanceMonth === month && currentFinanceYear === year) {
                 calculateFinanceData();
             }
@@ -10658,6 +10847,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             showMessage('Napaka pri posodobitvi popusta!', 'error');
         }
     }
+
+    window.toggleSwimmerDiscountUnit = async function(swimmerId, month, year) {
+        const unitSel = document.getElementById(`discount-unit-${swimmerId}`);
+        const input = document.getElementById(`discount-${swimmerId}`);
+        const feeInput = document.getElementById(`fee-${swimmerId}`);
+        if (!unitSel || !input) return;
+        const toUnit = unitSel.value === 'pct' ? 'pct' : 'eur';
+        const fromUnit = toUnit === 'pct' ? 'eur' : 'pct';
+        const fee = parseFloat(feeInput?.value) || 0;
+        const converted = convertDiscountUnit(fee, input.value, fromUnit, toUnit);
+        input.value = converted;
+        await updateSwimmerDiscount(swimmerId, converted, month, year, toUnit === 'pct');
+    };
     
     // Funkcija za posodobitev OLY statusa plavalca
     async function updateSwimmerOly(swimmerId, isOly, month, year) {
@@ -10924,9 +11126,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Pretvori v obliko, ki jo pričakuje aplikacija
             const swimmerFees = {};
             data.forEach(item => {
+                const isPercent = item.discount_is_percent != null
+                    ? !!item.discount_is_percent
+                    : getStoredDiscountIsPercent(item.swimmer_id, month, year);
                 swimmerFees[item.swimmer_id] = {
                     fee: item.monthly_fee,
                     discount: item.discount || 0,
+                    discount_is_percent: isPercent,
                     is_oly: item.is_oly || false
                 };
             });
@@ -11043,19 +11249,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Funkcija za posodobitev popusta plavalca
-    async function updateSwimmerDiscountInDB(swimmerId, discount, month, year) {
+    async function updateSwimmerDiscountInDB(swimmerId, discount, month, year, isPercent = false) {
         try {
-            const { error } = await supabase
+            const payload = {
+                swimmer_id: swimmerId,
+                month: month,
+                year: year,
+                discount: parseFloat(discount) || 0,
+                discount_is_percent: !!isPercent
+            };
+            let { error } = await supabase
                 .from('swimmer_monthly_fees')
-                .upsert({
-                    swimmer_id: swimmerId,
-                    month: month,
-                    year: year,
-                    discount: parseFloat(discount)
-                }, { onConflict: 'swimmer_id,month,year' });
+                .upsert(payload, { onConflict: 'swimmer_id,month,year' });
+
+            // Če stolpec discount_is_percent še ne obstaja, shrani brez njega (+ localStorage)
+            if (error && /discount_is_percent/i.test(error.message || '')) {
+                delete payload.discount_is_percent;
+                ({ error } = await supabase
+                    .from('swimmer_monthly_fees')
+                    .upsert(payload, { onConflict: 'swimmer_id,month,year' }));
+                if (!error) setStoredDiscountIsPercent(swimmerId, month, year, isPercent);
+            } else if (!error) {
+                setStoredDiscountIsPercent(swimmerId, month, year, isPercent);
+            }
 
             if (error) throw error;
-            
             return true;
         } catch (error) {
             console.error('Napaka pri posodobitvi popusta:', error);
@@ -11348,11 +11566,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Posodobljena funkcija za posodobitev popusta plavalca
-    async function updateSwimmerDiscount(swimmerId, discount, month, year) {
-        const success = await updateSwimmerDiscountInDB(swimmerId, discount, month, year);
+    async function updateSwimmerDiscount(swimmerId, discount, month, year, isPercent = false) {
+        const success = await updateSwimmerDiscountInDB(
+            swimmerId,
+            discount,
+            month,
+            year,
+            isPercent === true || isPercent === 'true' || isPercent === 'pct'
+        );
         
         if (success) {
-            // Osveži finance summary, če se sprememba nanaša na isti mesec/leto kot prikazan finance summary
             if (currentSection === 'finance' && currentFinanceMonth === month && currentFinanceYear === year) {
                 calculateFinanceData();
             }
