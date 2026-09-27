@@ -1161,6 +1161,22 @@
                 <option value="2">2 meseca</option>
               </select>
             </label>
+            <label style="display:flex;align-items:center;gap:6px" title="Vadnina v prvem mesecu sezone (npr. od 15. = 1/2)">
+              Začetek
+              <select id="newSeasonStartFeeFactor" style="padding:4px 6px">
+                <option value="1">polna</option>
+                <option value="0.5" selected>1/2</option>
+                <option value="0.25">1/4</option>
+              </select>
+            </label>
+            <label style="display:flex;align-items:center;gap:6px" title="Vadnina v zadnjem mesecu sezone (npr. do 15. = 1/2)">
+              Konec
+              <select id="newSeasonEndFeeFactor" style="padding:4px 6px">
+                <option value="1">polna</option>
+                <option value="0.5" selected>1/2</option>
+                <option value="0.25">1/4</option>
+              </select>
+            </label>
             <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="newSeasonIsActive"> Aktivna</label>
             <button type="button" class="btn pri" id="addSeasonBtn">Shrani sezono</button>
           </div>
@@ -1511,14 +1527,13 @@
           <h3>Poročilo za računovodstvo (mesečni seznam vadnin)</h3>
           <div class="inner">
             <p class="muted" style="font-size:13px;margin-bottom:12px">
-              Seznam plavalcev iz izbrane sezone za <strong>obračun izbranega meseca</strong>.
-              Prvi računi so odvisni od začetka sezone in zamika (nastavite pri sezoni).
+              Seznam plavalcev za <strong>obračun izbranega meseca</strong>.
+              Članarina gre z <strong>mesecem prvega računa</strong> (npr. oktober) — nikoli s septembrom;
+              oktobrska položnica pokrije tudi septembersko vadbo.
+              Za delni mesec (od/do 15.) uporabite faktor 1/2 pri vadninah.
               Filter: mesečno / 2× letno / enkrat letno.
-              Vrstni red: zgoraj mesečno, nato dvakrat letno, spodaj enkrat letno;
-              znotraj skupine najprej <strong>vračajoči</strong> (modro), nato novinci.
-              Plavalci z <strong>OLY</strong> se ne prikažejo.
-              <br><strong>Članarina</strong> gre z <strong>prvimi računi</strong> — enkrat na sezono.
-              Plavalci z 0 € so označeni rdeče in v PDF niso vključeni.
+              Vrstni red: mesečno → dvakrat letno → enkrat; znotraj skupine vračajoči (modro) zgoraj.
+              Plavalci z <strong>OLY</strong> se ne prikažejo. Znesek 0 € = rdeče, ni v PDF.
             </p>
             <div id="accountingReportSummary"></div>
             <p class="muted" style="font-size:13px;margin-bottom:8px">Obračunski mesec: <strong id="accountingReportMonthVisibleLabel"></strong> (enako kot v «Pregled stroškov» zgoraj)</p>
@@ -1842,6 +1857,22 @@ date,term_id,swimmer_id,status
             <option value="0">0 — isti mesec kot začetek</option>
             <option value="1">1 mesec kasneje (npr. sept→okt)</option>
             <option value="2">2 meseca kasneje</option>
+          </select>
+        </div>
+        <div class="row">
+          <label for="editSeasonStartFeeFactor">Vadnina – začetni mesec:</label>
+          <select id="editSeasonStartFeeFactor" style="max-width:220px">
+            <option value="1">Polna</option>
+            <option value="0.5">1/2 (npr. od 15.)</option>
+            <option value="0.25">1/4</option>
+          </select>
+        </div>
+        <div class="row">
+          <label for="editSeasonEndFeeFactor">Vadnina – končni mesec:</label>
+          <select id="editSeasonEndFeeFactor" style="max-width:220px">
+            <option value="1">Polna</option>
+            <option value="0.5">1/2 (npr. do 15.)</option>
+            <option value="0.25">1/4</option>
           </select>
         </div>
         <div class="row">
