@@ -1530,7 +1530,8 @@
               Seznam plavalcev za <strong>obračun izbranega meseca</strong>.
               Članarina gre z <strong>mesecem prvega računa</strong> (npr. oktober) — nikoli s septembrom;
               oktobrska položnica pokrije tudi septembersko vadbo.
-              Za delni mesec (od/do 15.) uporabite faktor 1/2 pri vadninah.
+              Polovična (ali delna) vadnina velja <strong>samo za mesečne</strong> plačnike — faktor 1/2 pri upravljanju vadnin.
+              Kasnejši začetek plavalca: v Uredi plavalca → »Začetek obračuna«.
               Filter: mesečno / 2× letno / enkrat letno.
               Vrstni red: mesečno → dvakrat letno → enkrat; znotraj skupine vračajoči (modro) zgoraj.
               Plavalci z <strong>OLY</strong> se ne prikažejo. Znesek 0 € = rdeče, ni v PDF.
@@ -2040,6 +2041,13 @@ date,term_id,swimmer_id,status
         <div class="row" style="margin-top:8px">
           <label for="editSwimmerPaymentPlan">Način plačila:</label>
           <select id="editSwimmerPaymentPlan" style="flex:1;max-width:320px"></select>
+        </div>
+        <div class="row" style="margin-top:10px;align-items:flex-start;flex-wrap:wrap;gap:8px">
+          <label for="editSwimmerBillingStart" style="margin:0;min-width:140px">Začetek obračuna:</label>
+          <div style="flex:1;min-width:220px">
+            <select id="editSwimmerBillingStart" style="width:100%;max-width:320px"></select>
+            <p class="muted" style="font-size:12px;margin:6px 0 0">Če plavalec začne kasneje v sezoni, izberite mesec — takrat se obračunata prva vadnina in članarina. »Začetek sezone« = kot vsi ostali.</p>
+          </div>
         </div>
         <div class="row" style="margin-top:10px;align-items:center">
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0">
