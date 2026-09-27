@@ -2241,6 +2241,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             }));
     }
 
+    /** Plavalec je bil že v kateri koli drugi sezoni (ne le trenutni) */
+    function isReturningSwimmer(swimmer, currentSeasonId) {
+        return getSwimmerSeasonHistory(swimmer).some(h =>
+            h.seasonId !== '__none__' && h.seasonId !== currentSeasonId
+        );
+    }
+
     function renderEditSwimmerPastSeasons(swimmer, currentSeasonId) {
         if (!elEditSwimmerPastSeasons) return;
         const history = getSwimmerSeasonHistory(swimmer).filter(h =>
@@ -9753,7 +9760,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const paymentPlan = getSwimmerPaymentPlan(swimmer.id, seasonId);
             const defaultFee = getDefaultSwimmerFeeByTermCount(termCount, paymentPlan);
             const feeData = swimmerFees[swimmer.id];
-            const planLabel = PAYMENT_PLAN_LABELS[paymentPlan] || PAYMENT_PLAN_LABELS.monthly;
             const isBillingMonth = shouldIncludeSwimmerInBillingMonth(swimmer.id, month, year, season, seasonId);
             const monthInSeason = isMonthInSeason(month, year, season);
             const billingHint = getPaymentPlanBillingHint(paymentPlan, season);
@@ -9771,9 +9777,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             const canEditOly = canCheckOly && monthInSeason;
             const rowStyle = (finalFee === 0 && !isOly && isBillingMonth) ? 'style="background-color: #ffe0e0;"' : (!isBillingMonth ? 'style="opacity:0.65"' : '');
             const inputsDisabled = !isBillingMonth || isOly;
-            const planDisplay = billingHint
-                ? `${escapeHtml(planLabel)}<br><span style="font-size:11px;color:#666">${escapeHtml(billingHint)}</span>`
-                : escapeHtml(planLabel);
+            const planSelect = seasonId
+                ? buildPaymentPlanSelectHtml(swimmer.id, paymentPlan, false, season)
+                : escapeHtml(PAYMENT_PLAN_LABELS[paymentPlan] || PAYMENT_PLAN_LABELS.monthly);
+            const planHint = billingHint
+                ? `<br><span style="font-size:11px;color:#666">${escapeHtml(billingHint)}</span>`
+                : '';
             const notBillingNote = !isBillingMonth ? '<br><span style="font-size:11px;color:#999">Ni mesec obračuna vadnine</span>' : '';
 
             rowCount++;
@@ -9781,7 +9790,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <tr ${rowStyle}>
                     <td>${swimmer.first_name} ${swimmer.last_name}</td>
                     <td>${termsDisplay}</td>
-                    <td>${planDisplay}${notBillingNote}</td>
+                    <td>${planSelect}${planHint}${notBillingNote}</td>
                     <td class="swimmer-fees-term-count" title="${termCount} ${termCount === 1 ? 'termin' : 'terminov'} na teden">${termCountLabel}</td>
                     <td>
                         <input type="number" id="fee-${swimmer.id}" value="${effectiveFee}" min="0" step="0.01" style="width: 80px;" onchange="updateSwimmerFee('${swimmer.id}', this.value, ${month}, ${year})" ${inputsDisabled ? 'disabled' : ''}>
@@ -9979,7 +9988,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         PAYMENT_PLAN_GROUP_ORDER.forEach(plan => {
             const group = byPlan[plan];
             if (!group.length) return;
-            applyOrderToAccountingRows(group, orderedIds).forEach(r => result.push(r));
+            partitionReturningFirst(
+                applyOrderToAccountingRows(group, orderedIds),
+                seasonId
+            ).forEach(r => result.push(r));
         });
         return result;
     }
@@ -9988,6 +10000,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         return [...list].sort((a, b) =>
             swimmerDisplayName(a.swimmer).localeCompare(swimmerDisplayName(b.swimmer), 'sl')
         );
+    }
+
+    /** Znotraj skupine: najprej vračajoči (že v prejšnjih sezonah), nato novinci — ohrani relativni vrstni red znotraj vsake podskupine */
+    function partitionReturningFirst(list, seasonId) {
+        const returning = [];
+        const newcomers = [];
+        (list || []).forEach(r => {
+            if (isReturningSwimmer(r.swimmer, seasonId)) returning.push(r);
+            else newcomers.push(r);
+        });
+        return [...returning, ...newcomers];
+    }
+
+    function sortSwimmersReturningThenAlpha(list, seasonId) {
+        return partitionReturningFirst(sortSwimmersAlpha(list), seasonId);
     }
 
     function applyOrderToAccountingRows(feeRows, orderedIds) {
@@ -10044,13 +10071,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             (byPlan[plan] || byPlan.monthly).push(r);
         });
         accountingReportWorkingOrder = [
-            ...sortSwimmersAlpha(byPlan.monthly),
-            ...sortSwimmersAlpha(byPlan.two_installments),
-            ...sortSwimmersAlpha(byPlan.lump_sum)
+            ...sortSwimmersReturningThenAlpha(byPlan.monthly, seasonId),
+            ...sortSwimmersReturningThenAlpha(byPlan.two_installments, seasonId),
+            ...sortSwimmersReturningThenAlpha(byPlan.lump_sum, seasonId)
         ];
         const season = getAccountingReportSeason(currentAccountingReportMonth, currentAccountingReportYear);
         renderAccountingReportEditorTable(accountingReportWorkingOrder, season);
-        showMessage('Vrstni red po abecedi znotraj skupin (shrani gumb, če želite obdržati).', 'info');
+        showMessage('Vrstni red: vračajoči zgoraj, nato po abecedi znotraj skupin (shrani gumb, če želite obdržati).', 'info');
     }
 
     function updateAccountingReportSummary(rows, month, year) {
@@ -10097,9 +10124,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         let header = '';
         if (season) {
             const nSaved = (accountingReportOrderBySeason[season.id] || []).length;
-            header = `<p class="muted" style="font-size:13px;margin-bottom:10px">Sezona: <strong>${escapeHtml(season.name)}</strong> · ${rows.length} plavalcev · ${nSaved ? 'shranjen vrstni red znotraj skupin' : 'po abecedi znotraj skupin'} · premakni z ↑ ↓, nato <strong>Shrani vrstni red</strong></p>`;
+            header = `<p class="muted" style="font-size:13px;margin-bottom:10px">Sezona: <strong>${escapeHtml(season.name)}</strong> · ${rows.length} plavalcev · ${nSaved ? 'shranjen vrstni red znotraj skupin' : 'vračajoči zgoraj, nato po abecedi'} · premakni z ↑ ↓, nato <strong>Shrani vrstni red</strong><br>
+                <span style="display:inline-block;margin-top:4px;padding:2px 8px;background:#dbeafe;border-radius:4px;color:#1e40af;font-size:12px">Modro = vračajoči (že v prejšnji sezoni)</span></p>`;
         } else {
-            header = `<p class="muted" style="font-size:13px;margin-bottom:10px">${rows.length} plavalcev · po skupinah načina plačila</p>`;
+            header = `<p class="muted" style="font-size:13px;margin-bottom:10px">${rows.length} plavalcev · po skupinah načina plačila · vračajoči zgoraj</p>`;
         }
         if (missingFeeCount > 0) {
             header += `<p style="font-size:13px;margin-bottom:10px;padding:8px 10px;background:#fee2e2;border-radius:6px;color:#991b1b">
@@ -10130,7 +10158,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             const chargedElsewhere = !!period && !chargedHere;
             const total = getAccountingRowTotal(row, month, year);
             const noFee = (Number(row.netFee) || 0) <= 0;
-            const rowStyle = noFee ? ' style="background:#fee2e2"' : '';
+            const returning = isReturningSwimmer(s, seasonId);
+            let rowStyle = '';
+            if (noFee) rowStyle = ' style="background:#fee2e2"';
+            else if (returning) rowStyle = ' style="background:#dbeafe"';
+            const returningBadge = returning
+                ? ' <span title="Že bil(a) v prejšnji sezoni" style="font-size:10px;padding:1px 6px;background:#93c5fd;color:#1e3a8a;border-radius:4px;margin-left:4px;white-space:nowrap">vračajoči</span>'
+                : '';
             const membershipCell = chargedElsewhere
                 ? `<span class="muted" style="font-size:11px" title="Članarina je za to sezono že obračunana">✓ ${escapeHtml(formatMembershipPeriod(period))}</span>
                    <button type="button" class="btn" style="padding:1px 6px;font-size:11px;margin-left:4px" onclick="clearSwimmerMembershipFee('${s.id}')" title="Prekliči obračun članarine">×</button>`
@@ -10140,7 +10174,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <button type="button" class="btn" style="padding:2px 8px;font-size:12px" data-acc-order-up="${i}" title="Premakni gor">↑</button>
                     <button type="button" class="btn" style="padding:2px 8px;font-size:12px" data-acc-order-down="${i}" title="Premakni dol">↓</button>
                 </td>
-                <td>${escapeHtml(swimmerDisplayName(s))}</td>
+                <td>${escapeHtml(swimmerDisplayName(s))}${returningBadge}</td>
                 <td>${s.email ? escapeHtml(s.email) : '<span title="Manjka email">⚠</span>'}</td>
                 <td>${s.address ? escapeHtml(s.address) : '<span title="Manjka naslov">⚠</span>'}</td>
                 <td>${s.postal_code ? escapeHtml(s.postal_code) : '<span title="Manjka pošta">⚠</span>'}</td>
