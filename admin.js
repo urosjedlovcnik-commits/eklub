@@ -9384,6 +9384,156 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    /**
+     * Projekcija prihodkov za celo sezono:
+     * – OLY: 40 € × meseci sezone (od začetka obračuna plavalca)
+     * – mesečno: privzeta/shranjena vadnina × faktor v vsakem mesecu
+     * – 2× / enkrat: obroki v obračunskih mesecih
+     * – članarina: 1× na ne-OLY plavalca
+     * Če obstaja zapis v bazi za mesec, uporabi ta znesek (z popustom).
+     */
+    async function getSeasonRevenueProjection(season) {
+        const months = getSeasonMonthTuples(season);
+        const olyIds = await getOlySwimmerIdsForSeason(season);
+        const fromY = new Date(season.date_from).getFullYear();
+        const toY = new Date(season.date_to).getFullYear();
+        const feeMap = new Map();
+        try {
+            let { data, error } = await supabase
+                .from('swimmer_monthly_fees')
+                .select('swimmer_id, year, month, monthly_fee, discount, is_oly, discount_is_percent')
+                .gte('year', fromY)
+                .lte('year', toY);
+            if (error && /discount_is_percent/i.test(error.message || '')) {
+                ({ data, error } = await supabase
+                    .from('swimmer_monthly_fees')
+                    .select('swimmer_id, year, month, monthly_fee, discount, is_oly')
+                    .gte('year', fromY)
+                    .lte('year', toY));
+            }
+            if (error) throw error;
+            (data || []).forEach(row => {
+                if (!ymInSeasonRange(row.year, row.month, season)) return;
+                feeMap.set(`${row.swimmer_id}|${row.year}|${row.month}`, row);
+            });
+        } catch (e) {
+            console.warn('Projekcija: nalaganje vadnin:', e.message || e);
+        }
+
+        let fromRegular = 0;
+        let fromOly = 0;
+        let membership = 0;
+        let olySwimmers = 0;
+        let monthlyN = 0;
+        let twoN = 0;
+        let lumpN = 0;
+        let feeMonthsProjected = 0;
+
+        const seasonSwimmers = swimmers.filter(s =>
+            !s.is_deleted && getSwimmerTermIdsInSeason(s, season.id).length > 0
+        );
+
+        for (const swimmer of seasonSwimmers) {
+            const termCount = getSwimmerTermIdsInSeason(swimmer, season.id).length;
+            const plan = getSwimmerPaymentPlan(swimmer.id, season.id);
+            const start = getSwimmerBillingStart(swimmer.id, season.id);
+
+            if (olyIds.has(swimmer.id)) {
+                olySwimmers++;
+                for (const { month, year } of months) {
+                    if (start && yearMonthValue(year, month) < yearMonthValue(start.year, start.month)) continue;
+                    fromOly += OLY_MONTHLY_CONTRIBUTION_EUR;
+                    feeMonthsProjected++;
+                }
+                continue;
+            }
+
+            membership += getMembershipFeeAmount();
+
+            if (plan === 'monthly') {
+                monthlyN++;
+                for (const { month, year } of months) {
+                    if (!shouldIncludeSwimmerInBillingMonth(swimmer.id, month, year, season, season.id)) continue;
+                    const row = feeMap.get(`${swimmer.id}|${year}|${month}`);
+                    if (row?.is_oly === true) {
+                        fromOly += OLY_MONTHLY_CONTRIBUTION_EUR;
+                    } else if (row) {
+                        const isPct = row.discount_is_percent != null
+                            ? !!row.discount_is_percent
+                            : getStoredDiscountIsPercent(swimmer.id, month, year);
+                        fromRegular += applyDiscountToFee(row.monthly_fee, row.discount, isPct);
+                    } else {
+                        fromRegular += getDefaultSwimmerFeeForMonth(termCount, 'monthly', season, month, year);
+                    }
+                    feeMonthsProjected++;
+                }
+            } else if (plan === 'two_installments') {
+                twoN++;
+                for (const { month, year } of months) {
+                    if (!isBillingMonthForPlan('two_installments', month, year, season, swimmer.id, season.id)) continue;
+                    const row = feeMap.get(`${swimmer.id}|${year}|${month}`);
+                    if (row?.is_oly === true) {
+                        fromOly += OLY_MONTHLY_CONTRIBUTION_EUR;
+                    } else if (row) {
+                        const isPct = row.discount_is_percent != null
+                            ? !!row.discount_is_percent
+                            : getStoredDiscountIsPercent(swimmer.id, month, year);
+                        const stored = Number(row.monthly_fee) || 0;
+                        const monthlyDefault = getDefaultSwimmerFeeByTermCount(termCount, 'monthly');
+                        if (stored === 0 || stored === monthlyDefault) {
+                            fromRegular += getDefaultSwimmerFeeByTermCount(termCount, 'two_installments');
+                        } else {
+                            fromRegular += applyDiscountToFee(stored, row.discount, isPct);
+                        }
+                    } else {
+                        fromRegular += getDefaultSwimmerFeeByTermCount(termCount, 'two_installments');
+                    }
+                    feeMonthsProjected++;
+                }
+            } else {
+                // lump_sum
+                lumpN++;
+                for (const { month, year } of months) {
+                    if (!isBillingMonthForPlan('lump_sum', month, year, season, swimmer.id, season.id)) continue;
+                    const row = feeMap.get(`${swimmer.id}|${year}|${month}`);
+                    if (row?.is_oly === true) {
+                        fromOly += OLY_MONTHLY_CONTRIBUTION_EUR;
+                    } else if (row) {
+                        const isPct = row.discount_is_percent != null
+                            ? !!row.discount_is_percent
+                            : getStoredDiscountIsPercent(swimmer.id, month, year);
+                        const stored = Number(row.monthly_fee) || 0;
+                        const monthlyDefault = getDefaultSwimmerFeeByTermCount(termCount, 'monthly');
+                        if (stored === 0 || stored === monthlyDefault) {
+                            fromRegular += getDefaultSwimmerFeeByTermCount(termCount, 'lump_sum');
+                        } else {
+                            fromRegular += applyDiscountToFee(stored, row.discount, isPct);
+                        }
+                    } else {
+                        fromRegular += getDefaultSwimmerFeeByTermCount(termCount, 'lump_sum');
+                    }
+                    feeMonthsProjected++;
+                }
+            }
+        }
+
+        const feesTotal = fromRegular + fromOly;
+        return {
+            fromRegular,
+            fromOly,
+            membership,
+            feesTotal,
+            total: feesTotal + membership,
+            olySwimmers,
+            monthlyN,
+            twoN,
+            lumpN,
+            swimmerCount: seasonSwimmers.length,
+            months: months.length,
+            feeMonthsProjected
+        };
+    }
+
     function getSeasonMonthTuples(season) {
         const out = [];
         const s = new Date(season.date_from);
@@ -9592,12 +9742,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             stats = buildSeasonAttendanceStats(season, null);
         }
         const attScopeLabel = scope === 'oly' ? 'OLY (filtrirano)' : 'vsi dodeljeni';
+        // Za OLY/članarine v projekciji potrebuje naložen set
+        olySwimmerIdsForAdminSeason = await getOlySwimmerIdsForSeason(season);
         const fees = await getSeasonFeesTotals(season);
+        const proj = await getSeasonRevenueProjection(season);
         const fin = await computeSeasonFinanceRollup(season);
-        const revenueTotal = fees.total + fin.membership;
+        // Dejansko: samo vneseni zapisi; članarina iz obračunov
+        const actualRevenue = fees.total + fin.membership;
         const costTotal = fin.facility + fin.trainer + fin.management;
-        const net = revenueTotal - costTotal;
-        const netClass = net >= 0 ? '#166534' : '#991b1b';
+        const actualNet = actualRevenue - costTotal;
+        const projectedNet = proj.total - costTotal;
+        const actualNetClass = actualNet >= 0 ? '#166534' : '#991b1b';
+        const projNetClass = projectedNet >= 0 ? '#166534' : '#991b1b';
         const olyDetail = fees.olyRows > 0
             ? ` · OLY: ${fees.fromOly.toFixed(2)} € (${fees.olyRows} zap., po ${OLY_MONTHLY_CONTRIBUTION_EUR} €)`
             : '';
@@ -9627,9 +9783,18 @@ document.addEventListener('DOMContentLoaded', async () => {
               <div style="font-size:13px;color:#444">${stats.attAfter} / ${stats.posAfter} prisotnih / možnih</div>
             </div>
             <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:14px">
-              <div style="font-size:12px;color:#991b1b">Prihodki vadnin (+ članarine)</div>
-              <div style="font-size:22px;font-weight:700">${revenueTotal.toFixed(2)} €</div>
+              <div style="font-size:12px;color:#991b1b">Dejansko vneseno (do zdaj)</div>
+              <div style="font-size:22px;font-weight:700">${actualRevenue.toFixed(2)} €</div>
               <div style="font-size:13px;color:#444">${regDetail}${olyDetail} · Skupaj vadnine+OLY: ${fees.total.toFixed(2)} € (${fees.rows} zapisov)${fin.membership > 0 ? ` · Član.: ${fin.membership.toFixed(2)} €` : ''}</div>
+            </div>
+            <div style="background:#ecfdf5;border:2px solid #059669;border-radius:8px;padding:14px">
+              <div style="font-size:12px;color:#047857"><strong>Projekcija prihodkov (cela sezona)</strong></div>
+              <div style="font-size:22px;font-weight:700;color:#047857">${proj.total.toFixed(2)} €</div>
+              <div style="font-size:13px;color:#444;line-height:1.45">
+                Vadnine: ${proj.fromRegular.toFixed(2)} € · OLY: ${proj.fromOly.toFixed(2)} € (${proj.olySwimmers} × ${proj.months} mes. × ${OLY_MONTHLY_CONTRIBUTION_EUR} €)<br>
+                Članarine: ${proj.membership.toFixed(2)} € (${proj.swimmerCount - proj.olySwimmers} × ${getMembershipFeeAmount()} €, OLY izvzeti)<br>
+                <span class="muted">${proj.monthlyN} mesečno · ${proj.twoN} 2× · ${proj.lumpN} enkrat · ${proj.olySwimmers} OLY · ${proj.months} mesecev</span>
+              </div>
             </div>
             <div style="background:#fff7ed;border:1px solid #fdba74;border-radius:8px;padding:14px">
               <div style="font-size:12px;color:#9a3412">Stroški objektov (seštevek mesecev)</div>
@@ -9646,18 +9811,24 @@ document.addEventListener('DOMContentLoaded', async () => {
               <div style="font-size:22px;font-weight:700">${fin.management.toFixed(2)} €</div>
               <div style="font-size:13px;color:#444">Privzeto z nastavitve »Strošek vodenja« v Finance</div>
             </div>
-            <div style="background:#ecfdf5;border:2px solid ${netClass};border-radius:8px;padding:14px;grid-column:1/-1">
-              <div style="font-size:12px;color:${netClass}"><strong>Letni poračun (v obdobju sezone)</strong></div>
-              <div style="font-size:24px;font-weight:700;color:${netClass}">${net >= 0 ? '+' : ''}${net.toFixed(2)} €</div>
-              <div style="font-size:13px;color:#444">Prihodki (${revenueTotal.toFixed(2)} €) − skupaj stroški (${costTotal.toFixed(2)} €)</div>
+            <div style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;padding:14px">
+              <div style="font-size:12px;color:#475569">Dejanski poračun (vneseno − stroški)</div>
+              <div style="font-size:22px;font-weight:700;color:${actualNetClass}">${actualNet >= 0 ? '+' : ''}${actualNet.toFixed(2)} €</div>
+              <div style="font-size:13px;color:#444">${actualRevenue.toFixed(2)} € − ${costTotal.toFixed(2)} €</div>
+            </div>
+            <div style="background:#ecfdf5;border:2px solid ${projNetClass};border-radius:8px;padding:14px;grid-column:1/-1">
+              <div style="font-size:12px;color:${projNetClass}"><strong>Projekcija letnega poračuna (cela sezona)</strong></div>
+              <div style="font-size:24px;font-weight:700;color:${projNetClass}">${projectedNet >= 0 ? '+' : ''}${projectedNet.toFixed(2)} €</div>
+              <div style="font-size:13px;color:#444">Projekcija prihodkov (${proj.total.toFixed(2)} €) − skupaj stroški (${costTotal.toFixed(2)} €)</div>
             </div>
           </div>
           <p class="muted" style="font-size:13px;line-height:1.5;margin-top:16px">
             <strong>Skupna prisotnost</strong> je <strong>vsota vseh zabeleženih prisotnosti / vsota vseh možnih obiskov</strong> v izbranem obdobju sezone (po vseh dnevih, vseh terminih sezone in vseh dodeljenih plavalcih). Jutro in popoldan sta isti račun, ločeno po uri začetka termina. Če je delež nad 100 %, je prikaz omejen na 100 % (preverite podvojene zapise ali nadomestne obiske).<br>
             Ob izračunu poročila se iz baze za celotno obdobje sezone znova naložita prisotnost in statusi terminov (vsi zapisi, ne le prvih 1000).<br>
             <strong>Pravila:</strong> aktivni termini sezone; plavalec z dodeljenim terminom; nadomestni obiski brez dodelitve v možne niso všteti.<br>
-            <strong>Prihodki:</strong> OLY zapisi v <code>swimmer_monthly_fees</code> štejejo <strong>${OLY_MONTHLY_CONTRIBUTION_EUR} €</strong> na zapis na mesec (ne znesek vadnine v tabeli).<br>
-            <strong>Stroški:</strong> ročno v Finance ali izračun; preverite »Strošek vodenja na mesec«.
+            <strong>Dejansko vneseno:</strong> samo zapisi v <code>swimmer_monthly_fees</code> + obračunane članarine (zato je zgodaj v sezoni nižje od stroškov).<br>
+            <strong>Projekcija:</strong> za celo sezono — mesečni plačniki vsak mesec (z faktorjem 1/2 na začetku/koncu), 2×/enkrat v obračunskih mesecih, OLY ${OLY_MONTHLY_CONTRIBUTION_EUR} €/mesec, članarina ${getMembershipFeeAmount()} € (OLY ne plačajo). Kjer obstaja vnos, uporabi ta znesek (z popustom).<br>
+            <strong>Stroški:</strong> seštevek vseh mesecev sezone (objekti + trenerji + vodenje).
           </p>
         `;
         out.innerHTML = html;
