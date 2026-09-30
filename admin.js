@@ -10561,7 +10561,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             <button type="button" class="btn" id="applyMonthFeeFactorBtn" title="Nastavi vadnine samo mesečnim plačnikom = privzeto × faktor (2×/enkratno se ne spremeni)">Uporabi 1/2 samo za mesečne</button>
             <button type="button" class="btn" id="migrateMembershipToFirstInvoiceBtn" title="Članarine prestavi na prvi obračunski mesec sezone">Članarine → 1. obračun</button>
           </div>`;
-        html += `<p class="muted" style="font-size:13px;margin-bottom:10px">Sezona: <strong>${escapeHtml(seasonName) || '—'}</strong> · ${sortedSwimmers.length} plavalcev · ${monthLabel}${factorHint}<br>
+        html += `<p class="muted" style="font-size:13px;margin-bottom:10px">Sezona: <strong>${escapeHtml(seasonName) || '—'}</strong> · ${sortedSwimmers.length} plavalcev · ${monthLabel}${factorHint}
+            · <span style="display:inline-block;padding:2px 8px;background:#dbeafe;border-radius:4px;color:#1e40af;font-size:12px">Modro = OLY</span><br>
             <span style="font-size:12px">Obračun: <strong>1. mesec = ${escapeHtml(billing1Label)}</strong> (mesečni = polovica, če je faktor 1/2; enkrat/2× = polni znesek),
             2. obrok: <strong>${escapeHtml(billing2Label)}</strong>. Članarina gre z 1. obračunom. Popust v € ali %.
             Kasnejši začetek: Uredi plavalca → Začetek obračuna.</span></p>`;
@@ -10624,8 +10625,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             const canCheckOly = olyCount < 15 || isOly;
             // OLY je mesečni prispevek — ne veže se na mesec obračuna (enkratno / obroki)
             const canEditOly = canCheckOly && monthInSeason;
-            const rowStyle = (finalFee === 0 && !isOly && isBillingMonth) ? 'style="background-color: #ffe0e0;"' : (!isBillingMonth ? 'style="opacity:0.65"' : '');
+            const rowStyle = isOly
+                ? 'style="background-color:#dbeafe;"'
+                : (finalFee === 0 && isBillingMonth)
+                    ? 'style="background-color:#ffe0e0;"'
+                    : (!isBillingMonth ? 'style="opacity:0.65"' : '');
             const inputsDisabled = !isBillingMonth || isOly;
+            const olyBadge = isOly
+                ? ' <span style="font-size:10px;padding:1px 6px;background:#93c5fd;color:#1e3a8a;border-radius:4px;margin-left:4px;white-space:nowrap">OLY</span>'
+                : '';
             const planSelect = seasonId
                 ? buildPaymentPlanSelectHtml(swimmer.id, paymentPlan, false, season)
                 : escapeHtml(PAYMENT_PLAN_LABELS[paymentPlan] || PAYMENT_PLAN_LABELS.monthly);
@@ -10658,7 +10666,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             rowCount++;
             html += `
                 <tr ${rowStyle}>
-                    <td>${swimmer.first_name} ${swimmer.last_name}</td>
+                    <td>${swimmer.first_name} ${swimmer.last_name}${olyBadge}</td>
                     <td>${termsDisplay}</td>
                     <td>${planSelect}${planHint}${lateStartNote}${notBillingNote}</td>
                     <td class="swimmer-fees-term-count" title="${termCount} ${termCount === 1 ? 'termin' : 'terminov'} na teden">${termCountLabel}</td>
