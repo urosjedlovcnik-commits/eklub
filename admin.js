@@ -11347,8 +11347,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 { text: 'Naslov', style: 'tableHeader' },
                 { text: 'Pošta', style: 'tableHeader' },
                 { text: 'Vadnina', style: 'tableHeader', alignment: 'right' },
-                { text: 'Popust', style: 'tableHeader', alignment: 'right' },
-                { text: 'Po popustu', style: 'tableHeader', alignment: 'right' },
                 { text: 'Član.', style: 'tableHeader', alignment: 'right' },
                 { text: 'Skupaj', style: 'tableHeader', alignment: 'right' }
             ];
@@ -11391,8 +11389,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     accountingPdfCell(s.email || ''),
                     accountingPdfCell(s.address || ''),
                     accountingPdfCell(s.postal_code || ''),
-                    accountingPdfCell(formatAccountingFeeAmount(row.fee), 'right'),
-                    accountingPdfCell(formatAccountingDiscountAmountEur(row), 'right'),
                     accountingPdfCell(formatAccountingFeeAmount(row.netFee), 'right'),
                     accountingPdfCell(membershipAmount ? formatAccountingFeeAmount(membershipAmount) : '—', 'right'),
                     accountingPdfCell(formatAccountingFeeAmount(total), 'right')
@@ -11400,7 +11396,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (rowFill) cells.forEach(c => { c.fillColor = rowFill; });
                 tableBody.push(cells);
             });
-            const colWidths = ['3%', '12%', '5%', '16%', '20%', '9%', '7%', '6%', '7%', '6%', '9%'];
+            const colWidths = ['3.5%', '14%', '5%', '18%', '24%', '11%', '8%', '7%', '9.5%'];
             const docDefinition = {
                 pageSize: 'A4',
                 pageOrientation: 'landscape',
