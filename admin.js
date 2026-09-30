@@ -10974,6 +10974,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         return `${formatAccountingFeeAmount(d)} €`;
     }
 
+    /** Za PDF: popust vedno kot znesek v € (ne %) */
+    function formatAccountingDiscountAmountEur(row) {
+        const fee = Number(row.fee) || 0;
+        const net = Number(row.netFee) || 0;
+        const diff = Math.round((fee - net) * 100) / 100;
+        if (diff <= 0) return '—';
+        return formatAccountingFeeAmount(diff);
+    }
+
     /** Članarina se šteje samo v mesecu, v katerem je bila obračunana */
     function rowIncludesMembership(row, month, year) {
         const seasonId = getAdminSeasonFilterId();
@@ -11383,7 +11392,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     accountingPdfCell(s.address || ''),
                     accountingPdfCell(s.postal_code || ''),
                     accountingPdfCell(formatAccountingFeeAmount(row.fee), 'right'),
-                    accountingPdfCell(formatAccountingDiscountLabel(row), 'right'),
+                    accountingPdfCell(formatAccountingDiscountAmountEur(row), 'right'),
                     accountingPdfCell(formatAccountingFeeAmount(row.netFee), 'right'),
                     accountingPdfCell(membershipAmount ? formatAccountingFeeAmount(membershipAmount) : '—', 'right'),
                     accountingPdfCell(formatAccountingFeeAmount(total), 'right')
