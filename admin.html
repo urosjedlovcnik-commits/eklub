@@ -2025,7 +2025,7 @@ date,term_id,swimmer_id,status
             <input type="text" id="billingPersonNewPostal" placeholder="Pošta (opcijsko)" style="width:100%">
           </div>
         </div>
-        <div class="row" style="margin-top:10px;margin-bottom:14px">
+        <div class="row" style="margin-top:10px;margin-bottom:10px">
           <label for="billingPersonPaymentPlan" style="min-width:80px">Plačilo:</label>
           <select id="billingPersonPaymentPlan" style="flex:1;max-width:280px">
             <option value="monthly">Mesečno</option>
@@ -2033,6 +2033,15 @@ date,term_id,swimmer_id,status
             <option value="lump_sum">Enkratno</option>
           </select>
         </div>
+        <div class="row" style="margin-bottom:10px">
+          <label for="billingPersonMonth" style="min-width:80px">Mesec:</label>
+          <select id="billingPersonMonth" style="flex:1;max-width:280px"></select>
+        </div>
+        <div class="row" style="margin-bottom:14px">
+          <label for="billingPersonFee" style="min-width:80px">Znesek (€):</label>
+          <input type="number" id="billingPersonFee" min="0" step="0.01" placeholder="npr. 45" style="flex:1;max-width:160px">
+        </div>
+        <p class="muted" style="font-size:12px;margin:0 0 12px">Oseba se doda v izbrani mesec (znesek + začetek obračuna, če je kasneje v sezoni).</p>
         <button type="button" class="btn pri" id="confirmAddBillingPersonBtn">Dodaj v obračun</button>
         <p id="billingPersonModalMsg" class="muted" style="font-size:12px;margin:10px 0 0"></p>
       </div>

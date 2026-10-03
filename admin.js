@@ -11748,6 +11748,28 @@ document.addEventListener('DOMContentLoaded', async () => {
             : '<option value="">— Ni oseb zunaj obračuna —</option>';
     }
 
+    function populateBillingPersonMonthSelect() {
+        const sel = document.getElementById('billingPersonMonth');
+        if (!sel) return;
+        const seasonId = getAdminSeasonFilterId();
+        const season = seasons.find(s => s.id === seasonId);
+        const tuples = season ? getSeasonMonthTuples(season) : [];
+        const preferred = `${currentSwimmerFeesYear}-${String(currentSwimmerFeesMonth).padStart(2, '0')}`;
+        if (!tuples.length) {
+            sel.innerHTML = `<option value="${preferred}">${escapeHtml(formatBillingMonthLabel({ month: currentSwimmerFeesMonth, year: currentSwimmerFeesYear }))}</option>`;
+            sel.value = preferred;
+            return;
+        }
+        sel.innerHTML = tuples.map(({ month, year }) => {
+            const val = `${year}-${String(month).padStart(2, '0')}`;
+            return `<option value="${val}">${escapeHtml(formatBillingMonthLabel({ month, year }))}</option>`;
+        }).join('');
+        const hasPreferred = tuples.some(t =>
+            t.month === currentSwimmerFeesMonth && t.year === currentSwimmerFeesYear
+        );
+        sel.value = hasPreferred ? preferred : `${tuples[0].year}-${String(tuples[0].month).padStart(2, '0')}`;
+    }
+
     function openAddBillingPersonModal() {
         const seasonId = getAdminSeasonFilterId();
         if (!seasonId) {
@@ -11761,12 +11783,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         setBillingPersonModalMode('existing');
         populateBillingPersonSelect('');
+        populateBillingPersonMonthSelect();
         const search = document.getElementById('billingPersonSearch');
         if (search) search.value = '';
         ['billingPersonNewFirst', 'billingPersonNewLast', 'billingPersonNewEmail', 'billingPersonNewAddress', 'billingPersonNewPostal']
             .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
         const planSel = document.getElementById('billingPersonPaymentPlan');
         if (planSel) planSel.value = 'monthly';
+        const feeInput = document.getElementById('billingPersonFee');
+        if (feeInput) feeInput.value = '';
         const msg = document.getElementById('billingPersonModalMsg');
         if (msg) msg.textContent = '';
         modal.style.display = 'flex';
@@ -11779,10 +11804,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             showMessage('Izberite sezono.', 'warning');
             return;
         }
+        const season = seasons.find(s => s.id === seasonId);
         const msg = document.getElementById('billingPersonModalMsg');
         const neuPanel = document.getElementById('billingPersonNewPanel');
         const isNew = neuPanel && neuPanel.style.display !== 'none';
         const plan = document.getElementById('billingPersonPaymentPlan')?.value || 'monthly';
+        const monthVal = document.getElementById('billingPersonMonth')?.value || '';
+        const [yearStr, monthStr] = monthVal.split('-');
+        const targetMonth = parseInt(monthStr, 10);
+        const targetYear = parseInt(yearStr, 10);
+        if (!Number.isFinite(targetMonth) || !Number.isFinite(targetYear)) {
+            if (msg) msg.textContent = 'Izberite mesec obračuna.';
+            return;
+        }
+        const feeRaw = document.getElementById('billingPersonFee')?.value;
+        const feeAmount = feeRaw === '' || feeRaw == null ? NaN : parseFloat(feeRaw);
+        if (!Number.isFinite(feeAmount) || feeAmount < 0) {
+            if (msg) msg.textContent = 'Vnesite znesek vadnine (lahko 0).';
+            return;
+        }
         const confirmBtn = document.getElementById('confirmAddBillingPersonBtn');
         if (confirmBtn) confirmBtn.disabled = true;
         try {
@@ -11832,19 +11872,51 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return;
                 }
             }
-            const ok = await upsertSwimmerSeasonBilling(swimmerId, seasonId, {
+
+            const billingPatch = {
                 billing_only: true,
                 payment_plan: plan
-            });
+            };
+            if (season && !isShortSeason(season)) {
+                const first = getSeasonFirstInvoiceMonth(season);
+                if (yearMonthValue(targetYear, targetMonth) > yearMonthValue(first.year, first.month)) {
+                    billingPatch.billing_start_month = targetMonth;
+                    billingPatch.billing_start_year = targetYear;
+                } else {
+                    billingPatch.billing_start_month = null;
+                    billingPatch.billing_start_year = null;
+                }
+            }
+
+            const ok = await upsertSwimmerSeasonBilling(swimmerId, seasonId, billingPatch);
             if (!ok) {
                 if (msg) msg.textContent = 'Ni uspelo shraniti oznake za obračun.';
                 return;
             }
+
+            // Če je kasnejši začetek, članarina gre v ta mesec (kot pri setSwimmerBillingStart)
+            if (billingPatch.billing_start_month && !isOlySwimmer(swimmerId)) {
+                const period = getMembershipChargedPeriod(swimmerId, seasonId);
+                if (!period) {
+                    await upsertSwimmerSeasonBilling(swimmerId, seasonId, {
+                        membership_charged_month: targetMonth,
+                        membership_charged_year: targetYear
+                    });
+                }
+            }
+
+            const feeOk = await updateSwimmerFeeInDB(swimmerId, feeAmount, targetMonth, targetYear);
+            if (!feeOk) {
+                if (msg) msg.textContent = 'Oseba je v obračunu, a zneska ni bilo mogoče shraniti.';
+                return;
+            }
+
             closeAddBillingPersonModal();
-            showMessage(`${displayName} dodan(a) v obračun (brez terminov). Nastavite znesek vadnine.`, 'success');
+            const monthLabel = formatBillingMonthLabel({ month: targetMonth, year: targetYear });
+            showMessage(`${displayName} dodan(a) v obračun za ${monthLabel} (${feeAmount} €).`, 'success');
             if (typeof updateSwimmerSelects === 'function') updateSwimmerSelects();
             if (typeof updateSwimmersList === 'function') updateSwimmersList();
-            await refreshSwimmerFees();
+            setAdminFinanceMonth(targetMonth, targetYear, { refresh: true });
         } catch (e) {
             console.error(e);
             if (msg) msg.textContent = 'Napaka: ' + (e.message || e);
