@@ -1143,14 +1143,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         return termMatchesAdminSeasonFilter(termId);
     }
 
-    function entityHasTermsInAdminSeason(entity) {
+    function entityHasTermsInSeason(entity, seasonId) {
         if (!entity?.terms?.length) return false;
-        const seasonId = getAdminSeasonFilterId();
-        if (!seasonId) return true;
+        const sid = seasonId || getAdminSeasonFilterId();
+        if (!sid) return true;
         return entity.terms.some(tid => {
             const t = TERMS.find(x => x.id === tid);
-            return t && t.season_id === seasonId;
+            return t && t.season_id === sid;
         });
+    }
+
+    function entityHasTermsInAdminSeason(entity) {
+        return entityHasTermsInSeason(entity, getAdminSeasonFilterId());
+    }
+
+    function isBillingOnlySwimmer(swimmerId, seasonId) {
+        return !!getSwimmerSeasonBillingRecord(swimmerId, seasonId).billing_only;
+    }
+
+    /** Plavalec v seznamu vadnin/obračuna: ima termine ALI je označen za obračun brez terminov */
+    function isSwimmerInSeasonBillingList(swimmer, seasonId) {
+        if (!swimmer || swimmer.is_deleted) return false;
+        const sid = seasonId || getAdminSeasonFilterId();
+        if (entityHasTermsInSeason(swimmer, sid)) return true;
+        return isBillingOnlySwimmer(swimmer.id, sid);
     }
 
     function countTermsInAdminSeason(termIds) {
@@ -1472,7 +1488,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         membership_charged_month: null,
         membership_charged_year: null,
         billing_start_month: null,
-        billing_start_year: null
+        billing_start_year: null,
+        billing_only: false
     };
 
     function getSwimmerSeasonBillingRecord(swimmerId, seasonId) {
@@ -1529,7 +1546,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 : current.billing_start_month,
             billing_start_year: patch.billing_start_year !== undefined
                 ? patch.billing_start_year
-                : current.billing_start_year
+                : current.billing_start_year,
+            billing_only: patch.billing_only !== undefined
+                ? !!patch.billing_only
+                : !!current.billing_only
         };
         try {
             const payload = {
@@ -1540,9 +1560,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 membership_charged_month: next.membership_charged_month,
                 membership_charged_year: next.membership_charged_year,
                 billing_start_month: next.billing_start_month,
-                billing_start_year: next.billing_start_year
+                billing_start_year: next.billing_start_year,
+                billing_only: next.billing_only
             };
             let { error } = await supabase.from('swimmer_season_billing').upsert(payload, { onConflict: 'swimmer_id,season_id' });
+            if (error && /billing_only/i.test(error.message || '')) {
+                delete payload.billing_only;
+                ({ error } = await supabase.from('swimmer_season_billing').upsert(payload, { onConflict: 'swimmer_id,season_id' }));
+            }
             if (error && /billing_start_/i.test(error.message || '')) {
                 delete payload.billing_start_month;
                 delete payload.billing_start_year;
@@ -1572,12 +1597,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 membership_charged_month,
                 membership_charged_year,
                 billing_start_month: current.billing_start_month || null,
-                billing_start_year: current.billing_start_year || null
+                billing_start_year: current.billing_start_year || null,
+                billing_only: !!current.billing_only
             };
         });
         try {
             let { error } = await supabase.from('swimmer_season_billing')
                 .upsert(payload, { onConflict: 'swimmer_id,season_id' });
+            if (error && /billing_only/i.test(error.message || '')) {
+                payload.forEach(p => { delete p.billing_only; });
+                ({ error } = await supabase.from('swimmer_season_billing')
+                    .upsert(payload, { onConflict: 'swimmer_id,season_id' }));
+            }
             if (error && /billing_start_/i.test(error.message || '')) {
                 payload.forEach(p => {
                     delete p.billing_start_month;
@@ -1598,7 +1629,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         : current.billing_start_month,
                     billing_start_year: p.billing_start_year != null
                         ? p.billing_start_year
-                        : current.billing_start_year
+                        : current.billing_start_year,
+                    billing_only: p.billing_only != null ? !!p.billing_only : !!current.billing_only
                 };
             });
             return true;
@@ -1635,7 +1667,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const { data, error } = await supabase
                 .from('swimmer_season_billing')
-                .select('swimmer_id, season_id, payment_plan, membership_charged_month, membership_charged_year, billing_start_month, billing_start_year');
+                .select('swimmer_id, season_id, payment_plan, membership_charged_month, membership_charged_year, billing_start_month, billing_start_year, billing_only');
             if (error) throw error;
             (data || []).forEach(row => {
                 swimmerSeasonBilling[`${row.swimmer_id}|${row.season_id}`] = {
@@ -1643,27 +1675,46 @@ document.addEventListener('DOMContentLoaded', async () => {
                     membership_charged_month: row.membership_charged_month || null,
                     membership_charged_year: row.membership_charged_year || null,
                     billing_start_month: row.billing_start_month || null,
-                    billing_start_year: row.billing_start_year || null
+                    billing_start_year: row.billing_start_year || null,
+                    billing_only: !!row.billing_only
                 };
             });
         } catch (e) {
-            // Starejša shema brez billing_start_*
+            // Starejša shema brez billing_only / billing_start_*
             try {
                 const { data, error } = await supabase
                     .from('swimmer_season_billing')
-                    .select('swimmer_id, season_id, payment_plan, membership_charged_month, membership_charged_year');
+                    .select('swimmer_id, season_id, payment_plan, membership_charged_month, membership_charged_year, billing_start_month, billing_start_year');
                 if (error) throw error;
                 (data || []).forEach(row => {
                     swimmerSeasonBilling[`${row.swimmer_id}|${row.season_id}`] = {
                         payment_plan: row.payment_plan || 'monthly',
                         membership_charged_month: row.membership_charged_month || null,
                         membership_charged_year: row.membership_charged_year || null,
-                        billing_start_month: null,
-                        billing_start_year: null
+                        billing_start_month: row.billing_start_month || null,
+                        billing_start_year: row.billing_start_year || null,
+                        billing_only: false
                     };
                 });
             } catch (e2) {
-                console.warn('Načini plačila niso naloženi:', e2.message || e2);
+                try {
+                    const { data, error } = await supabase
+                        .from('swimmer_season_billing')
+                        .select('swimmer_id, season_id, payment_plan, membership_charged_month, membership_charged_year');
+                    if (error) throw error;
+                    (data || []).forEach(row => {
+                        swimmerSeasonBilling[`${row.swimmer_id}|${row.season_id}`] = {
+                            payment_plan: row.payment_plan || 'monthly',
+                            membership_charged_month: row.membership_charged_month || null,
+                            membership_charged_year: row.membership_charged_year || null,
+                            billing_start_month: null,
+                            billing_start_year: null,
+                            billing_only: false
+                        };
+                    });
+                } catch (e3) {
+                    console.warn('Načini plačila niso naloženi:', e3.message || e3);
+                }
             }
         }
     }
@@ -9444,9 +9495,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         let lumpN = 0;
         let feeMonthsProjected = 0;
 
-        const seasonSwimmers = swimmers.filter(s =>
-            !s.is_deleted && getSwimmerTermIdsInSeason(s, season.id).length > 0
-        );
+        const seasonSwimmers = swimmers.filter(s => isSwimmerInSeasonBillingList(s, season.id));
 
         for (const swimmer of seasonSwimmers) {
             const termCount = getSwimmerTermIdsInSeason(swimmer, season.id).length;
@@ -10493,7 +10542,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             : '';
 
         let sortedSwimmers = swimmers
-            .filter(s => !s.is_deleted && entityHasTermsInAdminSeason(s))
+            .filter(s => isSwimmerInSeasonBillingList(s, seasonId))
             .sort((a, b) => {
                 const aName = `${a.last_name} ${a.first_name}`;
                 const bName = `${b.last_name} ${b.first_name}`;
@@ -10527,17 +10576,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             </label>
             <label style="font-size:14px;display:flex;align-items:center;gap:6px">OLY:
               <select id="swimmerFeesOlyFilter" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border)">${olyFilterOptsHtml}</select>
-            </label>`;
+            </label>
+            <button type="button" class="btn pri" id="openAddBillingPersonBtn" title="Oseba za obračun brez terminov (društvo / druga oseba plača)">+ Oseba za obračun</button>`;
 
         if (sortedSwimmers.length === 0) {
             elSwimmerFeesBox.innerHTML = `${feesFilterBarHtml}</div>
-              <p class="muted">Ni plavalcev z dodeljenimi termini v sezoni <strong>${escapeHtml(seasonName) || '—'}</strong>${swimmerFeesPlanFilter || swimmerFeesOlyFilter ? ' za izbran filter' : ''}. Dodelite termine v zavihku Plavalci.</p>`;
+              <p class="muted">Ni oseb za obračun v sezoni <strong>${escapeHtml(seasonName) || '—'}</strong>${swimmerFeesPlanFilter || swimmerFeesOlyFilter ? ' za izbran filter' : ''}. Dodelite termine ali dodajte osebo za obračun.</p>`;
             bindSwimmerFeesFilters();
+            document.getElementById('openAddBillingPersonBtn')?.addEventListener('click', openAddBillingPersonModal);
             return;
         }
 
         let olyCount = 0;
-        swimmers.filter(s => !s.is_deleted && entityHasTermsInAdminSeason(s)).forEach(swimmer => {
+        swimmers.filter(s => isSwimmerInSeasonBillingList(s, seasonId)).forEach(swimmer => {
             if (swimmerFees[swimmer.id]?.is_oly) olyCount++;
         });
 
@@ -10562,7 +10613,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             <button type="button" class="btn" id="migrateMembershipToFirstInvoiceBtn" title="Članarine prestavi na prvi obračunski mesec sezone">Članarine → 1. obračun</button>
           </div>`;
         html += `<p class="muted" style="font-size:13px;margin-bottom:10px">Sezona: <strong>${escapeHtml(seasonName) || '—'}</strong> · ${sortedSwimmers.length} plavalcev · ${monthLabel}${factorHint}
-            · <span style="display:inline-block;padding:2px 8px;background:#dbeafe;border-radius:4px;color:#1e40af;font-size:12px">Modro = OLY</span><br>
+            · <span style="display:inline-block;padding:2px 8px;background:#dbeafe;border-radius:4px;color:#1e40af;font-size:12px">Modro = OLY</span>
+            · <span style="display:inline-block;padding:2px 8px;background:#ffedd5;border-radius:4px;color:#9a3412;font-size:12px">Oranžno = samo obračun</span><br>
             <span style="font-size:12px">Obračun: <strong>1. mesec = ${escapeHtml(billing1Label)}</strong> (mesečni = polovica, če je faktor 1/2; enkrat/2× = polni znesek),
             2. obrok: <strong>${escapeHtml(billing2Label)}</strong>. Članarina gre z 1. obračunom. Popust v € ali %.
             Kasnejši začetek: Uredi plavalca → Začetek obračuna.</span></p>`;
@@ -10589,10 +10641,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             const termLabels = getSwimmerSeasonTermLabels(swimmer);
             const termCount = termLabels.length;
             const termCountLabel = termCount > 0 ? `${termCount}×` : '0';
-            const termsDisplay = termLabels.length > 0 ? termLabels.join(', ') : 'Brez terminov';
+            const termsDisplay = termLabels.length > 0
+                ? termLabels.join(', ')
+                : (isBillingOnlySwimmer(swimmer.id, seasonId)
+                    ? '<span style="color:#9a3412" title="Samo za obračun, brez terminov">Samo obračun</span>'
+                    : 'Brez terminov');
             const paymentPlan = getSwimmerPaymentPlan(swimmer.id, seasonId);
             const feeData = swimmerFees[swimmer.id];
             const isOly = feeData?.is_oly || false;
+            const billingOnly = isBillingOnlySwimmer(swimmer.id, seasonId);
             const isBillingMonth = shouldIncludeSwimmerInBillingMonth(swimmer.id, month, year, season, seasonId);
             const monthInSeason = isMonthInSeason(month, year, season);
             const billingHint = getPaymentPlanBillingHint(paymentPlan, season);
@@ -10627,12 +10684,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             const canEditOly = canCheckOly && monthInSeason;
             const rowStyle = isOly
                 ? 'style="background-color:#dbeafe;"'
+                : (billingOnly && !entityHasTermsInSeason(swimmer, seasonId))
+                    ? 'style="background-color:#ffedd5;"'
                 : (finalFee === 0 && isBillingMonth)
                     ? 'style="background-color:#ffe0e0;"'
                     : (!isBillingMonth ? 'style="opacity:0.65"' : '');
             const inputsDisabled = !isBillingMonth || isOly;
             const olyBadge = isOly
                 ? ' <span style="font-size:10px;padding:1px 6px;background:#93c5fd;color:#1e3a8a;border-radius:4px;margin-left:4px;white-space:nowrap">OLY</span>'
+                : '';
+            const billingOnlyBadge = billingOnly && !entityHasTermsInSeason(swimmer, seasonId)
+                ? ' <span style="font-size:10px;padding:1px 6px;background:#fed7aa;color:#9a3412;border-radius:4px;margin-left:4px;white-space:nowrap">obračun</span>'
+                : '';
+            const removeBillingBtn = billingOnly && !entityHasTermsInSeason(swimmer, seasonId)
+                ? ` <button type="button" class="btn" style="padding:1px 6px;font-size:11px;margin-left:4px" onclick="removeBillingOnlyPerson('${swimmer.id}')" title="Odstrani iz obračuna">×</button>`
                 : '';
             const planSelect = seasonId
                 ? buildPaymentPlanSelectHtml(swimmer.id, paymentPlan, false, season)
@@ -10666,7 +10731,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             rowCount++;
             html += `
                 <tr ${rowStyle}>
-                    <td>${swimmer.first_name} ${swimmer.last_name}${olyBadge}</td>
+                    <td>${swimmer.first_name} ${swimmer.last_name}${olyBadge}${billingOnlyBadge}${removeBillingBtn}</td>
                     <td>${termsDisplay}</td>
                     <td>${planSelect}${planHint}${lateStartNote}${notBillingNote}</td>
                     <td class="swimmer-fees-term-count" title="${termCount} ${termCount === 1 ? 'termin' : 'terminov'} na teden">${termCountLabel}</td>
@@ -10704,6 +10769,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         `;
         elSwimmerFeesBox.innerHTML = html;
         bindSwimmerFeesFilters();
+        document.getElementById('openAddBillingPersonBtn')?.addEventListener('click', openAddBillingPersonModal);
         const factorSel = document.getElementById('swimmerFeesMonthFactor');
         const factorCustom = document.getElementById('swimmerFeesMonthFactorCustom');
         factorSel?.addEventListener('change', () => {
@@ -10943,7 +11009,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const rows = [];
         swimmers
-            .filter(s => !s.is_deleted && entityHasTermsInAdminSeason(s))
+            .filter(s => isSwimmerInSeasonBillingList(s, seasonId))
             .forEach(swimmer => {
                 const plan = getSwimmerPaymentPlan(swimmer.id, seasonId);
                 if (accountingPlanFilter && plan !== accountingPlanFilter) return;
@@ -11200,6 +11266,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             const returningBadge = returning
                 ? ' <span title="Že bil(a) v prejšnji sezoni" style="font-size:10px;padding:1px 6px;background:#93c5fd;color:#1e3a8a;border-radius:4px;margin-left:4px;white-space:nowrap">vračajoči</span>'
                 : '';
+            const billingOnlyAccBadge = isBillingOnlySwimmer(s.id, seasonId) && !entityHasTermsInSeason(s, seasonId)
+                ? ' <span title="Samo za obračun, brez terminov" style="font-size:10px;padding:1px 6px;background:#fed7aa;color:#9a3412;border-radius:4px;margin-left:4px;white-space:nowrap">obračun</span>'
+                : '';
             const lateStartBadge = billingStart
                 ? ` <span title="Začetek obračuna" style="font-size:10px;padding:1px 6px;background:#fef3c7;color:#92400e;border-radius:4px;margin-left:4px;white-space:nowrap">od ${escapeHtml(formatBillingMonthLabel(billingStart))}</span>`
                 : '';
@@ -11213,7 +11282,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <button type="button" class="btn" style="padding:2px 8px;font-size:12px" data-acc-order-up="${i}" title="Premakni gor">↑</button>
                     <button type="button" class="btn" style="padding:2px 8px;font-size:12px" data-acc-order-down="${i}" title="Premakni dol">↓</button>
                 </td>
-                <td>${escapeHtml(swimmerDisplayName(s))}${returningBadge}${lateStartBadge}</td>
+                <td>${escapeHtml(swimmerDisplayName(s))}${returningBadge}${billingOnlyAccBadge}${lateStartBadge}</td>
                 <td>${s.email ? escapeHtml(s.email) : '<span title="Manjka email">⚠</span>'}</td>
                 <td>${s.address ? escapeHtml(s.address) : '<span title="Manjka naslov">⚠</span>'}</td>
                 <td>${s.postal_code ? escapeHtml(s.postal_code) : '<span title="Manjka pošta">⚠</span>'}</td>
@@ -11259,7 +11328,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         const rows = accountingReportWorkingOrder
-            .filter(row => entityHasTermsInAdminSeason(row.swimmer))
+            .filter(row => isSwimmerInSeasonBillingList(row.swimmer))
             .map((row, i) => ({
             season_id: season.id,
             swimmer_id: row.swimmer.id,
@@ -11339,6 +11408,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             const fileSlug = `${String(month).padStart(2, '0')}_${year}`;
             const hasAnyMembership = accountingReportHasAnyMembership(rows, month, year);
             const returningInPdf = rows.filter(r => isReturningSwimmer(r.swimmer, seasonId)).length;
+            const billingOnlyInPdf = rows.filter(r =>
+                isBillingOnlySwimmer(r.swimmer.id, seasonId) && !entityHasTermsInSeason(r.swimmer, seasonId)
+            ).length;
             const headerRow = [
                 { text: 'Št.', style: 'tableHeader', alignment: 'center' },
                 { text: 'Ime priimek', style: 'tableHeader' },
@@ -11366,10 +11438,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 rowIndex++;
                 const s = row.swimmer;
                 const returning = isReturningSwimmer(s, seasonId);
+                const billingOnlyPdf = isBillingOnlySwimmer(s.id, seasonId) && !entityHasTermsInSeason(s, seasonId);
                 const membershipAmount = rowIncludesMembership(row, month, year) ? getMembershipFeeAmount() : 0;
                 const total = getAccountingRowTotal(row, month, year);
                 const nameCell = {
-                    text: swimmerDisplayName(s),
+                    text: swimmerDisplayName(s) + (billingOnlyPdf ? ' *' : ''),
                     noWrap: true,
                     fontSize: 7.5,
                     bold: returning
@@ -11381,7 +11454,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     bold: returning,
                     color: returning ? '#1e40af' : '#94a3b8'
                 };
-                const rowFill = returning ? '#dbeafe' : undefined;
+                const rowFill = returning ? '#dbeafe' : (billingOnlyPdf ? '#ffedd5' : undefined);
                 const cells = [
                     accountingPdfCell(String(rowIndex), 'center'),
                     nameCell,
@@ -11409,7 +11482,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         margin: [0, 0, 0, 4]
                     },
                     {
-                        text: `Modro / ✓ (Ponov.) = ponavljajoči plavalec (že v prejšnji sezoni). Označenih: ${returningInPdf} / ${rows.length}. Plavalci z vadnino 0 € niso v seznamu.`,
+                        text: `Modro / ✓ (Ponov.) = vračajoči (${returningInPdf}). Oranžno / * = samo obračun, brez terminov (${billingOnlyInPdf}). Skupaj: ${rows.length}. Vadnina 0 € ni v seznamu.`,
                         fontSize: 8,
                         color: '#1e40af',
                         margin: [0, 0, 0, 10]
@@ -11629,6 +11702,187 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
     
+    function closeAddBillingPersonModal() {
+        const modal = document.getElementById('addBillingPersonModal');
+        if (!modal) return;
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+    }
+
+    function setBillingPersonModalMode(mode) {
+        const existing = document.getElementById('billingPersonExistingPanel');
+        const neu = document.getElementById('billingPersonNewPanel');
+        const btnEx = document.getElementById('billingPersonModeExistingBtn');
+        const btnNew = document.getElementById('billingPersonModeNewBtn');
+        const isNew = mode === 'new';
+        if (existing) existing.style.display = isNew ? 'none' : '';
+        if (neu) neu.style.display = isNew ? '' : 'none';
+        if (btnEx) btnEx.className = isNew ? 'btn' : 'btn pri';
+        if (btnNew) btnNew.className = isNew ? 'btn pri' : 'btn';
+    }
+
+    function populateBillingPersonSelect(filterText = '') {
+        const sel = document.getElementById('billingPersonSelect');
+        if (!sel) return;
+        const seasonId = getAdminSeasonFilterId();
+        const q = (filterText || '').trim().toLowerCase();
+        const candidates = swimmers
+            .filter(s => !s.is_deleted && !isSwimmerInSeasonBillingList(s, seasonId))
+            .filter(s => {
+                if (!q) return true;
+                const name = `${s.first_name || ''} ${s.last_name || ''} ${s.email || ''}`.toLowerCase();
+                return name.includes(q);
+            })
+            .sort((a, b) => {
+                const byLast = (a.last_name || '').localeCompare(b.last_name || '', 'sl');
+                if (byLast !== 0) return byLast;
+                return (a.first_name || '').localeCompare(b.first_name || '', 'sl');
+            });
+        sel.innerHTML = candidates.length
+            ? candidates.map(s =>
+                `<option value="${s.id}">${escapeHtml(s.last_name || '')} ${escapeHtml(s.first_name || '')}${s.email ? ` (${escapeHtml(s.email)})` : ''}</option>`
+            ).join('')
+            : '<option value="">— Ni oseb zunaj obračuna —</option>';
+    }
+
+    function openAddBillingPersonModal() {
+        const seasonId = getAdminSeasonFilterId();
+        if (!seasonId) {
+            showMessage('Izberite sezono v pasu zgoraj.', 'warning');
+            return;
+        }
+        const modal = document.getElementById('addBillingPersonModal');
+        if (!modal) {
+            showMessage('Modal ni na voljo — osvežite stran.', 'error');
+            return;
+        }
+        setBillingPersonModalMode('existing');
+        populateBillingPersonSelect('');
+        const search = document.getElementById('billingPersonSearch');
+        if (search) search.value = '';
+        ['billingPersonNewFirst', 'billingPersonNewLast', 'billingPersonNewEmail', 'billingPersonNewAddress', 'billingPersonNewPostal']
+            .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+        const planSel = document.getElementById('billingPersonPaymentPlan');
+        if (planSel) planSel.value = 'monthly';
+        const msg = document.getElementById('billingPersonModalMsg');
+        if (msg) msg.textContent = '';
+        modal.style.display = 'flex';
+        modal.setAttribute('aria-hidden', 'false');
+    }
+
+    async function confirmAddBillingPerson() {
+        const seasonId = getAdminSeasonFilterId();
+        if (!seasonId) {
+            showMessage('Izberite sezono.', 'warning');
+            return;
+        }
+        const msg = document.getElementById('billingPersonModalMsg');
+        const neuPanel = document.getElementById('billingPersonNewPanel');
+        const isNew = neuPanel && neuPanel.style.display !== 'none';
+        const plan = document.getElementById('billingPersonPaymentPlan')?.value || 'monthly';
+        const confirmBtn = document.getElementById('confirmAddBillingPersonBtn');
+        if (confirmBtn) confirmBtn.disabled = true;
+        try {
+            let swimmerId = null;
+            let displayName = '';
+            if (isNew) {
+                const first = document.getElementById('billingPersonNewFirst')?.value.trim() || '';
+                const last = document.getElementById('billingPersonNewLast')?.value.trim() || '';
+                const email = document.getElementById('billingPersonNewEmail')?.value.trim() || '';
+                const address = document.getElementById('billingPersonNewAddress')?.value.trim() || '';
+                const postal = document.getElementById('billingPersonNewPostal')?.value.trim() || '';
+                if (!first || !last) {
+                    if (msg) msg.textContent = 'Vnesite ime in priimek.';
+                    return;
+                }
+                if (email && !isValidEmail(email)) {
+                    if (msg) msg.textContent = 'Neveljaven email.';
+                    return;
+                }
+                const { data, error } = await supabase
+                    .from('swimmers')
+                    .insert([{
+                        first_name: first,
+                        last_name: last,
+                        email: email || null,
+                        address: address || null,
+                        postal_code: postal || null,
+                        terms: [],
+                        is_deleted: false
+                    }])
+                    .select();
+                if (error) throw error;
+                if (!data?.[0]) throw new Error('Oseba ni bila ustvarjena.');
+                swimmers.push(data[0]);
+                swimmerId = data[0].id;
+                displayName = `${first} ${last}`;
+            } else {
+                swimmerId = document.getElementById('billingPersonSelect')?.value || '';
+                if (!swimmerId) {
+                    if (msg) msg.textContent = 'Izberite osebo.';
+                    return;
+                }
+                const s = swimmers.find(x => x.id === swimmerId);
+                displayName = s ? `${s.first_name} ${s.last_name}` : swimmerId;
+                if (isSwimmerInSeasonBillingList(s, seasonId)) {
+                    if (msg) msg.textContent = 'Oseba je že v obračunu (ima termine ali je že označena).';
+                    return;
+                }
+            }
+            const ok = await upsertSwimmerSeasonBilling(swimmerId, seasonId, {
+                billing_only: true,
+                payment_plan: plan
+            });
+            if (!ok) {
+                if (msg) msg.textContent = 'Ni uspelo shraniti oznake za obračun.';
+                return;
+            }
+            closeAddBillingPersonModal();
+            showMessage(`${displayName} dodan(a) v obračun (brez terminov). Nastavite znesek vadnine.`, 'success');
+            if (typeof updateSwimmerSelects === 'function') updateSwimmerSelects();
+            if (typeof updateSwimmersList === 'function') updateSwimmersList();
+            await refreshSwimmerFees();
+        } catch (e) {
+            console.error(e);
+            if (msg) msg.textContent = 'Napaka: ' + (e.message || e);
+            showMessage('Napaka pri dodajanju osebe za obračun.', 'error');
+        } finally {
+            if (confirmBtn) confirmBtn.disabled = false;
+        }
+    }
+
+    window.removeBillingOnlyPerson = async function(swimmerId) {
+        const seasonId = getAdminSeasonFilterId();
+        if (!seasonId || !swimmerId) return;
+        const s = swimmers.find(x => x.id === swimmerId);
+        const name = s ? `${s.first_name} ${s.last_name}` : 'osebo';
+        if (!confirm(`Odstrani ${name} iz obračuna te sezone? (Zneski v bazi ostanejo.)`)) return;
+        const ok = await upsertSwimmerSeasonBilling(swimmerId, seasonId, { billing_only: false });
+        if (ok) {
+            showMessage(`${name} odstranjen(a) iz obračuna.`, 'success');
+            await refreshSwimmerFees();
+            if (typeof refreshAccountingReportEditor === 'function') {
+                try { await refreshAccountingReportEditor(); } catch { /* ignore */ }
+            }
+        }
+    };
+
+    window.openAddBillingPersonModal = openAddBillingPersonModal;
+
+    document.getElementById('closeAddBillingPersonModalBtn')?.addEventListener('click', closeAddBillingPersonModal);
+    document.getElementById('billingPersonModeExistingBtn')?.addEventListener('click', () => {
+        setBillingPersonModalMode('existing');
+        populateBillingPersonSelect(document.getElementById('billingPersonSearch')?.value || '');
+    });
+    document.getElementById('billingPersonModeNewBtn')?.addEventListener('click', () => setBillingPersonModalMode('new'));
+    document.getElementById('billingPersonSearch')?.addEventListener('input', (e) => {
+        populateBillingPersonSelect(e.target.value || '');
+    });
+    document.getElementById('confirmAddBillingPersonBtn')?.addEventListener('click', confirmAddBillingPerson);
+    document.getElementById('addBillingPersonModal')?.addEventListener('click', (e) => {
+        if (e.target?.id === 'addBillingPersonModal') closeAddBillingPersonModal();
+    });
+
     // Globalne funkcije za onchange evente
     window.updateSwimmerFee = updateSwimmerFee;
     window.updateSwimmerDiscount = updateSwimmerDiscount;

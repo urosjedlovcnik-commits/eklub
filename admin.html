@@ -1997,6 +1997,58 @@ date,term_id,swimmer_id,status
   </div>
 
   <!-- Modal za urejanje plavalca -->
+  <div class="modal" id="addBillingPersonModal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="box" style="max-width:520px">
+      <div class="box-header">
+        <strong>Oseba za obračun</strong>
+        <button type="button" class="btn" id="closeAddBillingPersonModalBtn">Zapri</button>
+      </div>
+      <div class="box-body">
+        <p class="muted" style="font-size:13px;margin:0 0 12px">
+          Za plačnike prek športnega društva ali tretje osebe — brez terminov vadbe.
+          Oseba se pojavi pri mesečnih pristojbinah in v PDF obračunu.
+        </p>
+        <div class="row" style="gap:8px;margin-bottom:12px;flex-wrap:wrap">
+          <button type="button" class="btn pri" id="billingPersonModeExistingBtn">Obstoječa oseba</button>
+          <button type="button" class="btn" id="billingPersonModeNewBtn">Nova oseba</button>
+        </div>
+        <div id="billingPersonExistingPanel">
+          <div class="row" style="margin-bottom:10px">
+            <label for="billingPersonSearch" style="min-width:80px">Išči:</label>
+            <input type="search" id="billingPersonSearch" placeholder="Ime ali priimek…" style="flex:1">
+          </div>
+          <div class="row" style="margin-bottom:10px">
+            <label for="billingPersonSelect" style="min-width:80px">Oseba:</label>
+            <select id="billingPersonSelect" style="flex:1;max-width:100%"></select>
+          </div>
+        </div>
+        <div id="billingPersonNewPanel" style="display:none">
+          <div class="row" style="margin-bottom:8px;gap:8px;flex-wrap:wrap">
+            <input type="text" id="billingPersonNewFirst" placeholder="Ime" style="flex:1;min-width:120px">
+            <input type="text" id="billingPersonNewLast" placeholder="Priimek" style="flex:1;min-width:120px">
+          </div>
+          <div class="row" style="margin-bottom:8px;gap:8px;flex-wrap:wrap">
+            <input type="email" id="billingPersonNewEmail" placeholder="Email (opcijsko)" style="flex:1;min-width:140px">
+            <input type="text" id="billingPersonNewAddress" placeholder="Naslov (opcijsko)" style="flex:1;min-width:140px">
+          </div>
+          <div class="row" style="margin-bottom:8px">
+            <input type="text" id="billingPersonNewPostal" placeholder="Pošta (opcijsko)" style="width:100%">
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px;margin-bottom:14px">
+          <label for="billingPersonPaymentPlan" style="min-width:80px">Plačilo:</label>
+          <select id="billingPersonPaymentPlan" style="flex:1;max-width:280px">
+            <option value="monthly">Mesečno</option>
+            <option value="two_installments">2 obroka</option>
+            <option value="lump_sum">Enkratno</option>
+          </select>
+        </div>
+        <button type="button" class="btn pri" id="confirmAddBillingPersonBtn">Dodaj v obračun</button>
+        <p id="billingPersonModalMsg" class="muted" style="font-size:12px;margin:10px 0 0"></p>
+      </div>
+    </div>
+  </div>
+
   <div class="modal" id="editSwimmerModal" role="dialog" aria-modal="true" aria-hidden="true">
     <div class="box edit-swimmer-box">
       <div class="box-header">
