@@ -10602,6 +10602,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const isPastMonth = requestedDate < currentDate;
         const monthLabel = new Date(year, month - 1, 1).toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
 
+        // % obiska za isti mesec kot vadnine
+        try {
+            await loadAttendanceForMonth(year, month);
+        } catch (e) {
+            console.warn('Prisotnost za % obiska ni naložena:', e);
+        }
+        const attendanceSummaryBySwimmer = calculateSwimmerSummaryData(year, month);
+
         let html = `${feesFilterBarHtml}
             <label style="font-size:14px;display:flex;align-items:center;gap:6px" title="Samo mesečni plačniki — za delni mesec (npr. od 15. do konca)">Faktor (mesečni):
               <select id="swimmerFeesMonthFactor" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border)">
@@ -10629,6 +10637,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <th>Termini (sezona)</th>
                         <th>Način plačila</th>
                         <th title="Število terminov na teden (določa privzeto višino vadnine)">×/teden</th>
+                        <th style="text-align:right" title="Delež prisotnosti v tem mesecu (obiskani / možni)">% obiska</th>
                         <th>Znesek vadnine (€)</th>
                         <th>Popust</th>
                         <th>Končna vadnina (€)</th>
@@ -10731,6 +10740,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <option value="pct"${discountIsPercent ? ' selected' : ''}>%</option>
             </select>`;
 
+            const attRow = attendanceSummaryBySwimmer[swimmer.id];
+            const att = attRow?.att || 0;
+            const pos = attRow?.pos || 0;
+            let attendanceCell = '<span class="muted">—</span>';
+            if (pos > 0 || att > 0) {
+                const pctNum = pos > 0 ? (att / pos * 100) : 0;
+                const pctLabel = pctNum.toFixed(1);
+                const pctColor = pctNum >= 80 ? '#166534' : (pctNum >= 50 ? '#92400e' : '#991b1b');
+                const title = `${att} / ${pos} v ${monthLabel}`;
+                const nameAttr = escapeHtml(`${swimmer.first_name} ${swimmer.last_name}`);
+                attendanceCell = (att > 0 || pos > 0)
+                    ? `<a href="#" class="fees-attendance-link" data-swimmer-id="${swimmer.id}" data-swimmer-name="${nameAttr}" title="${escapeHtml(title)}" style="color:${pctColor};text-decoration:underline;cursor:pointer;font-variant-numeric:tabular-nums">${pctLabel}%</a>`
+                    : `<span title="${escapeHtml(title)}" style="color:${pctColor};font-variant-numeric:tabular-nums">${pctLabel}%</span>`;
+            }
+
             rowCount++;
             html += `
                 <tr ${rowStyle}>
@@ -10738,6 +10762,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <td>${termsDisplay}</td>
                     <td>${planSelect}${planHint}${lateStartNote}${notBillingNote}</td>
                     <td class="swimmer-fees-term-count" title="${termCount} ${termCount === 1 ? 'termin' : 'terminov'} na teden">${termCountLabel}</td>
+                    <td style="text-align:right;white-space:nowrap">${attendanceCell}</td>
                     <td>
                         <input type="number" id="fee-${swimmer.id}" value="${effectiveFee}" min="0" step="0.01" style="width: 80px;" onchange="updateSwimmerFee('${swimmer.id}', this.value, ${month}, ${year})" ${inputsDisabled ? 'disabled' : ''}>
                     </td>
@@ -10773,6 +10798,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         elSwimmerFeesBox.innerHTML = html;
         bindSwimmerFeesFilters();
         document.getElementById('openAddBillingPersonBtn')?.addEventListener('click', openAddBillingPersonModal);
+        elSwimmerFeesBox.querySelectorAll('.fees-attendance-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const swimmerId = link.getAttribute('data-swimmer-id');
+                const swimmerName = link.getAttribute('data-swimmer-name') || '';
+                if (swimmerId && typeof showSwimmerAttendanceModal === 'function') {
+                    // Modal uporablja stats iz zadnjega povzetka — napolni za ta mesec
+                    window.currentSwimmerStats = window.currentSwimmerStats || {};
+                    if (attendanceSummaryBySwimmer[swimmerId]) {
+                        window.currentSwimmerStats[swimmerId] = attendanceSummaryBySwimmer[swimmerId];
+                    }
+                    showSwimmerAttendanceModal(swimmerId, swimmerName);
+                }
+            });
+        });
         const factorSel = document.getElementById('swimmerFeesMonthFactor');
         const factorCustom = document.getElementById('swimmerFeesMonthFactorCustom');
         factorSel?.addEventListener('change', () => {
