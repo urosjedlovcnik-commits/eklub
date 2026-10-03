@@ -202,9 +202,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentSwimmerSummaryYear = now.getFullYear();
     //// console.log('🔍 Inicializacija swimmer summary - mesec:', currentSwimmerSummaryMonth, 'leto:', currentSwimmerSummaryYear);
     
-    // Spremenljivke za OLY swimmer summary
+    // Spremenljivke za OLY swimmer summary (isti mesec kot glavni povzetek)
     let currentOlySwimmerSummaryMonth = now.getMonth() + 1;
     let currentOlySwimmerSummaryYear = now.getFullYear();
+    let attendanceSummaryTab = sessionStorage.getItem('eklub_attendance_summary_tab') === 'oly' ? 'oly' : 'all';
 
     // Poročilo za računovodstvo
     let currentAccountingReportMonth = now.getMonth() + 1;
@@ -783,6 +784,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
     
+    function syncOlySummaryMonthFromMain() {
+        currentOlySwimmerSummaryMonth = currentSwimmerSummaryMonth;
+        currentOlySwimmerSummaryYear = currentSwimmerSummaryYear;
+    }
+
+    function refreshActiveAttendanceSummary() {
+        syncOlySummaryMonthFromMain();
+        if (attendanceSummaryTab === 'oly') {
+            return refreshOlySwimmerSummary();
+        }
+        return refreshSwimmerSummary();
+    }
+
     function navigateSwimmerSummaryMonth(direction) {
         if (direction === 'prev') {
             currentSwimmerSummaryMonth--;
@@ -798,7 +812,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
         updateSwimmerSummaryMonthDisplay();
-        refreshSwimmerSummary();
+        refreshActiveAttendanceSummary();
     }
     
     function goToCurrentSwimmerSummaryMonth() {
@@ -806,7 +820,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentSwimmerSummaryMonth = now.getMonth() + 1;
         currentSwimmerSummaryYear = now.getFullYear();
         updateSwimmerSummaryMonthDisplay();
-        refreshSwimmerSummary();
+        refreshActiveAttendanceSummary();
     }
     
     // Funkcije za prikaz mesecev - OLY swimmer summary
@@ -2004,8 +2018,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateSwimmersList();
         updateBulkPaymentPlanSelect();
         renderTermCheckboxesForSwimmer(elSwimmerSelect?.value || '');
-        refreshSwimmerSummary();
-        refreshOlySwimmerSummary();
+        refreshActiveAttendanceSummary();
         updateTrainersList();
         populateUnassignedTerms();
         renderTermCheckboxesForTrainer(elTrainerSelect?.value || '');
@@ -2321,13 +2334,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             calculateTrainerHoursCostsData(); // Prikaži ure in stroške trenerjev
             calculateTrainerNotesData(); // Prikaži opombe trenerjev
             
-            // Osveži povzetek udeležbe plavalcev
-            await refreshSwimmerSummary();
+            // Osveži aktivni povzetek udeležbe (Vsi / OLY)
+            applyAttendanceSummaryTab(attendanceSummaryTab, { refresh: false });
+            await refreshActiveAttendanceSummary();
             
-            // Osveži povzetek udeležbe OLY plavalcev
-            await refreshOlySwimmerSummary();
-            
-            // Prikaži nastavitve stroškov prog in urnih postavk trenerjev
+            // Prikaži nastavitke stroškov prog in urnih postavk trenerjev
             await renderTermCostsSettings();
             await renderTrainerRatesSettings();
             updateTrainerRatesMonthDisplay();
@@ -2347,7 +2358,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateTrainersUnifiedMonthDisplay();
             updateOverviewMonthDisplay();
             updateSwimmerSummaryMonthDisplay();
-            updateOlySwimmerSummaryMonthDisplay();
             
 // console.log('✅ Inicializacija prikaza mesecev končana');
             
@@ -7276,7 +7286,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 currentSwimmerSummaryMonth = month;
                 currentSwimmerSummaryYear = year;
                 updateSwimmerSummaryMonthDisplay();
-                refreshSwimmerSummary();
+                refreshActiveAttendanceSummary();
             });
         });
     }
@@ -7286,48 +7296,40 @@ document.addEventListener('DOMContentLoaded', async () => {
             currentSwimmerSummaryYear = parseInt(year);
             currentSwimmerSummaryMonth = parseInt(month);
             updateSwimmerSummaryMonthDisplay();
-            refreshSwimmerSummary();
+            refreshActiveAttendanceSummary();
         });
     }
-    
-    // Event listenerji za navigacijo mesecev - OLY swimmer summary
-    const elPrevOlySwimmerSummaryMonthBtn = document.getElementById('prevOlySwimmerSummaryMonthBtn');
-    const elNextOlySwimmerSummaryMonthBtn = document.getElementById('nextOlySwimmerSummaryMonthBtn');
-    const elCurrentOlySwimmerSummaryMonthBtn = document.getElementById('currentOlySwimmerSummaryMonthBtn');
-    const elOlySwimmerSummaryMonthYearInput = document.getElementById('olySwimmerSummaryMonthYearInput');
-    const olySwimmerSummaryMonthYearContainer = document.getElementById('olySwimmerSummaryMonthYearContainer');
-    
-    if (elPrevOlySwimmerSummaryMonthBtn) {
-        elPrevOlySwimmerSummaryMonthBtn.addEventListener('click', () => navigateOlySwimmerSummaryMonth('prev'));
+
+    function applyAttendanceSummaryTab(tab, { refresh = true } = {}) {
+        attendanceSummaryTab = tab === 'oly' ? 'oly' : 'all';
+        try { sessionStorage.setItem('eklub_attendance_summary_tab', attendanceSummaryTab); } catch { /* ignore */ }
+        const allBtn = document.getElementById('attendanceSummaryTabAll');
+        const olyBtn = document.getElementById('attendanceSummaryTabOly');
+        const allPanel = document.getElementById('swimmerSummaryPanel');
+        const olyPanel = document.getElementById('olySwimmerSummaryPanel');
+        const isOly = attendanceSummaryTab === 'oly';
+        if (allBtn) {
+            allBtn.className = isOly ? 'btn' : 'btn pri';
+            allBtn.setAttribute('aria-selected', isOly ? 'false' : 'true');
+        }
+        if (olyBtn) {
+            olyBtn.className = isOly ? 'btn pri' : 'btn';
+            olyBtn.setAttribute('aria-selected', isOly ? 'true' : 'false');
+        }
+        if (allPanel) {
+            allPanel.style.display = isOly ? 'none' : '';
+            allPanel.hidden = isOly;
+        }
+        if (olyPanel) {
+            olyPanel.style.display = isOly ? '' : 'none';
+            olyPanel.hidden = !isOly;
+        }
+        if (refresh) refreshActiveAttendanceSummary();
     }
-    if (elNextOlySwimmerSummaryMonthBtn) {
-        elNextOlySwimmerSummaryMonthBtn.addEventListener('click', () => navigateOlySwimmerSummaryMonth('next'));
-    }
-    if (elCurrentOlySwimmerSummaryMonthBtn) {
-        elCurrentOlySwimmerSummaryMonthBtn.addEventListener('click', goToCurrentOlySwimmerSummaryMonth);
-    }
-    if (olySwimmerSummaryMonthYearContainer) {
-        olySwimmerSummaryMonthYearContainer.addEventListener('click', (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            
-            createCustomDatePicker(currentOlySwimmerSummaryMonth, currentOlySwimmerSummaryYear, (month, year) => {
-                currentOlySwimmerSummaryMonth = month;
-                currentOlySwimmerSummaryYear = year;
-                updateOlySwimmerSummaryMonthDisplay();
-                refreshOlySwimmerSummary();
-            });
-        });
-    }
-    if (elOlySwimmerSummaryMonthYearInput) {
-        elOlySwimmerSummaryMonthYearInput.addEventListener('change', (e) => {
-            const [year, month] = e.target.value.split('-');
-            currentOlySwimmerSummaryYear = parseInt(year);
-            currentOlySwimmerSummaryMonth = parseInt(month);
-            updateOlySwimmerSummaryMonthDisplay();
-            refreshOlySwimmerSummary();
-        });
-    }
+
+    document.getElementById('attendanceSummaryTabAll')?.addEventListener('click', () => applyAttendanceSummaryTab('all'));
+    document.getElementById('attendanceSummaryTabOly')?.addEventListener('click', () => applyAttendanceSummaryTab('oly'));
+    applyAttendanceSummaryTab(attendanceSummaryTab, { refresh: false });
 
     // ===== Event listener za izbiro plavalca pri dodeljevanju terminov =====
     document.getElementById('swimmerSearchInput')?.addEventListener('input', () => {
@@ -8759,6 +8761,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Funkcija za osvežitev povzetka udeležbe OLY plavalcev
     async function refreshOlySwimmerSummary() {
+        syncOlySummaryMonthFromMain();
         const month = currentOlySwimmerSummaryMonth;
         const year = currentOlySwimmerSummaryYear;
         

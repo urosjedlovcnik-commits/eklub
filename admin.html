@@ -1025,44 +1025,34 @@
         </div>
       </div>
 
-                  <div style="display: flex; gap: 20px; width: 100%; flex-wrap: wrap;">
-            <div class="card" style="flex: 1; min-width: min(100%, 320px);">
-              <h3>Povzetek udeležbe plavalcev (za prikazani mesec)</h3>
-              <div class="inner">
-                <div class="summary-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
-                  <button class="btn" id="prevSwimmerSummaryMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Prejšnji mesec">←</button>
-                  <div style="text-align: center; min-width: 200px; cursor: pointer; padding: 10px; border-radius: 8px; transition: background-color 0.2s;" id="swimmerSummaryMonthYearContainer" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
-                    <div id="currentSwimmerSummaryMonthYear" style="font-size: 18px; font-weight: bold; color: #333;"></div>
-                    <div style="font-size: 12px; color: #666;">Klikni za izbiro datuma</div>
-                  </div>
-                  <button class="btn" id="nextSwimmerSummaryMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Naslednji mesec">→</button>
-                  <button class="btn" id="currentSwimmerSummaryMonthBtn" style="background: #007bff; color: white; padding: 8px 12px; cursor: pointer;" title="Pojdi na trenutni mesec">Trenutni mesec</button>
-                  <input type="month" id="swimmerSummaryMonthYearInput" style="display: none;">
-                </div>
-          <p style="margin-top: 8px;">
+      <div class="card" style="width:100%">
+        <h3>Povzetek udeležbe (za prikazani mesec)</h3>
+        <div class="inner">
+          <div class="attendance-summary-toggle" role="tablist" aria-label="Vrsta povzetka udeležbe" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+            <button type="button" class="btn pri" id="attendanceSummaryTabAll" role="tab" aria-selected="true" data-attendance-summary-tab="all">Vsi plavalci</button>
+            <button type="button" class="btn" id="attendanceSummaryTabOly" role="tab" aria-selected="false" data-attendance-summary-tab="oly">OLY</button>
+          </div>
+          <div class="summary-controls" style="display:flex;align-items:center;gap:15px;margin-bottom:16px;flex-wrap:wrap">
+            <button class="btn" id="prevSwimmerSummaryMonthBtn" style="background:#6c757d;color:white;padding:8px 12px;cursor:pointer" title="Prejšnji mesec">←</button>
+            <div style="text-align:center;min-width:200px;cursor:pointer;padding:10px;border-radius:8px;transition:background-color 0.2s" id="swimmerSummaryMonthYearContainer" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
+              <div id="currentSwimmerSummaryMonthYear" style="font-size:18px;font-weight:bold;color:#333"></div>
+              <div style="font-size:12px;color:#666">Klikni za izbiro datuma</div>
+            </div>
+            <button class="btn" id="nextSwimmerSummaryMonthBtn" style="background:#6c757d;color:white;padding:8px 12px;cursor:pointer" title="Naslednji mesec">→</button>
+            <button class="btn" id="currentSwimmerSummaryMonthBtn" style="background:#007bff;color:white;padding:8px 12px;cursor:pointer" title="Pojdi na trenutni mesec">Trenutni mesec</button>
+            <input type="month" id="swimmerSummaryMonthYearInput" style="display:none">
+          </div>
+          <p style="margin:0 0 12px">
             <a href="index.html" class="btn" style="font-size:13px">Odpri koledar za vnos prisotnosti →</a>
           </p>
-                <div id="swimmerSummaryBox">Nalaganje podatkov...</div>
-              </div>
-            </div>
-
-            <div class="card" style="flex: 1; min-width: min(100%, 320px);">
-              <h3>Povzetek udeležbe OLY plavalcev (za prikazani mesec)</h3>
-              <div class="inner">
-                <div class="summary-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
-                  <button class="btn" id="prevOlySwimmerSummaryMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Prejšnji mesec">←</button>
-                  <div style="text-align: center; min-width: 200px; cursor: pointer; padding: 10px; border-radius: 8px; transition: background-color 0.2s;" id="olySwimmerSummaryMonthYearContainer" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
-                    <div id="currentOlySwimmerSummaryMonthYear" style="font-size: 18px; font-weight: bold; color: #333;"></div>
-                    <div style="font-size: 12px; color: #666;">Klikni za izbiro datuma</div>
-                  </div>
-                  <button class="btn" id="nextOlySwimmerSummaryMonthBtn" style="background: #6c757d; color: white; padding: 8px 12px; cursor: pointer;" title="Naslednji mesec">→</button>
-                  <button class="btn" id="currentOlySwimmerSummaryMonthBtn" style="background: #007bff; color: white; padding: 8px 12px; cursor: pointer;" title="Pojdi na trenutni mesec">Trenutni mesec</button>
-                  <input type="month" id="olySwimmerSummaryMonthYearInput" style="display: none;">
-                </div>
-                <div id="olySwimmerSummaryBox">Nalaganje podatkov...</div>
-              </div>
-            </div>
+          <div id="swimmerSummaryPanel" data-attendance-summary-panel="all">
+            <div id="swimmerSummaryBox">Nalaganje podatkov...</div>
           </div>
+          <div id="olySwimmerSummaryPanel" data-attendance-summary-panel="oly" style="display:none" hidden>
+            <div id="olySwimmerSummaryBox">Nalaganje podatkov...</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
