@@ -11113,12 +11113,54 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    /** ID-ji oseb, ki bi bile v PDF za dani mesec (vadnina > 0 ali članarina) */
+    /**
+     * ID-ji oseb, ki so bile dejansko na PDF seznamu za mesec:
+     * shranjena vadnina po popustu > 0 ALI članarina v tem mesecu.
+     * (Brez privzetih zneskov — sicer bi Sara/Juš/Gregor z 0 € v septembru
+     * ostali «na seznamu» in ne bi šli na dno oktobra.)
+     */
     async function getAccountingExportSwimmerIdSet(month, year) {
-        const feeRows = await fetchAccountingReportFeeRows(month, year);
-        return new Set(
-            filterAccountingRowsForExport(feeRows, month, year).map(r => r.swimmer.id)
-        );
+        const ids = new Set();
+        const season = getAccountingReportSeason(month, year);
+        const seasonId = season?.id || getAdminSeasonFilterId();
+
+        try {
+            let { data, error } = await supabase
+                .from('swimmer_monthly_fees')
+                .select('swimmer_id, monthly_fee, discount, is_oly, discount_is_percent')
+                .eq('month', month)
+                .eq('year', year);
+            if (error && /discount_is_percent/i.test(error.message || '')) {
+                ({ data, error } = await supabase
+                    .from('swimmer_monthly_fees')
+                    .select('swimmer_id, monthly_fee, discount, is_oly')
+                    .eq('month', month)
+                    .eq('year', year));
+            }
+            if (error) throw error;
+            (data || []).forEach(row => {
+                if (row.is_oly === true) return;
+                const isPct = row.discount_is_percent != null
+                    ? !!row.discount_is_percent
+                    : getStoredDiscountIsPercent(row.swimmer_id, month, year);
+                const net = applyDiscountToFee(row.monthly_fee, row.discount, isPct);
+                if (net > 0) ids.add(row.swimmer_id);
+            });
+        } catch (e) {
+            console.warn('Seznam prejšnjega meseca (vadnine):', e);
+        }
+
+        if (seasonId) {
+            Object.entries(swimmerSeasonBilling).forEach(([key, rec]) => {
+                const [swimmerId, sid] = key.split('|');
+                if (sid !== seasonId) return;
+                if (Number(rec.membership_charged_month) === Number(month)
+                    && Number(rec.membership_charged_year) === Number(year)) {
+                    ids.add(swimmerId);
+                }
+            });
+        }
+        return ids;
     }
 
     /**
