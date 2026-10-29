@@ -11045,12 +11045,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             .forEach(swimmer => {
                 const plan = getSwimmerPaymentPlan(swimmer.id, seasonId);
                 if (accountingPlanFilter && plan !== accountingPlanFilter) return;
-                if (!shouldIncludeSwimmerInBillingMonth(swimmer.id, month, year, season, seasonId)) return;
+
+                const inBilling = shouldIncludeSwimmerInBillingMonth(swimmer.id, month, year, season, seasonId);
+                const membershipHere = isMembershipChargedInMonth(swimmer.id, seasonId, month, year);
+                // Vključi tudi osebe z samo članarino v tem mesecu (brez vadnine)
+                if (!inBilling && !membershipHere) return;
 
                 const feeRow = feesBySwimmer[swimmer.id];
                 if (feeRow?.is_oly === true) return;
 
-                const { net, fee, discount, isPercent } = resolveSwimmerNetFee(swimmer, feeRow, seasonId, season, month, year);
+                const { net, fee, discount, isPercent } = inBilling
+                    ? resolveSwimmerNetFee(swimmer, feeRow, seasonId, season, month, year)
+                    : { net: 0, fee: 0, discount: 0, isPercent: false };
 
                 rows.push({
                     swimmer,
@@ -11098,9 +11104,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         return (rows || accountingReportWorkingOrder).some(r => rowIncludesMembership(r, month, year));
     }
 
-    /** Vrstice za PDF: brez plavalcev z vadnino 0 € (tudi če imajo članarino) */
+    /** Vrstice za PDF: vadnina > 0 ali članarina v tem mesecu (skupaj > 0) */
     function filterAccountingRowsForExport(rows, month, year) {
-        return (rows || []).filter(r => (Number(r.netFee) || 0) > 0);
+        return (rows || []).filter(r => {
+            const fee = Number(r.netFee) || 0;
+            if (fee > 0) return true;
+            return rowIncludesMembership(r, month, year);
+        });
     }
 
     function groupAndSortAccountingRows(feeRows, orderedIds, seasonId) {
@@ -11111,13 +11121,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             (byPlan[plan] || byPlan.monthly).push(r);
         });
         const result = [];
+        const hasSavedOrder = Array.isArray(orderedIds) && orderedIds.length > 0;
         PAYMENT_PLAN_GROUP_ORDER.forEach(plan => {
             const group = byPlan[plan];
             if (!group.length) return;
-            partitionReturningFirst(
-                applyOrderToAccountingRows(group, orderedIds),
-                seasonId
-            ).forEach(r => result.push(r));
+            if (hasSavedOrder) {
+                // Shranjeni vrstni red ostane; osebe prvič na seznamu na konec (brez prestavljanja ostalih)
+                applyOrderToAccountingRows(group, orderedIds).forEach(r => result.push(r));
+            } else {
+                partitionReturningFirst(
+                    applyOrderToAccountingRows(group, orderedIds),
+                    seasonId
+                ).forEach(r => result.push(r));
+            }
         });
         return result;
     }
@@ -11233,7 +11249,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <span>Vadnina: <strong>${formatAccountingFeeAmount(feeTotal)} €</strong></span>
             ${membershipTotal > 0 ? `<span>Članarina: <strong>${formatAccountingFeeAmount(membershipTotal)} €</strong></span>` : ''}
             <span>Skupaj: <strong>${formatAccountingFeeAmount(grandTotal)} €</strong></span>
-            ${skipped > 0 ? `<span style="color:#991b1b">(${skipped} z 0 € izpuščenih iz PDF)</span>` : ''}
+            ${skipped > 0 ? `<span style="color:#991b1b">(${skipped} brez vadnine in članarine izpuščenih iz PDF)</span>` : ''}
         </div>`;
     }
 
@@ -11429,10 +11445,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const { month, year, rows: allRows } = await getAccountingReportExportRows();
             const seasonId = getAdminSeasonFilterId();
-            // Samo plavalci z vadnino > 0 (OLY / 0 € niso v PDF)
+            // Vadnina > 0 ali samo članarina v tem mesecu
             const rows = filterAccountingRowsForExport(allRows, month, year);
             if (!rows.length) {
-                showMessage('Ni podatkov za PDF (vsi plavalci imajo vadnino 0 €).', 'warning');
+                showMessage('Ni podatkov za PDF (ni vadnine ali članarine).', 'warning');
                 return;
             }
             const skipped = allRows.length - rows.length;
@@ -11514,7 +11530,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         margin: [0, 0, 0, 4]
                     },
                     {
-                        text: `Modro / ✓ (Ponov.) = vračajoči (${returningInPdf}). Oranžno / * = samo obračun, brez terminov (${billingOnlyInPdf}). Skupaj: ${rows.length}. Vadnina 0 € ni v seznamu.`,
+                        text: `Modro / ✓ (Ponov.) = vračajoči (${returningInPdf}). Oranžno / * = samo obračun, brez terminov (${billingOnlyInPdf}). Skupaj: ${rows.length}. Vključene so tudi osebe samo s članarino; brez vadnine in članarine niso v seznamu.`,
                         fontSize: 8,
                         color: '#1e40af',
                         margin: [0, 0, 0, 10]
