@@ -11113,6 +11113,54 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    /** ID-ji oseb, ki bi bile v PDF za dani mesec (vadnina > 0 ali članarina) */
+    async function getAccountingExportSwimmerIdSet(month, year) {
+        const feeRows = await fetchAccountingReportFeeRows(month, year);
+        return new Set(
+            filterAccountingRowsForExport(feeRows, month, year).map(r => r.swimmer.id)
+        );
+    }
+
+    /**
+     * Osebe, ki jih ni bilo na prejšnjem mesečnem seznamu (npr. samo članarina),
+     * na konec znotraj skupine načina plačila — brez prestavljanja ostalih.
+     */
+    function moveAbsentFromPreviousListToBottom(rows, previousIds) {
+        if (!previousIds || previousIds.size === 0) return rows || [];
+        const kept = [];
+        const firstTimers = [];
+        (rows || []).forEach(r => {
+            if (previousIds.has(r.swimmer.id)) kept.push(r);
+            else firstTimers.push(r);
+        });
+        return [...kept, ...firstTimers];
+    }
+
+    async function reorderAccountingRowsByPreviousMonth(rows, month, year) {
+        const prev = addCalendarMonths(month, year, -1);
+        let previousIds;
+        try {
+            previousIds = await getAccountingExportSwimmerIdSet(prev.month, prev.year);
+        } catch (e) {
+            console.warn('Prejšnji mesec za vrstni red ni naložen:', e);
+            return rows || [];
+        }
+        if (!previousIds.size) return rows || [];
+
+        const byPlan = { monthly: [], two_installments: [], lump_sum: [] };
+        (rows || []).forEach(r => {
+            const plan = r.paymentPlan || 'monthly';
+            (byPlan[plan] || byPlan.monthly).push(r);
+        });
+        const result = [];
+        PAYMENT_PLAN_GROUP_ORDER.forEach(plan => {
+            const group = byPlan[plan] || [];
+            if (!group.length) return;
+            moveAbsentFromPreviousListToBottom(group, previousIds).forEach(r => result.push(r));
+        });
+        return result;
+    }
+
     function groupAndSortAccountingRows(feeRows, orderedIds, seasonId) {
         const byPlan = { monthly: [], two_installments: [], lump_sum: [] };
         feeRows.forEach(r => {
@@ -11183,16 +11231,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         const seasonId = season?.id || getAdminSeasonFilterId();
         const feeRows = await fetchAccountingReportFeeRows(month, year);
         if (!season) {
-            return { season: null, rows: groupAndSortAccountingRows(feeRows, [], seasonId) };
+            const unsorted = groupAndSortAccountingRows(feeRows, [], seasonId);
+            return {
+                season: null,
+                rows: await reorderAccountingRowsByPreviousMonth(unsorted, month, year)
+            };
         }
         await ensureAccountingReportSeedForSeason(season);
         const orderRows = accountingReportOrderBySeason[season.id] || [];
         const orderedIds = [...orderRows]
             .sort((a, b) => a.sort_order - b.sort_order)
             .map(r => r.swimmer_id);
+        const sorted = groupAndSortAccountingRows(feeRows, orderedIds, seasonId);
         return {
             season,
-            rows: groupAndSortAccountingRows(feeRows, orderedIds, seasonId)
+            rows: await reorderAccountingRowsByPreviousMonth(sorted, month, year)
         };
     }
 
@@ -11414,6 +11467,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!rows.length) {
             const built = await buildAccountingReportRows(month, year);
             rows = built.rows;
+        } else {
+            // Tudi pri shranjenem delovnem vrstnem redu: prvič na seznamu (glede na prejšnji mesec) na dno
+            rows = await reorderAccountingRowsByPreviousMonth(rows, month, year);
         }
         return { month, year, rows };
     }
@@ -11530,7 +11586,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         margin: [0, 0, 0, 4]
                     },
                     {
-                        text: `Modro / ✓ (Ponov.) = vračajoči (${returningInPdf}). Oranžno / * = samo obračun, brez terminov (${billingOnlyInPdf}). Skupaj: ${rows.length}. Vključene so tudi osebe samo s članarino; brez vadnine in članarine niso v seznamu.`,
+                        text: `Modro / ✓ (Ponov.) = vračajoči (${returningInPdf}). Oranžno / * = samo obračun (${billingOnlyInPdf}). Skupaj: ${rows.length}. Tudi samo članarina; kdor ni bil na prejšnjem seznamu, je na dnu. Brez vadnine in članarine ni v seznamu.`,
                         fontSize: 8,
                         color: '#1e40af',
                         margin: [0, 0, 0, 10]
