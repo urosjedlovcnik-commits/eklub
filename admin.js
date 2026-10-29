@@ -1878,7 +1878,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (typeof calculateFinanceData === 'function') calculateFinanceData();
     }
 
-    /** Obkljuka = članarina se obračuna v prvem obračunskem mesecu sezone (ali mesecu začetka plavalca) */
+    /** Obkljuka = članarina v trenutno prikazanem mesecu (npr. oktober, ne nujno 1. obračun) */
     window.updateSwimmerMembershipFee = async function(swimmerId, included, month, year) {
         const seasonId = getAdminSeasonFilterId();
         if (isOlySwimmer(swimmerId) || (await ensureOlyKnown(swimmerId, seasonId))) {
@@ -1890,18 +1890,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             await refreshAfterMembershipChange();
             return;
         }
-        const season = seasons.find(s => s.id === seasonId);
         const viewM = month != null ? Number(month) : currentAccountingReportMonth;
         const viewY = year != null ? Number(year) : currentAccountingReportYear;
         let patch;
         if (included === true) {
-            const charge = resolveMembershipChargePeriod(season, viewM, viewY, swimmerId);
-            patch = { membership_charged_month: charge.month, membership_charged_year: charge.year };
-            if (charge.month !== viewM || charge.year !== viewY) {
-                const label = new Date(charge.year, charge.month - 1, 1)
-                    .toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
-                showMessage(`Članarina se obračuna z 1. obračunom: ${label}.`, 'info');
+            if (!Number.isFinite(viewM) || !Number.isFinite(viewY)) {
+                showMessage('Ni veljavnega meseca za članarino.', 'warning');
+                return;
             }
+            patch = { membership_charged_month: viewM, membership_charged_year: viewY };
         } else {
             patch = { membership_charged_month: null, membership_charged_year: null };
         }
@@ -1930,15 +1927,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function applyGlobalMembershipFeeToReport(checked) {
         const seasonId = getAdminSeasonFilterId();
         if (!seasonId || !accountingReportWorkingOrder.length) return;
-        const season = seasons.find(s => s.id === seasonId);
         const viewM = currentAccountingReportMonth;
         const viewY = currentAccountingReportYear;
-        const seasonDefault = resolveMembershipChargePeriod(season, viewM, viewY);
-        if (checked && (seasonDefault.month !== viewM || seasonDefault.year !== viewY)) {
-            const label = new Date(seasonDefault.year, seasonDefault.month - 1, 1)
-                .toLocaleDateString('sl-SI', { month: 'long', year: 'numeric' });
-            showMessage(`Članarine se obračunajo z 1. obračunom (${label}), razen pri kasnejšem začetku plavalca.`, 'info');
-        }
         const entries = [];
         accountingReportWorkingOrder.forEach(row => {
             if (isOlySwimmer(row.swimmer.id)) return;
@@ -1946,11 +1936,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (checked) {
                 // Ne premikaj članarine, ki je bila že obračunana v drugem mesecu
                 if (period) return;
-                const charge = resolveMembershipChargePeriod(season, viewM, viewY, row.swimmer.id);
                 entries.push({
                     swimmerId: row.swimmer.id,
-                    membership_charged_month: charge.month,
-                    membership_charged_year: charge.year
+                    membership_charged_month: viewM,
+                    membership_charged_year: viewY
                 });
             } else {
                 // Odkljuka: odstrani samo tiste, ki so obračunane v trenutno odprtem mesecu
@@ -11318,7 +11307,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const membershipCell = chargedElsewhere
                 ? `<span class="muted" style="font-size:11px" title="Članarina je za to sezono že obračunana">✓ ${escapeHtml(formatMembershipPeriod(period))}</span>
                    <button type="button" class="btn" style="padding:1px 6px;font-size:11px;margin-left:4px" onclick="clearSwimmerMembershipFee('${s.id}')" title="Prekliči obračun članarine">×</button>`
-                : `<input type="checkbox" ${chargedHere ? 'checked' : ''} onchange="updateSwimmerMembershipFee('${s.id}', this.checked)" style="width:18px;height:18px;cursor:pointer" title="Obračunaj članarino v tem mesecu">`;
+                : `<input type="checkbox" ${chargedHere ? 'checked' : ''} onchange="updateSwimmerMembershipFee('${s.id}', this.checked, ${month}, ${year})" style="width:18px;height:18px;cursor:pointer" title="Obračunaj članarino v tem mesecu">`;
             const hasDiscount = (Number(row.discount) || 0) > 0;
             html += `<tr${rowStyle}>
                 <td style="white-space:nowrap">
