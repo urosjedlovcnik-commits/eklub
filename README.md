@@ -57,4 +57,4 @@ Vsak push na vejo `main` se samodejno objavi na Vercel produkcijo. Lokalno stran
 - [TRAINER_AUTH_SYSTEM.md](TRAINER_AUTH_SYSTEM.md) — prijava trenerjev
 - [NAVODILA_UCITELJI.html](NAVODILA_UCITELJI.html) — navodila za trenerje
 
-Mape `Backup/`, `Good version/` in `test Authentication/` so stare kopije in se v produkciji ne uporabljajo.
+Mapa `test Authentication/` vsebuje stare poskuse in se v produkciji ne uporablja.

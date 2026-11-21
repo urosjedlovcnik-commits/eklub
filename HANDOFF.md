@@ -63,7 +63,7 @@
 
 - Windows paths; PowerShell — **no bash heredocs**; use `git commit -m "..."`.
 - Sandbox often needs `required_permissions: ["all"]` for git.
-- Folders `Backup/`, `Good version/` are gitignored / legacy; ignore them.
+- Legacy folder `test Authentication/` is old experiments; ignore it.
 
 ---
 
