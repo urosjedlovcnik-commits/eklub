@@ -1,132 +1,60 @@
-# Sistem za vodenje prisotnosti plavalcev
+# eKlub — Plavalni klub Ljubljana
 
-Sistem za vodenje prisotnosti plavalcev je sestavljen iz dveh glavnih delov:
+Spletna aplikacija za vodenje prisotnosti, plavalcev, trenerjev in financ v programih za odrasle Plavalnega kluba Ljubljana (PKL).
 
-## 📅 Glavna stran (index.html)
-**Namen**: Vodenje prisotnosti plavalcev na treningih
+- **Produkcija:** https://eklub.vercel.app
+- **Podrobna tehnična dokumentacija:** [HANDOFF.md](HANDOFF.md) (poslovna pravila, obračun, PDF za računovodstvo, ključne funkcije)
 
-**Funkcionalnosti**:
-- Koledar z mesečnim prikazom treningov
-- Klik na termin za beleženje prisotnosti
-- Povzetek udeležbe za prikazani mesec
-- Povezava na admin stran
+## Strani
 
-**Uporaba**:
-1. Z gumbi "Prejšnji mesec" in "Naslednji mesec" se premikate med meseci
-2. Kliknite na termin v koledarju za beleženje prisotnosti
-3. V modalnem oknu označite prisotnost vsakega plavalca
-4. Dodajte opombe o treningu
-5. Shranite podatke
+| Pot | Datoteka | Namen |
+|-----|----------|-------|
+| `/` | `index.html` + `script.js` | Koledar terminov in beleženje prisotnosti |
+| `/login.html` | `login.html` + `trainer-auth.js` | Prijava trenerjev (Supabase Auth) |
+| `/admin-login.html` | `admin-login.html` + `auth.js` | Prijava administratorja |
+| `/admin.html` | `admin.html` + `admin.js` | Administracija |
+| `/swimmers-list.html` | `swimmers-list.html` + `swimmers-list.js` | Seznam plavalcev |
+| `/reset-password.html` | `reset-password.html` | Ponastavitev gesla trenerja |
 
-## ⚙️ Admin stran (admin.html)
-**Namen**: Upravljanje plavalcev, terminov in podatkov
+### Admin razdelki
 
-**Dostop**: Samo preko login strani (admin-login.html)
-**Administrator**: uros.jedlovcnik@gmail.com
-**Geslo**: admin123
+- **Pregled** — ključni kazalniki za izbrani mesec
+- **Plavalci** — dodajanje, urejanje, dodeljevanje terminov, povzetek obiska (Vsi / OLY)
+- **Termini** — treningi po dnevih v tednu
+- **Sezone** — obdobja sezon, faktorji vadnine
+- **Trenerji** — trenerji, urne postavke, ure, odsotnosti
+- **Finance** — mesečne vadnine, članarina, popusti, OLY, osebe za obračun, poročilo in PDF za računovodstvo, projekcija sezone
+- **Mailing** — e-poštni seznami (plavalci, OLY, trenerji, po terminih)
+- **CSV** — uvoz in izvoz podatkov
 
-**Funkcionalnosti**:
-- **Plavalci**: Dodajanje, brisanje, dodeljevanje terminov
-- **Termini**: Ustvarjanje in urejanje treningov
-- **CSV**: Uvoz/izvoz podatkov
+Izbira sezone v zgornji vrstici admina določa skoraj vso logiko financ in dodeljevanja.
 
-### Navigacija
-- **Plavalci**: Upravljanje s plavalci in njihovimi termini
-- **Termini**: Ustvarjanje in urejanje treningov
-- **CSV**: Uvoz/izvoz podatkov v CSV formatu
+## Tehnologija
 
-### Dodajanje plavalca
-1. Vnesite ime in priimek
-2. Vnesite email naslov (opcijsko)
-3. Kliknite "Dodaj"
-4. Dodelite termine iz padajočega seznama
+- **Frontend:** čisti HTML, CSS in JavaScript, brez build koraka. Knjižnice prek CDN: `@supabase/supabase-js` (pripeta verzija), pdfMake.
+- **Podatki:** Supabase Postgres z vklopljenim RLS. URL in javni `anon` ključ sta v `config.js`.
+- **Strežnik:** Vercel serverless funkcije v `api/` (prijava administratorja s podpisanim žetonom).
+- **Edge funkcija:** `supabase/functions/invite-trainer` (vabila trenerjem).
+- **Migracije baze:** `SQL/` — zaganjajo se ročno v Supabase SQL urejevalniku.
 
-### Dodajanje termina
-1. Izberite dan v tednu
-2. Vnesite začetno in končno uro
-3. Vnesite datum trajanja (od - do)
-4. Kliknite "Dodaj termin"
+## Prijava administratorja
 
-### CSV uvoz
-- **Plavalci**: Datoteka mora vsebovati stolpce `first_name`, `last_name`, `terms` (email je opcijski)
-- **Termini**: Datoteka mora vsebovati stolpce `id`, `day`, `start_time`, `end_time`, `date_from`, `date_to`
-- **Vadnine**: Datoteka mora vsebovati stolpce `first_name`, `last_name`, `email` (opcijsko), `monthly_fee`, `discount` (opcijsko)
+Gesla ni v kodi. Na Vercelu morajo biti nastavljene okoljske spremenljivke:
 
-### Avtomatsko kopiranje vadnin
-- **Avtomatsko kopiranje**: Sistem avtomatsko kopira vadnine iz prejšnega meseca v trenutni mesec
-- **Ročno kopiranje**: Gumb "Kopiraj vadnine iz prejšnega meseca" v finance sekciji
-- **Preverjanje stanja**: Gumb "Preveri stanje vadnin" za pregled stanja trenutnega meseca
-- **Pametno preverjanje**: Sistem preveri vadnine ob nalaganju strani in prehodu v finance sekcijo
+- `ADMIN_EMAIL`
+- `ADMIN_PASSWORD`
+- `ADMIN_SESSION_SECRET`
 
-### CSV izvoz
-- Izvoz prisotnosti za izbrani mesec in leto
-- Vključuje datum, termin, plavalce, prisotnost in opombe
+Predloga je v `.env.example`, navodila v [VERCEL_ENV.md](VERCEL_ENV.md). Varnostne opombe so v [SECURITY.md](SECURITY.md).
 
-## 🔧 Tehnične specifikacije
+## Objava
 
-**Frontend**: HTML5, CSS3, JavaScript (ES6+)
-**Shranjevanje**: localStorage (podatki se shranjujejo v brskalniku)
-**Responsive design**: Prilagojen za namizne in mobilne naprave
+Vsak push na vejo `main` se samodejno objavi na Vercel produkcijo. Lokalno strani lahko odpreš s poljubnim statičnim strežnikom, vendar prijava administratorja deluje samo prek Vercela (npr. `vercel dev`), ker potrebuje `api/`.
 
-## 📱 Uporaba na mobilnih napravah
+## Ostala navodila
 
-Sistem je popolnoma prilagojen za uporabo na mobilnih napravah:
-- Responsive grid layout
-- Prilagojeni gumbi za dotik
-- Optimizirana navigacija za majhne zaslone
+- [CSV_UVOZ_IZVOZ_NAVODILA.md](CSV_UVOZ_IZVOZ_NAVODILA.md), [CSV_UVOZ_FORMAT_TERMINOV.md](CSV_UVOZ_FORMAT_TERMINOV.md), [CSV_UVOZ_VADNIN.md](CSV_UVOZ_VADNIN.md) — formati CSV
+- [TRAINER_AUTH_SYSTEM.md](TRAINER_AUTH_SYSTEM.md) — prijava trenerjev
+- [NAVODILA_UCITELJI.html](NAVODILA_UCITELJI.html) — navodila za trenerje
 
-## 🚀 Namestitev
-
-1. Prenesite vse datoteke v mapo
-2. Odprite `index.html` v brskalniku za glavno stran
-3. Za admin dostop obiščite `admin-login.html`
-4. Sistem je pripravljen za uporabo
-
-## 📊 Struktura podatkov
-
-**Plavalci**:
-```json
-{
-  "id": "swimmer_1234567890",
-  "first_name": "Janez",
-  "last_name": "Novak",
-  "email": "janez.novak@email.com",
-  "terms": ["pon-17:00-18:00", "sre-18:00-19:00"],
-  "is_deleted": false
-}
-```
-
-**Termini**:
-```json
-{
-  "id": "pon-17:00-18:00",
-  "day": 1,
-  "start_time": "17:00",
-  "end_time": "18:00",
-  "date_from": "2024-09-01",
-  "date_to": "2025-05-31"
-}
-```
-
-**Prisotnost**:
-```json
-{
-  "2024-12-15": {
-    "pon-17:00-18:00": {
-      "swimmer_1234567890": "present"
-    }
-  }
-}
-```
-
-## 🔒 Varnost
-
-- Vsi podatki se shranjujejo lokalno v brskalniku
-- Ni potrebe po strežniku ali bazi podatkov
-- Podatki so dostopni samo uporabniku naprave
-- Admin dostop je zaščiten z login sistemom
-- Samo avtorizirani administrator ima dostop do admin funkcionalnosti
-
-## 📞 Podpora
-
-Za vprašanja ali težave obiščite admin stran ali preverite konzolo brskalnika za morebitne napake.
+Mape `Backup/`, `Good version/` in `test Authentication/` so stare kopije in se v produkciji ne uporabljajo.
