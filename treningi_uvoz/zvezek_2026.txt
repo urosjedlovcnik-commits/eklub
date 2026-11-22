@@ -1,9 +1,9 @@
 # Zvezek 2026 v obliki za uvoz (osnutek, 22. 11. 2026).
-# Glava: "# datum nivoji Σkm". Vrstice: faza + besedilo.
+# Glava: "# datum nivoji Σkm [✔ = pregledano s trenerjem]". Vrstice: faza + besedilo.
 # Faze: R razplavanje, O ogrevalna, V vaje, VR vmesno razplavanje, G glavna (G! = šprinterska),
 #       Z zaključek, ZR zaključno razplavanje. Zaporedne vrstice G so ena glavna serija.
 
-# 2026-06-08 A,B 2.40
+# 2026-06-08 A,B 2.40 ✔
 R 300 RAZP
 O 8x50 KV 1x L/D 1x ČMZ
 V 8x25 PL @40" 3xBD 1xNPV
@@ -14,7 +14,7 @@ G 4x100 K T @1'50"
 G 4x100 M @2'
 ZR 50 RAZP
 
-# 2026-06-11 A,B 2.40
+# 2026-06-11 A,B 2.40 ✔
 R 300 RAZP
 O 4x100 M Z ZAMIKOM
 V 8x25 PL D 3-3
@@ -24,7 +24,7 @@ G 12x50 3+1 @1'
 G 6x100 K 2+1 @2'
 ZR 50 RAZP
 
-# 2026-06-10 C 1.60
+# 2026-06-10 C 1.60 ✔
 R 200 RAZP
 O 4x50 ↑PD ↓K RRU
 V 8x25 PL KN SUPERMAN
@@ -34,7 +34,7 @@ VR 50 RAZP
 G 4x100 M 1x K PL 1x P 1x K 1x P
 ZR 50 RAZP
 
-# 2026-06-10 A 2.25
+# 2026-06-10 A 2.25 ✔
 R 300 RAZP
 O 16x25 M p5" N/CT
 V 4x50 PL HV HITLER 1x 2-2-2
@@ -45,7 +45,7 @@ VR 50 RAZP
 Z 6x100 VL DOLGO
 ZR 50 RAZP
 
-# 2026-06-15 A,B 2.20
+# 2026-06-15 A,B 2.20 ✔
 R 300 RAZP
 O 6x75 1x MBP 1x K DIH 3-4-5
 V 6x50 PL 1xN 1xT @1'
@@ -59,7 +59,7 @@ G 100 D/K @2'
 G 50 D @1'
 ZR 100 RAZP
 
-# 2026-06-18 A,B 2.30
+# 2026-06-18 A,B 2.30 ✔
 R 300 RAZP
 O 3x100 M N/V/CT
 V 10x25 PL ↑DN PV ↓M CT
@@ -68,7 +68,7 @@ VR 50 RAZP
 G 4x( 75 K T @1'30" / 50 K HITRO @1' / 25 D / 50 RAZP )
 ZR 100 RAZP
 
-# 2026-06-17 C 1.50
+# 2026-06-17 C 1.50 ✔
 R 200 RAZP
 O 4x75 H/P/K PV 1-2 1-3 1-2
 V 8x25 PL MN 90°
@@ -78,7 +78,7 @@ VR 50 RAZP
 Z 4x50 DESKA 1xN 1xKN
 ZR 50 RAZP
 
-# 2026-06-17 A 2.20
+# 2026-06-17 A 2.20 ✔
 R 300 RAZP
 O 4x75 M VB1T
 V 4x75 PL 25 K MAX NOGE + 25 H + 25 BD
@@ -89,7 +89,7 @@ G 4x75 @1'15"
 G 4x75 DESKA P/K @1'30"
 ZR 50 RAZP
 
-# 2026-06-22 A,B 2.50
+# 2026-06-22 A,B 2.50 ✔
 R 300 RAZP
 O 6x50 MM BP
 V 6x50 PL ↑DN ↓H RRU 90°
@@ -101,7 +101,7 @@ G 6x50 @50"
 G 6x50 KVL @1'
 ZR 50 RAZP
 
-# 2026-06-24 C 1.25
+# 2026-06-24 C 1.25 ✔
 R 200 RAZP
 O 4x50 ↑K ↓H / ↑P ↓H HV RRU
 V 8x25 PL PREVAL
@@ -109,7 +109,7 @@ V 8x25 PL KN KZ 4x NOGE
 VR 50 RAZP
 G 16x25 p15" 3xP 1xH 3xP 1xK
 
-# 2026-06-24 A 2.20
+# 2026-06-24 A 2.20 ✔
 R 300 RAZP
 O 10x25 PL POČASI + SPRINT
 V 6x50 PL ↑VATERPOLO ŠPRICANJE ↓DN KR

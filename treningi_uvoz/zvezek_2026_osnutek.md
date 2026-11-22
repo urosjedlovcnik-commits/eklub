@@ -1,6 +1,6 @@
 # Prepis zvezka: treningi 2026 (osnutek za pregled)
 
-Stanje: **osnutek**, prepisano s fotografij 22. 11. 2026. Nič od tega še ni v bazi.
+Stanje 22. 11. 2026: šifrant (razdelek 2) je v bazi. Pregledani treningi (✔, tedni 8.–24. 6.) so v bazi kot »izveden«. **Pregled nadaljujeva pri tednu 14. 9.** Nepregledani treningi so samo v `zvezek_2026.json` in jih generator že uporablja.
 
 Oznake:
 

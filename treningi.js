@@ -14,7 +14,7 @@
     dbSets: [],
     dbTrainings: [],
     zvezek: null,           // { sets, history, trainings } iz treningi_uvoz/zvezek_2026.json
-    zvezekImported: false,
+    zvezekPending: [],      // treningi iz zvezka, ki še niso v bazi
     library: [],
     history: [],
     week: null,             // ponedeljek ISO
@@ -87,15 +87,13 @@
     S.terms = termsR.data || [];
     S.dbSets = (setsR.data || []).map(s => Object.assign({}, s, { source: 'db', origin: s.source }));
     S.dbTrainings = trR.data || [];
-    S.zvezekImported = S.dbSets.some(s => s.origin === 'uvoz');
 
     if (!S.zvezek) {
       try {
         const res = await fetch('treningi_uvoz/zvezek_2026.json', { cache: 'no-cache' });
         if (res.ok) {
           const json = await res.json();
-          const lib = C.libraryFromTrainings(json.trainings, S.dict);
-          S.zvezek = { trainings: json.trainings, sets: lib.sets, history: lib.history };
+          S.zvezek = { trainings: json.trainings };
         }
       } catch (e) { console.warn('Zvezek ni na voljo:', e); }
     }
@@ -105,16 +103,18 @@
   function rebuildLibrary() {
     const lib = S.dbSets.slice();
     const have = new Set(lib.map(s => s.phase + '|' + s.fingerprint));
-    if (S.zvezek && !S.zvezekImported) {
-      S.zvezek.sets.forEach(s => { if (!have.has(s.phase + '|' + s.fingerprint)) lib.push(s); });
-    }
+    // Treningi iz zvezka, ki še niso v bazi, dopolnijo knjižnico in zgodovino.
+    const inDb = new Set(S.dbTrainings.map(t => slotKey(t.date, t.levels)));
+    S.zvezekPending = S.zvezek ? S.zvezek.trainings.filter(t => !inDb.has(slotKey(t.date, t.levels))) : [];
+    const pend = C.libraryFromTrainings(S.zvezekPending, S.dict);
+    pend.sets.forEach(s => { if (!have.has(s.phase + '|' + s.fingerprint)) lib.push(s); });
     S.library = lib;
     const hist = [];
     S.dbTrainings.forEach(t => {
       const lvl = C.historyLevel(t.levels);
       (t.training_items || []).forEach(i => hist.push({ date: t.date, level: lvl, phase: i.phase, fingerprint: i.fingerprint, main_type: mainTypeOf(i), status: t.status }));
     });
-    if (S.zvezek && !S.zvezekImported) hist.push(...S.zvezek.history);
+    hist.push(...pend.history);
     S.history = hist;
   }
 
@@ -561,20 +561,24 @@
 
   function renderImportBox() {
     const box = $('importBox');
-    if (!S.zvezek || S.zvezekImported) { box.innerHTML = ''; return; }
-    const n = S.zvezek.sets.length, t = S.zvezek.trainings.length;
-    box.innerHTML = `<div class="tr-banner warn">Knjižnica zdaj uporablja prepis zvezka 2026 (${n} serij iz ${t} treningov), ki <strong>še ni v bazi</strong>.
-      Ko ga pregledaš, ga uvozi: serije gredo v knjižnico, treningi pa v zgodovino s statusom »izveden«, da velja pravilo 2 mesecev.
-      <div style="margin-top:8px"><button class="btn ok" id="importBtn">Uvozi zvezek 2026 v bazo</button></div></div>`;
-    $('importBtn').addEventListener('click', importZvezek);
+    const pending = S.zvezekPending || [];
+    if (!pending.length) { box.innerHTML = ''; return; }
+    const ready = pending.filter(t => t.reviewed);
+    box.innerHTML = `<div class="tr-banner warn">${pending.length} treningov iz zvezka 2026 <strong>še ni v bazi</strong>; njihove serije se že uporabljajo za predloge in pravilo 2 mesecev.
+      ${ready.length ? `${ready.length} od njih je pregledanih in pripravljenih za uvoz (serije v knjižnico, treningi v zgodovino kot »izveden«).
+      <div style="margin-top:8px"><button class="btn ok" id="importBtn">Uvozi ${ready.length} pregledanih treningov</button></div>` : 'Uvozijo se, ko jih pregledava.'}</div>`;
+    const btn = $('importBtn');
+    if (btn) btn.addEventListener('click', importZvezek);
   }
 
   async function importZvezek() {
-    if (!S.zvezek) return;
-    if (!confirm(`Uvozim ${S.zvezek.sets.length} serij in ${S.zvezek.trainings.length} treningov iz zvezka 2026 v bazo?`)) return;
+    const ready = (S.zvezekPending || []).filter(t => t.reviewed);
+    if (!ready.length) return;
+    const lib = C.libraryFromTrainings(ready, S.dict);
+    if (!confirm(`Uvozim ${ready.length} pregledanih treningov (${lib.sets.length} serij) iz zvezka 2026 v bazo?`)) return;
     banner('Uvažam zvezek …');
     try {
-      const rows = S.zvezek.sets.map(s => {
+      const rows = lib.sets.map(s => {
         const parsed = C.parseText(s.text, S.dict);
         return { trainer_id: S.trainer.id, phase: s.phase, levels: s.levels.slice().sort(), text: s.text, structure: C.toStructure(parsed),
           meters: parsed.meters, fingerprint: s.fingerprint, main_type: s.main_type || null, source: 'uvoz', notes: 'zvezek 2026' };
@@ -589,7 +593,7 @@
       const existing = new Set(S.dbTrainings.map(t => slotKey(t.date, t.levels)));
       const { data: allTerms } = await sb.from('terms').select('*').in('id', Array.from(auth.ownTermIds));
       const termFor = (date) => (allTerms || []).find(t => Number(t.day) === C.weekday(date) && (!t.date_from || t.date_from <= date) && (!t.date_to || t.date_to >= date));
-      for (const t of S.zvezek.trainings) {
+      for (const t of ready) {
         if (existing.has(slotKey(t.date, t.levels))) continue;
         const term = termFor(t.date);
         const lk = C.historyLevel(t.levels);

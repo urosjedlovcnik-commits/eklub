@@ -17,9 +17,9 @@ let lastPhase = null;
 for (const raw of src) {
   const line = raw.trim();
   if (!line) continue;
-  const h = line.match(/^#\s*(\d{4}-\d{2}-\d{2})\s+([ABC,]+)\s+([\d.]+)/);
+  const h = line.match(/^#\s*(\d{4}-\d{2}-\d{2})\s+([ABC,]+)\s+([\d.]+)\s*(✔)?/);
   if (h) {
-    cur = { date: h[1], levels: h[2].split(','), notebook_km: +h[3], items: [] };
+    cur = { date: h[1], levels: h[2].split(','), notebook_km: +h[3], reviewed: !!h[4], items: [] };
     trainings.push(cur); lastPhase = null; continue;
   }
   if (line.startsWith('#') || !cur) continue;
