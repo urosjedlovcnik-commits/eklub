@@ -1,0 +1,658 @@
+// Podstran Treningi: sestavljanje, shranjeni treningi, knjižnica, šifrant.
+(function () {
+  'use strict';
+  const C = window.TreningiCore;
+  const auth = window.trainerAuth;
+  let sb = null;
+
+  const S = {
+    trainer: null,
+    settings: C.DEFAULT_SETTINGS,
+    codes: [],
+    dict: new Map(),
+    terms: [],
+    dbSets: [],
+    dbTrainings: [],
+    zvezek: null,           // { sets, history, trainings } iz treningi_uvoz/zvezek_2026.json
+    zvezekImported: false,
+    library: [],
+    history: [],
+    week: null,             // ponedeljek ISO
+    cards: new Map()        // ključ slota -> stanje kartice
+  };
+
+  // ---------- Pomožne ----------
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const DAYS = ['', 'Ponedeljek', 'Torek', 'Sreda', 'Četrtek', 'Petek', 'Sobota', 'Nedelja'];
+  const fmtDate = (iso) => { const [y, m, d] = iso.split('-'); return `${+d}. ${+m}. ${y}`; };
+  const slotKey = (date, levels) => date + '|' + levels.slice().sort().join('');
+  const todayIso = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+  function mondayOf(iso) { return C.addDays(iso, 1 - C.weekday(iso)); }
+  function nextMonday() { const t = todayIso(); return C.weekday(t) === 1 ? t : C.addDays(mondayOf(t), 7); }
+
+  function banner(msg, warn) {
+    const b = $('statusBanner');
+    if (!msg) { b.hidden = true; return; }
+    b.hidden = false; b.className = 'tr-banner' + (warn ? ' warn' : ''); b.textContent = msg;
+  }
+
+  function autoSize(ta) { ta.style.height = 'auto'; ta.style.height = (ta.scrollHeight + 2) + 'px'; }
+
+  // ---------- Nalaganje ----------
+  async function init() {
+    if (typeof redirectRecoveryToResetPage === 'function' && redirectRecoveryToResetPage()) return;
+    const ctx = await auth.restoreSession();
+    if (!ctx) {
+      window.location.href = 'login.html?return=' + encodeURIComponent('treningi.html');
+      return;
+    }
+    sb = auth.supabase;
+    S.trainer = ctx.trainer;
+    $('authUserLabel').textContent = auth.getDisplayName() || ctx.trainer.email;
+    $('authRoleBadge').textContent = ctx.permissions?.label || 'Trener';
+    $('logoutBtn').addEventListener('click', async () => { await auth.logout(); window.location.href = 'login.html'; });
+
+    setupTabs();
+    setupSestavi();
+    setupLibraryForm();
+    banner('Nalaganje knjižnice …');
+    try {
+      await loadAll();
+      banner(null);
+    } catch (e) {
+      console.error(e);
+      banner('Napaka pri nalaganju: ' + (e.message || e), true);
+    }
+    renderWeek();
+    renderSaved();
+    renderLibrary();
+    renderCodes();
+  }
+
+  async function loadAll() {
+    const tid = S.trainer.id;
+    const [codesR, setR, termsR, setsR, trR] = await Promise.all([
+      sb.from('training_codes').select('*').eq('active', true).order('category').order('code'),
+      sb.from('training_settings').select('settings').eq('trainer_id', tid).maybeSingle(),
+      auth.ownTermIds.size ? sb.from('terms').select('*').in('id', Array.from(auth.ownTermIds)) : Promise.resolve({ data: [] }),
+      sb.from('training_sets').select('*').eq('trainer_id', tid).eq('active', true),
+      sb.from('trainings').select('*, training_items(*)').eq('trainer_id', tid).order('date', { ascending: false })
+    ]);
+    for (const r of [codesR, setR, termsR, setsR, trR]) if (r.error) throw r.error;
+    S.codes = codesR.data || [];
+    S.dict = C.buildDict(S.codes, true);
+    const st = (setR.data && setR.data.settings) || {};
+    S.settings = Object.assign({}, C.DEFAULT_SETTINGS, st, { levels: Object.assign({}, C.DEFAULT_SETTINGS.levels, st.levels || {}) });
+    S.terms = termsR.data || [];
+    S.dbSets = (setsR.data || []).map(s => Object.assign({}, s, { source: 'db', origin: s.source }));
+    S.dbTrainings = trR.data || [];
+    S.zvezekImported = S.dbSets.some(s => s.origin === 'uvoz');
+
+    if (!S.zvezek) {
+      try {
+        const res = await fetch('treningi_uvoz/zvezek_2026.json', { cache: 'no-cache' });
+        if (res.ok) {
+          const json = await res.json();
+          const lib = C.libraryFromTrainings(json.trainings, S.dict);
+          S.zvezek = { trainings: json.trainings, sets: lib.sets, history: lib.history };
+        }
+      } catch (e) { console.warn('Zvezek ni na voljo:', e); }
+    }
+    rebuildLibrary();
+  }
+
+  function rebuildLibrary() {
+    const lib = S.dbSets.slice();
+    const have = new Set(lib.map(s => s.phase + '|' + s.fingerprint));
+    if (S.zvezek && !S.zvezekImported) {
+      S.zvezek.sets.forEach(s => { if (!have.has(s.phase + '|' + s.fingerprint)) lib.push(s); });
+    }
+    S.library = lib;
+    const hist = [];
+    S.dbTrainings.forEach(t => {
+      const lvl = C.historyLevel(t.levels);
+      (t.training_items || []).forEach(i => hist.push({ date: t.date, level: lvl, phase: i.phase, fingerprint: i.fingerprint, main_type: mainTypeOf(i), status: t.status }));
+    });
+    if (S.zvezek && !S.zvezekImported) hist.push(...S.zvezek.history);
+    S.history = hist;
+  }
+
+  function mainTypeOf(item) {
+    if (item.phase !== 'glavna') return null;
+    const s = S.dbSets.find(x => x.id === item.set_id) || S.dbSets.find(x => x.phase === 'glavna' && x.fingerprint === item.fingerprint);
+    return s ? s.main_type : null;
+  }
+
+  // ---------- Zavihki ----------
+  function setupTabs() {
+    document.querySelectorAll('.tr-tab').forEach(btn => btn.addEventListener('click', () => {
+      document.querySelectorAll('.tr-tab').forEach(b => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('.tr-panel').forEach(p => { p.hidden = p.id !== 'panel-' + btn.dataset.tab; });
+    }));
+  }
+
+  // ---------- Sestavi ----------
+  function setupSestavi() {
+    S.week = nextMonday();
+    const wd = $('weekDate');
+    wd.value = S.week;
+    wd.addEventListener('change', () => { if (wd.value) { S.week = mondayOf(wd.value); wd.value = S.week; renderWeek(); } });
+    $('weekPrev').addEventListener('click', () => { S.week = C.addDays(S.week, -7); wd.value = S.week; renderWeek(); });
+    $('weekNext').addEventListener('click', () => { S.week = C.addDays(S.week, 7); wd.value = S.week; renderWeek(); });
+    $('proposeWeekBtn').addEventListener('click', () => proposeWeek());
+  }
+
+  function slotsForWeek() { return C.weekSlots(S.week, S.terms, S.settings); }
+
+  function savedFor(slot) {
+    return S.dbTrainings.find(t => t.date === slot.date && t.levels.slice().sort().join('') === slot.levels.slice().sort().join(''));
+  }
+
+  function cardFromDb(t, slot) {
+    const items = (t.training_items || []).slice().sort((a, b) => a.position - b.position).map(i => ({
+      phase: i.phase, text: i.text, set_id: i.set_id, source: 'db', main_type: mainTypeOf(i),
+      variantB: i.level_variants && i.level_variants.B ? i.level_variants.B.text : undefined
+    }));
+    return { slot, dbId: t.id, status: t.status, order_variant: t.order_variant, items, notes: [], dirty: false };
+  }
+
+  // Zgodovina brez treninga v tem slotu (da se predlog ne primerja sam s sabo) + ostali predlogi tedna.
+  function historyExcluding(slot) {
+    const key = slotKey(slot.date, slot.levels);
+    const base = S.history.filter(h => !(h.date === slot.date && h.level === C.historyLevel(slot.levels) && S.dbTrainings.some(t => slotKey(t.date, t.levels) === key && t.date === h.date)));
+    S.cards.forEach((card, k) => {
+      if (k === key || card.dbId) return;
+      base.push(...C.historyFromTraining({ date: card.slot.date, levels: card.slot.levels, items: card.items }));
+    });
+    return base;
+  }
+
+  function propose(slot, mainMode) {
+    const tr = C.generateTraining({
+      date: slot.date, levels: slot.levels, library: S.library, history: historyExcluding(slot),
+      settings: S.settings, seed: Math.floor(Math.random() * 1e9), mainMode: mainMode || 'auto'
+    });
+    return { slot, dbId: null, status: 'predlog', order_variant: tr.order_variant, items: tr.items, notes: tr.notes, dirty: true, mainMode: mainMode || 'auto' };
+  }
+
+  function proposeWeek() {
+    const slots = slotsForWeek();
+    if (!slots.length) { banner('Za ta teden ni tvojih terminov (pon, sre, čet).', true); return; }
+    slots.forEach(slot => {
+      const key = slotKey(slot.date, slot.levels);
+      if (savedFor(slot)) return;
+      S.cards.set(key, propose(slot));
+    });
+    renderWeek();
+  }
+
+  function renderWeek() {
+    const view = $('weekView');
+    const slots = slotsForWeek();
+    if (!S.terms.length) {
+      view.innerHTML = '<p class="tr-empty">Nimaš dodeljenih terminov (trainer_terms).</p>';
+      return;
+    }
+    if (!slots.length) { view.innerHTML = '<p class="tr-empty">V tem tednu ni terminov.</p>'; return; }
+    // Kartice iz baze (če obstajajo in niso lokalno spremenjene).
+    slots.forEach(slot => {
+      const key = slotKey(slot.date, slot.levels);
+      const saved = savedFor(slot);
+      const card = S.cards.get(key);
+      if (saved && (!card || (!card.dirty && card.dbId === saved.id) || !card.dbId && !card.dirty)) S.cards.set(key, cardFromDb(saved, slot));
+    });
+    const byDate = new Map();
+    slots.forEach(s => { if (!byDate.has(s.date)) byDate.set(s.date, []); byDate.get(s.date).push(s); });
+    view.innerHTML = '';
+    byDate.forEach((list, date) => {
+      const day = document.createElement('div');
+      day.className = 'tr-day';
+      day.innerHTML = `<h2>${DAYS[C.weekday(date)]}, ${fmtDate(date)} <span class="tr-sub">${esc(list[0].term_label)}</span></h2><div class="tr-cards"></div>`;
+      const cards = day.querySelector('.tr-cards');
+      list.forEach(slot => cards.appendChild(renderCard(slot)));
+      view.appendChild(day);
+    });
+  }
+
+  function levelKey(levels) { return C.historyLevel(levels); }
+
+  function cardTotals(card) {
+    let meters = 0;
+    card.items.forEach(it => { meters += C.parseText(it.text, S.dict).meters; });
+    const lk = levelKey(card.slot.levels);
+    const lv = S.settings.levels[lk];
+    return { meters, minutes: C.estimateMinutes(meters, lk, S.settings), ok: meters >= lv.meters_min && meters <= lv.meters_max, lv };
+  }
+
+  function renderCard(slot) {
+    const key = slotKey(slot.date, slot.levels);
+    const card = S.cards.get(key);
+    const el = document.createElement('div');
+    el.className = 'tr-card';
+    el.dataset.key = key;
+    const title = slot.levels.join(' + ');
+    if (!card) {
+      el.innerHTML = `<div class="tr-card-head"><div><div class="tr-card-title">Nivo ${esc(title)}</div><div class="tr-sub">Še ni treninga</div></div></div>
+        <button class="btn pri" data-act="propose">Predlagaj</button>`;
+      el.querySelector('[data-act=propose]').addEventListener('click', () => { S.cards.set(key, propose(slot)); rerenderCard(key); });
+      return el;
+    }
+    const tot = cardTotals(card);
+    const statusLabel = card.status === 'predlog' ? 'predlog' : card.status;
+    el.innerHTML = `
+      <div class="tr-card-head">
+        <div><div class="tr-card-title">Nivo ${esc(title)}</div>
+          <div class="tr-sub">${esc(DAYS[C.weekday(slot.date)])} ${fmtDate(slot.date)}</div></div>
+        <div><span class="tr-badge ${esc(card.status)}">${esc(statusLabel)}</span>${card.dirty && card.dbId ? ' <span class="tr-badge">neshranjeno</span>' : ''}</div>
+      </div>
+      ${card.notes && card.notes.length ? `<div class="tr-chips">${card.notes.map(n => `<span class="tr-chip info">${esc(n)}</span>`).join('')}</div>` : ''}
+      <div class="tr-items"></div>
+      <div class="tr-add">
+        <select>${C.PHASES.map(p => `<option value="${p}">${esc(C.PHASE_LABELS[p])}</option>`).join('')}</select>
+        <button class="tr-ico" data-act="add">+ vrstica</button>
+      </div>
+      <div class="tr-foot">
+        <div><span class="tr-total ${tot.ok ? 'ok' : 'bad'}">${tot.meters} m</span>
+          <span class="tr-sub"> cilj ${tot.lv.meters_min}–${tot.lv.meters_max} m · ~${tot.minutes} min plavanja</span></div>
+        <div class="tr-seg" title="Vrstni red">
+          <button data-order="obicajni" class="${card.order_variant === 'obicajni' ? 'active' : ''}">Vaje → glavna</button>
+          <button data-order="glavna_takoj" class="${card.order_variant === 'glavna_takoj' ? 'active' : ''}">Glavna takoj</button>
+        </div>
+        <div class="tr-btns">
+          <select data-act="mode" title="Vrsta glavne serije za nov predlog" style="width:auto;margin:0">
+            <option value="auto"${(card.mainMode || 'auto') === 'auto' ? ' selected' : ''}>Glavna: samodejno</option>
+            <option value="ne_sprint"${card.mainMode === 'ne_sprint' ? ' selected' : ''}>Glavna: brez šprinta</option>
+            <option value="sprint"${card.mainMode === 'sprint' ? ' selected' : ''}>Glavna: šprint</option>
+          </select>
+          <button class="btn" data-act="regen">Nov predlog</button>
+          <button class="btn" data-act="draft">Shrani osnutek</button>
+          <button class="btn ok" data-act="confirm">Potrdi</button>
+          ${card.dbId && card.status === 'potrjen' ? '<button class="btn" data-act="done">Izveden</button>' : ''}
+          <button class="btn" data-act="print">Natisni</button>
+          ${card.dbId ? '<button class="btn warn" data-act="delete">Izbriši</button>' : ''}
+        </div>
+      </div>`;
+    const itemsEl = el.querySelector('.tr-items');
+    card.items.forEach((it, idx) => itemsEl.appendChild(renderItem(card, it, idx, key)));
+
+    el.querySelector('[data-act=add]').addEventListener('click', () => {
+      const phase = el.querySelector('.tr-add select').value;
+      card.items.push({ phase, text: '', source: 'rocno' });
+      card.items = C.arrangeOrder(card.items, card.order_variant);
+      card.dirty = true; rerenderCard(key);
+    });
+    el.querySelectorAll('[data-order]').forEach(b => b.addEventListener('click', () => {
+      card.order_variant = b.dataset.order;
+      card.items = C.arrangeOrder(card.items, card.order_variant);
+      card.dirty = true; rerenderCard(key);
+    }));
+    el.querySelector('[data-act=regen]').addEventListener('click', () => {
+      if (card.dbId && !confirm('Trening je shranjen. Zamenjam ga z novim predlogom? (V bazi se spremeni šele ob shranjevanju.)')) return;
+      const fresh = propose(slot, el.querySelector('[data-act=mode]').value);
+      fresh.dbId = card.dbId; fresh.status = card.dbId ? card.status : 'predlog';
+      S.cards.set(key, fresh); rerenderCard(key);
+    });
+    el.querySelector('[data-act=draft]').addEventListener('click', () => saveCard(key, 'osnutek'));
+    el.querySelector('[data-act=confirm]').addEventListener('click', () => saveCard(key, 'potrjen'));
+    const done = el.querySelector('[data-act=done]');
+    if (done) done.addEventListener('click', () => setStatus(card, 'izveden'));
+    el.querySelector('[data-act=print]').addEventListener('click', () => printCard(el));
+    const del = el.querySelector('[data-act=delete]');
+    if (del) del.addEventListener('click', () => deleteCard(key));
+    return el;
+  }
+
+  function renderItem(card, it, idx, key) {
+    const wrap = document.createElement('div');
+    wrap.className = 'tr-item ' + it.phase;
+    const parsed = C.parseText(it.text, S.dict);
+    let info = '';
+    if (it.phase === 'glavna' && it.text.trim()) {
+      const d = C.lastUseDays(S.history.filter(h => !(h.date === card.slot.date)), C.fingerprint(it.text), levelKey(card.slot.levels), 'glavna', card.slot.date);
+      info = d === null ? 'še ni bila uporabljena' : `zadnjič pred ${d} dnevi`;
+      if (d !== null && d < S.settings.main_repeat_days) info += ` · ⚠ manj kot ${S.settings.main_repeat_days} dni`;
+      if (it.main_type === 'sprint') info += ' · šprint';
+    }
+    wrap.innerHTML = `
+      <div class="tr-item-head">
+        <span class="tr-phase">${esc(C.PHASE_LABELS[it.phase])}${info ? ' · ' + esc(info) : ''}</span>
+        <span class="tr-actions">
+          <span class="tr-m">${parsed.meters} m</span>
+          ${C.LIBRARY_PHASES.includes(it.phase) ? '<button class="tr-ico" data-a="swap" title="Zamenjaj iz knjižnice">↻</button>' : ''}
+          <button class="tr-ico" data-a="up" title="Gor">↑</button>
+          <button class="tr-ico" data-a="del" title="Odstrani">✕</button>
+        </span>
+      </div>
+      <textarea rows="1" spellcheck="false">${esc(it.text)}</textarea>
+      ${card.slot.levels.includes('B') && it.phase === 'glavna' ? `<div class="tr-b"><label>Nivo B</label><textarea rows="1" spellcheck="false" data-b="1">${esc(it.variantB != null ? it.variantB : it.text)}</textarea>${it.variantBNote ? `<div class="tr-sub">${esc(it.variantBNote)}</div>` : ''}</div>` : ''}
+      <div class="tr-chips">${parsed.unknown.map(u => `<span class="tr-chip" title="Ni v šifrantu">${esc(u)}</span>`).join('')}${parsed.lines.some(l => l.noLength) ? '<span class="tr-chip">ni dolžine</span>' : ''}</div>`;
+    const ta = wrap.querySelector('textarea:not([data-b])');
+    setTimeout(() => wrap.querySelectorAll('textarea').forEach(autoSize));
+    ta.addEventListener('input', () => {
+      it.text = ta.value; card.dirty = true; autoSize(ta);
+      const p = C.parseText(it.text, S.dict);
+      wrap.querySelector('.tr-m').textContent = p.meters + ' m';
+      wrap.querySelector('.tr-chips').innerHTML = p.unknown.map(u => `<span class="tr-chip">${esc(u)}</span>`).join('');
+      updateTotals(key);
+    });
+    ta.addEventListener('change', () => {
+      if (card.slot.levels.includes('B') && it.phase === 'glavna') { const b = C.bVariant(it.text, S.settings); it.variantB = b.text; it.variantBNote = b.note; }
+      rerenderCard(key);
+    });
+    const tb = wrap.querySelector('textarea[data-b]');
+    if (tb) tb.addEventListener('input', () => { it.variantB = tb.value; card.dirty = true; autoSize(tb); });
+    const swap = wrap.querySelector('[data-a=swap]');
+    if (swap) swap.addEventListener('click', () => swapItem(card, idx, key));
+    wrap.querySelector('[data-a=up]').addEventListener('click', () => {
+      if (idx === 0) return;
+      [card.items[idx - 1], card.items[idx]] = [card.items[idx], card.items[idx - 1]];
+      card.dirty = true; rerenderCard(key);
+    });
+    wrap.querySelector('[data-a=del]').addEventListener('click', () => { card.items.splice(idx, 1); card.dirty = true; rerenderCard(key); });
+    return wrap;
+  }
+
+  function updateTotals(key) {
+    const card = S.cards.get(key);
+    const el = document.querySelector(`.tr-card[data-key="${CSS.escape(key)}"]`);
+    if (!card || !el) return;
+    const tot = cardTotals(card);
+    const t = el.querySelector('.tr-total');
+    t.textContent = tot.meters + ' m';
+    t.className = 'tr-total ' + (tot.ok ? 'ok' : 'bad');
+  }
+
+  function rerenderCard(key) {
+    const card = S.cards.get(key);
+    const old = document.querySelector(`.tr-card[data-key="${CSS.escape(key)}"]`);
+    if (!old || !card) { renderWeek(); return; }
+    old.replaceWith(renderCard(card.slot));
+  }
+
+  function swapItem(card, idx, key) {
+    const it = card.items[idx];
+    const lk = levelKey(card.slot.levels);
+    const hist = historyExcluding(card.slot);
+    const used = new Set(card.items.map(i => C.fingerprint(i.text)));
+    let pool = S.library.filter(s => s.phase === it.phase && (s.levels || []).includes(lk) && !used.has(s.fingerprint));
+    if (it.phase === 'glavna') {
+      if (card.mainMode === 'ne_sprint') pool = pool.filter(s => s.main_type !== 'sprint');
+      if (card.mainMode === 'sprint') pool = pool.filter(s => s.main_type === 'sprint');
+      pool = pool.filter(s => { const d = C.lastUseDays(hist, s.fingerprint, lk, 'glavna', card.slot.date); return d === null || d >= S.settings.main_repeat_days; });
+    }
+    if (!pool.length) { alert('V knjižnici ni druge primerne serije za to fazo.'); return; }
+    const weight = s => { const d = C.lastUseDays(hist, s.fingerprint, lk, s.phase, card.slot.date); return d === null ? 40 : Math.min(d, 60) + 1; };
+    const total = pool.reduce((a, s) => a + weight(s), 0);
+    let r = Math.random() * total, pick = pool[0];
+    for (const s of pool) { r -= weight(s); if (r <= 0) { pick = s; break; } }
+    const next = { phase: it.phase, text: pick.text, set_id: pick.source === 'db' ? pick.id : null, source: pick.source, main_type: pick.main_type };
+    if (card.slot.levels.includes('B') && it.phase === 'glavna') { const b = C.bVariant(pick.text, S.settings); next.variantB = b.text; next.variantBNote = b.note; }
+    card.items[idx] = next;
+    card.dirty = true;
+    rerenderCard(key);
+  }
+
+  // ---------- Shranjevanje ----------
+  async function ensureSet(item, levels) {
+    if (!C.LIBRARY_PHASES.includes(item.phase) || !item.text.trim()) return null;
+    const fp = C.fingerprint(item.text);
+    const existing = S.dbSets.find(s => s.phase === item.phase && s.fingerprint === fp);
+    if (existing) return existing.id;
+    const parsed = C.parseText(item.text, S.dict);
+    const row = {
+      trainer_id: S.trainer.id, phase: item.phase, levels, text: item.text.trim(),
+      structure: C.toStructure(parsed), meters: parsed.meters, fingerprint: fp,
+      main_type: item.main_type || null, source: item.source === 'zvezek' ? 'uvoz' : 'rocno'
+    };
+    const { data, error } = await sb.from('training_sets').upsert(row, { onConflict: 'trainer_id,phase,fingerprint' }).select().single();
+    if (error) throw error;
+    S.dbSets.push(Object.assign({}, data, { source: 'db', origin: data.source }));
+    return data.id;
+  }
+
+  async function saveCard(key, status) {
+    const card = S.cards.get(key);
+    if (!card) return;
+    const items = card.items.filter(i => i.text.trim());
+    if (!items.length) { alert('Trening je prazen.'); return; }
+    if (status === 'potrjen') {
+      const lk = levelKey(card.slot.levels);
+      const hist = S.history.filter(h => h.date !== card.slot.date);
+      const clash = items.filter(i => i.phase === 'glavna').map(i => C.lastUseDays(hist, C.fingerprint(i.text), lk, 'glavna', card.slot.date)).find(d => d !== null && d < S.settings.main_repeat_days);
+      if (clash != null && !confirm(`Glavna serija je bila uporabljena pred ${clash} dnevi. Vseeno potrdim?`)) return;
+    }
+    banner('Shranjujem …');
+    try {
+      const tot = cardTotals(card);
+      const lvls = card.slot.levels.slice().sort();
+      const row = {
+        trainer_id: S.trainer.id, term_id: card.slot.term_id, date: card.slot.date, levels: lvls,
+        status, order_variant: card.order_variant, total_meters: tot.meters, estimated_minutes: tot.minutes,
+        confirmed_at: status === 'potrjen' ? new Date().toISOString() : null
+      };
+      let id = card.dbId;
+      if (id) {
+        const { error } = await sb.from('trainings').update(row).eq('id', id);
+        if (error) throw error;
+        const { error: e2 } = await sb.from('training_items').delete().eq('training_id', id);
+        if (e2) throw e2;
+      } else {
+        const { data, error } = await sb.from('trainings').insert(row).select().single();
+        if (error) throw error;
+        id = data.id;
+      }
+      const rows = [];
+      for (let i = 0; i < items.length; i++) {
+        const it = items[i];
+        const parsed = C.parseText(it.text, S.dict);
+        const setId = await ensureSet(it, lvls);
+        const lv = {};
+        if (lvls.includes('B') && it.phase === 'glavna' && it.variantB && it.variantB.trim() !== it.text.trim()) lv.B = { text: it.variantB.trim() };
+        rows.push({
+          training_id: id, position: i, phase: it.phase, set_id: setId, text: it.text.trim(),
+          structure: C.toStructure(parsed), meters: parsed.meters, fingerprint: C.fingerprint(it.text), level_variants: lv
+        });
+      }
+      const { error: e3 } = await sb.from('training_items').insert(rows);
+      if (e3) throw e3;
+      await loadAll();
+      const saved = S.dbTrainings.find(t => t.id === id);
+      if (saved) S.cards.set(key, cardFromDb(saved, card.slot));
+      banner(status === 'potrjen' ? 'Trening je potrjen in shranjen.' : 'Osnutek je shranjen.');
+      renderWeek(); renderSaved(); renderLibrary();
+    } catch (e) {
+      console.error(e);
+      banner('Shranjevanje ni uspelo: ' + (e.message || e), true);
+    }
+  }
+
+  async function setStatus(card, status) {
+    const { error } = await sb.from('trainings').update({ status }).eq('id', card.dbId);
+    if (error) { banner('Napaka: ' + error.message, true); return; }
+    await loadAll(); S.cards.delete(slotKey(card.slot.date, card.slot.levels)); renderWeek(); renderSaved();
+  }
+
+  async function deleteCard(key) {
+    const card = S.cards.get(key);
+    if (!card || !card.dbId) return;
+    if (!confirm('Izbrišem ta trening iz baze? Serije ostanejo v knjižnici.')) return;
+    const { error } = await sb.from('trainings').delete().eq('id', card.dbId);
+    if (error) { banner('Brisanje ni uspelo: ' + error.message, true); return; }
+    S.cards.delete(key);
+    await loadAll(); renderWeek(); renderSaved();
+  }
+
+  function printCard(el) {
+    document.querySelectorAll('.print-target').forEach(x => x.classList.remove('print-target'));
+    el.classList.add('print-target');
+    document.body.classList.add('printing');
+    const done = () => { document.body.classList.remove('printing'); el.classList.remove('print-target'); window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done);
+    window.print();
+  }
+
+  // ---------- Shranjeni ----------
+  function renderSaved() {
+    const view = $('savedView');
+    if (!S.dbTrainings.length) { view.innerHTML = '<p class="tr-empty">Ni še shranjenih treningov.</p>'; return; }
+    const list = S.dbTrainings.slice(0, 120);
+    view.innerHTML = list.map(t => {
+      const items = (t.training_items || []).slice().sort((a, b) => a.position - b.position);
+      return `<div class="tr-lib-row">
+        <div class="tr-item-head"><strong>${DAYS[C.weekday(t.date)]} ${fmtDate(t.date)} · ${esc(t.levels.join('+'))}</strong>
+          <span><span class="tr-badge ${esc(t.status)}">${esc(t.status)}</span> <span class="tr-m">${t.total_meters || ''} m</span>
+          <button class="tr-ico" data-week="${esc(t.date)}">Odpri</button></span></div>
+        <pre>${items.map(i => esc(i.text.replace(/\n/g, ' | '))).join('\n')}</pre></div>`;
+    }).join('') + (S.dbTrainings.length > list.length ? `<p class="tr-sub">Prikazanih je zadnjih ${list.length}.</p>` : '');
+    view.querySelectorAll('[data-week]').forEach(b => b.addEventListener('click', () => {
+      S.week = mondayOf(b.dataset.week); $('weekDate').value = S.week; renderWeek();
+      document.querySelector('.tr-tab[data-tab=sestavi]').click();
+    }));
+  }
+
+  // ---------- Knjižnica ----------
+  function setupLibraryForm() {
+    $('newSetPhase').innerHTML = C.LIBRARY_PHASES.map(p => `<option value="${p}">${esc(C.PHASE_LABELS[p])}</option>`).join('');
+    $('libPhase').innerHTML = '<option value="">Vse faze</option>' + C.LIBRARY_PHASES.map(p => `<option value="${p}">${esc(C.PHASE_LABELS[p])}</option>`).join('');
+    ['libPhase', 'libLevel', 'libSearch'].forEach(id => $(id).addEventListener('input', renderLibrary));
+    const prev = () => {
+      const p = C.parseText($('newSetText').value, S.dict);
+      $('newSetPreview').innerHTML = $('newSetText').value.trim()
+        ? `${p.meters} m${p.unknown.length ? ' · ni v šifrantu: ' + p.unknown.map(esc).join(', ') : ''}${p.lines.some(l => l.noLength) ? ' · vrstica brez dolžine' : ''}`
+        : '';
+    };
+    $('newSetText').addEventListener('input', prev);
+    $('newSetSave').addEventListener('click', async () => {
+      const text = $('newSetText').value.trim();
+      const levels = Array.from(document.querySelectorAll('.newSetLevel:checked')).map(c => c.value);
+      if (!text || !levels.length) { alert('Vpiši serijo in izberi vsaj en nivo.'); return; }
+      try {
+        await ensureSet({ phase: $('newSetPhase').value, text, main_type: $('newSetSprint').checked ? 'sprint' : null, source: 'rocno' }, levels);
+        $('newSetText').value = ''; prev();
+        rebuildLibrary(); renderLibrary();
+        banner('Serija je dodana v knjižnico.');
+      } catch (e) { banner('Napaka: ' + (e.message || e), true); }
+    });
+  }
+
+  function renderLibrary() {
+    renderImportBox();
+    const phase = $('libPhase').value, level = $('libLevel').value, q = $('libSearch').value.trim().toUpperCase();
+    const today = todayIso();
+    const rows = S.library.filter(s => (!phase || s.phase === phase) && (!level || (s.levels || []).includes(level)) && (!q || s.text.toUpperCase().includes(q)))
+      .sort((a, b) => C.PHASES.indexOf(a.phase) - C.PHASES.indexOf(b.phase) || a.meters - b.meters);
+    $('libCount').textContent = `${rows.length} serij`;
+    $('libView').innerHTML = rows.slice(0, 300).map(s => {
+      const lk = (s.levels || []).includes('A') ? 'A' : 'C';
+      const d = C.lastUseDays(S.history, s.fingerprint, lk, s.phase, today);
+      let avail = '';
+      if (s.phase === 'glavna') {
+        const last = S.history.filter(h => h.fingerprint === s.fingerprint && h.level === lk && h.phase === 'glavna').map(h => h.date).sort().pop();
+        avail = last ? ` · na voljo od ${fmtDate(C.addDays(last, S.settings.main_repeat_days))}` : '';
+      }
+      return `<div class="tr-lib-row"><div class="tr-item-head">
+        <span class="tr-phase">${esc(C.PHASE_LABELS[s.phase])} · ${esc((s.levels || []).join(', '))}${s.main_type === 'sprint' ? ' · šprint' : ''}</span>
+        <span><span class="tr-badge">${s.source === 'db' ? 'baza' : 'zvezek'}</span> <span class="tr-m">${s.meters} m</span></span></div>
+        <pre>${esc(s.text)}</pre>
+        <div class="tr-sub">${d === null ? 'še ni bila uporabljena' : 'zadnjič pred ' + d + ' dnevi'}${avail}</div></div>`;
+    }).join('') || '<p class="tr-empty">Ni zadetkov.</p>';
+  }
+
+  function renderImportBox() {
+    const box = $('importBox');
+    if (!S.zvezek || S.zvezekImported) { box.innerHTML = ''; return; }
+    const n = S.zvezek.sets.length, t = S.zvezek.trainings.length;
+    box.innerHTML = `<div class="tr-banner warn">Knjižnica zdaj uporablja prepis zvezka 2026 (${n} serij iz ${t} treningov), ki <strong>še ni v bazi</strong>.
+      Ko ga pregledaš, ga uvozi: serije gredo v knjižnico, treningi pa v zgodovino s statusom »izveden«, da velja pravilo 2 mesecev.
+      <div style="margin-top:8px"><button class="btn ok" id="importBtn">Uvozi zvezek 2026 v bazo</button></div></div>`;
+    $('importBtn').addEventListener('click', importZvezek);
+  }
+
+  async function importZvezek() {
+    if (!S.zvezek) return;
+    if (!confirm(`Uvozim ${S.zvezek.sets.length} serij in ${S.zvezek.trainings.length} treningov iz zvezka 2026 v bazo?`)) return;
+    banner('Uvažam zvezek …');
+    try {
+      const rows = S.zvezek.sets.map(s => {
+        const parsed = C.parseText(s.text, S.dict);
+        return { trainer_id: S.trainer.id, phase: s.phase, levels: s.levels.slice().sort(), text: s.text, structure: C.toStructure(parsed),
+          meters: parsed.meters, fingerprint: s.fingerprint, main_type: s.main_type || null, source: 'uvoz', notes: 'zvezek 2026' };
+      });
+      for (let i = 0; i < rows.length; i += 100) {
+        const { error } = await sb.from('training_sets').upsert(rows.slice(i, i + 100), { onConflict: 'trainer_id,phase,fingerprint', ignoreDuplicates: true });
+        if (error) throw error;
+      }
+      const { data: sets, error: es } = await sb.from('training_sets').select('id, phase, fingerprint').eq('trainer_id', S.trainer.id);
+      if (es) throw es;
+      const setId = new Map(sets.map(s => [s.phase + '|' + s.fingerprint, s.id]));
+      const existing = new Set(S.dbTrainings.map(t => slotKey(t.date, t.levels)));
+      const { data: allTerms } = await sb.from('terms').select('*').in('id', Array.from(auth.ownTermIds));
+      const termFor = (date) => (allTerms || []).find(t => Number(t.day) === C.weekday(date) && (!t.date_from || t.date_from <= date) && (!t.date_to || t.date_to >= date));
+      for (const t of S.zvezek.trainings) {
+        if (existing.has(slotKey(t.date, t.levels))) continue;
+        const term = termFor(t.date);
+        const lk = C.historyLevel(t.levels);
+        const { data: tr, error } = await sb.from('trainings').insert({
+          trainer_id: S.trainer.id, term_id: term ? term.id : null, date: t.date, levels: t.levels.slice().sort(), status: 'izveden',
+          order_variant: t.order_variant, total_meters: t.total_meters, estimated_minutes: C.estimateMinutes(t.total_meters, lk, S.settings),
+          notes: 'Uvoz iz zvezka 2026'
+        }).select().single();
+        if (error) throw error;
+        const items = t.items.map((it, i) => {
+          const parsed = C.parseText(it.text, S.dict);
+          const fp = C.fingerprint(it.text);
+          return { training_id: tr.id, position: i, phase: it.phase, set_id: setId.get(it.phase + '|' + fp) || null, text: it.text,
+            structure: C.toStructure(parsed), meters: parsed.meters, fingerprint: fp, level_variants: {} };
+        });
+        const { error: ei } = await sb.from('training_items').insert(items);
+        if (ei) throw ei;
+      }
+      await loadAll();
+      banner('Zvezek 2026 je uvožen.');
+      renderWeek(); renderSaved(); renderLibrary();
+    } catch (e) {
+      console.error(e);
+      banner('Uvoz ni uspel: ' + (e.message || e), true);
+    }
+  }
+
+  // ---------- Šifrant ----------
+  function renderCodes() {
+    const view = $('codesView');
+    const dbKeys = new Set();
+    S.codes.forEach(c => [c.code].concat(c.aliases || []).forEach(a => dbKeys.add(String(a).toUpperCase())));
+    const pending = C.REVIEW_CODES.filter(c => !dbKeys.has(c.code.toUpperCase()));
+    const byCat = new Map();
+    S.codes.forEach(c => { if (!byCat.has(c.category)) byCat.set(c.category, []); byCat.get(c.category).push(c); });
+    let html = '';
+    if (pending.length) {
+      html += `<div class="tr-form"><strong>Iz pregleda zvezka, še ni v bazi (${pending.length})</strong>
+        <p class="tr-sub">Razčlenjevalnik jih že pozna. Z gumbom jih dodaš v šifrant v bazi.</p>
+        <table class="tr-codes"><tbody>${pending.map(c => `<tr><td><strong>${esc(c.code)}</strong></td><td>${esc(c.meaning)}</td><td>${esc(c.category)}</td>
+          <td><button class="tr-ico" data-add="${esc(c.code)}">Dodaj</button></td></tr>`).join('')}</tbody></table>
+        <button class="btn ok" id="addAllCodes" style="margin-top:8px">Dodaj vse v šifrant</button></div>`;
+    }
+    byCat.forEach((list, cat) => {
+      html += `<h3 style="margin:14px 0 6px">${esc(cat)}</h3><table class="tr-codes"><tbody>${list.map(c =>
+        `<tr><td style="width:110px"><strong>${esc(c.code)}</strong></td><td>${esc(c.meaning)}${c.explanation ? `<div class="tr-sub">${esc(c.explanation)}</div>` : ''}</td>
+        <td class="tr-sub">${esc((c.aliases || []).join(', '))}</td></tr>`).join('')}</tbody></table>`;
+    });
+    view.innerHTML = html || '<p class="tr-empty">Šifrant je prazen.</p>';
+    const addCodes = async (codes) => {
+      const rows = codes.map(c => ({ code: c.code, meaning: c.meaning, category: c.category, created_by: S.trainer.id }));
+      const { error } = await sb.from('training_codes').upsert(rows, { onConflict: 'code', ignoreDuplicates: true });
+      if (error) {
+        // lower(code) je unikaten indeks izraza; ob konfliktu poskusi posamično.
+        for (const r of rows) { const { error: e } = await sb.from('training_codes').insert(r); if (e && !/duplicate/i.test(e.message)) { banner('Napaka: ' + e.message, true); return; } }
+      }
+      await loadAll(); renderCodes(); renderWeek();
+      banner(`Dodano v šifrant: ${codes.map(c => c.code).join(', ')}`);
+    };
+    view.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', () => addCodes(pending.filter(c => c.code === b.dataset.add))));
+    const all = $('addAllCodes');
+    if (all) all.addEventListener('click', () => { if (confirm(`Dodam ${pending.length} kratic v šifrant?`)) addCodes(pending); });
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+})();

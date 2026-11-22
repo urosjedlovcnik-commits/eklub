@@ -5,7 +5,7 @@ Stanje: **osnutek**, prepisano s fotografij 22. 11. 2026. Nič od tega še ni v 
 Oznake:
 
 - **(?)** pomeni, da zapisa nisem zanesljivo prebral ali ne vem, kaj pomeni.
-- **↑ / ↓** sta tvoja znaka za prvo in drugo dolžino (v zvezku krog s puščico gor in puščica dol), npr. `6x50 ↑K ↓M` = tja kravl, nazaj mešano (*domneva*).
+- **↑ / ↓** sta tvoja znaka za prvo in drugo dolžino (v zvezku krog s puščico gor in puščica dol), npr. `6x50 ↑K ↓M` = tja kravl, nazaj mešano (potrjeno).
 - Na koncu vsakega treninga je vsota iz zvezka.
 - Nivo je določen po razplavanju: **200 RAZP = C** (sreda), **300 RAZP = A** (oz. A+B ob pon/čet).
 
@@ -16,60 +16,123 @@ Oznake:
 - **`CRP` iz prvega pogovora je v resnici `RAZP` = razplavanje.**
 - Glavne serije so zelo raznolike: 4x100 KVL, 12x50 3+1, gnezdeni bloki `3x( … )`, `5x(5x50 …)`, lestvice `3x100 2' / 3x50 1' / 2x100 2' …`, piramide `25D 50H 75P 100K 75P 50H 25D`, neprekinjeno `300 VL / 200 M / 100 K hitro / …`.
 
-## 2. Nove kratice in izrazi (za potrditev)
+## 2. Nove kratice in izrazi
 
-| Zapis v zvezku | Moja domneva | Vprašanje |
-|----------------|--------------|-----------|
-| `RAZP`, `RAZ` | razplavanje | — (zanesljivo) |
-| `CT` | cela tehnika (celo plavanje) | Drži? Npr. `N/V/CT`, `4xCT 4xNOGE` |
-| `N/V/CT` | po dolžinah: noge / vaje / cela tehnika | Je `V` tukaj **vaje** (ne valček)? |
-| ↑ … ↓ … | prva dolžina … / druga dolžina … | Kako naj se to tipka na telefonu? Predlog: `↑K ↓M` ali `K > M` |
-| `!` (`K!`, `25!`, `S!`) | hitro / sprint | Je `!` isto kot `HIT` ali `Max`? |
-| `BD` (`KBD`, `25 BD`) | brez dihanja | Drži? |
-| `MBK`, `MBD`, `MBP` | mešano brez kravla / delfina / prsnega | `MBD` = brez **delfina** ali brez **dihanja**? (`KBD` je brez dihanja) |
-| `KVL` | K + VL (kravl z valčkom in lopatkami) | Drži? Pišeš skupaj |
-| `ZD`, `Z DESKO`, `DESKA` | z desko (`DE`) | Drži? Npr. `KN ZD 1'15"` |
-| `STOP`, `STOP PO 25` | stopnjevano (= `ST`); po 25 = vsakih 25 hitreje | Drži? |
-| `KZ` | ? | Npr. `KZ 25-25`, `KZ DIH KONDA`, `KZ DK`, `6x50 PL KZ` |
-| `PPV` | ? (prsno pod vodo?) | `6x25 PPV`, `4x25 PPV`, `6x50 ↑PPV` |
-| `POPAJ` (?) | ? | `6x25 POPAJ`, `8x25 POPAJ` |
-| `DOLGO`, `NA DOLGO` | dolg zavesljaj / dolgo drsenje? | `4x50 K/H NA DOLGO`, `3x100 VL DOLGO` |
-| `BOK` | noge na boku | `KN BOK`, `1DN BOK` |
-| `MAX OBRAT` | maksimalno hiter obrat | |
-| `DIH 3/4/5`, `DIHANJE 3,5,7`, `DIH NA 1` | dihanje na vsak 3./5./7. zavesljaj | Predlog zapisa: `DIH 3-5-7` |
-| `PO 25`, `PO 100` | menjava vsakih 25 / 100 m | `M PO 100`, `STOP PO 25` |
-| `Z ZAMIKOM` | ? | `4x100 M Z ZAMIKOM CT/N/V/CT` |
-| `4-3-2-1`, `6-1`, `7-5-3`, `1-1-2`, `2-2-2`, `3-3-6` | parametri vaj ali stopnjevanja? | Npr. `10x50 PL K 4-3-2-1 55"`, `PL D 7-5-3` |
-| `5"`, `10"`, `15" PAVZE` | pavza | Predlog: `p5"`, `p15"` |
-| `1xN 1xCT`, `1xVL 1xK …` | izmenično po ponovitvah | |
+### 2a. Potrjeno (prvi sklop, 22. 11. 2026)
 
-**Imena vaj** (dodam jih v šifrant kot vaje, potrebujem tvojo kratko razlago): `SUPERMAN`, `SHARK` / `SHARK 1` / `SHARK 2`, `VATERPOLO`, `SCULLING`, `ZADRGA`, `RRU PESTI`, `RRU PALEC`, `RRU SPRIJANO` (?), `ORKA` (?), `PACMAN` (?), `RINGO` (?), `ROTACIJA`, `VISOK KOMOLEC`, `SIMULATOR` (?), `90°` (`H RRU 90°`, `MN 90°`), `MENJAMO POLOŽAJ`, `ČIM DLJE POD VODO`, `ZADUŠNICA` (?), `GRANDA` (?), `ROTULJICA` (?), `KRAŠANJE` (?), `ROKA UZ ZAVES` (?).
+| Zapis v zvezku | Pomen | Opomba |
+|----------------|-------|--------|
+| `RAZP`, `RAZ` | razplavanje | |
+| `CT` | cela tehnika | |
+| `N/V/CT` | noge / vaje / cela tehnika | menjava po dolžinah ali po ponovitvah |
+| ↑ … ↓ … | ena smer … / druga smer … | v aplikaciji gumba ↑ in ↓ |
+| `!` | Max | `K!` = kravl Max |
+| `BD` | brez dihanja | `KBD` = kravl brez dihanja |
+| `MBK`, `MBD`, `MBP` | mešano brez kravla / delfina / prsnega | |
+| `KVL` | kravl z valčkom in lopatkami (`K` + `VL`) | |
+| `ZD` | z desko (`DE`) | tudi `Z DESKO`, `DESKA` |
+| `STOP` | stopnjevano (= `ST`) | `4x50 K STOP` = stopnjevano 1-4 po ponovitvah; `STOP PO 25` = vsakih 25 m hitreje |
+| `KZ` | kravl, vaja zavesljaji | dve različici: dihanje na stran zavesljaja, dihanje kontra (`KZ DK`, `KZ DIH KONTRA`) |
+| `PPV` | prsno pod vodo | v `6x50 ↑PPV ↓…` je nazaj germanja |
+| `POPAJ` | vaja za sculling | |
+| `DOLGO`, `NA DOLGO` | počasi | |
+
+### 2b. Potrjeno (drugi sklop, 22. 11. 2026)
+
+| Zapis v zvezku | Pomen | Opomba |
+|----------------|-------|--------|
+| `BOK` | noge na boku | `KN BOK`, `DN BOK` |
+| `MAX OBRAT` | šprint v obrat in iz njega, čim hitreje | |
+| `DIH 3-5-7` (tudi `DIH 3/4/5`, `DIHANJE 3,5,7`) | na koliko zavesljajev vdihneš | pri 75 m se vsakih 25 m diha drugače; `DIH NA 1` = vdih ob vsakem zavesljaju |
+| `Z ZAMIKOM` | mešano, vsakih 100 m začneš z naslednjo tehniko | pravilni vrstni red je D, H, P, K; z zamikom npr. H, P, K, D |
+| `4-3-2-1` | razdelitev intenzivnosti: 4 POČ, 3 T, 2 HIT, 1 Max | `10x50 PL K 4-3-2-1 55"` |
+| `7-5-3` | dihanje (na 7, 5, 3 zavesljaje) | `4x75 PL D 7-5-3` |
+| `6-1` | vaja hrbtno: na 6 udarcev nog zamenjaš roki | `6x25 PL D 6-1` |
+| `1-1-2` | vaja delfin: 1 zavesljaj z levo, 1 z desno, 2 cela koordinacija | |
+| `2-2-2` | enaka vaja kot `1-1-2`, z enim zavesljajem več | |
+| `DV 3-3`, `D 3-3` | delfin: 3x noge, 3x cela koordinacija | |
+| `2+1` | 2 tempo, 1 hitro (analogno `3+1`) | lahko v kateri koli tehniki |
+| `L/D` | 25 m leva roka, 25 m desna roka | `8x50 KV L/D` |
+| `ČMZ` | čim manj zavesljajev | |
+| `MM BP` | mešano menjajoče brez prsnega | |
+| `STIL` | prosta izbira tehnike (plavalci izberejo) | npr. del glavne serije ni kravl |
+| `PREVAL` | preval (obrat) | `8x25 PL + PREVAL` |
+| `KR` | ? vaja pri DN | `↓DN KR` |
+| `NPV` | noge pod vodo | `3xBD 1xNPV` |
+| `DN PV` | delfin noge pod vodo | |
+| `PV 1-2`, `PV 1-3` | prsno vaja: 1 zavesljaj, 2 ali 3 udarci nog | pozor: številke pomenijo drugače glede na tehniko/vajo (pri `ST` je `1-3` stopnjevanje) |
+| `p15"` | pavza | v zvezku `15" PAVZE`, `5"` |
+| `1xN 1xCT`, `1xVL 1xK` | izmenično po ponovitvah | |
+| `DOLGO`, `NA DOLGO` | počasi | pri `KV` pomeni dolg zavesljaj |
+
+Pravila iz pregleda treningov:
+
+- **Privzeti štart glavne serije**, če v zvezku ni zapisan: 50 m `@1'`, 75 m `@1'30"`, 100 m `@2'`, 200 m `@3'30"`.
+- **Nivo C** nima izrazitih glavnih serij, so lažje; ponovitve so lahko različne (npr. `4x100 M`: K PL, P, K, P).
+- **Izjemoma dve glavni seriji**: ena je glavna (velja zanjo pravilo 2 mesecev), druga je *stranska* (npr. 10. 6. A: SIMULATOR glavna, `6x100 VL DOLGO` stranska).
+
+Še odprto: `3-3-6` (`8x25 PL K 3-3-6`, 23. 9., C) ni znano, kaj je bilo mišljeno.
+
+### 2c. Vaje
+
+| Vaja | Razlaga |
+|------|---------|
+| `PD` | prsno drsenje (vaja) |
+| `HITLER` | HV: roka gre ven iz vode, pri 90° se dotakneš prsnega koša, nato nadaljuješ |
+| `SUPERMAN` | kravl noge, ena roka ob telesu, druga spredaj; dihaš na stran |
+| `SHARK 1` | kravl vaja: komolec zadržiš visoko nad ramo 2–3 s, nato nadaljuješ |
+| `SHARK 2` | ko pride komolec do rame, roko vrneš nazaj ob telo, nato cel zavesljaj |
+| `SHARK 3` | roko vrneš ob telo in pod vodo naprej do izhodišča, nato cel zavesljaj |
+| `VATERPOLO` | kravl z glavo nad vodo |
+| `SCULLING` | sklop vaj za občutek za vodo, plava se zelo počasi |
+| `POPAJ` | ena od vaj sculling |
+| `RRU` | sklop kravl vaj, kjer roka vedno počaka drugo (roka roka ujame) |
+| `ZADRGA` (zipper) | RRU: s palcem vlečeš po robu telesa ves čas do rame |
+| `RRU PESTI` | RRU s stisnjeno pestjo |
+| `RRU PALEC` | RRU: s palcem se dotakneš stegna in pazduhe |
+| `RRU ŠPRICANJE` | RRU: ob koncu potega izpljuskneš vodo ven |
+| `GERMANJA` | pomožna tehnika; za razplavanje ali v kombinaciji s hrbtno nogami kot vaja za podvodni del hrbtnega potega |
+| `ORKA` | delfin noge, samo podvodni del zavesljaja, roke vrneš naprej |
+| `ROTACIJA` | predvsem pri hrbtno nogah ali vajah za rotacijo ramenskega obroča |
+| `VISOK KOMOLEC` | kot K CT ali KV RRU; čim višje zarotiraš ramenski obroč, dvigneš ramo in komolec |
+| `SIMULATOR` | vaja hitrosti: 50 m, natanko 10 s počitka, 50 m; vsota je simuliran čas na tekmi |
+| `90°` | noge hrbtno ali kravl z roko iz vode; ali hrbtno RRU, kjer roka čaka zunaj |
+| `PACMAN` | z lopatkami: lopatko držiš na dnu, sili te v pravilen poteg |
+| `MENJAMO POLOŽAJ` | pri DN: hrbet, trebuh, en bok, drugi bok |
+| `ČIM DLJE POD VODO` | plavanje pod vodo: prsno, kravl, delfin ali hrbtno noge |
+| `ZADUŠNICA` | zadnjih 7 m pod vodo: potopiš se in v cilj prideš z delfin nogami |
+| `ROTULJICA` | metuljček, pomožna tehnika med delfinom in prsnim |
+| `KRAJŠANJE` | PV: trije zaporedni zavesljaji, vsak krajši (dolg, srednji, kratek), nato spet dolg |
+| `ROKA UZ ZAVES` | HV, kombinacija z 90°: hrbtno zavesljaji, druga roka je zunaj |
+| `RINEŠ` | RRU: dlan med vračanjem naprej pod vodo porineš naprej |
+
+Vse vaje iz zvezka so razložene.
 
 ## 3. Treningi
 
 ### Junij 2026
 
-**8. 6. 2026 (pon, A+B)**: 300 RAZP; `8x50 KV L/D` + `CT/R` (?); `8x25 PL 40" 3xBD 1xNPV` (?); `4x50 K PL MAX OBRAT`; 50 RAZP; `4x100 KVL 2'`; `4x100 K T 1'50"`; `4x100 M 2'`; 50 RAZP. **Σ 2,40**
+**8. 6. 2026 (pon, A+B)** ✔: 300 RAZP; `8x50 KV 1x L/D, 1x ČMZ`; `8x25 PL 40" 3xBD 1xNPV`; `4x50 K PL MAX OBRAT`; 50 RAZP; glavna `4x100 KVL 2'`, `4x100 K T 1'50"`, `4x100 M 2'`; 50 RAZP. **Σ 2,40**
 
-**11. 6. 2026 (čet, A+B)**: 300 RAZP; `4x100 M Z ZAMIKOM` (?); `8x25 PL D 3-3` (?); `4x50 PL K DIH 5/7`; 50 RAZP; `12x50 3+1`; `6x100 K 2+1` (?); 50 RAZP. **Σ 2,40**
+**11. 6. 2026 (čet, A+B)** ✔: 300 RAZP; `4x100 M Z ZAMIKOM`; `8x25 PL D 3-3`; `4x50 PL K DIH 5-7`; 50 RAZP; glavna `12x50 3+1 @1'` (privzeti štart), `6x100 K 2+1 @2'` (privzeti štart); 50 RAZP. **Σ 2,40**
 
-**10. 6. 2026 (sre, C)**: 200 RAZP; `4x50 ↑PD ↓K RRU` (?); `8x25 PL KN SUPERMAN`; `4x50 PL HV RRU`; `8x25 PL M CT 10"`; 50 RAZP; `4x100 M: 100 K PL / 100 P / 100 K / 100 P` (?); 50 RAZP. **Σ 1,60**
+**10. 6. 2026 (sre, C)** ✔: 200 RAZP; `4x50 ↑PD ↓K RRU`; `8x25 PL KN SUPERMAN`; `4x50 PL HV RRU`; `8x25 PL M CT p10"`; 50 RAZP; glavna `4x100 M`: 1x K PL, 1x P, 1x K, 1x P; 50 RAZP. **Σ 1,60**
 
-**10. 6. 2026 (sre, A)**: 300 RAZP; `16x25 M 5" N/CT`; `4x50 PL H…(?) 1x2-2-2`; `8x25 PL … HITRO` (?); 50 RAZP; `3x100 SIMULATOR` (?) + 50 RAZP; `6x100 VL DOLGO`; 50 RAZP. **Σ 2,25**
+**10. 6. 2026 (sre, A)** ✔: 300 RAZP; `16x25 M p5" N/CT`; `4x50 PL HV HITLER 1x 2-2-2`; `8x25 PL … HITRO` (?); 50 RAZP; glavna `3x100 SIMULATOR` + 50 RAZP; stranska glavna `6x100 VL DOLGO`; 50 RAZP. **Σ 2,25**
 
-**15. 6. 2026 (pon, A+B)**: 300 RAZP; `6x75 MBP, 1x R DIH 3/4/5` (?); `6x50 PL 1xN 1xT 1'`; `8x25 PL 1xD D NA 1, 1xK 2-2`; 50 RAZP; `3x100 KVL`; `3x50 T 50"`; `2x100 M`; `2x50 1'`; `100 D/K`; `50 D` (?); 100 RAZP. **Σ 2,20**
+**15. 6. 2026 (pon, A+B)** ✔: 300 RAZP; `6x75 1x MBP, 1x K DIH 3-4-5`; `6x50 PL 1xN 1xT 1'`; `8x25 PL 1xD DIH NA 1, 1xK 2-2`; 50 RAZP; glavna (lestvica) `3x100 KVL @2'`, `3x50 T 50"`, `2x100 M @2'`, `2x50 1'`, `100 D/K @2'`, `50 D @1'`; 100 RAZP. **Σ 2,20**
 
-**18. 6. 2026 (čet, A+B)**: 300 RAZP; `3x100 M (N, V, CT)`; `10x25 PL ↑DN PV ↓M CT` (?); `6x50 PL SHARK 1 / SHARK 2`; 50 RAZP; `4x( 75 K T 1'30" / 50 K HITRO / 25 D / 50 RAZP )`; 100 RAZP. **Σ 2,30**
+**18. 6. 2026 (čet, A+B)** ✔: 300 RAZP; `3x100 M (N, V, CT)`; `10x25 PL ↑DN PV ↓M CT`; `6x50 PL SHARK 1 / SHARK 2`; 50 RAZP; glavna `4x( 75 K T 1'30" / 50 K HITRO 1' / 25 D + takoj 50 RAZP )`; 100 RAZP. **Σ 2,30**
 
-**17. 6. 2026 (sre, C)**: 200 RAZP; `4x75 H, P, K` + `P 1-2, 1-3, 1-2`; `8x25 PL MN 90°`; `4x50 PL KV RRU ZAPRTO (?) / RRU PESTI`; `6x50 25 K CT HITRO + 25 RAZP`; 50 RAZP; `4x50 DESKA 1xN 1xKN` (?); 50 RAZP. **Σ 1,50**
+**17. 6. 2026 (sre, C)** ✔: 200 RAZP; `4x75 H, P, K`; `PV 1-2, 1-3, 1-2`; `8x25 PL MN 90°`; `4x50 PL KV RRU ZADRGA / RRU PESTI`; glavna `6x50 25 K CT HITRO + 25 RAZP`; 50 RAZP; zaključek `4x50 DESKA 1xN 1xKN`; 50 RAZP. **Σ 1,50**
 
-**17. 6. 2026 (sre, A)**: 300 RAZP; `4x75 M VB1T`; `4x75 PL 25 K MAX NOGE / 25 H / 25 BD`; 50 RAZP; `4x75 KVL`; `4x75 STOP PO 25`; `4x75 1'15"`; `4x75 DESKA P/K`; 50 RAZP. **Σ 2,20**
+**17. 6. 2026 (sre, A)** ✔: 300 RAZP; `4x75 M VB1T`; `4x75 PL 25 K MAX NOGE / 25 H / 25 BD`; 50 RAZP; glavna `4x75 KVL @1'30"`, `4x75 STOP PO 25 @1'30"`, `4x75 1'15"`, `4x75 DESKA P/K @1'30"`; 50 RAZP. **Σ 2,20**
 
-**22. 6. 2026 (pon, A+B)**: 300 RAZP; `6x50 MM BP` (?); `6x50 PL ↑DN ↓H RRU 90°`; `6x50 PL ↑KN BOK ↓K RRU PESTI`; 50 RAZP; `6x50 KVL 1'`; `6x50 PL MAX NOGE`; `6x50 50"`; `6x50 KVL 1'`; 50 RAZP. **Σ 2,50**
+**22. 6. 2026 (pon, A+B)** ✔: 300 RAZP; `6x50 MM BP`; `6x50 PL ↑DN ↓H RRU 90°`; `6x50 PL ↑KN BOK ↓K RRU PESTI`; 50 RAZP; glavna `6x50 KVL 1'`, `6x50 PL MAX NOGE 1'10"`, `6x50 50"`, `6x50 KVL 1'`; 50 RAZP. **Σ 2,50**
 
-**24. 6. 2026 (sre, C)**: 200 RAZP; `4x50 K+H (RRU 1) / P+H (RRU 2)` (?); `8x25 PL + POČASI` (?); `8x25 PL KN KZ 4x NOGE …` (?); `16x25 15" PAVZE: 3+1 H, 3+1 K, …` (?); 50 RAZP; SCULLING VAJE. **Σ ~1,25+**
+**24. 6. 2026 (sre, C)** ✔: 200 RAZP; `4x50 ↑K ↓H` (H: HV RRU ob telesu) / `↑P ↓H` (H: HV RRU zgoraj); `8x25 PL + PREVAL`; `8x25 PL KN KZ 4x NOGE …` (?); 50 RAZP; glavna `16x25 p15"`: 3xP 1xH, 3xP 1xK, 3xP 1xH, 3xP 1xK; SCULLING VAJE. **Σ 1,25**
 
-**24. 6. 2026 (sre, A)**: 300 RAZP; `10x25 PL POČASI + SPRINT`; `6x50 PL ↑VATERPOLO SP ↓DN KR` (?); `4x75 M BD C, N, V, C` (?); 50 RAZP; `2x200 VL`; `2x100 50 HITRO + 50 POČASI`; `2x50 1x SMIL (?) 1x KD (?)`; 50 RAZP; `8x25 SCULLING`; 50 RAZP. **Σ 2,20**
+**24. 6. 2026 (sre, A)** ✔: 300 RAZP; `10x25 PL POČASI + SPRINT`; `6x50 PL ↑VATERPOLO ŠPRICANJE ↓DN KR`; `4x75 MBD CT, N, V, CT`; 50 RAZP; glavna `2x200 VL 3'30"`, `2x100 50 HITRO + 50 POČASI @2'`, `2x50 1x STIL 1x K! @1'`; 50 RAZP; `8x25 SCULLING`; 50 RAZP. **Σ 2,20**
 
 ### September 2026
 
@@ -87,19 +150,19 @@ Oznake:
 
 **23. 9. 2026 (sre, C)**: 200 RAZP; `6x50 ↑P ↓H/K`; `8x25 PL KN …` (?); `8x25 PL K 3-3-6` (?); `6x25 PL KZ DK` (?); `6x25 K`; 50 RAZP; `6x50 STIL (?) 15" PAVZE`; 50 RAZP. **Σ 1,60**
 
-**23. 9. 2026 (sre, A)**: 300 RAZP; `8x50 MM`; `8x25 PL ↑VATERPOLO ↓M 3-1` (?); `4x50 PL RRU SHARK / RINGO` (?); 50 RAZP; `3x( 6x50 1': 1x VL, 1x K, 1x K vsak 3. 25 D / 25 H )` (?); 50 RAZP; `6x25 KBD`; 50 RAZP. **Σ 2,30**
+**23. 9. 2026 (sre, A)**: 300 RAZP; `8x50 MM`; `8x25 PL ↑VATERPOLO ↓M 3-1` (?); `4x50 PL RRU SHARK / RINEŠ`; 50 RAZP; `3x( 6x50 1': 1x VL, 1x K, 1x K vsak 3. 25 D / 25 H )` (?); 50 RAZP; `6x25 KBD`; 50 RAZP. **Σ 2,30**
 
 **28. 9. 2026 (pon, A+B)**: 300 RAZP; `25 D, 50 H, 75 P, 100 K, 75 P, 50 H, 25 D`; `4x50 PL ↑P 2-2-2 ↓KN DR` (?); `10x50 PL K 4-3-2-1 55"`; 50 RAZP; `8x50 KVL`; `6x50 ↑PV ↓M`; `4x50 ↑S! ↓RAZP`; 50 RAZP. **Σ 2,40**
 
 ### Oktober 2026
 
-**1. 10. 2026 (čet, A+B)**: 300 RAZP; `4x75 MM 25+50`; `4x50 1' + 2x100 2'`; `2x100 VL 1'50" + 4x50 35"` (?); 50 RAZP; `10x25 PL ↑KN PV ↓DN KR` (?); `4x50 PL RRU … / RRU SPRIJANO` (?); `4x25 + 25 ↑D/K! ↓RAZP`; 100 RAZP. **Σ 2,30**
+**1. 10. 2026 (čet, A+B)**: 300 RAZP; `4x75 MM 25+50`; `4x50 1' + 2x100 2'`; `2x100 VL 1'50" + 4x50 35"` (?); 50 RAZP; `10x25 PL ↑KN PV ↓DN KR` (?); `4x50 PL RRU … / RRU ŠPRICANJE` (?); `4x25 + 25 ↑D/K! ↓RAZP`; 100 RAZP. **Σ 2,30**
 
-**30. 9. 2026 (sre, C)**: 200 RAZP; `4x50 ↑PN NA H (?) ↓P 1-3`; `8x25 PN Z DESKO` (?); `8x25 P 1-2 KRAŠANJE` (?); `8x25 P ČIM DLJE POD VODO`; 50 RAZP; `4x50 PL KN ZD 15"`; `4x50 PL KRRU`; 50 RAZP. **Σ 1,50**
+**30. 9. 2026 (sre, C)**: 200 RAZP; `4x50 ↑PN NA H (?) ↓P 1-3`; `8x25 PN Z DESKO` (?); `8x25 P 1-2 KRAJŠANJE`; `8x25 P ČIM DLJE POD VODO`; 50 RAZP; `4x50 PL KN ZD 15"`; `4x50 PL KRRU`; 50 RAZP. **Σ 1,50**
 
 **30. 9. 2026 (sre, A)**: 300 RAZP; `4x75 MBD N/V`; `8x25 PL ↑PRS BD (?) ↓MN POČASI`; `4x50 PL KN ZD 1'…` (?); `8x25 ↑DELFIN ↓M`; `4x50 KN ZD 1'15"`; 50 RAZP; `6x75 KVL`; `6x25 POPAJ` (?); 50 RAZP. **Σ 2,10**
 
-**5. 10. 2026 (pon, A+B)**: 300 RAZP; `16x25 M N/CT POČ`; `8x25 PL K ZADUŠNICA (?) DV`; `6x50 PL DV ORKA (?) KV PESTI`; 50 RAZP; `200, 100, 50 … / 50, 100, 200 KVL` (lestvica, ?); 50 RAZP; `6x25 VATERPOLO`; `6x25 KBD 20"`; 50 RAZP. **Σ 2,35**
+**5. 10. 2026 (pon, A+B)**: 300 RAZP; `16x25 M N/CT POČ`; `8x25 PL K ZADUŠNICA DV` (?); `6x50 PL DV ORKA KV PESTI`; 50 RAZP; `200, 100, 50 … / 50, 100, 200 KVL` (lestvica, ?); 50 RAZP; `6x25 VATERPOLO`; `6x25 KBD 20"`; 50 RAZP. **Σ 2,35**
 
 **8. 10. 2026 (čet, A+B)**: 300 RAZP; `4x100 M PO 100 CT/N/V/CT`; `4x100 KVL`; `3x100 MEŠANO`; `2x100 PL NOGE`; `1x100 HITRO`; 50 RAZP; `8x25 PL K … BD` (?); `6x50 1 DN BOK, 1x DV 1-1-2` (?); 50 RAZP. **Σ 2,30**
 
@@ -111,7 +174,7 @@ Oznake:
 
 **15. 10. 2026 (čet, A+B)**: 300 RAZP; `6x50 H/K ↑V ↓CT`; `8x25 PL DN MENJAMO POLOŽAJ`; `4x50 PL HV 90° / HV … RAMENA` (?); 50 RAZP; `6x25 NOGE 35"`; `6x50 KVL 1'10"`; `6x25 NOGE 30"`; `6x50 K PL 1'`; 100 RAZP; `4x25 PPV`. **Σ 2,10**
 
-**14. 10. 2026 (sre, C)**: 200 RAZP; `4x75 PRSNO 1-2, 1-3, D`; `4x50 HN PL ROTACIJA`; `8x25 PL HV ROKA … ZAVES` (?); `8x25 HRBTNO`; 50 RAZP; `4x75 50 P + 25 K/H` (?); 50 RAZP. **Σ 1,50**
+**14. 10. 2026 (sre, C)**: 200 RAZP; `4x75 PRSNO 1-2, 1-3, D`; `4x50 HN PL ROTACIJA`; `8x25 PL HV ROKA UZ ZAVES`; `8x25 HRBTNO`; 50 RAZP; `4x75 50 P + 25 K/H` (?); 50 RAZP. **Σ 1,50**
 
 **14. 10. 2026 (sre, A)**: 300 RAZP; `4x100 PL (25 CT + 75 N/V/C)` (?); `10x25 PL ↑DR KN ↓SCULLING HRN` (?); `4x75 DIHANJE 3, 5, 7`; 50 RAZP; `5x( 100 T + 25 MAX + 25 … )` (?); 100 RAZP. **Σ 2,15**
 
@@ -127,7 +190,7 @@ Oznake:
 
 **29. 10. 2026 (čet, A+B)**: 300 RAZP; `8x50 MM ↑CT ↓N`; `300 VL`, `200 MEŠANO`, `100 K HITRO`, `50 NOGE`, `100 K HITRO`, `200 MEŠANO`, `300 VL` (piramida); 50 RAZP; `6x50 K PL RRU: 1x SHARK, 1x ZADRGA`; 100 RAZP. **Σ 2,40**
 
-**28. 10. 2026 (sre, C)**: 200 RAZP; `6x50 P/H K6` (?); `8x25 PL DN H/T/S/B` (?); `8x25 PL DZ L/D` (?); `6x25 PD 6-1` (?); 50 RAZP; `4x25 ROTULJICA` (?); `200 P, 100 H, 50 K`; 50 RAZP. **Σ 1,60**
+**28. 10. 2026 (sre, C)**: 200 RAZP; `6x50 P/H K6` (?); `8x25 PL DN H/T/S/B` (?); `8x25 PL DZ L/D` (?); `6x25 PD 6-1` (?); 50 RAZP; `4x25 ROTULJICA`; `200 P, 100 H, 50 K`; 50 RAZP. **Σ 1,60**
 
 **28. 10. 2026 (sre, A)**: 300 RAZP; `4x100 M … N/CT` (?); `8x25 PL ↑VATERPOLO ↓K ČIM DALJŠI`; `4x50 PL H RRU 90° / K 3-1` (?); 50 RAZP; `3x( 100 + 50 )` + 50 RAZP (?); `3x( 50 + 100 … )` (?); 100 RAZP. **Σ 2,20**
 
@@ -135,7 +198,7 @@ Oznake:
 
 **2. 11. 2026 (pon, A+B)**: 300 RAZP; `4x75 VB1T`; `18x25 VALČ ML …` (?); 50 RAZP; `6x100 (2+1) 2'`; 50 RAZP; `4x50 PL KN 1'`; `4x50 PL 25 D V 3-2 (?) / 25 DN …` (?); `8x25 PL ↑DN PV ↓DN M`; 100 RAZP. **Σ 2,25**
 
-**5. 11. 2026 (čet, A+B)**: 300 RAZP; `6x50 ↑N ↓V K/H`; `8x25 PL KN SUPERMAN`; `4x50 PL KZ DIH KONDA` (?); 50 RAZP; `3x( 6x50 1': 1x MADŽ, 1x VL, 1x CT )`; 50 RAZP; `6x50 ↑PPV ↓GRANDA` (?); 100 RAZP. **Σ 2,40**
+**5. 11. 2026 (čet, A+B)**: 300 RAZP; `6x50 ↑N ↓V K/H`; `8x25 PL KN SUPERMAN`; `4x50 PL KZ DIH KONTRA`; 50 RAZP; `3x( 6x50 1': 1x MADŽ, 1x VL, 1x CT )`; 50 RAZP; `6x50 ↑PPV ↓GERMANJA`; 100 RAZP. **Σ 2,40**
 
 **4. 11. 2026 (sre, C)**: 200 RAZP; `4x50 DESKA P/K`; `4x50 PV 1-3, 1-4` (?); `8x25 PR-DN` (?); `6x25 PPV`; `4x50 P 1'15"`; 50 RAZP; `8x25 1x MAX 1x RAZP`; 50 RAZP. **Σ 1,50**
 
@@ -147,7 +210,7 @@ Oznake:
 
 **11. 11. 2026 (sre, C)**: 200 RAZP; `6x50 ↑PDS (?) ↓H/K`; `25 + 50 + 75 + 100 + 75 + 50 … K H PRSNO 1-2 + 25` (?); 50 RAZP; `10x25 PL K/H N`; `4x50 PL KV 2-2`; `4x50 PL KRRU PALEC`; 50 RAZP. **Σ 1,65**
 
-**11. 11. 2026 (sre, A)**: 300 RAZP; `8x50 MM`; `8x25 PL ↑DN H (?) ↓PV SPRIJANO (?)`; `4x50 KRRU PALEC`; 50 RAZP; `4x100 KVL`; `4x50 MBK`; `4x50 K 50"`; `4x25 + 25 …` (?); … **Σ 2,35**
+**11. 11. 2026 (sre, A)**: 300 RAZP; `8x50 MM`; `8x25 PL ↑DN H (?) ↓PV ŠPRICANJE (?)`; `4x50 KRRU PALEC`; 50 RAZP; `4x100 KVL`; `4x50 MBK`; `4x50 K 50"`; `4x25 + 25 …` (?); … **Σ 2,35**
 
 **16. 11. 2026 (pon, A+B)**: 300 RAZP; `16x25 M POČ ↑N ↓CT`; `3x( 150 VL 3' / 100 TEMPO 2' / 50 HITRO 1' / 25 D + 25 RAZP )`; 50 RAZP; `10x25 PL K ČIM VIŠJI …` (?); `6x50 PL KZ 1x NOR… 1x DIMANJE K` (?); 50 RAZP. **Σ 2,40**
 

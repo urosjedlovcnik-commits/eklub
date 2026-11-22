@@ -340,6 +340,12 @@ document.addEventListener('DOMContentLoaded', () => {
         adminLink.hidden = false;
       }
 
+      // Sestavljanje treningov: zaenkrat samo za super admina (Uroš).
+      const trainingsLink = document.getElementById('trainingsLink');
+      if (trainingsLink && trainerAuth.permissions?.canAccessAdmin) {
+        trainingsLink.hidden = false;
+      }
+
       if (logoutBtn && !logoutBtn.dataset.bound) {
         logoutBtn.dataset.bound = '1';
         logoutBtn.addEventListener('click', async () => {

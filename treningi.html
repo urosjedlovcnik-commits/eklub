@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>eKlub – Treningi</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  body{margin:16px 12px}
+  .tr-wrap{max-width:1100px;margin:0 auto}
+  .tr-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}
+  .tr-tab{padding:9px 14px;border:1px solid var(--border);border-radius:999px;background:#fff;cursor:pointer;font-weight:600;color:#374151}
+  .tr-tab.active{background:var(--pri);border-color:var(--pri);color:#fff}
+  .tr-panel[hidden]{display:none}
+  .tr-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  .tr-toolbar input[type=date]{width:auto;margin:0}
+  .tr-toolbar select,.tr-toolbar input[type=search]{width:auto;margin:0}
+  .tr-note{font-size:13px;color:var(--mut);margin:4px 0 12px}
+  .tr-banner{padding:10px 12px;border-radius:10px;background:#eff6ff;border:1px solid #bfdbfe;font-size:14px;margin-bottom:12px}
+  .tr-banner.warn{background:#fff7ed;border-color:#fed7aa}
+  .tr-day{margin-bottom:18px}
+  .tr-day h2{font-size:17px;margin:0 0 8px}
+  .tr-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+  .tr-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:12px}
+  .tr-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+  .tr-card-title{font-weight:800;font-size:16px}
+  .tr-sub{font-size:12px;color:var(--mut)}
+  .tr-badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700;background:#e5e7eb;color:#374151}
+  .tr-badge.osnutek{background:#fef3c7;color:#92400e}
+  .tr-badge.potrjen{background:#dcfce7;color:#166534}
+  .tr-badge.izveden{background:#dbeafe;color:#1e40af}
+  .tr-badge.predlog{background:#f3e8ff;color:#6b21a8}
+  .tr-item{border-top:1px solid #f1f5f9;padding:8px 0}
+  .tr-item.glavna{background:#f8fafc;border-radius:10px;padding:8px;border:1px solid #e2e8f0;margin:6px 0}
+  .tr-item-head{display:flex;justify-content:space-between;align-items:center;gap:6px}
+  .tr-phase{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);font-weight:700}
+  .tr-item textarea{font-family:ui-monospace,Consolas,monospace;font-size:15px;min-height:38px;resize:vertical;margin-top:4px;line-height:1.35}
+  .tr-item .tr-b{margin-top:6px}
+  .tr-item .tr-b label{font-size:12px;font-weight:700;color:#7c3aed}
+  .tr-m{font-size:13px;font-weight:700;color:#334155;white-space:nowrap}
+  .tr-actions{display:flex;gap:4px}
+  .tr-ico{border:1px solid var(--border);background:#fff;border-radius:8px;padding:3px 8px;cursor:pointer;font-size:13px}
+  .tr-chips{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+  .tr-chip{font-size:11px;padding:1px 7px;border-radius:999px;background:#fee2e2;color:#991b1b}
+  .tr-chip.info{background:#e0f2fe;color:#075985}
+  .tr-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+  .tr-total{font-weight:800}
+  .tr-total.ok{color:var(--ok)} .tr-total.bad{color:#c2410c}
+  .tr-btns{display:flex;gap:6px;flex-wrap:wrap}
+  .tr-seg{display:inline-flex;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  .tr-seg button{border:0;background:#fff;padding:6px 10px;cursor:pointer;font-size:13px}
+  .tr-seg button.active{background:#1f2937;color:#fff}
+  .tr-add{display:flex;gap:6px;margin-top:8px}
+  .tr-add select{width:auto;margin:0}
+  .tr-lib-row{background:#fff;border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin-bottom:6px}
+  .tr-lib-row pre{margin:2px 0;font-family:ui-monospace,Consolas,monospace;font-size:14px;white-space:pre-wrap}
+  .tr-form{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:14px}
+  .tr-form label{font-size:13px;font-weight:600}
+  .tr-preview{font-size:13px;color:#334155;margin-top:6px}
+  .tr-codes{width:100%;border-collapse:collapse;background:#fff}
+  .tr-codes td,.tr-codes th{font-size:14px}
+  .tr-empty{color:var(--mut);font-style:italic;padding:8px 0}
+  @media (max-width:520px){
+    .tr-cards{grid-template-columns:1fr}
+    .tr-item textarea{font-size:16px}
+  }
+  @media print{
+    body{margin:0;background:#fff}
+    body.printing .auth-bar, body.printing .tr-tabs, body.printing .tr-toolbar, body.printing .tr-note,
+    body.printing .tr-banner, body.printing h1, body.printing .tr-panel:not(#panel-sestavi):not(#panel-shranjeni){display:none!important}
+    body.printing .tr-card:not(.print-target), body.printing .tr-day:not(:has(.print-target)){display:none!important}
+    body.printing .tr-actions, body.printing .tr-foot .tr-btns, body.printing .tr-add, body.printing .tr-seg, body.printing .tr-chips{display:none!important}
+    body.printing .tr-card{border:0;padding:0}
+    body.printing textarea{border:0;resize:none;font-size:16pt;padding:0;overflow:hidden}
+  }
+</style>
+</head>
+<body>
+  <div class="auth-bar" id="authBar">
+    <div class="auth-bar-user">
+      <a href="index.html" class="auth-brand">eKlub</a>
+      <strong id="authUserLabel">Nalaganje …</strong>
+      <span class="auth-role-badge" id="authRoleBadge"></span>
+    </div>
+    <div class="auth-bar-actions">
+      <a href="index.html" class="btn">Koledar</a>
+      <button type="button" class="btn" id="logoutBtn">Odjava</button>
+    </div>
+  </div>
+
+  <div class="tr-wrap">
+    <h1>Treningi</h1>
+    <div class="tr-tabs" role="tablist">
+      <button class="tr-tab active" data-tab="sestavi">Sestavi</button>
+      <button class="tr-tab" data-tab="shranjeni">Shranjeni</button>
+      <button class="tr-tab" data-tab="knjiznica">Knjižnica</button>
+      <button class="tr-tab" data-tab="sifrant">Šifrant</button>
+    </div>
+
+    <div id="statusBanner" class="tr-banner" hidden></div>
+
+    <section class="tr-panel" id="panel-sestavi">
+      <div class="tr-toolbar">
+        <button class="btn" id="weekPrev" title="Prejšnji teden">◀</button>
+        <input type="date" id="weekDate" aria-label="Teden">
+        <button class="btn" id="weekNext" title="Naslednji teden">▶</button>
+        <button class="btn pri" id="proposeWeekBtn">Predlagaj teden</button>
+      </div>
+      <p class="tr-note">Predlog upošteva pravilo 2 mesecev za glavne serije (ločeno za A in C), šprint na 2–3 tedne in ciljne metre. Vsako vrstico lahko popraviš, zamenjaš (↻) ali odstraniš. V bazo gre šele, ko klikneš Shrani ali Potrdi.</p>
+      <div id="weekView"></div>
+    </section>
+
+    <section class="tr-panel" id="panel-shranjeni" hidden>
+      <div id="savedView"></div>
+    </section>
+
+    <section class="tr-panel" id="panel-knjiznica" hidden>
+      <div id="importBox"></div>
+      <div class="tr-form">
+        <strong>Dodaj serijo v knjižnico</strong>
+        <div class="tr-toolbar" style="margin-top:8px">
+          <select id="newSetPhase"></select>
+          <label><input type="checkbox" class="newSetLevel" value="A" checked> A</label>
+          <label><input type="checkbox" class="newSetLevel" value="B" checked> B</label>
+          <label><input type="checkbox" class="newSetLevel" value="C"> C</label>
+          <label><input type="checkbox" id="newSetSprint"> šprint</label>
+        </div>
+        <textarea id="newSetText" rows="3" placeholder="npr. 4x100 KVL @2'&#10;4x50 K 3+1 @1'"></textarea>
+        <div class="tr-preview" id="newSetPreview"></div>
+        <button class="btn ok" id="newSetSave" style="margin-top:8px">Shrani v knjižnico</button>
+      </div>
+      <div class="tr-toolbar">
+        <select id="libPhase"></select>
+        <select id="libLevel"><option value="">Vsi nivoji</option><option>A</option><option>B</option><option>C</option></select>
+        <input type="search" id="libSearch" placeholder="Išči …">
+        <span class="tr-sub" id="libCount"></span>
+      </div>
+      <div id="libView"></div>
+    </section>
+
+    <section class="tr-panel" id="panel-sifrant" hidden>
+      <div id="codesView"></div>
+    </section>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
+  <script src="./config.js"></script>
+  <script src="./trainer-auth.js"></script>
+  <script src="./treningi-core.js"></script>
+  <script src="./treningi.js"></script>
+</body>
+</html>
