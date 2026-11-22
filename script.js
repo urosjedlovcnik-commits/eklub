@@ -1976,6 +1976,9 @@ document.addEventListener('DOMContentLoaded', () => {
         elInactiveNote.style.display = "none";
       }
 
+      // Sestavljen trening iz podstrani Treningi (samo branje)
+      renderComposedTraining(ymd, termId);
+
       // Nastavitev opomb o treningu
       elNotesInput.value = termStatusObj.notes || "";
       elSaveNotesBtn.textContent = "Shrani trening";
@@ -2069,6 +2072,48 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
     
+    const CT_PHASES = {
+      razplavanje: 'Razplavanje', ogrevalna: 'Ogrevalna serija', vaje: 'Vaje', vmesno_razplavanje: 'Razplavanje',
+      glavna: 'Glavna serija', zakljucek: 'Zaključek', zakljucno_razplavanje: 'Zaključno razplavanje'
+    };
+    let ctRequest = 0;
+
+    /** Prikaže treninge, sestavljene na podstrani Treningi, za ta termin in dan (RLS: samo lastni). */
+    async function renderComposedTraining(ymd, termId) {
+      const box = document.getElementById('composedTrainingBlock');
+      if (!box) return;
+      const req = ++ctRequest;
+      box.hidden = true;
+      box.innerHTML = '';
+      const { data, error } = await supabase
+        .from('trainings')
+        .select('id, levels, status, total_meters, estimated_minutes, training_items(position, phase, text, meters, level_variants)')
+        .eq('date', ymd)
+        .eq('term_id', termId);
+      if (req !== ctRequest) return;
+      if (error) { console.warn('Treningi niso na voljo:', error.message); return; }
+      if (!data || !data.length) return;
+      const escCt = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+      const order = (l) => l.includes('C') && !l.includes('A') ? 1 : 0;
+      data.sort((a, b) => order(a.levels) - order(b.levels));
+      box.innerHTML = data.map(t => {
+        const items = (t.training_items || []).slice().sort((a, b) => a.position - b.position);
+        const statusLabel = { osnutek: 'osnutek', potrjen: 'potrjen', izveden: 'izveden' }[t.status] || t.status;
+        return `<div class="ct-card">
+          <div class="ct-head"><span>Nivo ${escCt(t.levels.join(' + '))}</span><span class="ct-badge ${escCt(t.status)}">${escCt(statusLabel)}</span></div>
+          ${items.map(i => {
+            const b = i.level_variants && i.level_variants.B && i.level_variants.B.text;
+            return `<div class="ct-row ${escCt(i.phase)}"><div><span class="ct-phase">${escCt(CT_PHASES[i.phase] || i.phase)}</span>
+              <span class="ct-text">${escCt(i.text)}</span>${b ? `<div class="ct-b">B: ${escCt(b)}</div>` : ''}</div>
+              <span class="ct-m">${i.meters} m</span></div>`;
+          }).join('')}
+          <div class="ct-foot"><strong>${t.total_meters || items.reduce((a, i) => a + (i.meters || 0), 0)} m${t.estimated_minutes ? ` · ~${t.estimated_minutes} min` : ''}</strong>
+            <a href="treningi.html?datum=${escCt(ymd)}">Uredi v Treningih</a></div>
+        </div>`;
+      }).join('');
+      box.hidden = false;
+    }
+
     function openModal(modalEl){ modalEl.style.display = "flex"; modalEl.setAttribute("aria-hidden", "false"); }
     function closeModal(modalEl){ modalEl.style.display = "none"; modalEl.setAttribute("aria-hidden", "true"); }
 

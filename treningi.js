@@ -134,7 +134,8 @@
 
   // ---------- Sestavi ----------
   function setupSestavi() {
-    S.week = nextMonday();
+    const fromUrl = new URLSearchParams(window.location.search).get('datum');
+    S.week = fromUrl && /^\d{4}-\d{2}-\d{2}$/.test(fromUrl) ? mondayOf(fromUrl) : nextMonday();
     const wd = $('weekDate');
     wd.value = S.week;
     wd.addEventListener('change', () => { if (wd.value) { S.week = mondayOf(wd.value); wd.value = S.week; renderWeek(); } });

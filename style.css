@@ -29,6 +29,20 @@ body{font-family:system-ui, Segoe UI, Roboto, Arial, sans-serif; background:var(
 .event{display:flex;align-items:center;gap:4px}
 .modal-notes-prominent{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:4px}
 .modal-notes-prominent h4{margin:0 0 8px;font-size:15px}
+.composed-training{margin:0 0 12px}
+.composed-training .ct-card{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:8px}
+.composed-training .ct-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;font-weight:700}
+.composed-training .ct-badge{font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:#e5e7eb;color:#374151}
+.composed-training .ct-badge.potrjen{background:#dcfce7;color:#166534}
+.composed-training .ct-badge.osnutek{background:#fef3c7;color:#92400e}
+.composed-training .ct-badge.izveden{background:#dbeafe;color:#1e40af}
+.composed-training .ct-row{display:grid;grid-template-columns:1fr auto;gap:8px;padding:3px 0;border-top:1px solid #f1f5f9;font-size:14px}
+.composed-training .ct-row.glavna{font-weight:700}
+.composed-training .ct-phase{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);font-weight:600}
+.composed-training .ct-text{font-family:ui-monospace,Consolas,monospace;white-space:pre-wrap}
+.composed-training .ct-b{color:#7c3aed;font-family:ui-monospace,Consolas,monospace;white-space:pre-wrap}
+.composed-training .ct-m{color:#334155;font-size:13px;white-space:nowrap}
+.composed-training .ct-foot{display:flex;justify-content:space-between;margin-top:6px;font-size:13px}
 .calendar-status-banner{max-width:1200px;margin:0 auto 12px;padding:12px 14px;border-radius:10px;font-size:14px;line-height:1.5}
 .calendar-status-banner.warn{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
 .calendar-status-banner.info{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af}
