@@ -681,7 +681,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return status === true || status === 'true' || status === 1;
     }
 
-    /** Število dodeljenih / prisotnih / označenih za termin na dan. */
+    /** Število dodeljenih / prisotnih / označenih za termin na dan (+ prisotni na nadomeščanju). */
     function getAttendanceCountSummary(date, termId) {
       const ymd = iso(date);
       const termAtt = attendance[ymd]?.[termId] || {};
@@ -689,6 +689,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!s.terms?.includes(termId) || s.is_deleted) return false;
         return isSwimmerAssignedToTermOnDate(s.id, termId, date);
       });
+      const assignedIds = new Set(assigned.map(s => s.id));
       let present = 0;
       let marked = 0;
       assigned.forEach(s => {
@@ -697,14 +698,25 @@ document.addEventListener('DOMContentLoaded', () => {
         marked += 1;
         if (isPresentAttendanceStatus(status)) present += 1;
       });
-      return { assigned: assigned.length, present, marked };
+      // Nadomeščanje: plavalci s prisotnostjo, ki niso redno dodeljeni temu terminu
+      let substitutes = 0;
+      Object.keys(termAtt).forEach(id => {
+        if (!assignedIds.has(id) && isPresentAttendanceStatus(termAtt[id])) substitutes += 1;
+      });
+      return { assigned: assigned.length, present, marked, substitutes };
     }
 
     function formatEventSwimmerCountHtml(date, termId, isTrainingFinished) {
       const summary = getAttendanceCountSummary(date, termId);
-      if (summary.assigned <= 0) return '';
-      if (isTrainingFinished && summary.marked > 0) {
-        return `<span class="event-count" title="${summary.present} prisotnih od ${summary.assigned} dodeljenih">${summary.present}/${summary.assigned}</span>`;
+      const subs = summary.substitutes;
+      if (summary.assigned <= 0 && subs <= 0) return '';
+      const subsTitle = subs ? ` (od tega ${subs} na nadomeščanju)` : '';
+      if (isTrainingFinished && (summary.marked > 0 || subs > 0)) {
+        const total = summary.present + subs;
+        return `<span class="event-count" title="${total} prisotnih${subsTitle} od ${summary.assigned} dodeljenih">${total}/${summary.assigned}</span>`;
+      }
+      if (subs > 0) {
+        return `<span class="event-count" title="${summary.assigned} plavalcev + ${subs} na nadomeščanju">${summary.assigned}+${subs}</span>`;
       }
       return `<span class="event-count" title="${summary.assigned} plavalcev">${summary.assigned}</span>`;
     }
