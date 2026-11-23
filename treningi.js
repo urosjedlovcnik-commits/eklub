@@ -333,6 +333,10 @@
       const d = C.lastDrillDays(S.history.filter(h => h.date !== card.slot.date), C.fingerprint(it.text), levelKey(card.slot.levels), card.slot.date);
       if (d !== null && d < S.settings.vaje_repeat_days) info = `⚠ ista vaja pred ${d} dnevi`;
       if (C.exclusiveConflict(it.text, card.items.filter(x => x !== it).map(x => x.text), S.settings)) info = '⚠ ORKA in BIONDI ne gresta skupaj';
+      else {
+        const ex = C.lastExclusiveDays(it.text, S.history.filter(h => h.date !== card.slot.date), levelKey(card.slot.levels), card.slot.date, S.settings);
+        if (ex !== null && ex < S.settings.exclusive_gap_days) info = `⚠ ORKA/BIONDI pred ${ex} dnevi (vsaj ${S.settings.exclusive_gap_days})`;
+      }
     }
     wrap.innerHTML = `
       <div class="tr-item-head">
@@ -407,7 +411,7 @@
     const sprint = it.phase === 'glavna' && (card.mainMode === 'sprint' || (card.mainMode !== 'ne_sprint' && C.isSprintMain(it, S.settings)));
     const n = C.suggestNewSet(it.phase, {
       level: levelKey(card.slot.levels), library: S.library, history: historyExcluding(card.slot), dict: S.dict,
-      exclude: card.items.map(i => C.fingerprint(i.text)), sprint, settings: S.settings,
+      exclude: card.items.map(i => C.fingerprint(i.text)), sprint, settings: S.settings, date: card.slot.date,
       others: card.items.filter((x, j) => j !== idx).map(i => i.text)
     });
     if (!n) { alert('Za to fazo trenutno nimam nove serije.'); return; }

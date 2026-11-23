@@ -40,6 +40,8 @@
     highlight_order_choice_weekdays: [1],
     // Vaje, ki nikoli ne pridejo skupaj v istem treningu.
     exclusive_codes: [['ORKA', 'BIONDI']],
+    // Te (skoraj enake) vaje naj bodo tudi med treningi vsaj toliko dni narazen.
+    exclusive_gap_days: 28,
     // Dan v tednu (1 = ponedeljek) -> skupine nivojev, ki imajo vsaka svoj trening.
     day_levels: { 1: [['A', 'B']], 3: [['A'], ['C']], 4: [['A', 'B']] },
     // Privzeti štart glavne serije, če ni zapisan (sekunde po dolžini).
@@ -333,7 +335,13 @@
       const reps = +n;
       if (reps >= cfg.min_reps_to_reduce) { changed = true; return sp + (reps - cfg.reps_minus) + x; }
       return all;
-    })).join('\n');
+    })).map((line, i) => {
+      const orig = cleanQuotes(text).split(/\n/)[i];
+      const reps = parseInt(orig, 10);
+      const alt = orig.match(/\s1x\s[^]*?(?=\s1x\s|$)/g);
+      // Vsaka ponovitev ima svojo različico: ko ponovitev odpade, odpade tudi zadnja različica.
+      return line !== orig && alt && alt.length === reps && cfg.reps_minus === 1 ? line.slice(0, line.length - alt[alt.length - 1].length) : line;
+    }).join('\n');
     return { text: out, changed, note: changed ? '' : 'ni česa skrajšati: daljši štart ali + PL' };
   }
 
@@ -445,7 +453,7 @@
   function availableDrills(sets, history, level, date, settings) {
     return sets.filter(s => {
       const d = lastDrillDays(history, s.fingerprint, level, date);
-      return d === null || d >= settings.vaje_repeat_days;
+      return (d === null || d >= settings.vaje_repeat_days) && !exclusiveTooSoon(s.text, history, level, date, settings);
     });
   }
   function drillWeight(set, history, level, date, settings) {
@@ -464,38 +472,108 @@
     return groups.some(g => g.some(w => hasWord(text, w)) && g.filter(w => all.some(t => hasWord(t, w))).length > 1);
   }
 
+  /** Koliko dni je od zadnje vaje iz iste skupine (ORKA/BIONDI); null, če besedilo take vaje nima ali je še ni bilo. */
+  function lastExclusiveDays(text, history, level, date, settings) {
+    const groups = (settings && settings.exclusive_codes) || DEFAULT_SETTINGS.exclusive_codes;
+    const words = [].concat(...groups.filter(g => g.some(w => hasWord(text, w))));
+    if (!words.length) return null;
+    let best = null;
+    (history || []).forEach(h => {
+      if (h.level !== level || !words.some(w => hasWord(h.fingerprint, w))) return;
+      const d = Math.abs(daysBetween(h.date, date));
+      if (best === null || d < best) best = d;
+    });
+    return best;
+  }
+  function exclusiveTooSoon(text, history, level, date, settings) {
+    const d = lastExclusiveDays(text, history, level, date, settings);
+    return d !== null && d < ((settings && settings.exclusive_gap_days) || DEFAULT_SETTINGS.exclusive_gap_days);
+  }
+
   // ---------- Nove serije ----------
-  // Sestavljene iz potrjenih kratic in oblik, ki jih trener že uporablja. Vedno čakajo na pregled.
+  // Dva vira: (1) križanje delov serij, ki jih trener že ima v knjižnici (slog se uči sproti z vsakim uvozom),
+  // (2) ideje v njegovem slogu iz potrjenih kratic. Vedno čakajo na pregled.
   const NEW_PARTS = {
     A: {
-      noge: [['K', 'KN'], ['K', 'KN BOK'], ['K', 'KN SUPERMAN'], ['K', 'KN RV'], ['D', 'DN'], ['D', 'DN BOK'], ['H', 'HN'], ['H', 'HN ROTACIJA']],
+      noge: [['K', 'KN'], ['K', 'KN BOK'], ['K', 'KN SUPERMAN'], ['K', 'KN RV'], ['D', 'DN'], ['D', 'DN BOK'], ['D', 'DN H'], ['H', 'HN'], ['H', 'HN ROTACIJA'], ['H', 'HN RV']],
       vaje: [['K', 'KV 2-2'], ['K', 'K RRU PESTI'], ['K', 'K RRU PALEC'], ['K', 'K RRU ZADRGA'], ['K', 'K RRU ŠPRICANJE'], ['K', 'K RRU RINEŠ'], ['K', 'K RRU PPDZ'], ['K', 'K RRU PRSTI'], ['K', 'K 6-3-6'],
-        ['K', 'K SHARK 1'], ['K', 'K SHARK 2'], ['K', 'K VISOK KOMOLEC'], ['K', 'VATERPOLO'], ['K', 'KBD'],
-        ['D', 'DV 1-1-2'], ['D', 'DV 2-2-2'], ['D', 'DV 3-3'], ['D', 'DV ORKA'], ['D', 'DV BIONDI'], ['D', 'DV 6-1'], ['D', 'D DIH NA 1'],
-        ['H', 'HV RRU 90°'], ['H', 'HV ROKA VEN ZAVES'], ['H', 'H 6-1'], ['H', 'H 3-1']],
-      formati25: [10, 10, 10, 8, 12], formati50: [4]
+        ['K', 'K SHARK 1'], ['K', 'K SHARK 2'], ['K', 'K SHARK 3'], ['K', 'K VISOK KOMOLEC'], ['K', 'VATERPOLO'], ['K', 'KZ'], ['K', 'K BIEGNER'],
+        ['D', 'DV 1-1-2'], ['D', 'DV 2-2-2'], ['D', 'DV 3-3'], ['D', 'DV ORKA'], ['D', 'DV BIONDI'], ['D', 'DV 6-1'], ['D', 'D DIH NA 1'], ['D', 'DN KR'],
+        ['H', 'HV RRU 90°'], ['H', 'HV ROKA VEN ZAVES'], ['H', 'H 6-1'], ['H', 'H 3-1'], ['H', 'HV HITLER']]
     },
     C: {
-      noge: [['K', 'KN'], ['K', 'KN BOK'], ['K', 'KN SUPERMAN'], ['H', 'HN'], ['H', 'HN ROTACIJA']],
-      vaje: [['K', 'KV 2-2'], ['K', 'K RRU'], ['K', 'K RRU PESTI'], ['K', 'K RRU PALEC'], ['K', 'K RRU ZADRGA'],
-        ['H', 'HV RRU'], ['H', 'HV RRU 90°'], ['H', 'H 6-1']],
-      formati25: [8, 8, 10, 6], formati50: [4]
+      noge: [['K', 'KN'], ['K', 'KN BOK'], ['K', 'KN SUPERMAN'], ['K', 'KN RV'], ['H', 'HN'], ['H', 'HN ROTACIJA'], ['H', 'HN 90°']],
+      vaje: [['K', 'KV 2-2'], ['K', 'K RRU'], ['K', 'K RRU PESTI'], ['K', 'K RRU PALEC'], ['K', 'K RRU ZADRGA'], ['K', 'K 6-3-6'], ['K', 'KZ'],
+        ['H', 'HV RRU'], ['H', 'HV RRU 90°'], ['H', 'H 6-1'], ['H', 'HV ROKA VEN ZAVES']]
     }
   };
   const CELA = { K: 'K CT', H: 'H CT', D: 'D CT' };
+  const UNDERWATER = ['DN PV', 'DN H', 'KN PV', 'DN BOK'];
 
-  function newDrill(lk, rng) {
+  // Polovice ↑…/↓… iz knjižnice, ločeno po razdalji in plavutkah.
+  function libraryHalves(library, lk) {
+    const out = {};
+    (library || []).forEach(s => {
+      if (s.phase !== 'vaje' || !(s.levels || []).includes(lk)) return;
+      const m = s.text.match(/^\d+x(25|50)( PL)? ↑([^↑↓\n]+) ↓([^↑↓\n]+)$/);
+      if (!m || /!|MAX|RAZP|VSAK/.test(s.text)) return;
+      const k = m[1] + (m[2] || '');
+      (out[k] = out[k] || { up: [], down: [] });
+      out[k].up.push(m[3].trim()); out[k].down.push(m[4].trim());
+    });
+    return out;
+  }
+
+  function newDrill(lk, rng, opts) {
     const P = NEW_PARTS[lk];
     const one = a => a[Math.floor(rng() * a.length)];
+    const halves = libraryHalves(opts && opts.library, lk);
+    const keys = Object.keys(halves).filter(k => halves[k].up.length > 2);
+    if (keys.length && rng() < 0.35) {
+      const k = one(keys), h = halves[k];
+      const up = one(h.up), down = one(h.down);
+      if (up !== down) {
+        const fifty = k.startsWith('50');
+        return `${fifty ? 4 : lk === 'C' ? one([8, 8, 6]) : one([10, 8, 10])}x${fifty ? 50 : 25}${k.slice(2)} ↑${up} ↓${down}`;
+      }
+    }
     const v1 = one(P.vaje);
-    const v2 = one(P.vaje.filter(x => x[0] === v1[0] && x[1] !== v1[1]));
+    const same = P.vaje.filter(x => x[0] === v1[0] && x[1] !== v1[1]);
+    const other = P.vaje.filter(x => x[0] !== v1[0]);
     const n = one(P.noge.filter(x => x[0] === v1[0]));
-    const r = rng();
-    const f25 = one(P.formati25) + 'x25 PL ';
-    if (r < 0.35) return f25 + `↑${n[1]} ↓${v1[1]}`;
-    if (r < 0.6) return f25 + `1x ${v1[1]} 1x ${v2[1]}`;
-    if (r < 0.8) return `${lk === 'C' ? 8 : one([8, 12])}x25 PL 3x ${v1[1]} 1x ${CELA[v1[0]]}`;
-    return one(P.formati50) + `x50 PL ↑${n[1]} ↓${v1[1]}`;
+    const rru = P.vaje.filter(x => /RRU|SHARK/.test(x[1]) && x[0] === 'K');
+    if (lk === 'C') {
+      return one([
+        () => `${one([8, 8, 6])}x25 PL ↑${n[1]} ↓${v1[1]}`,
+        () => `8x25 PL 4x ${v1[1]} 4x ${one(same)[1]}`,
+        () => `8x25 PL 3x ${v1[1]} 1x ${CELA[v1[0]]}`,
+        () => `8x25 PL ${one(['KN', 'HN', 'KN BOK'])} + PREVAL`,
+        () => `${one([6, 8])}x25 ↑${one(['PD 3s', 'PV 1-2', 'PV 1-3'])} ↓${one(['P', 'H', 'PV 1-2'])}`,
+        () => `8x25 P ↑ČIM DLJE POD VODO ↓${one(['1-2', '1-3', 'KRAJŠANJE'])}`,
+        () => `8x25 ↑PPV ↓${one(['GERMANJA', 'H', 'PD 3s'])}`,
+        () => `4x50 PL ↑${n[1]} ↓${v1[1]}`,
+        () => `4x75 PL 25 ${n[1]} + 25 ${v1[1]} + 25 ${CELA[v1[0]]}`,
+        () => `8x25 PL ↑DN H ↓${one(['K 6-3-6', 'KV 2-2', 'K RRU'])}`
+      ])();
+    }
+    const dStroke = P.vaje.filter(x => x[0] === 'D'), hStroke = P.vaje.filter(x => x[0] === 'H'), kStroke = P.vaje.filter(x => x[0] === 'K');
+    return one([
+      () => `${one([10, 10, 8])}x25 PL ↑${n[1]} ↓${v1[1]}`,
+      () => `${one([10, 8])}x25 PL ↑${v1[1]} ↓${one(other)[1]}`,
+      () => `${one([10, 8])}x25 PL ↑${one(UNDERWATER)} ↓${one(kStroke.concat(hStroke))[1]}`,
+      () => `12x25 PL 4x ${v1[1]} 4x ${one(same)[1]} 4x ${CELA[v1[0]]}`,
+      () => `${one([8, 12])}x25 PL 3x ${v1[1]} 1x ${CELA[v1[0]]}`,
+      () => `12x25 PL 3x ${one(['DN PV', 'KN PV', 'DN H PV'])} 1x ${one(['H', 'K'])} VSAKIČ DLJE`,
+      () => `8x25 PL ${one(['H', 'D DIH NA 1', 'K BD', 'K VISOK KOMOLEC'])} ZADNJIH 7 DN`,
+      () => `4x75 PL 25 ${n[1]} + 25 ${v1[1]} + 25 ${CELA[v1[0]]}`,
+      () => `4x75 PL 25 ${one(dStroke)[1]} + 25 ${one(hStroke)[1]} + 25 ${one(kStroke)[1]}`,
+      () => `10x25 PL ↑${one(['KN DR', 'DN KR', 'PR DN'])} ↓${one(['K CT', 'D CT', 'K BD', 'H CT'])}`,
+      () => `8x25 ↑${one(['POPAJ', 'SCULLING'])} ↓K ČMZ`,
+      () => `4x50 PL ↑${one(rru)[1]} ↓${one(rru)[1]}`,
+      () => `4x50 PL ${v1[1]} + MAX OBRAT`,
+      () => `${one([8, 10])}x25 PL ↑${v1[1]} ↓${v1[0] === 'D' ? 'D' : 'K'} DIH NA ${one([3, 5])}`,
+      () => `4x50 PL ↑${n[1]} ↓${v1[1]}`
+    ])();
   }
 
   function newWarmup(lk, rng) {
@@ -504,49 +582,101 @@
       () => `${one([4, 6])}x75 ${one(['MBK', 'MBD', 'MBP', 'K', 'H'])} ${one(['N/V/CT', 'V/N/CT', 'CT/N/CT', 'N/CT/V'])}`,
       () => `${one([4, 6])}x75 1x ${one(['MBK', 'MBD', 'MBP'])} 1x K DIH ${one(['3-5-7', '3-4-5', '5-3-5'])}`,
       () => `4x100 ${one(['M', 'M Z ZAMIKOM'])} ${one(['N/CT/V/CT', 'V/CT/N/CT', 'CT/V/N/CT'])}`,
-      () => `16x25 M ${one(['1xV 1xCT', '2xN 2xCT', '4xN 4xCT 4xV 4xCT', '3xCT 1xN'])} p${one([5, 10])}"`,
+      () => `4x100 M PO 25 ${one(['V/CT', 'N/V', 'CT/V'])}`,
+      () => `4x100 PL 25 ${one(['D', 'M', 'DN PV'])} + 75 ${one(['H/K', 'K N/V/CT', 'H N/V/CT'])}`,
+      () => `16x25 M ${one(['1xV 1xCT', '2xN 2xCT', '4xN 4xCT 4xV 4xCT', '4xV 4xN 4xCT 4xČMZ', 'PO 4 ↑V ↓CT', '3xCT 1xN'])}${one(['', ' p10"', ' p5"'])}`,
       () => `8x50 MM ↑${one(['N', 'V'])} ↓CT`,
-      () => `${one([6, 8])}x50 ↑${one(['N', 'V'])} ↓CT ${one(['K/H', 'K/D', 'H/P', 'P/K'])}`
+      () => `8x50 ${one(['KV 1x RRU PALEC 1x ČMZ', '1x K ČMZ 1x H V', 'KV 1x 2-2 1x ČMZ', 'MM 2xN 2xV 4xCT', 'M 2xV 2xCT 2xN 2xCT'])}`,
+      () => `${one([6, 8])}x50 ↑${one(['N', 'V'])} ↓CT ${one(['K/H', 'K/D', 'H/P', 'P/K'])}`,
+      () => `6x50 ↑${one(['K', 'H'])} ↓${one(['D/H/P', 'P/D/H', 'H/P/D'])}`,
+      () => `3x150 PL ${one(['H N/V/CT', 'K V/N/CT', 'K DIH 3-5-7'])}`,
+      () => one(['100 K + 75 P + 50 H + 25 D + 50 H + 75 P', '25 D + 50 H + 75 P + 100 K + 50 H + 75 P', '50 K + 100 M + 150 K + 100 M', '25 DV + 50 HV + 75 PV + 100 KV + 50 H + 25 D', '100 M + 75 MBK + 50 H + 25 D + 50 K + 75 P'])
     ];
     const C = [
       () => `4x75 ${one(['H/K/P', 'K/P/H', 'P/H/K'])} CT`,
       () => `${one([4, 6])}x50 ↑${one(['KN', 'HN', 'PN'])} ↓${one(['K', 'H', 'P'])} CT`,
-      () => `${one([4, 6])}x50 ↑${one(['PD', 'PV 1-2', 'PV 1-3'])} ↓${one(['K', 'H'])}`,
-      () => `8x25 ${one(['1xK 1xH', '1xP 1xK', '2xH 2xP'])} p10"`
+      () => `${one([4, 6])}x50 ↑${one(['PD 3s', 'PD 5s', 'PV 1-2', 'PV 1-3'])} ↓${one(['K', 'H', 'H/K'])}`,
+      () => `6x50 ↑${one(['K', 'H'])} ↓${one(['P/H/GERMANJA', 'K/P/GERMANJA'])}`,
+      () => `8x25 ${one(['1xK 1xH', '1xP 1xK', '2xH 2xP'])} p10"`,
+      () => `4x75 25 P 1-2 + 25 PD 3s + 25 ${one(['P', 'H', 'K'])}`,
+      () => `4x50 DESKA ${one(['P/H', 'K/H', 'H/P'])}`,
+      () => one(['25 K + 50 H + 75 P + 50 H + 25 K', '50 K + 75 P + 50 H + 25 K', '25 P + 50 K + 75 H + 50 K + 25 P', '50 H + 50 P + 100 K + 50 P'])
     ];
     return one(lk === 'C' ? C : A)();
   }
 
-  function newMain(lk, rng, sprint) {
+  // Zamenja eno ali dve vrstici glavne serije iz knjižnice z vrstico druge glavne, ki ima enako metrov.
+  function mixMain(library, lk, rng) {
     const one = a => a[Math.floor(rng() * a.length)];
+    const sets = (library || []).filter(s => s.phase === 'glavna' && (s.levels || []).includes(lk) && s.text.split('\n').length >= 3);
+    if (sets.length < 4) return null;
+    const base = one(sets);
+    const lines = base.text.split('\n');
+    const pool = [];
+    sets.forEach(s => { if (s !== base) s.text.split('\n').forEach(l => { if (/@|p\d/.test(l)) pool.push(l); }); });
+    const m = l => parseLine(l, new Map()).meters;
+    const n = 1 + Math.floor(rng() * 2);
+    for (let i = 0; i < n; i++) {
+      const k = Math.floor(rng() * lines.length);
+      const cand = pool.filter(l => m(l) === m(lines[k]) && !lines.includes(l));
+      if (!cand.length) return null;
+      lines[k] = one(cand);
+    }
+    return lines.join('\n');
+  }
+
+  function newMain(lk, rng, opts) {
+    const one = a => a[Math.floor(rng() * a.length)];
+    const pick = (a, n) => { const c = a.slice(), r = []; while (r.length < n && c.length) r.push(c.splice(Math.floor(rng() * c.length), 1)[0]); return r; };
     const uniq = a => a.filter((x, i) => a.indexOf(x) === i).join('\n');
+    const sprint = !!(opts && opts.sprint);
     if (lk === 'C') {
+      const s = () => one(['K', 'H', 'P']);
       return one([
-        () => `${one([6, 8])}x50 ↑${one(['K', 'H', 'P'])} HITRO ↓RAZP`,
-        () => `4x75 50 ${one(['P', 'H', 'K'])} + 25 ${one(['K', 'H'])}`,
-        () => `${one([3, 4])}x100 ${one(['50 P + 50 K', '50 H + 50 K', '75 K + 25 H', '75 P + 25 H'])}`,
-        () => `16x25 p15" 3x${one(['K', 'H'])} 1xP`,
-        () => `25 + 50 + 75 + 100 + 75 + 50 + 25 ${one(['K/P', 'H/P', 'P/K'])}`
+        () => `${one([6, 8])}x50 ↑${s()} HITRO ↓RAZP`,
+        () => `4x75 50 ${s()} + 25 ${one(['K', 'H'])}`,
+        () => `${one([3, 4])}x100 ${one(['50 P + 50 K', '50 H + 50 K', '75 K + 25 H', '75 P + 25 H', '25 H + 50 P + 25 K'])}`,
+        () => `16x25 p15" ${one(['3xK 1xP', '3xH 1xP', '2xP 2xK', '1xK 1xH 1xP 1xK'])}`,
+        () => one(['100 K + 75 P + 50 H + 25 K + 50 H + 75 P', '50 K + 100 P + 150 K + 50 H', '200 K + 100 P + 50 H', '25 K + 50 P + 75 H + 100 K + 75 P']),
+        () => `3x( 50 ${s()} @1'15" / 50 ${s()} @1'15" / 25 K + 25 RAZP )`,
+        () => `2x150 1x ${one(['P', 'K'])} 1x ${one(['H/P/K', 'K/H/P'])}`,
+        () => `6x50 STIL p15"`,
+        () => `4x50 PL KN ZD p15"\n4x50 PL ${one(['K RRU PALEC', 'H CT', 'KV 2-2'])}`
       ])();
     }
-    // Štarti so samo taki, ki jih trener za te serije že uporablja.
-    const base = [`4x100 KVL @2'`, `3x100 KVL @2'`, `6x50 KVL @1'`, `4x75 KVL @1'30"`, `2x200 VL @3'30"`];
-    const tempo = [`4x50 K 3+1 @1'`, `8x50 K 3+1 @1'`, `4x50 K 1-4 @1'`, `3x100 K T @1'50"`, `6x50 K 2+1 @1'`, `4x75 STOP PO 25 @1'30"`, `4x50 K @50"`];
-    const mix = [`3x100 M @2'`, `2x100 M @2'`, `4x50 MBK @1'`, `4x50 25 D + 25 K @1'`, `6x50 PL MAX NOGE @1'10"`, `4x50 KN @1'20"`];
-    const fast = [`6x50 25 K! + 25 RAZP @1'`, `8x50 ↑K! ↓RAZP @1'`, `4x50 25 D! + 25 RAZP @1'`, `4x( 50 K T @1' / 25 MAX / 25 RAZP )`, `6x50 25 K! BD + 25 RAZP @1'`];
-    if (sprint) return uniq([one(base), one(fast), rng() < 0.5 ? one(tempo) : one(fast)]);
-    if (rng() < 0.25) {
-      const g1 = one([`100 KVL @2'`, `75 KVL @1'30"`]);
-      const g2 = one([`50 K T @1'`, `50 K HITRO @1'`]);
-      const g3 = one([`50 M @1'`, '25 D + 25 RAZP', `50 KN @1'20"`]);
-      return `4x( ${g1} / ${g2} / ${g3} )`;
+    // Štarti so samo taki, ki jih trener za te razdalje že uporablja.
+    const base = [`4x100 KVL @2'`, `3x100 KVL @2'`, `6x50 KVL @1'`, `4x75 KVL @1'30"`, `2x200 VL @3'30"`, `3x100 VL DOLGO @2'`];
+    const tempo = [`4x50 K 3+1 @1'`, `8x50 K 3+1 @1'`, `6x50 K 5+1 @1'`, `4x50 K 1-4 @1'`, `3x100 K T @1'50"`, `6x50 K 2+1 @1'`, `4x75 STOP PO 25 @1'30"`, `4x50 K @50"`, `4x75 @1'15"`];
+    const mix = [`3x100 M @2'`, `2x100 M @2'`, `4x50 MBK @1'`, `4x75 MBK @1'30"`, `4x50 25 D + 25 K @1'`, `4x75 50 K + 25 D @1'30"`, `4x50 KN @1'20"`, `6x25 NOGE @35"`, `2x100 PL NOGE @2'`];
+    const fast = [`6x50 25 K! + 25 RAZP @1'`, `8x50 ↑K! ↓RAZP @1'`, `8x50 ↑STIL! ↓RAZP @1'`, `4x50 25 D! + 25 RAZP @1'`, `4x( 50 K T @1' / 25 K! / 25 RAZP )`, `6x50 25 K! BD + 25 RAZP @1'`, `8x25 1x K! 1x RAZP p30"`, `3x( 4x50 ↑K! ↓RAZP p30" )`];
+    const theme50 = ['VL', 'K', 'MAD', 'K VSAK 3. D', 'MBK', 'K STOP', 'K 2+1', 'K DIH 5-7', 'K ČMZ'];
+    const theme100 = ['VL', '75 K + 25 N', 'K T', 'M', '50 H + 50 K', 'K 2+1', 'NORMALNO', '50 HITRO + 50 POČASI'];
+    if (sprint) {
+      return one([
+        () => uniq([one(base), one(fast), rng() < 0.5 ? one(tempo) : one(fast)]),
+        () => uniq([`3x( 100 SIMULATOR / 50 RAZP )`, one([`6x50 KVL @1'`, `4x100 KVL @2'`, `4x50 MBK @1'`])]),
+        () => `${one([4, 5])}x( 100 K T @2' / 25 ${one(['K!', 'D!', 'STIL!'])} / 25 RAZP )\n${one(fast)}`,
+        () => uniq([one(fast), one([`4x50 KVL @1'`, `4x50 MBK @1'`]), one(fast)])
+      ])();
     }
-    return uniq([one(base), one(tempo), one(mix)].concat(rng() < 0.4 ? [one(tempo)] : []));
+    return one([
+      () => mixMain(opts && opts.library, lk, rng) || uniq([one(base), one(tempo), one(mix)]),
+      () => mixMain(opts && opts.library, lk, rng) || uniq([one(tempo), one(base), one(mix)]),
+      () => uniq([one(base), one(tempo), one(mix)].concat(rng() < 0.4 ? [one(tempo)] : [])),
+      () => `3x( ${one([5, 6])}x50 @1' ) ${pick(theme50, 3).map(t => '1x ' + t).join(' ')}`,
+      () => `3x( ${one([3, 4])}x100 @2' ) ${pick(theme100, 3).map(t => '1x ' + t).join(' ')}`,
+      () => `${one([3, 4])}x( ${one([`150 VL @3'`, `100 KVL @2'`, `75 K T @1'30"`])} / ${one([`100 T @2'`, `50 K T @1'`])} / ${one([`50 HITRO @1'`, `50 M @1'`, `50 KN @1'20"`])} / ${one(['25 D + 25 RAZP', '50 RAZP'])} )`,
+      () => { const a = one(['K', 'VL']), b = one(['M', 'MBK', 'H', 'D/K']); return `3x( 100 ${a} @2' / 50 ${b} @1' )\n50 RAZP\n3x( 50 ${b} @1' / 100 ${a} @2' )`; },
+      () => `4x50 ${one(['K', 'KVL'])} @1'05"\n4x50 KN @1'20"\n4x50 K @1'\n4x50 KN @1'15"\n4x50 K @55"`,
+      () => `3x100 ${one(['VL', 'KVL'])} @2'\n3x50 ${one(['T', 'MBK', 'K 2+1'])} @1'\n2x100 ${one(['M', 'K T'])} @2'\n2x50 ${one(['D', 'H', 'KN'])} @1'\n100 ${one(['K HITRO', 'STIL'])} @2'\n50 ${one(['D', 'K HITRO'])} @1'`,
+      () => `200 ${one(['VL', 'K'])} @3'30"\n100 ${one(['M', 'K T'])} @2'\n4x50 ${one(['K 3+1', 'MBK', 'K STOP'])} @1'\n100 ${one(['M', 'K T'])} @2'\n200 ${one(['VL', 'K'])} @3'30"`
+    ])();
   }
 
   /** Predlog nove serije za fazo; null, če ustrezne ni. */
   function suggestNewSet(phase, opts) {
     const { level, library, history, dict } = opts;
+    const settings = Object.assign({}, DEFAULT_SETTINGS, opts.settings || {});
     const rng = opts.rng || Math.random;
     const key = phase === 'vaje' ? drillKey : (f => f);
     const known = new Set((library || []).filter(s => s.phase === phase).map(s => key(s.fingerprint)));
@@ -559,12 +689,16 @@
     }[phase];
     if (!limits) return null;
     const make = { vaje: newDrill, ogrevalna: newWarmup, glavna: newMain }[phase];
-    for (let i = 0; i < 80; i++) {
-      const text = make(level, rng, opts.sprint);
+    for (let i = 0; i < 120; i++) {
+      const text = make(level, rng, { sprint: opts.sprint, library });
       const fp = fingerprint(text);
       if (known.has(key(fp))) continue;
-      if (exclusiveConflict(text, opts.others, opts.settings)) continue;
-      if (phase === 'glavna' && isSprintTexts([text], opts.settings) !== !!opts.sprint) continue;
+      // Ista vaja na obeh straneh (↑X ↓X, 1x X 1x X) ni smiselna.
+      const halves = text.match(/[↑↓][^↑↓]+/g);
+      if (halves && halves.length === 2 && halves[0].slice(1).trim() === halves[1].slice(1).trim()) continue;
+      if (exclusiveConflict(text, opts.others, settings)) continue;
+      if (opts.date && exclusiveTooSoon(text, history, level, opts.date, settings)) continue;
+      if (phase === 'glavna' && isSprintTexts([text], settings) !== !!opts.sprint) continue;
       const meters = parseText(text, dict).meters;
       if (meters < limits[0] || meters > limits[1]) continue;
       return { phase, text, meters, fingerprint: fp, levels: [level], source: 'nova', isNew: true, main_type: phase === 'glavna' && opts.sprint ? 'sprint' : null };
@@ -625,7 +759,7 @@
     let vaje = availableDrills(allDrills, history, lk, date, settings);
     if (vaje.length < 4 && allDrills.length) {
       notes.push('Premalo vaj, ki ne bi bile uporabljene v zadnjih ' + settings.vaje_repeat_days + ' dneh; dodaj nove v knjižnico.');
-      vaje = allDrills;
+      vaje = allDrills.filter(v => !exclusiveTooSoon(v.text, history, lk, date, settings));
     }
     const zak = byPhase('zakljucek');
     const mid = (lv.meters_min + lv.meters_max) / 2;
@@ -642,7 +776,7 @@
       : newMode === 'ena' ? [['ogrevalna', 'vaje', 'vaje', 'glavna'][Math.floor(rng() * 4)]] : [];
     const fresh = {};
     newPhases.forEach(p => {
-      const n = suggestNewSet(p, { level: lk, library: opts.library, history, dict: opts.dict, rng, settings, others: Object.values(fresh).map(x => x.text), sprint: p === 'glavna' && wantSprint });
+      const n = suggestNewSet(p, { level: lk, library: opts.library, history, dict: opts.dict, rng, settings, date, others: Object.values(fresh).map(x => x.text), sprint: p === 'glavna' && wantSprint });
       if (n) fresh[p] = n;
     });
 
@@ -763,6 +897,6 @@
     buildDict, parseLine, parseText, toStructure, normalizeText, fingerprint, bVariant,
     estimateMinutes, parseTime, formatTime, libraryFromTrainings, generateTraining, arrangeOrder,
     weekSlots, historyFromTraining, historyLevel, lastUseDays, lastDrillDays, drillKey, setFormat,
-    availableDrills, drillWeight, suggestNewSet, exclusiveConflict, maxMeters, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
+    availableDrills, drillWeight, suggestNewSet, exclusiveConflict, exclusiveTooSoon, lastExclusiveDays, maxMeters, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
   };
 });
