@@ -115,7 +115,7 @@
   ].map(([code, meaning, category]) => ({ code, meaning, category, aliases: [], source: 'pregled' }));
 
   // Besede v opisih vaj, ki niso kratice in jih ne označujemo kot neznane.
-  const FILLER = new Set(('SALTO POL FREK VEN ZADNJIH METULJČEK LEVA DESNA VDIH NAPREJ Z NA PO POD ČIM DLJE DALJŠI VIŠJI VODO BREZ DIHANJA DIHANJE VDIHA VSAK VSAKIČ ROKA ROKE UZ ZAVES ' +
+  const FILLER = new Set(('EASY SALTO POL FREK VEN ZADNJIH METULJČEK LEVA DESNA VDIH NAPREJ Z NA PO POD ČIM DLJE DALJŠI VIŠJI VODO BREZ DIHANJA DIHANJE VDIHA VSAK VSAKIČ ROKA ROKE UZ ZAVES ' +
     'ZAVESLJAJI ZAVESLJAJ VISOK KOMOLEC KOMOLCEM POLOŽAJ MENJAMO KONTRA HITRO POČASI TEMPO MEŠANO PRSNO KRAVL ' +
     'HRBTNO DELFIN DESKA DESKO VALČEK LOP RAMENA IN ALI ŠTARTI ŠTART X 1. 2. 3. CT/N/V/CT N/V/CT DO TAKOJ').split(/\s+/));
 
@@ -672,7 +672,7 @@
     // Štarti so samo taki, ki jih trener za te razdalje že uporablja.
     const base = [`4x100 KVL @2'`, `3x100 KVL @2'`, `6x50 KVL @1'`, `4x75 KVL @1'30"`, `2x200 VL @3'30"`, `3x100 VL DOLGO @2'`];
     const tempo = [`4x50 K 3+1 @1'`, `8x50 K 3+1 @1'`, `6x50 K 5+1 @1'`, `4x50 K 1-4 @1'`, `3x100 K T @1'50"`, `6x50 K 2+1 @1'`, `4x75 STOP PO 25 @1'30"`, `4x50 K @50"`, `4x75 @1'15"`];
-    const mix = [`3x100 M @2'`, `2x100 M @2'`, `4x50 MBK @1'`, `4x75 MBK @1'30"`, `4x50 25 D + 25 K @1'`, `4x75 50 K + 25 D @1'30"`, `4x50 KN @1'20"`, `6x25 NOGE @35"`, `2x100 PL NOGE @2'`];
+    const mix = [`3x100 M @2'`, `2x100 M @2'`, `4x50 MBK @1'`, `4x75 MBK @1'30"`, `4x50 25 D + 25 K @1'`, `4x75 50 K + 25 D @1'30"`, `4x50 KN @1'20"`, `6x25 NOGE @35"`, `2x100 PL NOGE @2'`, `6x50 PL NOGE 1x MAX 1x EASY @1'10"`, `4x50 PL NOGE 1x MAX 1x EASY @1'10"`];
     const fast = [`6x50 25 K! + 25 RAZP @1'`, `8x50 ↑K! ↓RAZP @1'`, `8x50 ↑STIL! ↓RAZP @1'`, `4x50 25 D! + 25 RAZP @1'`, `4x( 50 K T @1' / 25 K! / 25 RAZP )`, `6x50 25 K! BD + 25 RAZP @1'`, `8x25 1x K! 1x RAZP p30"`, `3x( 4x50 ↑K! ↓RAZP p30" )`];
     const theme50 = ['VL', 'K', 'MAD', 'K VSAK 3. D', 'MBK', 'K STOP', 'K 2+1', 'K DIH 5-7', 'K ČMZ'];
     const theme100 = ['VL', '75 K + 25 N', 'K T', 'M', '50 H + 50 K', 'K 2+1', 'NORMALNO', '50 HITRO + 50 POČASI'];
