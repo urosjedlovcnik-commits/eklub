@@ -33,6 +33,11 @@
   .tr-item.je-nova{background:#fffbeb;border:1px solid #f59e0b;border-radius:10px;padding:8px;margin:6px 0}
   .tr-new{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0 2px}
   .tr-new input{flex:1;min-width:140px;margin:0}
+  .tr-count{display:inline-block;min-width:20px;padding:0 6px;border-radius:999px;background:#f59e0b;color:#fff;font-size:12px;text-align:center}
+  .tr-drill{background:#fff;border:1px solid var(--border);border-radius:14px;padding:12px;margin-bottom:12px}
+  .tr-drill label{font-size:13px;font-weight:600;display:block;margin-top:6px}
+  .tr-drill iframe{width:100%;aspect-ratio:16/9;border:0;border-radius:10px;margin-top:8px}
+  .tr-drill .tr-btns{margin-top:10px}
   .tr-badge.predlog{background:#f3e8ff;color:#6b21a8}
   .tr-item{border-top:1px solid #f1f5f9;padding:8px 0}
   .tr-item.glavna{background:#f8fafc;border-radius:10px;padding:8px;border:1px solid #e2e8f0;margin:6px 0}
@@ -99,6 +104,7 @@
       <button class="tr-tab" data-tab="shranjeni">Shranjeni</button>
       <button class="tr-tab" data-tab="knjiznica">Knjižnica</button>
       <button class="tr-tab" data-tab="sifrant">Šifrant</button>
+      <button class="tr-tab" data-tab="predlogi">Predlogi vaj <span class="tr-count" id="drillCount" hidden></span></button>
     </div>
 
     <div id="statusBanner" class="tr-banner" hidden></div>
@@ -147,6 +153,11 @@
         <span class="tr-sub" id="libCount"></span>
       </div>
       <div id="libView"></div>
+    </section>
+
+    <section class="tr-panel" id="panel-predlogi" hidden>
+      <p class="tr-note">Vaje s spleta, ki jih še nisi pregledal. Oglej si video, po potrebi popravi kratico in opis, izberi razdaljo in potrdi v šifrant. Generator jih uporabi šele po potrditvi.</p>
+      <div id="drillsView"></div>
     </section>
 
     <section class="tr-panel" id="panel-sifrant" hidden>

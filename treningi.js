@@ -68,17 +68,22 @@
     renderSaved();
     renderLibrary();
     renderCodes();
+    renderDrills();
   }
 
   async function loadAll() {
     const tid = S.trainer.id;
-    const [codesR, setR, termsR, setsR, trR] = await Promise.all([
+    const [codesR, setR, termsR, setsR, trR, drR] = await Promise.all([
       sb.from('training_codes').select('*').eq('active', true).order('category').order('code'),
       sb.from('training_settings').select('settings').eq('trainer_id', tid).maybeSingle(),
       auth.ownTermIds.size ? sb.from('terms').select('*').in('id', Array.from(auth.ownTermIds)) : Promise.resolve({ data: [] }),
       sb.from('training_sets').select('*').eq('trainer_id', tid).eq('active', true),
-      sb.from('trainings').select('*, training_items(*)').eq('trainer_id', tid).order('date', { ascending: false })
+      sb.from('trainings').select('*, training_items(*)').eq('trainer_id', tid).order('date', { ascending: false }),
+      sb.from('training_drill_suggestions').select('*').eq('trainer_id', tid).eq('status', 'predlog').order('created_at')
     ]);
+    // Brez predlogov stran deluje naprej.
+    if (drR.error) console.warn('Predlogi vaj niso na voljo:', drR.error.message);
+    S.drillSuggestions = drR.data || [];
     for (const r of [codesR, setR, termsR, setsR, trR]) if (r.error) throw r.error;
     S.codes = codesR.data || [];
     S.dict = C.buildDict(S.codes, true);
@@ -186,7 +191,7 @@
     const tr = C.generateTraining({
       date: slot.date, levels: slot.levels, library: S.library, history: historyExcluding(slot),
       settings: S.settings, seed: Math.floor(Math.random() * 1e9), mainMode: mainMode || 'auto',
-      newSets: $('newSetsMode').value, dict: S.dict
+      newSets: $('newSetsMode').value, dict: S.dict, drills: S.codes
     });
     return { slot, dbId: null, status: 'predlog', order_variant: tr.order_variant, items: tr.items, notes: tr.notes, dirty: true, mainMode: mainMode || 'auto' };
   }
@@ -411,7 +416,7 @@
     const it = card.items[idx];
     const sprint = it.phase === 'glavna' && (card.mainMode === 'sprint' || (card.mainMode !== 'ne_sprint' && C.isSprintMain(it, S.settings)));
     const n = C.suggestNewSet(it.phase, {
-      level: levelKey(card.slot.levels), library: S.library, history: historyExcluding(card.slot), dict: S.dict,
+      level: levelKey(card.slot.levels), library: S.library, history: historyExcluding(card.slot), dict: S.dict, drills: S.codes,
       exclude: card.items.map(i => C.fingerprint(i.text)), sprint, settings: S.settings, date: card.slot.date,
       others: card.items.filter((x, j) => j !== idx).map(i => i.text)
     });
@@ -730,6 +735,76 @@
     }
   }
 
+  // ---------- Predlogi vaj ----------
+  function embedUrl(url) {
+    let m = String(url).match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})/);
+    if (m) return 'https://www.youtube-nocookie.com/embed/' + m[1];
+    m = String(url).match(/^https:\/\/vimeo\.com\/(\d+)/);
+    return m ? 'https://player.vimeo.com/video/' + m[1] + '?dnt=1' : null;
+  }
+  const safeUrl = (u) => (/^https:\/\//.test(u || '') ? u : '#');
+
+  function renderDrills() {
+    const list = S.drillSuggestions || [];
+    const cnt = $('drillCount');
+    cnt.hidden = !list.length;
+    cnt.textContent = list.length;
+    const view = $('drillsView');
+    if (!list.length) { view.innerHTML = '<p class="tr-empty">Trenutno ni novih predlogov.</p>'; return; }
+    view.innerHTML = list.map(d => `<div class="tr-drill" data-id="${esc(d.id)}">
+      <div class="tr-card-title">${esc(d.title)}</div>
+      <div class="tr-sub">${esc(d.why || '')}</div>
+      <div data-video>${embedUrl(d.video_url) ? '<button class="btn" data-play>▶ Pokaži video</button> ' : ''}<a href="${esc(safeUrl(d.video_url))}" target="_blank" rel="noopener noreferrer">Odpri video</a></div>
+      <label>Kratica <input type="text" data-code value="${esc(d.code)}"></label>
+      <label>Opis <textarea rows="3" data-desc>${esc(d.description)}</textarea></label>
+      <label>Plava se
+        <select data-dist><option value="">izberi …</option><option value="25">samo 25 m</option><option value="25,50">25 ali 50 m</option></select></label>
+      <label>Nivoji <span><input type="checkbox" value="A" data-lv checked> A+B <input type="checkbox" value="C" data-lv> C</span></label>
+      <div class="tr-btns"><button class="btn ok" data-ok>Potrdi v šifrant</button> <button class="btn warn" data-no>Zavrni</button></div>
+    </div>`).join('');
+    view.querySelectorAll('.tr-drill').forEach(el => {
+      const d = list.find(x => x.id === el.dataset.id);
+      const play = el.querySelector('[data-play]');
+      if (play) play.addEventListener('click', () => {
+        const f = document.createElement('iframe');
+        f.src = embedUrl(d.video_url);
+        f.allow = 'fullscreen; picture-in-picture';
+        f.allowFullscreen = true;
+        f.referrerPolicy = 'strict-origin-when-cross-origin';
+        el.querySelector('[data-video]').appendChild(f);
+        play.remove();
+      });
+      el.querySelector('[data-ok]').addEventListener('click', () => confirmDrill(d, el));
+      el.querySelector('[data-no]').addEventListener('click', () => decideDrill(d, 'zavrnjen'));
+    });
+  }
+
+  async function confirmDrill(d, el) {
+    const code = el.querySelector('[data-code]').value.trim();
+    const desc = el.querySelector('[data-desc]').value.trim();
+    const dist = el.querySelector('[data-dist]').value;
+    const levels = Array.from(el.querySelectorAll('[data-lv]:checked')).map(x => x.value).reduce((a, l) => a.concat(l === 'A' ? ['A', 'B'] : [l]), []);
+    if (!code || !desc) { alert('Vpiši kratico in opis.'); return; }
+    if (!dist) { alert('Izberi, ali se plava samo 25 m ali tudi 50 m.'); return; }
+    if (!levels.length) { alert('Izberi vsaj en nivo.'); return; }
+    const taken = S.codes.find(c => [c.code].concat(c.aliases || []).some(a => String(a).toUpperCase() === code.toUpperCase()));
+    if (taken) { alert(`Kratica ${code} je že v šifrantu (${taken.meaning}). Izberi drugo.`); return; }
+    const { error } = await sb.from('training_codes').insert({
+      code, meaning: desc, category: 'vaja', stroke: d.stroke || null, explanation: d.title, video_url: d.video_url,
+      distances: dist.split(',').map(Number), levels, created_by: S.trainer.id
+    });
+    if (error) { banner('Vaja ni shranjena: ' + error.message, true); return; }
+    await decideDrill(d, 'potrjen', `Vaja ${code} je v šifrantu.`);
+  }
+
+  async function decideDrill(d, status, message) {
+    const { error } = await sb.from('training_drill_suggestions').update({ status, decided_at: new Date().toISOString() }).eq('id', d.id);
+    if (error) { banner('Napaka: ' + error.message, true); return; }
+    await loadAll();
+    renderDrills(); renderCodes();
+    banner(message || `Predlog ${d.title} je zavrnjen.`);
+  }
+
   // ---------- Šifrant ----------
   function renderCodes() {
     const view = $('codesView');
@@ -748,7 +823,7 @@
     }
     byCat.forEach((list, cat) => {
       html += `<h3 style="margin:14px 0 6px">${esc(cat)}</h3><table class="tr-codes"><tbody>${list.map(c =>
-        `<tr><td style="width:110px"><strong>${esc(c.code)}</strong></td><td>${esc(c.meaning)}${c.explanation ? `<div class="tr-sub">${esc(c.explanation)}</div>` : ''}</td>
+        `<tr><td style="width:110px"><strong>${esc(c.code)}</strong></td><td>${esc(c.meaning)}${c.explanation ? `<div class="tr-sub">${esc(c.explanation)}</div>` : ''}${(c.distances || []).length ? `<div class="tr-sub">${c.distances.join(' / ')} m</div>` : ''}${c.video_url ? `<div class="tr-sub"><a href="${esc(safeUrl(c.video_url))}" target="_blank" rel="noopener noreferrer">video</a></div>` : ''}</td>
         <td class="tr-sub">${esc((c.aliases || []).join(', '))}</td></tr>`).join('')}</tbody></table>`;
     });
     view.innerHTML = html || '<p class="tr-empty">Šifrant je prazen.</p>';

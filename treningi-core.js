@@ -83,7 +83,7 @@
     ['ŠPRICANJE', 'RRU/vaterpolo: ob koncu potega izpljuskneš vodo', 'vaja'],
     ['GERMANJA', 'pomožna tehnika (podvodni del hrbtnega potega)', 'vaja'],
     ['BIONDI', 'delfin vaja, skoraj enaka kot ORKA; nikoli skupaj z ORKA', 'vaja'],
-    ['RV', 'roka ven, 90° (npr. KN RV)', 'vaja'],
+    ['RV', 'roka ven, 90° (npr. KN RV 90°)', 'vaja'],
     ['PPDZ', 'RRU: ponavljaj prednji del zavesljaja', 'vaja'],
     ['ŠTETJE', 'štetje zavesljajev', 'vaja'],
     ['KR', 'kravl roke (DN KR = delfin noge, kravl roke)', 'vaja'],
@@ -124,15 +124,19 @@
 
   function buildDict(dbCodes, includeReview) {
     const dict = new Map();
+    const phraseWords = [];
     const add = (c, source) => {
       const entry = { code: c.code, meaning: c.meaning, category: c.category, source };
       [c.code].concat(c.aliases || []).forEach(k => {
         const key = String(k).toUpperCase();
         if (!dict.has(key)) dict.set(key, entry);
+        // Deli večbesedne kratice (npr. DN 360, H SPIN) niso neznane besede.
+        if (key.includes(' ')) key.split(/\s+/).forEach(w => { if (w.length > 2 && !/^\d/.test(w)) phraseWords.push([w, entry]); });
       });
     };
     (dbCodes || []).forEach(c => add(c, 'db'));
     if (includeReview !== false) REVIEW_CODES.forEach(c => add(c, 'pregled'));
+    phraseWords.forEach(([w, e]) => { if (!dict.has(w) && !FILLER.has(w)) dict.set(w, e); });
     return dict;
   }
 
@@ -458,7 +462,8 @@
 
   // Vsebina vaje brez števila ponovitev in razdalje: "8X25 PL KN" in "10X25 PL KN" sta ista vaja.
   function drillKey(fp) {
-    return String(fp || '').split('\n').map(l => l.replace(/^\d+X\s*\d+\s*/, '').trim()).join('\n');
+    // KN RV in KN RV 90° sta ista vaja (star in nov zapis).
+    return String(fp || '').split('\n').map(l => l.replace(/^\d+X\s*\d+\s*/, '').replace(/\bRV(?! 90°)/g, 'RV 90°').trim()).join('\n');
   }
   function setFormat(text) {
     const m = String(text || '').match(/^\s*(\d+)\s*[xX]\s*(\d+)(?![\d'"])/);
@@ -515,19 +520,39 @@
     return d !== null && d < ((settings && settings.exclusive_gap_days) || DEFAULT_SETTINGS.exclusive_gap_days);
   }
 
+  // Vaje, kjer se plava enkrat na eni in enkrat na drugi strani: število dolžin mora biti sodo.
+  const ONE_SIDED = /\bBOK\b|\bSUPERMAN\b|\bRV\b|\bROKA VEN\b/;
+  function unevenSides(text) {
+    return String(text || '').split('\n').some(line => {
+      const m = line.match(/^(\d+)x(25|50)(?!\d)\s*(.*)$/);
+      if (!m || !ONE_SIDED.test(m[3])) return false;
+      const lengths = +m[1] * (+m[2] / 25);
+      const arrows = m[3].match(/[↑↓][^↑↓]*/g);
+      if (arrows && arrows.length > 1) return arrows.some(a => ONE_SIDED.test(a) && (lengths / arrows.length) % 2 !== 0);
+      const alt = m[3].match(/\d+x\s*[^\d\s][^]*?(?=\s\d+x\s*[^\d\s]|$)/g);
+      if (alt && alt.length > 1) {
+        const n = alt.map(a => parseInt(a, 10)), sum = n.reduce((a, b) => a + b, 0);
+        return alt.some((a, i) => ONE_SIDED.test(a) && (+m[1] * n[i] / sum) % 2 !== 0);
+      }
+      const segs = m[3].split('+');
+      if (segs.length > 1) return +m[1] % 2 !== 0;
+      return lengths % 2 !== 0;
+    });
+  }
+
   // ---------- Nove serije ----------
   // Dva vira: (1) križanje delov serij, ki jih trener že ima v knjižnici (slog se uči sproti z vsakim uvozom),
   // (2) ideje v njegovem slogu iz potrjenih kratic. Vedno čakajo na pregled.
   const NEW_PARTS = {
     A: {
-      noge: [['K', 'KN'], ['K', 'KN BOK'], ['K', 'KN SUPERMAN'], ['K', 'KN RV'], ['D', 'DN'], ['D', 'DN BOK'], ['D', 'DN H'], ['H', 'HN'], ['H', 'HN ROTACIJA'], ['H', 'HN RV']],
+      noge: [['K', 'KN'], ['K', 'KN BOK'], ['K', 'KN SUPERMAN'], ['K', 'KN RV 90°'], ['D', 'DN'], ['D', 'DN BOK'], ['D', 'DN H'], ['H', 'HN'], ['H', 'HN ROTACIJA'], ['H', 'HN RV 90°']],
       vaje: [['K', 'KV 2-2'], ['K', 'K RRU PESTI'], ['K', 'K RRU PALEC'], ['K', 'K RRU ZADRGA'], ['K', 'K RRU ŠPRICANJE'], ['K', 'K RRU RINEŠ'], ['K', 'K RRU PPDZ'], ['K', 'K RRU PRSTI'], ['K', 'K 6-3-6'],
         ['K', 'K SHARK 1'], ['K', 'K SHARK 2'], ['K', 'K SHARK 3'], ['K', 'K VISOK KOMOLEC'], ['K', 'VATERPOLO'], ['K', 'KZ'], ['K', 'K BIEGNER'],
         ['D', 'DV 1-1-2'], ['D', 'DV 2-2-2'], ['D', 'DV 3-3'], ['D', 'DV ORKA'], ['D', 'DV BIONDI'], ['D', 'DV 6-1'], ['D', 'D DIH NA 1'], ['D', 'DN KR'],
         ['H', 'HV RRU 90°'], ['H', 'HV ROKA VEN ZAVES'], ['H', 'H 6-1'], ['H', 'H 3-1'], ['H', 'HV HITLER']]
     },
     C: {
-      noge: [['K', 'KN'], ['K', 'KN BOK'], ['K', 'KN SUPERMAN'], ['K', 'KN RV'], ['H', 'HN'], ['H', 'HN ROTACIJA'], ['H', 'HN 90°']],
+      noge: [['K', 'KN'], ['K', 'KN BOK'], ['K', 'KN SUPERMAN'], ['K', 'KN RV 90°'], ['H', 'HN'], ['H', 'HN ROTACIJA'], ['H', 'HN 90°']],
       vaje: [['K', 'KV 2-2'], ['K', 'K RRU'], ['K', 'K RRU PESTI'], ['K', 'K RRU PALEC'], ['K', 'K RRU ZADRGA'], ['K', 'K 6-3-6'], ['K', 'KZ'],
         ['H', 'HV RRU'], ['H', 'HV RRU 90°'], ['H', 'H 6-1'], ['H', 'HV ROKA VEN ZAVES']]
     }
@@ -552,6 +577,17 @@
   function newDrill(lk, rng, opts) {
     const P = NEW_PARTS[lk];
     const one = a => a[Math.floor(rng() * a.length)];
+    // Potrjene vaje z določeno razdaljo (25 ali 25/50 m).
+    const own = ((opts && opts.drills) || []).filter(d => d.active !== false && d.category === 'vaja' && (d.distances || []).length &&
+      (!(d.levels || []).length || d.levels.includes(lk)));
+    if (own.length && rng() < 0.25) {
+      const d = one(own), cela = { K: 'K CT', H: 'H CT', D: 'D CT', P: 'P' }[d.stroke];
+      const n25 = lk === 'C' ? 8 : 10;
+      const forms = [`8x25 PL ${d.code}`];
+      if (cela) forms.push(`${n25}x25 PL ↑${d.code} ↓${cela}`, `8x25 PL 3x ${d.code} 1x ${cela}`);
+      if (d.distances.includes(50)) forms.push(`4x50 PL ${d.code}`);
+      return one(forms);
+    }
     const halves = libraryHalves(opts && opts.library, lk);
     const keys = Object.keys(halves).filter(k => halves[k].up.length > 2);
     if (keys.length && rng() < 0.35) {
@@ -715,7 +751,7 @@
     if (!limits) return null;
     const make = { vaje: newDrill, ogrevalna: newWarmup, glavna: newMain }[phase];
     for (let i = 0; i < 120; i++) {
-      const text = make(level, rng, { sprint: opts.sprint, library });
+      const text = make(level, rng, { sprint: opts.sprint, library, drills: opts.drills });
       const fp = fingerprint(text);
       if (known.has(key(fp))) continue;
       // Ista vaja na obeh straneh (↑X ↓X, 1x X 1x X) ni smiselna.
@@ -723,6 +759,7 @@
       if (halves && halves.length === 2 && halves[0].slice(1).trim() === halves[1].slice(1).trim()) continue;
       if (exclusiveConflict(text, opts.others, settings)) continue;
       if (overMaxDistance(text, settings)) continue;
+      if (unevenSides(text)) continue;
       if (opts.date && exclusiveTooSoon(text, history, level, opts.date, settings)) continue;
       if (phase === 'glavna' && isSprintTexts([text], settings) !== !!opts.sprint) continue;
       const meters = parseText(text, dict).meters;
@@ -803,7 +840,7 @@
       : newMode === 'ena' ? [['ogrevalna', 'vaje', 'vaje', 'glavna'][Math.floor(rng() * 4)]] : [];
     const fresh = {};
     newPhases.forEach(p => {
-      const n = suggestNewSet(p, { level: lk, library: opts.library, history, dict: opts.dict, rng, settings, date, others: Object.values(fresh).map(x => x.text), sprint: p === 'glavna' && wantSprint });
+      const n = suggestNewSet(p, { level: lk, library: opts.library, drills: opts.drills, history, dict: opts.dict, rng, settings, date, others: Object.values(fresh).map(x => x.text), sprint: p === 'glavna' && wantSprint });
       if (n) fresh[p] = n;
     });
     if (needNewSprint && !fresh.glavna) {
@@ -928,6 +965,6 @@
     buildDict, parseLine, parseText, toStructure, normalizeText, fingerprint, bVariant,
     estimateMinutes, parseTime, formatTime, libraryFromTrainings, generateTraining, arrangeOrder,
     weekSlots, historyFromTraining, historyLevel, lastUseDays, lastDrillDays, drillKey, setFormat,
-    availableDrills, drillWeight, suggestNewSet, exclusiveConflict, exclusiveTooSoon, lastExclusiveDays, maxMeters, longestMaxLine, overMaxDistance, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
+    availableDrills, drillWeight, suggestNewSet, exclusiveConflict, exclusiveTooSoon, lastExclusiveDays, unevenSides, maxMeters, longestMaxLine, overMaxDistance, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
   };
 });
