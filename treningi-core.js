@@ -27,6 +27,8 @@
     sprint_force_days: 21,
     // Šprinterski trening: več kot toliko metrov max v celem treningu.
     sprint_max_meters: 150,
+    // Najdaljša posamezna razdalja max (noge ali šprint); ponovitev v seriji je lahko več.
+    max_distance: 100,
     // Vaje: ista vaja (ne glede na število ponovitev) se ne ponovi 3 tedne.
     vaje_repeat_days: 21,
     // Pogostost formatov pri vajah (privzeto 1): 6x50 je redkost, 10x25 in podobno pogosteje.
@@ -296,6 +298,29 @@
   function isSprintTexts(texts, settings) {
     const limit = (settings && settings.sprint_max_meters) || DEFAULT_SETTINGS.sprint_max_meters;
     return texts.reduce((a, t) => a + maxMeters(t), 0) > limit;
+  }
+  /** Najdaljša razdalja max v enem kosu: 6x50 MAX NOGE -> 50, 3x( 50 MAX / 50 RAZP ) -> 50, 200 K! -> 200. */
+  function longestMaxLine(line) {
+    const s = cleanQuotes(line).trim();
+    let m;
+    if ((m = s.match(/^\d+\s*[xX]\s*\((.*)\)(.*)$/))) return Math.max(0, ...m[1].split(/\s+\/\s+/).map(longestMaxLine));
+    let dist, rest;
+    if ((m = s.match(/^\d+\s*[xX]\s*(\d+)(?![\d'"])(.*)$/))) { dist = +m[1]; rest = m[2]; }
+    else if ((m = s.match(/^(\d+)(?![\d'"xX])(.*)$/))) {
+      const segs = s.split(/\s*[+,]\s*/);
+      if (segs.length > 1 && segs.every(x => /^\d+(\s|$)/.test(x))) return Math.max(0, ...segs.map(x => (isMaxText(x) ? parseInt(x, 10) : 0)));
+      dist = +m[1]; rest = m[2];
+    } else return 0;
+    if (!isMaxText(rest)) return /\b4-3-2-1\b/.test(rest) ? dist : 0;
+    const arrows = rest.match(/[↑↓][^↑↓]*/g);
+    if (arrows && arrows.length > 1) return dist * arrows.filter(isMaxText).length / arrows.length;
+    const segs = rest.split('+').map(x => x.match(/(\d+)(!|\s*$|\s+(?![\d@])[^]*|\s+@[^]*)/)).filter(Boolean);
+    if (segs.length > 1 && !/\d+\s*x\s/i.test(rest)) return Math.max(0, ...segs.map(x => (isMaxText(x[2]) ? +x[1] : 0)));
+    return dist;
+  }
+  function overMaxDistance(text, settings) {
+    const limit = (settings && settings.max_distance) || DEFAULT_SETTINGS.max_distance;
+    return cleanQuotes(text).split(/\n/).some(l => longestMaxLine(l) > limit);
   }
   function isSprintMain(set, settings) { return set.main_type === 'sprint' || isSprintTexts([set.text], settings); }
 
@@ -697,6 +722,7 @@
       const halves = text.match(/[↑↓][^↑↓]+/g);
       if (halves && halves.length === 2 && halves[0].slice(1).trim() === halves[1].slice(1).trim()) continue;
       if (exclusiveConflict(text, opts.others, settings)) continue;
+      if (overMaxDistance(text, settings)) continue;
       if (opts.date && exclusiveTooSoon(text, history, level, opts.date, settings)) continue;
       if (phase === 'glavna' && isSprintTexts([text], settings) !== !!opts.sprint) continue;
       const meters = parseText(text, dict).meters;
@@ -727,7 +753,7 @@
     const rng = mulberry32(opts.seed != null ? opts.seed : Date.now() % 2147483647);
     const notes = [];
 
-    const lib = (opts.library || []).filter(s => s.active !== false && (s.levels || []).includes(lk));
+    const lib = (opts.library || []).filter(s => s.active !== false && (s.levels || []).includes(lk) && !overMaxDistance(s.text, settings));
     const byPhase = p => lib.filter(s => s.phase === p);
 
     let mains = byPhase('glavna').filter(s => mainAvailability(s, history, lk, date, settings).ok);
@@ -772,13 +798,18 @@
     const newMode = opts.newSets || 'brez';
     const wantSprint = mode === 'sprint' || (mains.length > 0 && mains.every(s => isSprintMain(s, settings)));
     const noSprint = mode === 'ne_sprint' || (mode === 'auto' && sprintDays !== null && sprintDays < settings.sprint_min_gap_days);
-    const newPhases = newMode === 'vse' ? ['ogrevalna', 'vaje', 'glavna']
+    const needNewSprint = mode === 'sprint' && !mains.length;
+    const newPhases = needNewSprint && newMode !== 'vse' ? ['glavna'] : newMode === 'vse' ? ['ogrevalna', 'vaje', 'glavna']
       : newMode === 'ena' ? [['ogrevalna', 'vaje', 'vaje', 'glavna'][Math.floor(rng() * 4)]] : [];
     const fresh = {};
     newPhases.forEach(p => {
       const n = suggestNewSet(p, { level: lk, library: opts.library, history, dict: opts.dict, rng, settings, date, others: Object.values(fresh).map(x => x.text), sprint: p === 'glavna' && wantSprint });
       if (n) fresh[p] = n;
     });
+    if (needNewSprint && !fresh.glavna) {
+      mains = byPhase('glavna').filter(s => mainAvailability(s, history, lk, date, settings).ok);
+      notes.push('Šprinterske serije za ta nivo ni, zato je glavna navadna.');
+    }
 
     let best = null;
     for (let attempt = 0; attempt < 400; attempt++) {
@@ -897,6 +928,6 @@
     buildDict, parseLine, parseText, toStructure, normalizeText, fingerprint, bVariant,
     estimateMinutes, parseTime, formatTime, libraryFromTrainings, generateTraining, arrangeOrder,
     weekSlots, historyFromTraining, historyLevel, lastUseDays, lastDrillDays, drillKey, setFormat,
-    availableDrills, drillWeight, suggestNewSet, exclusiveConflict, exclusiveTooSoon, lastExclusiveDays, maxMeters, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
+    availableDrills, drillWeight, suggestNewSet, exclusiveConflict, exclusiveTooSoon, lastExclusiveDays, maxMeters, longestMaxLine, overMaxDistance, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
   };
 });
