@@ -194,6 +194,24 @@ Potrjeno brez spremembe: 18. 6. glavna je `4x( … )`; 24. 6. C `16x25` je štir
 | `2x( 2x100 M )` (21. 10. A) | enkrat normalni, enkrat obratni vrstni red |
 | `RRU PRSTI` (21. 10. A) | prsti po gladini vode |
 
+### 2i. Tedna 26. 10. in 2. 11. (odgovori 23. 11. 2026)
+
+| Zapis | Pomen |
+|-------|-------|
+| `RRU PESTI`, `RRU PRSTI` | dve ločeni vaji |
+| `KZ OBRATNO` | dihanje kontra |
+| `25 M + 75 H/K` (26. 10.) | prvih 25: enkrat D, enkrat H, enkrat P, enkrat K |
+| `3x D 1x H VSAKIČ DLJE` (26. 10.) | vsakič dlje pod vodo, četrti hrbtno, da se nadihaš |
+| `3x( 5x50 )` (26. 10.) | 1. VL, 2. K, 3. vsak tretji 50 delfin |
+| `V PR` (26. 10.) | valček, prsno roke |
+| `P/HKG` (28. 10. C) | tja prsno, nazaj hrbtno, kravl, germanja |
+| `DZ L/D` (28. 10. C) | delfin zavesljaji: gor leva, nazaj desna |
+| `DV 6-1` (28. 10. C) | 6 udarcev, ena koordinacija |
+| `3x(100+50)`, `3x(50+100)` (28. 10. A) | vse kravl, privzeti štarti |
+| `V ML PR` (2. 11.) | na koncu prsno roke |
+| `25 DN VDIH NAPREJ` (2. 11.) | vdih naprej |
+| `8x25 1x MAX 1x RAZP` (4. 11. C) | 200 m; vsota v zvezku je napačna |
+
 Kratice, ki sem jih verjetno napačno prebral in so že v šifrantu (čakajo na potrditev): `ZADUŠNICA` = `ZADNJIH 7 DN`, `ROTULJICA` = `METULJČEK`, `ROKA UZ ZAVES` = `ROKA VEN ZAVES`.
 
 ## 3. Treningi

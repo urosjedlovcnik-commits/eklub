@@ -88,7 +88,7 @@
     ['PZDZ', 'ponovi zadnji del zavesljaja', 'vaja'],
     ['BIEGNER', 'stegnjene roke', 'vaja'],
     ['VDIHA', 'BREZ VDIHA = poskusiš odplavati 50 m brez vdiha', 'drugo'],
-    ['OBRATNO', 'mešano v obratnem vrstnem redu (NORMALNO / OBRATNO); pri KZ še ni potrjeno', 'drugo'],
+    ['OBRATNO', 'mešano v obratnem vrstnem redu (NORMALNO / OBRATNO); pri KZ dihanje kontra', 'drugo'],
     ['PRSTI', 'RRU: prsti po gladini vode', 'vaja'],
     ['SALTO', 'SALTO NA POL: salto na pol bazena in nazaj v cilj hitro, ne nadaljuješ naprej', 'vaja'],
     ['POL', 'glej SALTO NA POL', 'drugo'],
@@ -109,7 +109,7 @@
   ].map(([code, meaning, category]) => ({ code, meaning, category, aliases: [], source: 'pregled' }));
 
   // Besede v opisih vaj, ki niso kratice in jih ne označujemo kot neznane.
-  const FILLER = new Set(('VEN ZADNJIH METULJČEK Z NA PO POD ČIM DLJE DALJŠI VIŠJI VODO BREZ DIHANJA DIHANJE VDIHA VSAK VSAKIČ ROKA ROKE UZ ZAVES ' +
+  const FILLER = new Set(('FREK VEN ZADNJIH METULJČEK LEVA DESNA VDIH NAPREJ Z NA PO POD ČIM DLJE DALJŠI VIŠJI VODO BREZ DIHANJA DIHANJE VDIHA VSAK VSAKIČ ROKA ROKE UZ ZAVES ' +
     'ZAVESLJAJI ZAVESLJAJ VISOK KOMOLEC KOMOLCEM POLOŽAJ MENJAMO KONTRA HITRO POČASI TEMPO MEŠANO PRSNO KRAVL ' +
     'HRBTNO DELFIN DESKA DESKO VALČEK LOP RAMENA IN ALI ŠTARTI ŠTART X 1. 2. 3. CT/N/V/CT N/V/CT DO TAKOJ').split(/\s+/));
 
