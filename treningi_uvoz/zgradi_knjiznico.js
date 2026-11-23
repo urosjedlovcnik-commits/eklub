@@ -44,7 +44,8 @@ for (const raw of src) {
 let warn = 0;
 const unknown = new Map();
 for (const t of trainings) {
-  t.order_variant = t.items.findIndex(i => i.phase === 'glavna') < t.items.findIndex(i => i.phase === 'vaje') ? 'glavna_takoj' : 'obicajni';
+  const gi = t.items.findIndex(i => i.phase === 'glavna');
+  t.order_variant = gi >= 0 && gi < t.items.findIndex(i => i.phase === 'vaje') ? 'glavna_takoj' : 'obicajni';
   let total = 0;
   for (const it of t.items) {
     const p = core.parseText(it.text, dict);

@@ -1,6 +1,6 @@
 # Prepis zvezka: treningi 2026 (osnutek za pregled)
 
-Stanje 22. 11. 2026: šifrant (razdelek 2) je v bazi. Pregledani treningi (✔, tedni 8.–24. 6.) so v bazi kot »izveden«. **Pregled nadaljujeva pri tednu 14. 9.** Nepregledani treningi so samo v `zvezek_2026.json` in jih generator že uporablja.
+Stanje 23. 11. 2026: vseh 50 treningov je pregledanih in v bazi kot »izveden«. Veljajo zapisi v `zvezek_2026.txt` in odgovori v razdelkih 2d–2j; razdelek 3 je prvotni prepis.
 
 Oznake:
 
@@ -212,7 +212,24 @@ Potrjeno brez spremembe: 18. 6. glavna je `4x( … )`; 24. 6. C `16x25` je štir
 | `25 DN VDIH NAPREJ` (2. 11.) | vdih naprej |
 | `8x25 1x MAX 1x RAZP` (4. 11. C) | 200 m; vsota v zvezku je napačna |
 
-Kratice, ki sem jih verjetno napačno prebral in so že v šifrantu (čakajo na potrditev): `ZADUŠNICA` = `ZADNJIH 7 DN`, `ROTULJICA` = `METULJČEK`, `ROKA UZ ZAVES` = `ROKA VEN ZAVES`.
+### 2j. Tedna 9. in 16. 11. (odgovori 23. 11. 2026)
+
+| Zapis | Pomen |
+|-------|-------|
+| `6-1` | obe vaji obstajata: hrbtno (na 6 udarcev zamenjaš roki) in `DV 6-1` (6 udarcev, ena koordinacija) |
+| stopnjevano (`1-4`) | ne vpliva na seštevek šprinta |
+| `↑KBD ↓RAZP` (9. 11.) | pavza 30 s |
+| `MAX FREK` (12. 11.) | maksimalna frekvenca, ne šteje kot šprint |
+| `PONOVIŠ PRVI DZ` (12. 11.) | `PPDZ` |
+| `3x( 4x100 @2' )` (12. 11.) | 1x VL, 1x 75 K + 25 N, 1x normalno |
+| lestvica 11. 11. C | 25 K, 50 H, 75 P, 100 P 1-2, 75 P 1-2, 50 H, 25 K; daljša ogrevalna |
+| `25! + 25` (11. 11. A) | prvih 25 max |
+| `PO 4 ↑N ↓CT` (16. 11.) | 4x vsaka tehnika, izmenično noge in cela |
+| `4x25 KBD` (19. 11.) | pavza 15 s |
+| `DV 3-3, 2-2-1 (DIH NAPREJ)` (18. 11. A) | dihanje naprej |
+| `6x25 KBD + H`, `6x25 D + H` (18. 11. A) | izmenično po ponovitvah, pavza 15 s |
+
+Kratice `ZADUŠNICA`, `ROTULJICA`, `ROKA UZ ZAVES` so preimenovane v `ZADNJIH 7 DN`, `METULJČEK`, `ROKA VEN ZAVES`.
 
 ## 3. Treningi
 

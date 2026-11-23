@@ -87,17 +87,19 @@
     ['PR', 'prsno roke (PR DN = prsno roke, delfin noge)', 'vaja'],
     ['PZDZ', 'ponovi zadnji del zavesljaja', 'vaja'],
     ['BIEGNER', 'stegnjene roke', 'vaja'],
-    ['VDIHA', 'BREZ VDIHA = poskusiš odplavati 50 m brez vdiha', 'drugo'],
+    ['BREZ VDIHA', 'poskusiš odplavati 50 m brez vdiha', 'drugo'],
+    ['5+1', '5 tempo, 1 hitro', 'stopnjevanje'],
+    ['6-3-6', '6 udarcev na boku, 3 zavesljaji, 6 udarcev na drugem boku', 'vaja'],
+    ['3-1', 'H 3-1: trije udarci, 1 koordinacija', 'vaja'],
     ['OBRATNO', 'mešano v obratnem vrstnem redu (NORMALNO / OBRATNO); pri KZ dihanje kontra', 'drugo'],
     ['PRSTI', 'RRU: prsti po gladini vode', 'vaja'],
-    ['SALTO', 'SALTO NA POL: salto na pol bazena in nazaj v cilj hitro, ne nadaljuješ naprej', 'vaja'],
-    ['POL', 'glej SALTO NA POL', 'drugo'],
+    ['SALTO NA POL', 'salto na pol bazena in nazaj v cilj hitro, ne nadaljuješ naprej', 'vaja'],
     ['ORKA', 'delfin noge s podvodnim delom zavesljaja', 'vaja'],
     ['ROTACIJA', 'rotacija ramenskega obroča', 'vaja'],
     ['SIMULATOR', '50 m + natanko 10 s + 50 m, simuliran čas tekme', 'vaja'],
     ['PACMAN', 'z lopatkami, lopatka na dnu', 'vaja'],
-    ['ZADUŠNICA', 'zadnjih 7 m pod vodo z delfin nogami', 'vaja'],
-    ['ROTULJICA', 'metuljček, pomožna tehnika med delfinom in prsnim', 'vaja'],
+    ['ZADNJIH 7 DN', 'zadnjih 7 m pod vodo, v cilj z delfin nogami', 'vaja'],
+    ['METULJČEK', 'metuljček, pomožna tehnika med delfinom in prsnim', 'vaja'],
     ['KRAJŠANJE', 'PV: trije vse krajši zavesljaji', 'vaja'],
     ['RINEŠ', 'RRU: dlan pod vodo porineš naprej', 'vaja'],
     ['SHARK', 'kravl vaja s komolcem nad ramo (SHARK 1/2/3)', 'vaja'],
@@ -109,7 +111,7 @@
   ].map(([code, meaning, category]) => ({ code, meaning, category, aliases: [], source: 'pregled' }));
 
   // Besede v opisih vaj, ki niso kratice in jih ne označujemo kot neznane.
-  const FILLER = new Set(('FREK VEN ZADNJIH METULJČEK LEVA DESNA VDIH NAPREJ Z NA PO POD ČIM DLJE DALJŠI VIŠJI VODO BREZ DIHANJA DIHANJE VDIHA VSAK VSAKIČ ROKA ROKE UZ ZAVES ' +
+  const FILLER = new Set(('SALTO POL FREK VEN ZADNJIH METULJČEK LEVA DESNA VDIH NAPREJ Z NA PO POD ČIM DLJE DALJŠI VIŠJI VODO BREZ DIHANJA DIHANJE VDIHA VSAK VSAKIČ ROKA ROKE UZ ZAVES ' +
     'ZAVESLJAJI ZAVESLJAJ VISOK KOMOLEC KOMOLCEM POLOŽAJ MENJAMO KONTRA HITRO POČASI TEMPO MEŠANO PRSNO KRAVL ' +
     'HRBTNO DELFIN DESKA DESKO VALČEK LOP RAMENA IN ALI ŠTARTI ŠTART X 1. 2. 3. CT/N/V/CT N/V/CT DO TAKOJ').split(/\s+/));
 
@@ -252,7 +254,7 @@
   }
 
   // ---------- Metri max (šprint) ----------
-  const isMaxText = t => /![^A-Z]*|\bMAX\b|\bSIMULATOR\b/i.test(String(t || '').replace(/MAX\s+OBRAT/gi, ''));
+  const isMaxText = t => /![^A-Z]*|\bMAX\b|\bSIMULATOR\b/i.test(String(t || '').replace(/MAX\s+(OBRAT|FREK)/gi, ''));
 
   function maxMetersLine(line) {
     const s = cleanQuotes(line).trim();
@@ -281,7 +283,7 @@
       const sum = n.reduce((a, b) => a + b, 0);
       return Math.round(total * alt.reduce((a, t, i) => a + (isMaxText(t) ? n[i] : 0), 0) / sum);
     }
-    const segs = rest.split('+').map(x => x.match(/(\d+)\s+([^\d@][^]*)/)).filter(Boolean);
+    const segs = rest.split('+').map(x => x.match(/(\d+)(!|\s*$|\s+(?![\d@])[^]*|\s+@[^]*)/)).filter(Boolean);
     if (segs.length > 1) return reps * segs.reduce((a, x) => a + (isMaxText(x[2]) ? +x[1] : 0), 0);
     return total;
   }
@@ -469,8 +471,8 @@
       noge: [['K', 'KN'], ['K', 'KN BOK'], ['K', 'KN SUPERMAN'], ['K', 'KN RV'], ['D', 'DN'], ['D', 'DN BOK'], ['H', 'HN'], ['H', 'HN ROTACIJA']],
       vaje: [['K', 'KV 2-2'], ['K', 'K RRU PESTI'], ['K', 'K RRU PALEC'], ['K', 'K RRU ZADRGA'], ['K', 'K RRU ŠPRICANJE'], ['K', 'K RRU RINEŠ'], ['K', 'K RRU PPDZ'], ['K', 'K RRU PRSTI'], ['K', 'K 6-3-6'],
         ['K', 'K SHARK 1'], ['K', 'K SHARK 2'], ['K', 'K VISOK KOMOLEC'], ['K', 'VATERPOLO'], ['K', 'KBD'],
-        ['D', 'DV 1-1-2'], ['D', 'DV 2-2-2'], ['D', 'DV 3-3'], ['D', 'DV ORKA'], ['D', 'DV BIONDI'], ['D', 'D DIH NA 1'],
-        ['H', 'HV RRU 90°'], ['H', 'HV ROKA VEN'], ['H', 'H 6-1'], ['H', 'H 3-1']],
+        ['D', 'DV 1-1-2'], ['D', 'DV 2-2-2'], ['D', 'DV 3-3'], ['D', 'DV ORKA'], ['D', 'DV BIONDI'], ['D', 'DV 6-1'], ['D', 'D DIH NA 1'],
+        ['H', 'HV RRU 90°'], ['H', 'HV ROKA VEN ZAVES'], ['H', 'H 6-1'], ['H', 'H 3-1']],
       formati25: [10, 10, 10, 8, 12], formati50: [4]
     },
     C: {

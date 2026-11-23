@@ -2221,7 +2221,7 @@
     "B"
    ],
    "notebook_km": 2.3,
-   "reviewed": false,
+   "reviewed": true,
    "items": [
     {
      "phase": "razplavanje",
@@ -2245,7 +2245,7 @@
     },
     {
      "phase": "glavna",
-     "text": "4x50 K 3+1 @1'\n4x50 K 1-4 @1'\n4x50 K VL @50\"\n4x50 KN @1'20\"\n4x50 ↑KBD ↓RAZP @1'",
+     "text": "4x50 K 3+1 @1'\n4x50 K 1-4 @1'\n4x50 K VL @50\"\n4x50 KN @1'20\"\n4x50 ↑KBD ↓RAZP p30\"",
      "meters": 1000
     },
     {
@@ -2264,7 +2264,7 @@
     "B"
    ],
    "notebook_km": 2.4,
-   "reviewed": false,
+   "reviewed": true,
    "items": [
     {
      "phase": "razplavanje",
@@ -2293,8 +2293,7 @@
     },
     {
      "phase": "glavna",
-     "text": "3x( 4x100 ) 1x VL 1x 75 K + 25 N 1x NORMALNO",
-     "incomplete": true,
+     "text": "3x( 4x100 @2' ) 1x VL 1x 75 K + 25 N 1x NORMALNO",
      "meters": 1200
     },
     {
@@ -2312,7 +2311,7 @@
     "C"
    ],
    "notebook_km": 1.65,
-   "reviewed": false,
+   "reviewed": true,
    "items": [
     {
      "phase": "razplavanje",
@@ -2325,9 +2324,8 @@
      "meters": 300
     },
     {
-     "phase": "glavna",
-     "text": "25 + 50 + 75 + 100 + 75 + 50 + 25 K/H/P 1-2",
-     "incomplete": true,
+     "phase": "ogrevalna",
+     "text": "25 K + 50 H + 75 P + 100 P 1-2 + 75 P 1-2 + 50 H + 25 K",
      "meters": 400
     },
     {
@@ -2356,7 +2354,7 @@
      "meters": 50
     }
    ],
-   "order_variant": "glavna_takoj",
+   "order_variant": "obicajni",
    "total_meters": 1650
   },
   {
@@ -2365,7 +2363,7 @@
     "A"
    ],
    "notebook_km": 2.35,
-   "reviewed": false,
+   "reviewed": true,
    "items": [
     {
      "phase": "razplavanje",
@@ -2379,8 +2377,7 @@
     },
     {
      "phase": "vaje",
-     "text": "8x25 PL ↑DN H ↓PV",
-     "incomplete": true,
+     "text": "8x25 PL ↑DN H ↓DN PV",
      "meters": 200
     },
     {
@@ -2395,8 +2392,7 @@
     },
     {
      "phase": "glavna",
-     "text": "4x100 KVL @2'\n4x75 MBK @1'30\"\n4x50 K @50\"\n4x50 25 + 25 D!",
-     "incomplete": true,
+     "text": "4x100 KVL @2'\n4x75 MBK @1'30\"\n4x50 K @50\"\n4x50 25! + 25 @1'",
      "meters": 1100
     },
     {
@@ -2415,7 +2411,7 @@
     "B"
    ],
    "notebook_km": 2.4,
-   "reviewed": false,
+   "reviewed": true,
    "items": [
     {
      "phase": "razplavanje",
@@ -2425,7 +2421,6 @@
     {
      "phase": "ogrevalna",
      "text": "16x25 M PO 4 ↑N ↓CT",
-     "incomplete": true,
      "meters": 400
     },
     {
@@ -2464,7 +2459,7 @@
     "B"
    ],
    "notebook_km": 2.3,
-   "reviewed": false,
+   "reviewed": true,
    "items": [
     {
      "phase": "razplavanje",
@@ -2498,7 +2493,7 @@
     },
     {
      "phase": "glavna",
-     "text": "4x25 KBD\n4x50 25 D + 25 K @1'\n4x75 50 K + 25 D @1'30\"\n4x100 KVL @2'",
+     "text": "4x25 KBD p15\"\n4x50 25 D + 25 K @1'\n4x75 50 K + 25 D @1'30\"\n4x100 KVL @2'",
      "meters": 1000
     },
     {
@@ -2516,7 +2511,7 @@
     "A"
    ],
    "notebook_km": 2.3,
-   "reviewed": false,
+   "reviewed": true,
    "items": [
     {
      "phase": "razplavanje",
@@ -2526,7 +2521,6 @@
     {
      "phase": "ogrevalna",
      "text": "4x100 M PO 100 25 V + 50 N + 25 CT",
-     "incomplete": true,
      "meters": 400
     },
     {
@@ -2536,8 +2530,7 @@
     },
     {
      "phase": "vaje",
-     "text": "4x50 PL DV 1x 3-3 1x 2-2-1",
-     "incomplete": true,
+     "text": "4x50 PL DV 1x 3-3 1x 2-2-1 DIH NAPREJ",
      "meters": 200
     },
     {
@@ -2547,8 +2540,7 @@
     },
     {
      "phase": "glavna",
-     "text": "6x25 1x KBD 1x H\n6x50 KVL @1'\n6x25 1x D 1x H\n6x50 2+1 @1'",
-     "incomplete": true,
+     "text": "6x25 1x KBD 1x H p15\"\n6x50 KVL @1'\n6x25 1x D 1x H p15\"\n6x50 2+1 @1'",
      "meters": 900
     },
     {
