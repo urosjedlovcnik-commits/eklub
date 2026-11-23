@@ -112,7 +112,8 @@
     const hist = [];
     S.dbTrainings.forEach(t => {
       const lvl = C.historyLevel(t.levels);
-      (t.training_items || []).forEach(i => hist.push({ date: t.date, level: lvl, phase: i.phase, fingerprint: i.fingerprint, main_type: mainTypeOf(i), status: t.status }));
+      const sprint = C.isSprintTexts((t.training_items || []).map(i => i.text), S.settings);
+      (t.training_items || []).forEach(i => hist.push({ date: t.date, level: lvl, phase: i.phase, fingerprint: i.fingerprint, main_type: i.phase === 'glavna' && sprint ? 'sprint' : null, status: t.status }));
     });
     hist.push(...pend.history);
     S.history = hist;
@@ -232,11 +233,11 @@
   function levelKey(levels) { return C.historyLevel(levels); }
 
   function cardTotals(card) {
-    let meters = 0;
-    card.items.forEach(it => { meters += C.parseText(it.text, S.dict).meters; });
+    let meters = 0, max = 0;
+    card.items.forEach(it => { meters += C.parseText(it.text, S.dict).meters; max += C.maxMeters(it.text); });
     const lk = levelKey(card.slot.levels);
     const lv = S.settings.levels[lk];
-    return { meters, minutes: C.estimateMinutes(meters, lk, S.settings), ok: meters >= lv.meters_min && meters <= lv.meters_max, lv };
+    return { meters, max, sprint: max > S.settings.sprint_max_meters, minutes: C.estimateMinutes(meters, lk, S.settings), ok: meters >= lv.meters_min && meters <= lv.meters_max, lv };
   }
 
   function renderCard(slot) {
@@ -268,7 +269,7 @@
       </div>
       <div class="tr-foot">
         <div><span class="tr-total ${tot.ok ? 'ok' : 'bad'}">${tot.meters} m</span>
-          <span class="tr-sub"> cilj ${tot.lv.meters_min}–${tot.lv.meters_max} m · ~${tot.minutes} min plavanja</span></div>
+          <span class="tr-sub"> cilj ${tot.lv.meters_min}–${tot.lv.meters_max} m · ~${tot.minutes} min plavanja</span> <span class="tr-sub tr-max">· max ${tot.max} m${tot.sprint ? ' (šprint)' : ''}</span></div>
         <div class="tr-seg" title="Vrstni red">
           <button data-order="obicajni" class="${card.order_variant === 'obicajni' ? 'active' : ''}">Vaje → glavna</button>
           <button data-order="glavna_takoj" class="${card.order_variant === 'glavna_takoj' ? 'active' : ''}">Glavna takoj</button>
@@ -326,7 +327,7 @@
       const d = C.lastUseDays(S.history.filter(h => !(h.date === card.slot.date)), C.fingerprint(it.text), levelKey(card.slot.levels), 'glavna', card.slot.date);
       info = d === null ? 'še ni bila uporabljena' : `zadnjič pred ${d} dnevi`;
       if (d !== null && d < S.settings.main_repeat_days) info += ` · ⚠ manj kot ${S.settings.main_repeat_days} dni`;
-      if (it.main_type === 'sprint') info += ' · šprint';
+      if (C.isSprintMain(it, S.settings)) info += ' · šprint';
     }
     if (it.phase === 'vaje' && it.text.trim()) {
       const d = C.lastDrillDays(S.history.filter(h => h.date !== card.slot.date), C.fingerprint(it.text), levelKey(card.slot.levels), card.slot.date);
@@ -390,6 +391,7 @@
     const t = el.querySelector('.tr-total');
     t.textContent = tot.meters + ' m';
     t.className = 'tr-total ' + (tot.ok ? 'ok' : 'bad');
+    el.querySelector('.tr-max').textContent = `· max ${tot.max} m${tot.sprint ? ' (šprint)' : ''}`;
   }
 
   function rerenderCard(key) {
@@ -402,7 +404,7 @@
   /** Zamenja vrstico s povsem novo serijo, ki čaka na pregled. */
   function newItem(card, idx, key) {
     const it = card.items[idx];
-    const sprint = it.phase === 'glavna' && (card.mainMode === 'sprint' || (card.mainMode !== 'ne_sprint' && it.main_type === 'sprint'));
+    const sprint = it.phase === 'glavna' && (card.mainMode === 'sprint' || (card.mainMode !== 'ne_sprint' && C.isSprintMain(it, S.settings)));
     const n = C.suggestNewSet(it.phase, {
       level: levelKey(card.slot.levels), library: S.library, history: historyExcluding(card.slot), dict: S.dict,
       exclude: card.items.map(i => C.fingerprint(i.text)), sprint, settings: S.settings,
@@ -466,8 +468,8 @@
     const others = card.items.filter((x, j) => j !== idx).map(i => i.text);
     let pool = S.library.filter(s => s.phase === it.phase && (s.levels || []).includes(lk) && !used.has(s.fingerprint) && !C.exclusiveConflict(s.text, others, S.settings));
     if (it.phase === 'glavna') {
-      if (card.mainMode === 'ne_sprint') pool = pool.filter(s => s.main_type !== 'sprint');
-      if (card.mainMode === 'sprint') pool = pool.filter(s => s.main_type === 'sprint');
+      if (card.mainMode === 'ne_sprint') pool = pool.filter(s => !C.isSprintMain(s, S.settings));
+      if (card.mainMode === 'sprint') pool = pool.filter(s => C.isSprintMain(s, S.settings));
       pool = pool.filter(s => { const d = C.lastUseDays(hist, s.fingerprint, lk, 'glavna', card.slot.date); return d === null || d >= S.settings.main_repeat_days; });
     }
     if (it.phase === 'vaje') {
@@ -654,7 +656,7 @@
         avail = last ? ` · na voljo od ${fmtDate(C.addDays(last, S.settings.main_repeat_days))}` : '';
       }
       return `<div class="tr-lib-row"><div class="tr-item-head">
-        <span class="tr-phase">${esc(C.PHASE_LABELS[s.phase])} · ${esc((s.levels || []).join(', '))}${s.main_type === 'sprint' ? ' · šprint' : ''}</span>
+        <span class="tr-phase">${esc(C.PHASE_LABELS[s.phase])} · ${esc((s.levels || []).join(', '))}${s.phase === 'glavna' && C.isSprintMain(s, S.settings) ? ' · šprint' : ''}</span>
         <span><span class="tr-badge">${s.source === 'db' ? (s.origin === 'ai' ? 'baza · predlagana' : 'baza') : 'zvezek'}</span> <span class="tr-m">${s.meters} m</span></span></div>
         <pre>${esc(s.text)}</pre>
         <div class="tr-sub">${d === null ? 'še ni bila uporabljena' : 'zadnjič pred ' + d + ' dnevi'}${avail}</div></div>`;

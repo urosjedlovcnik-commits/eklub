@@ -158,9 +158,25 @@ Potrjeno brez spremembe: 18. 6. glavna je `4x( … )`; 24. 6. C `16x25` je štir
 | `10x25 K ŠTETJE` (21. 9.) | šteje zavesljaje (prej prebrano STOP) |
 | 24. 9. | vsota v zvezku je za 100 m prenizka; glavna je vse od `3x100 VL` do `3x50 HITRO` |
 | `3x100 PL 75 VISOK KOMOLEC DOLGO + 25 N!` (24. 9.) | `!` = noge max |
-| `3x50 PL 25 DN PV + 25 HN` (24. 9.) | odprto: `DN PV` ali `DV PV` |
+| `3x50 PL 25 DN PV + 25 HN` (24. 9.) | |
 | `K 6-3-6` | 6 udarcev na boku, 3 zavesljaji, 6 udarcev na drugem boku (prej `3-3-6`) |
 | `H 3-1` | trije udarci, 1 koordinacija |
+
+### 2g. Tedna 28. 9. in 5. 10. (odgovori 23. 11. 2026)
+
+| Zapis | Pomen |
+|-------|-------|
+| `KR`, `DR`, `PR` | kravl / delfin / prsno roke: `DN KR`, `KN DR`, `PR DN` |
+| `↑S!` (28. 9.) | stil max |
+| `PZDZ` | ponovi zadnji del zavesljaja |
+| `N/CT PO 4` (5. 10.) | 4x noge, 4x cela |
+| lestvica 5. 10. | `KVL` velja za prvih in zadnjih 200 |
+| `6x25 KBD 20"` (5. 10.) | pavza |
+| `BIEGNER` (8. 10.) | stegnjene roke |
+| `K/DHP` (7. 10. A) | tja kravl, nazaj izmenično D, H, P |
+| `RRU 3s DN!` (7. 10. A) | počakaš 3 sekunde, delfin noge max |
+| `BREZ VDIHA` (7. 10. A) | poskusiš odplavati 50 m brez vdiha |
+| šprinterski trening | več kot 150 m max |
 
 Kratice, ki sem jih verjetno napačno prebral in so že v šifrantu (čakajo na potrditev): `ZADUŠNICA` = `ZADNJIH 7 DN`, `ROTULJICA` = `METULJČEK`, `ROKA UZ ZAVES` = `ROKA VEN ZAVES`.
 

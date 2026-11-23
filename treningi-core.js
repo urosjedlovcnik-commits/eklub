@@ -25,6 +25,8 @@
     main_repeat_days: 60,
     sprint_min_gap_days: 14,
     sprint_force_days: 21,
+    // Šprinterski trening: več kot toliko metrov max v celem treningu.
+    sprint_max_meters: 150,
     // Vaje: ista vaja (ne glede na število ponovitev) se ne ponovi 3 tedne.
     vaje_repeat_days: 21,
     // Pogostost formatov pri vajah (privzeto 1): 6x50 je redkost, 10x25 in podobno pogosteje.
@@ -80,6 +82,12 @@
     ['RV', 'roka ven, 90° (npr. KN RV)', 'vaja'],
     ['PPDZ', 'RRU: ponavljaj prednji del zavesljaja', 'vaja'],
     ['ŠTETJE', 'štetje zavesljajev', 'vaja'],
+    ['KR', 'kravl roke (DN KR = delfin noge, kravl roke)', 'vaja'],
+    ['DR', 'delfin roke (KN DR = kravl noge, delfin roke)', 'vaja'],
+    ['PR', 'prsno roke (PR DN = prsno roke, delfin noge)', 'vaja'],
+    ['PZDZ', 'ponovi zadnji del zavesljaja', 'vaja'],
+    ['BIEGNER', 'stegnjene roke', 'vaja'],
+    ['VDIHA', 'BREZ VDIHA = poskusiš odplavati 50 m brez vdiha', 'drugo'],
     ['OBRATNO', 'KZ OBRATNO = dihanje kontra', 'drugo'],
     ['ORKA', 'delfin noge s podvodnim delom zavesljaja', 'vaja'],
     ['ROTACIJA', 'rotacija ramenskega obroča', 'vaja'],
@@ -240,6 +248,50 @@
     };
   }
 
+  // ---------- Metri max (šprint) ----------
+  const isMaxText = t => /![^A-Z]*|\bMAX\b|\bSIMULATOR\b/i.test(String(t || '').replace(/MAX\s+OBRAT/gi, ''));
+
+  function maxMetersLine(line) {
+    const s = cleanQuotes(line).trim();
+    let m;
+    if ((m = s.match(/^(\d+)\s*[xX]\s*\((.*)\)(.*)$/))) {
+      const inner = m[2].split(/\s+\/\s+/);
+      return +m[1] * inner.reduce((a, p) => a + maxMetersLine(p), 0);
+    }
+    let reps = 1, dist = 0, rest = s;
+    if ((m = s.match(/^(\d+)\s*[xX]\s*(\d+)(?![\d'"])(.*)$/))) { reps = +m[1]; dist = +m[2]; rest = m[3]; }
+    else if ((m = s.match(/^(\d+)(?![\d'"xX])(.*)$/))) {
+      const segs = s.split(/\s*[+,]\s*/);
+      if (segs.length > 1 && segs.every(x => /^\d+(\s|$)/.test(x))) return segs.reduce((a, x) => a + (isMaxText(x) ? parseInt(x, 10) : 0), 0);
+      dist = +m[1]; rest = m[2];
+    } else return 0;
+    const total = reps * dist;
+    if (/\b4-3-2-1\b/.test(rest)) return Math.round(total / 10); // 4 POČ, 3 T, 2 HIT, 1 Max
+    if (!isMaxText(rest)) return 0;
+    if (/↑/.test(rest) && /↓/.test(rest)) {
+      const parts = rest.match(/[↑↓][^↑↓]*/g) || [];
+      return total * parts.filter(isMaxText).length / parts.length;
+    }
+    const alt = rest.match(/\d+\s*x\s*[^\d\s][^]*?(?=\s\d+\s*x\s*[^\d\s]|$)/gi);
+    if (alt && alt.length > 1) {
+      const n = alt.map(a => parseInt(a, 10));
+      const sum = n.reduce((a, b) => a + b, 0);
+      return Math.round(total * alt.reduce((a, t, i) => a + (isMaxText(t) ? n[i] : 0), 0) / sum);
+    }
+    const segs = rest.split('+').map(x => x.match(/(\d+)\s+([^\d@][^]*)/)).filter(Boolean);
+    if (segs.length > 1) return reps * segs.reduce((a, x) => a + (isMaxText(x[2]) ? +x[1] : 0), 0);
+    return total;
+  }
+  /** Koliko metrov v besedilu je max (K!, MAX, SIMULATOR; MAX OBRAT se ne šteje). */
+  function maxMeters(text) {
+    return cleanQuotes(text).split(/\n/).reduce((a, l) => a + maxMetersLine(l), 0);
+  }
+  function isSprintTexts(texts, settings) {
+    const limit = (settings && settings.sprint_max_meters) || DEFAULT_SETTINGS.sprint_max_meters;
+    return texts.reduce((a, t) => a + maxMeters(t), 0) > limit;
+  }
+  function isSprintMain(set, settings) { return set.main_type === 'sprint' || isSprintTexts([set.text], settings); }
+
   // Strnjena oblika za shranjevanje v stolpec structure (jsonb).
   function toStructure(parsed) {
     return {
@@ -301,6 +353,7 @@
     const history = [];
     for (const t of trainings) {
       const hl = historyLevel(t.levels);
+      const sprint = isSprintTexts(t.items.map(i => i.text));
       for (const it of t.items) {
         const fp = fingerprint(it.text);
         // Negotovo prebrane vrstice štejejo v zgodovino, ne pa v predloge.
@@ -310,14 +363,13 @@
             const parsed = parseText(it.text, dict);
             map.set(key, {
               id: 'zvezek:' + key, source: 'zvezek', phase: it.phase, text: it.text,
-              meters: parsed.meters, fingerprint: fp, levels: [], main_type: it.main_type || null
+              meters: parsed.meters, fingerprint: fp, levels: [], main_type: it.phase === 'glavna' && isSprintTexts([it.text]) ? 'sprint' : null
             });
           }
           const s = map.get(key);
           t.levels.forEach(l => { if (!s.levels.includes(l)) s.levels.push(l); });
-          if (it.main_type && !s.main_type) s.main_type = it.main_type;
         }
-        history.push({ date: t.date, level: hl, phase: it.phase, fingerprint: fp, main_type: it.main_type || null });
+        history.push({ date: t.date, level: hl, phase: it.phase, fingerprint: fp, main_type: it.phase === 'glavna' && sprint ? 'sprint' : null });
       }
     }
     return { sets: Array.from(map.values()), history };
@@ -507,6 +559,7 @@
       const fp = fingerprint(text);
       if (known.has(key(fp))) continue;
       if (exclusiveConflict(text, opts.others, opts.settings)) continue;
+      if (phase === 'glavna' && isSprintTexts([text], opts.settings) !== !!opts.sprint) continue;
       const meters = parseText(text, dict).meters;
       if (meters < limits[0] || meters > limits[1]) continue;
       return { phase, text, meters, fingerprint: fp, levels: [level], source: 'nova', isNew: true, main_type: phase === 'glavna' && opts.sprint ? 'sprint' : null };
@@ -540,15 +593,15 @@
 
     let mains = byPhase('glavna').filter(s => mainAvailability(s, history, lk, date, settings).ok);
     const sprintDays = lastSprintDays(history, lk, date);
-    const sprintMains = mains.filter(s => s.main_type === 'sprint');
+    const sprintMains = mains.filter(s => isSprintMain(s, settings));
     const mode = opts.mainMode || 'auto';
     if (mode === 'ne_sprint') {
-      mains = mains.filter(s => s.main_type !== 'sprint');
+      mains = mains.filter(s => !isSprintMain(s, settings));
     } else if (mode === 'sprint') {
       mains = sprintMains;
       if (!mains.length) notes.push('Ni šprinterske glavne serije, ki ne bi bila uporabljena v zadnjih ' + settings.main_repeat_days + ' dneh.');
     } else if (sprintDays !== null && sprintDays < settings.sprint_min_gap_days) {
-      mains = mains.filter(s => s.main_type !== 'sprint');
+      mains = mains.filter(s => !isSprintMain(s, settings));
     } else if ((sprintDays === null || sprintDays >= settings.sprint_force_days) && sprintMains.length) {
       mains = sprintMains;
       notes.push(`Šprint: zadnji pred ${sprintDays === null ? 'več kot ' + settings.sprint_force_days : sprintDays} dnevi, zato je glavna serija šprinterska.`);
@@ -573,16 +626,18 @@
     const mid = (lv.meters_min + lv.meters_max) / 2;
     const vajeRange = lk === 'C' ? [2, 4] : [2, 3];
     const vajeWeight = memo(v => drillWeight(v, history, lk, date, settings));
+    const maxM = memo(x => x ? maxMeters(x.text) : 0);
     const warmDays = memo(w => lastUseDays(history, w.fingerprint, lk, 'ogrevalna', date));
 
     // Nove serije: opts.newSets = 'brez' | 'ena' | 'vse'. Izbrane so vnaprej, da se metri izidejo.
     const newMode = opts.newSets || 'brez';
-    const isSprintMain = mode === 'sprint' || (mains.length > 0 && mains.every(s => s.main_type === 'sprint'));
+    const wantSprint = mode === 'sprint' || (mains.length > 0 && mains.every(s => isSprintMain(s, settings)));
+    const noSprint = mode === 'ne_sprint' || (mode === 'auto' && sprintDays !== null && sprintDays < settings.sprint_min_gap_days);
     const newPhases = newMode === 'vse' ? ['ogrevalna', 'vaje', 'glavna']
       : newMode === 'ena' ? [['ogrevalna', 'vaje', 'vaje', 'glavna'][Math.floor(rng() * 4)]] : [];
     const fresh = {};
     newPhases.forEach(p => {
-      const n = suggestNewSet(p, { level: lk, library: opts.library, history, dict: opts.dict, rng, settings, others: Object.values(fresh).map(x => x.text), sprint: p === 'glavna' && isSprintMain });
+      const n = suggestNewSet(p, { level: lk, library: opts.library, history, dict: opts.dict, rng, settings, others: Object.values(fresh).map(x => x.text), sprint: p === 'glavna' && wantSprint });
       if (n) fresh[p] = n;
     });
 
@@ -623,6 +678,8 @@
       fmts.forEach(f => { if (fw[f] != null && fw[f] < 0.5) score += 0.7; });
       score += fmts.length - new Set(fmts).size;
       if (warm) { const d = warmDays(warm); if (d !== null && d < 14) score += 3; }
+      // Kadar šprinta ne sme biti, naj tudi vaje in zaključek ne prinesejo čez mejo metrov max.
+      if (noSprint && maxM(main) + maxM(z) + maxM(warm) + vs.reduce((a, v) => a + maxM(v), 0) > settings.sprint_max_meters) score += 25;
       score += rng() * 2;
       if (!best || score < best.score) best = { score, main, warm, vs, z, fin, total };
     }
@@ -692,7 +749,8 @@
   // Zgodovinski zapis iz predloga (za zaporedno sestavljanje tedna).
   function historyFromTraining(tr) {
     const lvl = historyLevel(tr.levels);
-    return tr.items.map(it => ({ date: tr.date, level: lvl, phase: it.phase, fingerprint: fingerprint(it.text), main_type: it.main_type || null }));
+    const sprint = isSprintTexts(tr.items.map(i => i.text));
+    return tr.items.map(it => ({ date: tr.date, level: lvl, phase: it.phase, fingerprint: fingerprint(it.text), main_type: it.phase === 'glavna' && sprint ? 'sprint' : null }));
   }
 
   return {
@@ -700,6 +758,6 @@
     buildDict, parseLine, parseText, toStructure, normalizeText, fingerprint, bVariant,
     estimateMinutes, parseTime, formatTime, libraryFromTrainings, generateTraining, arrangeOrder,
     weekSlots, historyFromTraining, historyLevel, lastUseDays, lastDrillDays, drillKey, setFormat,
-    availableDrills, drillWeight, suggestNewSet, exclusiveConflict, addDays, daysBetween, weekday, mulberry32
+    availableDrills, drillWeight, suggestNewSet, exclusiveConflict, maxMeters, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
   };
 });
