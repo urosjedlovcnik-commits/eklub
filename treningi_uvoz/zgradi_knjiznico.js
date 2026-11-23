@@ -23,16 +23,18 @@ for (const raw of src) {
     trainings.push(cur); lastPhase = null; continue;
   }
   if (line.startsWith('#') || !cur) continue;
-  const m = line.match(/^(G!|VR|ZR|R|O|V|G|Z)\s+(.*)$/);
+  const m = line.match(/^(G!|VR|ZR|R|O|V|G|Z)(\?)?\s+(.*)$/);
   if (!m) throw new Error('Neznana vrstica: ' + line);
   const phase = PH[m[1]];
   const sprint = m[1] === 'G!';
   const prev = cur.items[cur.items.length - 1];
   if (phase === 'glavna' && prev && prev.phase === 'glavna' && lastPhase === 'glavna') {
-    prev.text += '\n' + m[2];
+    prev.text += '\n' + m[3];
+    if (m[2]) prev.incomplete = true;
     if (sprint) prev.main_type = 'sprint';
   } else {
-    const it = { phase, text: m[2] };
+    const it = { phase, text: m[3] };
+    if (m[2]) it.incomplete = true;
     if (sprint) it.main_type = 'sprint';
     cur.items.push(it);
   }

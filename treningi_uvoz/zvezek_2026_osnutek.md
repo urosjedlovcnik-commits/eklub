@@ -108,6 +108,28 @@ Pravila iz pregleda treningov:
 
 Vse vaje iz zvezka so razložene.
 
+### 2d. Popravki po ponovnem branju (23. 11. 2026, čakajo na potrditev)
+
+Vrstice iz junija so v bazi še v stari obliki.
+
+| Trening | V bazi | V zvezku |
+|---------|--------|----------|
+| 10. 6. A | `4x50 PL HV HITLER 1x 2-2-2` | `4x50 PL 1x BIONDI 1x 2-2-2` |
+| 10. 6. A | `8x25 PL HITRO` | `8x25 PL HITLER` |
+| 10. 6. A | `3x100 SIMULATOR` + enkrat 50 RAZP | po vsaki ponovitvi 50 RAZP (skupaj 450 m) |
+| 10. 6. C | `8x25 PL M CT p10"` | `8x25 PL H CT p10"` |
+| 11. 6. A+B | `8x25 PL D 3-3` | `8x25 PL DV 3-3` |
+| 11. 6. A+B | `12x50 3+1` | `12x50 5+1` (?) |
+| 17. 6. C | `8x25 PL MN 90°` | `8x25 PL HN 90°` |
+| 17. 6. C | `4x50 DESKA 1xN 1xKN` | `4x50 DESKA 1xPN 1xKN` |
+| 18. 6. A+B | `4x( 75 / 50 / 25 / 50 )` | `5x( … )`, po vsoti 1000 m |
+| 18. 6. A+B | `10x25 PL ↑DN PV ↓M CT` | `10x25 PL ↑DN PV ↓H CT` |
+| 24. 6. C | `8x25 PL PREVAL` | `8x25 PL KN + PREVAL` |
+| 24. 6. C | `8x25 PL KN KZ 4x NOGE` | `8x25 PL KZ 4x NORMALNO 4x OBRATNO` |
+| 24. 6. C | 50 RAZP pred glavno | 50 RAZP po glavni |
+| 24. 6. C | `16x25: 3xP 1xH, 3xP 1xK` | `3+1 H, 3+1 K, 2+2 H, 2+2 K` (?) |
+| 24. 6. A | `10x25 PL POČASI + SPRINT` | `10x25 PL PREVAL + SPRINT` |
+
 ## 3. Treningi
 
 ### Junij 2026

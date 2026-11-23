@@ -29,6 +29,10 @@
   .tr-badge.osnutek{background:#fef3c7;color:#92400e}
   .tr-badge.potrjen{background:#dcfce7;color:#166534}
   .tr-badge.izveden{background:#dbeafe;color:#1e40af}
+  .tr-badge.nova{background:#fde68a;color:#78350f}
+  .tr-item.je-nova{background:#fffbeb;border:1px solid #f59e0b;border-radius:10px;padding:8px;margin:6px 0}
+  .tr-new{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0 2px}
+  .tr-new input{flex:1;min-width:140px;margin:0}
   .tr-badge.predlog{background:#f3e8ff;color:#6b21a8}
   .tr-item{border-top:1px solid #f1f5f9;padding:8px 0}
   .tr-item.glavna{background:#f8fafc;border-radius:10px;padding:8px;border:1px solid #e2e8f0;margin:6px 0}
@@ -98,6 +102,7 @@
     </div>
 
     <div id="statusBanner" class="tr-banner" hidden></div>
+    <div id="newReminder" class="tr-banner warn" hidden></div>
 
     <section class="tr-panel" id="panel-sestavi">
       <div class="tr-toolbar">
@@ -105,8 +110,14 @@
         <input type="date" id="weekDate" aria-label="Teden">
         <button class="btn" id="weekNext" title="Naslednji teden">▶</button>
         <button class="btn pri" id="proposeWeekBtn">Predlagaj teden</button>
+        <label class="tr-sub">Nove serije
+          <select id="newSetsMode" title="Koliko povsem novih serij naj bo v predlogu">
+            <option value="brez">brez</option>
+            <option value="ena">ena na trening</option>
+            <option value="vse">ogrevalna, vaja in glavna</option>
+          </select></label>
       </div>
-      <p class="tr-note">Predlog upošteva pravilo 2 mesecev za glavne serije (ločeno za A in C), šprint na 2–3 tedne in ciljne metre. Vsako vrstico lahko popraviš, zamenjaš (↻) ali odstraniš. V bazo gre šele, ko klikneš Shrani ali Potrdi.</p>
+      <p class="tr-note">Predlog upošteva pravilo 2 mesecev za glavne serije (ločeno za A in C), šprint na 2–3 tedne in ciljne metre. Ista vaja se ne ponovi 3 tedne. Vsako vrstico lahko popraviš, zamenjaš (↻), dobiš zanjo povsem novo serijo (★) ali jo odstraniš. V bazo gre šele, ko klikneš Shrani ali Potrdi.</p>
       <div id="weekView"></div>
     </section>
 

@@ -2099,7 +2099,7 @@ document.addEventListener('DOMContentLoaded', () => {
       box.innerHTML = '';
       const { data, error } = await supabase
         .from('trainings')
-        .select('id, levels, status, total_meters, estimated_minutes, training_items(position, phase, text, meters, level_variants)')
+        .select('id, levels, status, total_meters, estimated_minutes, training_items(position, phase, text, meters, level_variants, notes)')
         .eq('date', ymd)
         .eq('term_id', termId);
       if (req !== ctRequest) return;
@@ -2115,7 +2115,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="ct-head"><span>Nivo ${escCt(t.levels.join(' + '))}</span><span class="ct-badge ${escCt(t.status)}">${escCt(statusLabel)}</span></div>
           ${items.map(i => {
             const b = i.level_variants && i.level_variants.B && i.level_variants.B.text;
-            return `<div class="ct-row ${escCt(i.phase)}"><div><span class="ct-phase">${escCt(CT_PHASES[i.phase] || i.phase)}</span>
+            return `<div class="ct-row ${escCt(i.phase)}"><div><span class="ct-phase">${escCt(CT_PHASES[i.phase] || i.phase)}${/^nova(:|\||$)/.test(i.notes || '') ? ' · <span class="ct-nova">★ nova serija</span>' : ''}</span>
               <span class="ct-text">${escCt(i.text)}</span>${b ? `<div class="ct-b">B: ${escCt(b)}</div>` : ''}</div>
               <span class="ct-m">${i.meters} m</span></div>`;
           }).join('')}

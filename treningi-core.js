@@ -25,6 +25,10 @@
     main_repeat_days: 60,
     sprint_min_gap_days: 14,
     sprint_force_days: 21,
+    // Vaje: ista vaja (ne glede na število ponovitev) se ne ponovi 3 tedne.
+    vaje_repeat_days: 21,
+    // Pogostost formatov pri vajah (privzeto 1): 6x50 je redkost, 10x25 in podobno pogosteje.
+    vaje_format_weights: { '10x25': 3, '12x25': 2, '8x25': 1.5, '6x25': 1.5, '6x50': 0.15, '8x50': 0.15, '10x50': 0.3 },
     levels: {
       A: { meters_min: 2200, meters_max: 2500, warmup_m: 300, pace_per_100_sec: 85 },
       B: { meters_min: 2200, meters_max: 2500, warmup_m: 300, pace_per_100_sec: 85 },
@@ -292,7 +296,8 @@
       const hl = historyLevel(t.levels);
       for (const it of t.items) {
         const fp = fingerprint(it.text);
-        if (LIBRARY_PHASES.includes(it.phase)) {
+        // Negotovo prebrane vrstice štejejo v zgodovino, ne pa v predloge.
+        if (LIBRARY_PHASES.includes(it.phase) && !it.incomplete) {
           const key = it.phase + '|' + fp;
           if (!map.has(key)) {
             const parsed = parseText(it.text, dict);
@@ -354,6 +359,143 @@
     return pool[pool.length - 1];
   }
 
+  // Vsebina vaje brez števila ponovitev in razdalje: "8X25 PL KN" in "10X25 PL KN" sta ista vaja.
+  function drillKey(fp) {
+    return String(fp || '').split('\n').map(l => l.replace(/^\d+X\s*\d+\s*/, '').trim()).join('\n');
+  }
+  function setFormat(text) {
+    const m = String(text || '').match(/^\s*(\d+)\s*[xX]\s*(\d+)(?![\d'"])/);
+    return m ? m[1] + 'x' + m[2] : 'drugo';
+  }
+  function lastDrillDays(history, fp, level, date) {
+    const key = drillKey(fp);
+    let best = null;
+    for (const h of history) {
+      if (h.level !== level || h.phase !== 'vaje' || drillKey(h.fingerprint) !== key) continue;
+      const d = Math.abs(daysBetween(h.date, date));
+      if (best === null || d < best) best = d;
+    }
+    return best;
+  }
+  /** Vaje, ki na ta dan niso blokirane s pravilom 3 tednov. */
+  function availableDrills(sets, history, level, date, settings) {
+    return sets.filter(s => {
+      const d = lastDrillDays(history, s.fingerprint, level, date);
+      return d === null || d >= settings.vaje_repeat_days;
+    });
+  }
+  function drillWeight(set, history, level, date, settings) {
+    const d = lastDrillDays(history, set.fingerprint, level, date);
+    const w = (settings.vaje_format_weights || {})[setFormat(set.text)];
+    return (d === null ? 40 : Math.min(d, 60) + 1) * (w == null ? 1 : w);
+  }
+
+  // ---------- Nove serije ----------
+  // Sestavljene iz potrjenih kratic in oblik, ki jih trener že uporablja. Vedno čakajo na pregled.
+  const NEW_PARTS = {
+    A: {
+      noge: [['K', 'KN'], ['K', 'KN BOK'], ['K', 'KN SUPERMAN'], ['D', 'DN'], ['D', 'DN BOK'], ['H', 'HN'], ['H', 'HN ROTACIJA']],
+      vaje: [['K', 'KV 2-2'], ['K', 'K RRU PESTI'], ['K', 'K RRU PALEC'], ['K', 'K RRU ZADRGA'], ['K', 'K RRU ŠPRICANJE'], ['K', 'K RRU RINEŠ'],
+        ['K', 'K SHARK 1'], ['K', 'K SHARK 2'], ['K', 'K VISOK KOMOLEC'], ['K', 'VATERPOLO'], ['K', 'KBD'],
+        ['D', 'DV 1-1-2'], ['D', 'DV 2-2-2'], ['D', 'DV 3-3'], ['D', 'DV ORKA'], ['D', 'D DIH NA 1'],
+        ['H', 'HV RRU 90°'], ['H', 'HV ROKA UZ ZAVES'], ['H', 'H 6-1']],
+      formati25: [10, 10, 10, 8, 12], formati50: [4]
+    },
+    C: {
+      noge: [['K', 'KN'], ['K', 'KN BOK'], ['K', 'KN SUPERMAN'], ['H', 'HN'], ['H', 'HN ROTACIJA']],
+      vaje: [['K', 'KV 2-2'], ['K', 'K RRU'], ['K', 'K RRU PESTI'], ['K', 'K RRU PALEC'], ['K', 'K RRU ZADRGA'],
+        ['H', 'HV RRU'], ['H', 'HV RRU 90°'], ['H', 'H 6-1']],
+      formati25: [8, 8, 10, 6], formati50: [4]
+    }
+  };
+  const CELA = { K: 'K CT', H: 'H CT', D: 'D CT' };
+
+  function newDrill(lk, rng) {
+    const P = NEW_PARTS[lk];
+    const one = a => a[Math.floor(rng() * a.length)];
+    const v1 = one(P.vaje);
+    const v2 = one(P.vaje.filter(x => x[0] === v1[0] && x[1] !== v1[1]));
+    const n = one(P.noge.filter(x => x[0] === v1[0]));
+    const r = rng();
+    const f25 = one(P.formati25) + 'x25 PL ';
+    if (r < 0.35) return f25 + `↑${n[1]} ↓${v1[1]}`;
+    if (r < 0.6) return f25 + `1x ${v1[1]} 1x ${v2[1]}`;
+    if (r < 0.8) return `${lk === 'C' ? 8 : one([8, 12])}x25 PL 3x ${v1[1]} 1x ${CELA[v1[0]]}`;
+    return one(P.formati50) + `x50 PL ↑${n[1]} ↓${v1[1]}`;
+  }
+
+  function newWarmup(lk, rng) {
+    const one = a => a[Math.floor(rng() * a.length)];
+    const A = [
+      () => `${one([4, 6])}x75 ${one(['MBK', 'MBD', 'MBP', 'K', 'H'])} ${one(['N/V/CT', 'V/N/CT', 'CT/N/CT', 'N/CT/V'])}`,
+      () => `${one([4, 6])}x75 1x ${one(['MBK', 'MBD', 'MBP'])} 1x K DIH ${one(['3-5-7', '3-4-5', '5-3-5'])}`,
+      () => `4x100 ${one(['M', 'M Z ZAMIKOM'])} ${one(['N/CT/V/CT', 'V/CT/N/CT', 'CT/V/N/CT'])}`,
+      () => `16x25 M ${one(['1xV 1xCT', '2xN 2xCT', '4xN 4xCT 4xV 4xCT', '3xCT 1xN'])} p${one([5, 10])}"`,
+      () => `8x50 MM ↑${one(['N', 'V'])} ↓CT`,
+      () => `${one([6, 8])}x50 ↑${one(['N', 'V'])} ↓CT ${one(['K/H', 'K/D', 'H/P', 'P/K'])}`
+    ];
+    const C = [
+      () => `4x75 ${one(['H/K/P', 'K/P/H', 'P/H/K'])} CT`,
+      () => `${one([4, 6])}x50 ↑${one(['KN', 'HN', 'PN'])} ↓${one(['K', 'H', 'P'])} CT`,
+      () => `${one([4, 6])}x50 ↑${one(['PD', 'PV 1-2', 'PV 1-3'])} ↓${one(['K', 'H'])}`,
+      () => `8x25 ${one(['1xK 1xH', '1xP 1xK', '2xH 2xP'])} p10"`
+    ];
+    return one(lk === 'C' ? C : A)();
+  }
+
+  function newMain(lk, rng, sprint) {
+    const one = a => a[Math.floor(rng() * a.length)];
+    const uniq = a => a.filter((x, i) => a.indexOf(x) === i).join('\n');
+    if (lk === 'C') {
+      return one([
+        () => `${one([6, 8])}x50 ↑${one(['K', 'H', 'P'])} HITRO ↓RAZP`,
+        () => `4x75 50 ${one(['P', 'H', 'K'])} + 25 ${one(['K', 'H'])}`,
+        () => `${one([3, 4])}x100 ${one(['50 P + 50 K', '50 H + 50 K', '75 K + 25 H', '75 P + 25 H'])}`,
+        () => `16x25 p15" 3x${one(['K', 'H'])} 1xP`,
+        () => `25 + 50 + 75 + 100 + 75 + 50 + 25 ${one(['K/P', 'H/P', 'P/K'])}`
+      ])();
+    }
+    // Štarti so samo taki, ki jih trener za te serije že uporablja.
+    const base = [`4x100 KVL @2'`, `3x100 KVL @2'`, `6x50 KVL @1'`, `4x75 KVL @1'30"`, `2x200 VL @3'30"`];
+    const tempo = [`4x50 K 3+1 @1'`, `8x50 K 3+1 @1'`, `4x50 K 1-4 @1'`, `3x100 K T @1'50"`, `6x50 K 2+1 @1'`, `4x75 STOP PO 25 @1'30"`, `4x50 K @50"`];
+    const mix = [`3x100 M @2'`, `2x100 M @2'`, `4x50 MBK @1'`, `4x50 25 D + 25 K @1'`, `6x50 PL MAX NOGE @1'10"`, `4x50 KN @1'20"`];
+    const fast = [`6x50 25 K! + 25 RAZP @1'`, `8x50 ↑K! ↓RAZP @1'`, `4x50 25 D! + 25 RAZP @1'`, `4x( 50 K T @1' / 25 MAX / 25 RAZP )`, `6x50 25 K! BD + 25 RAZP @1'`];
+    if (sprint) return uniq([one(base), one(fast), rng() < 0.5 ? one(tempo) : one(fast)]);
+    if (rng() < 0.25) {
+      const g1 = one([`100 KVL @2'`, `75 KVL @1'30"`]);
+      const g2 = one([`50 K T @1'`, `50 K HITRO @1'`]);
+      const g3 = one([`50 M @1'`, '25 D + 25 RAZP', `50 KN @1'20"`]);
+      return `4x( ${g1} / ${g2} / ${g3} )`;
+    }
+    return uniq([one(base), one(tempo), one(mix)].concat(rng() < 0.4 ? [one(tempo)] : []));
+  }
+
+  /** Predlog nove serije za fazo; null, če ustrezne ni. */
+  function suggestNewSet(phase, opts) {
+    const { level, library, history, dict } = opts;
+    const rng = opts.rng || Math.random;
+    const key = phase === 'vaje' ? drillKey : (f => f);
+    const known = new Set((library || []).filter(s => s.phase === phase).map(s => key(s.fingerprint)));
+    (history || []).forEach(h => { if (h.phase === phase) known.add(key(h.fingerprint)); });
+    (opts.exclude || []).forEach(f => known.add(key(f)));
+    const limits = {
+      ogrevalna: level === 'C' ? [200, 300] : [300, 450],
+      vaje: [150, 300],
+      glavna: level === 'C' ? [300, 450] : [700, 1250]
+    }[phase];
+    if (!limits) return null;
+    const make = { vaje: newDrill, ogrevalna: newWarmup, glavna: newMain }[phase];
+    for (let i = 0; i < 80; i++) {
+      const text = make(level, rng, opts.sprint);
+      const fp = fingerprint(text);
+      if (known.has(key(fp))) continue;
+      const meters = parseText(text, dict).meters;
+      if (meters < limits[0] || meters > limits[1]) continue;
+      return { phase, text, meters, fingerprint: fp, levels: [level], source: 'nova', isNew: true, main_type: phase === 'glavna' && opts.sprint ? 'sprint' : null };
+    }
+    return null;
+  }
+
   function mainAvailability(set, history, level, date, settings) {
     const d = lastUseDays(history, set.fingerprint, level, 'glavna', date);
     const repeat = settings.main_repeat_days;
@@ -395,28 +537,52 @@
     }
     if (!mains.length) notes.push('V knjižnici ni glavne serije, ki ne bi bila uporabljena v zadnjih ' + settings.main_repeat_days + ' dneh.');
 
-    const recencyWeight = (s) => {
+    // Uteži se izračunajo enkrat na serijo (zgodovina je dolga, poskusov je 400).
+    const memo = fn => { const m = new Map(); return s => { if (!m.has(s)) m.set(s, fn(s)); return m.get(s); }; };
+    const recencyWeight = memo((s) => {
       const d = lastUseDays(history, s.fingerprint, lk, s.phase, date);
       return d === null ? 40 : Math.min(d, 60) + 1;
-    };
+    });
 
     const ogr = byPhase('ogrevalna');
-    const vaje = byPhase('vaje');
+    const allDrills = byPhase('vaje');
+    let vaje = availableDrills(allDrills, history, lk, date, settings);
+    if (vaje.length < 4 && allDrills.length) {
+      notes.push('Premalo vaj, ki ne bi bile uporabljene v zadnjih ' + settings.vaje_repeat_days + ' dneh; dodaj nove v knjižnico.');
+      vaje = allDrills;
+    }
     const zak = byPhase('zakljucek');
     const mid = (lv.meters_min + lv.meters_max) / 2;
     const vajeRange = lk === 'C' ? [2, 4] : [2, 3];
+    const vajeWeight = memo(v => drillWeight(v, history, lk, date, settings));
+    const warmDays = memo(w => lastUseDays(history, w.fingerprint, lk, 'ogrevalna', date));
+
+    // Nove serije: opts.newSets = 'brez' | 'ena' | 'vse'. Izbrane so vnaprej, da se metri izidejo.
+    const newMode = opts.newSets || 'brez';
+    const isSprintMain = mode === 'sprint' || (mains.length > 0 && mains.every(s => s.main_type === 'sprint'));
+    const newPhases = newMode === 'vse' ? ['ogrevalna', 'vaje', 'glavna']
+      : newMode === 'ena' ? [['ogrevalna', 'vaje', 'vaje', 'glavna'][Math.floor(rng() * 4)]] : [];
+    const fresh = {};
+    newPhases.forEach(p => {
+      const n = suggestNewSet(p, { level: lk, library: opts.library, history, dict: opts.dict, rng, sprint: p === 'glavna' && isSprintMain });
+      if (n) fresh[p] = n;
+    });
 
     let best = null;
     for (let attempt = 0; attempt < 400; attempt++) {
-      const main = mains.length ? weightedPick(mains, recencyWeight, rng) : null;
-      const warm = ogr.length ? weightedPick(ogr, recencyWeight, rng) : null;
+      const main = fresh.glavna || (mains.length ? weightedPick(mains, recencyWeight, rng) : null);
+      const warm = fresh.ogrevalna || (ogr.length ? weightedPick(ogr, recencyWeight, rng) : null);
       const nV = vajeRange[0] + Math.floor(rng() * (vajeRange[1] - vajeRange[0] + 1));
       const chosen = new Set();
-      const vs = [];
-      for (let i = 0; i < nV; i++) {
-        const v = weightedPick(vaje, recencyWeight, rng, chosen);
+      const vs = fresh.vaje ? [fresh.vaje] : [];
+      const keys = new Set(vs.map(v => drillKey(v.fingerprint)));
+      while (vs.length < nV) {
+        const v = weightedPick(vaje, vajeWeight, rng, chosen);
         if (!v) break;
-        chosen.add(v); vs.push(v);
+        chosen.add(v);
+        if (keys.has(drillKey(v.fingerprint))) continue; // ista vaja v drugem formatu
+        keys.add(drillKey(v.fingerprint));
+        vs.push(v);
       }
       // Kratka glavna serija (npr. SIMULATOR) dobi stransko serijo v zaključku.
       const shortMain = main && main.meters < (lk === 'C' ? 300 : 600);
@@ -432,8 +598,12 @@
       const block = main ? main.meters + (shortMain && z ? z.meters : 0) : 0;
       if (main && block < 0.3 * total) score += 6;
       if (main && vajeM > block) score += 4;
-      vs.forEach(v => { const d = lastUseDays(history, v.fingerprint, lk, 'vaje', date); if (d !== null && d < 14) score += 3; });
-      if (warm) { const d = lastUseDays(history, warm.fingerprint, lk, 'ogrevalna', date); if (d !== null && d < 14) score += 3; }
+      // 6x50 in drugi redki formati ter več vaj v istem formatu naj bodo izjema.
+      const fmts = vs.map(v => setFormat(v.text));
+      const fw = settings.vaje_format_weights || {};
+      fmts.forEach(f => { if (fw[f] != null && fw[f] < 0.5) score += 0.7; });
+      score += fmts.length - new Set(fmts).size;
+      if (warm) { const d = warmDays(warm); if (d !== null && d < 14) score += 3; }
       score += rng() * 2;
       if (!best || score < best.score) best = { score, main, warm, vs, z, fin, total };
     }
@@ -446,7 +616,7 @@
 
     const mk = (phase, set, text) => {
       const t = text || set.text;
-      return { phase, text: t, set_id: set && set.source === 'db' ? set.id : null, source: set ? set.source : 'fiksno', main_type: set ? set.main_type : null };
+      return { phase, text: t, set_id: set && set.source === 'db' ? set.id : null, source: set ? set.source : 'fiksno', main_type: set ? set.main_type : null, isNew: !!(set && set.isNew) };
     };
     const items = { warm: [], vaje: [], main: [], zak: [] };
     if (best && best.warm) items.warm.push(mk('ogrevalna', best.warm));
@@ -510,6 +680,7 @@
     PHASES, PHASE_LABELS, LIBRARY_PHASES, DEFAULT_SETTINGS, REVIEW_CODES,
     buildDict, parseLine, parseText, toStructure, normalizeText, fingerprint, bVariant,
     estimateMinutes, parseTime, formatTime, libraryFromTrainings, generateTraining, arrangeOrder,
-    weekSlots, historyFromTraining, historyLevel, lastUseDays, addDays, daysBetween, weekday, mulberry32
+    weekSlots, historyFromTraining, historyLevel, lastUseDays, lastDrillDays, drillKey, setFormat,
+    availableDrills, drillWeight, suggestNewSet, addDays, daysBetween, weekday, mulberry32
   };
 });
