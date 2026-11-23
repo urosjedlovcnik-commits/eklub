@@ -1,5 +1,6 @@
+-- NE POGANJAJ ZNOVA: po popravkih (popravki_zvezek_junij_1.sql) bi ta datoteka vrnila stare, napačne serije.
 -- Uvoz po pregledu zvezka s trenerjem (22. 11. 2026): šifrant in pregledani treningi (✔).
--- Zgenerirano s treningi_uvoz/sql_uvoz.js. Ponovljivo (obstoječe vrstice se preskočijo).
+-- Zgenerirano s treningi_uvoz/sql_uvoz.js.
 BEGIN;
 
 -- 1) Kratice iz pregleda

@@ -71,7 +71,7 @@
     },
     {
      "phase": "vaje",
-     "text": "8x25 PL D 3-3",
+     "text": "8x25 PL DV 3-3",
      "meters": 200
     },
     {
@@ -128,7 +128,7 @@
     },
     {
      "phase": "vaje",
-     "text": "8x25 PL M CT p10\"",
+     "text": "8x25 PL H CT p10\"",
      "meters": 200
     },
     {
@@ -170,12 +170,14 @@
     },
     {
      "phase": "vaje",
-     "text": "4x50 PL HV HITLER 1x 2-2-2",
+     "text": "4x50 PL 1x BIONDI 1x 2-2-2",
+     "incomplete": true,
      "meters": 200
     },
     {
      "phase": "vaje",
-     "text": "8x25 PL HITRO",
+     "text": "8x25 PL HITLER",
+     "incomplete": true,
      "meters": 200
     },
     {
@@ -185,14 +187,9 @@
     },
     {
      "phase": "glavna",
-     "text": "3x100 SIMULATOR",
+     "text": "3x( 100 SIMULATOR / 50 RAZP )",
      "main_type": "sprint",
-     "meters": 300
-    },
-    {
-     "phase": "vmesno_razplavanje",
-     "text": "50 RAZP",
-     "meters": 50
+     "meters": 450
     },
     {
      "phase": "zakljucek",
@@ -206,7 +203,7 @@
     }
    ],
    "order_variant": "obicajni",
-   "total_meters": 2150
+   "total_meters": 2250
   },
   {
    "date": "2026-06-15",
@@ -277,7 +274,7 @@
     },
     {
      "phase": "vaje",
-     "text": "10x25 PL ↑DN PV ↓M CT",
+     "text": "10x25 PL ↑DN PV ↓H CT",
      "meters": 250
     },
     {
@@ -324,7 +321,7 @@
     },
     {
      "phase": "vaje",
-     "text": "8x25 PL MN 90°",
+     "text": "8x25 PL HN 90°",
      "meters": 200
     },
     {
@@ -344,7 +341,7 @@
     },
     {
      "phase": "zakljucek",
-     "text": "4x50 DESKA 1xN 1xKN",
+     "text": "4x50 DESKA 1xPN 1xKN",
      "meters": 200
     },
     {
@@ -466,12 +463,12 @@
     },
     {
      "phase": "vaje",
-     "text": "8x25 PL PREVAL",
+     "text": "8x25 PL KN + PREVAL",
      "meters": 200
     },
     {
      "phase": "vaje",
-     "text": "8x25 PL KN KZ 4x NOGE",
+     "text": "8x25 PL KZ 4x NORMALNO 4x OBRATNO",
      "meters": 200
     },
     {
@@ -483,10 +480,15 @@
      "phase": "glavna",
      "text": "16x25 p15\" 3xP 1xH 3xP 1xK",
      "meters": 400
+    },
+    {
+     "phase": "zakljucno_razplavanje",
+     "text": "50 RAZP",
+     "meters": 50
     }
    ],
    "order_variant": "obicajni",
-   "total_meters": 1250
+   "total_meters": 1300
   },
   {
    "date": "2026-06-24",
@@ -503,7 +505,7 @@
     },
     {
      "phase": "ogrevalna",
-     "text": "10x25 PL POČASI + SPRINT",
+     "text": "10x25 PL PREVAL + SPRINT",
      "meters": 250
     },
     {
