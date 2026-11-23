@@ -331,6 +331,7 @@
     if (it.phase === 'vaje' && it.text.trim()) {
       const d = C.lastDrillDays(S.history.filter(h => h.date !== card.slot.date), C.fingerprint(it.text), levelKey(card.slot.levels), card.slot.date);
       if (d !== null && d < S.settings.vaje_repeat_days) info = `⚠ ista vaja pred ${d} dnevi`;
+      if (C.exclusiveConflict(it.text, card.items.filter(x => x !== it).map(x => x.text), S.settings)) info = '⚠ ORKA in BIONDI ne gresta skupaj';
     }
     wrap.innerHTML = `
       <div class="tr-item-head">
@@ -404,7 +405,8 @@
     const sprint = it.phase === 'glavna' && (card.mainMode === 'sprint' || (card.mainMode !== 'ne_sprint' && it.main_type === 'sprint'));
     const n = C.suggestNewSet(it.phase, {
       level: levelKey(card.slot.levels), library: S.library, history: historyExcluding(card.slot), dict: S.dict,
-      exclude: card.items.map(i => C.fingerprint(i.text)), sprint
+      exclude: card.items.map(i => C.fingerprint(i.text)), sprint, settings: S.settings,
+      others: card.items.filter((x, j) => j !== idx).map(i => i.text)
     });
     if (!n) { alert('Za to fazo trenutno nimam nove serije.'); return; }
     const next = { phase: it.phase, text: n.text, set_id: null, source: 'nova', isNew: true, main_type: n.main_type };
@@ -461,7 +463,8 @@
     const lk = levelKey(card.slot.levels);
     const hist = historyExcluding(card.slot);
     const used = new Set(card.items.map(i => C.fingerprint(i.text)));
-    let pool = S.library.filter(s => s.phase === it.phase && (s.levels || []).includes(lk) && !used.has(s.fingerprint));
+    const others = card.items.filter((x, j) => j !== idx).map(i => i.text);
+    let pool = S.library.filter(s => s.phase === it.phase && (s.levels || []).includes(lk) && !used.has(s.fingerprint) && !C.exclusiveConflict(s.text, others, S.settings));
     if (it.phase === 'glavna') {
       if (card.mainMode === 'ne_sprint') pool = pool.filter(s => s.main_type !== 'sprint');
       if (card.mainMode === 'sprint') pool = pool.filter(s => s.main_type === 'sprint');

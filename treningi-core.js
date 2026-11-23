@@ -36,6 +36,8 @@
     },
     b_variant: { reps_minus: 1, min_reps_to_reduce: 4 },
     highlight_order_choice_weekdays: [1],
+    // Vaje, ki nikoli ne pridejo skupaj v istem treningu.
+    exclusive_codes: [['ORKA', 'BIONDI']],
     // Dan v tednu (1 = ponedeljek) -> skupine nivojev, ki imajo vsaka svoj trening.
     day_levels: { 1: [['A', 'B']], 3: [['A'], ['C']], 4: [['A', 'B']] },
     // Privzeti štart glavne serije, če ni zapisan (sekunde po dolžini).
@@ -74,6 +76,8 @@
     ['PALEC', 'RRU: palec se dotakne stegna in pazduhe', 'vaja'],
     ['ŠPRICANJE', 'RRU/vaterpolo: ob koncu potega izpljuskneš vodo', 'vaja'],
     ['GERMANJA', 'pomožna tehnika (podvodni del hrbtnega potega)', 'vaja'],
+    ['BIONDI', 'delfin vaja, skoraj enaka kot ORKA; nikoli skupaj z ORKA', 'vaja'],
+    ['OBRATNO', 'KZ OBRATNO = dihanje kontra', 'drugo'],
     ['ORKA', 'delfin noge s podvodnim delom zavesljaja', 'vaja'],
     ['ROTACIJA', 'rotacija ramenskega obroča', 'vaja'],
     ['SIMULATOR', '50 m + natanko 10 s + 50 m, simuliran čas tekme', 'vaja'],
@@ -169,7 +173,7 @@
       }
       const sec = parseTime(t);
       if (sec != null && /['"]/.test(t)) { out.regimes.push({ type: '@', sec, bare: true }); continue; }
-      if (/^\d+\.?$/.test(t) || /^\d+[x×]$/i.test(t) || /^\d+°$/.test(t)) continue;
+      if (/^\d+\.?$/.test(t) || /^\d+[x×]$/i.test(t) || /^\d+°$/.test(t) || /^\d+s$/i.test(t)) continue;
       if (/^\d+([+\-/]\d+)+$/.test(t)) { out.params.push(t); continue; }
       const mx = t.match(/^\d+[x×](.+)$/i);
       if (mx) t = mx[1];
@@ -390,6 +394,16 @@
     return (d === null ? 40 : Math.min(d, 60) + 1) * (w == null ? 1 : w);
   }
 
+  function hasWord(text, word) {
+    return String(text || '').toUpperCase().split(/[^A-ZČŠŽĆĐ0-9°]+/).includes(word);
+  }
+  /** Ali bi dodano besedilo v istem treningu združilo vaji, ki se izključujeta (npr. ORKA in BIONDI). */
+  function exclusiveConflict(text, others, settings) {
+    const groups = (settings && settings.exclusive_codes) || DEFAULT_SETTINGS.exclusive_codes;
+    const all = (others || []).concat([text]);
+    return groups.some(g => g.some(w => hasWord(text, w)) && g.filter(w => all.some(t => hasWord(t, w))).length > 1);
+  }
+
   // ---------- Nove serije ----------
   // Sestavljene iz potrjenih kratic in oblik, ki jih trener že uporablja. Vedno čakajo na pregled.
   const NEW_PARTS = {
@@ -397,7 +411,7 @@
       noge: [['K', 'KN'], ['K', 'KN BOK'], ['K', 'KN SUPERMAN'], ['D', 'DN'], ['D', 'DN BOK'], ['H', 'HN'], ['H', 'HN ROTACIJA']],
       vaje: [['K', 'KV 2-2'], ['K', 'K RRU PESTI'], ['K', 'K RRU PALEC'], ['K', 'K RRU ZADRGA'], ['K', 'K RRU ŠPRICANJE'], ['K', 'K RRU RINEŠ'],
         ['K', 'K SHARK 1'], ['K', 'K SHARK 2'], ['K', 'K VISOK KOMOLEC'], ['K', 'VATERPOLO'], ['K', 'KBD'],
-        ['D', 'DV 1-1-2'], ['D', 'DV 2-2-2'], ['D', 'DV 3-3'], ['D', 'DV ORKA'], ['D', 'D DIH NA 1'],
+        ['D', 'DV 1-1-2'], ['D', 'DV 2-2-2'], ['D', 'DV 3-3'], ['D', 'DV ORKA'], ['D', 'DV BIONDI'], ['D', 'D DIH NA 1'],
         ['H', 'HV RRU 90°'], ['H', 'HV ROKA UZ ZAVES'], ['H', 'H 6-1']],
       formati25: [10, 10, 10, 8, 12], formati50: [4]
     },
@@ -489,6 +503,7 @@
       const text = make(level, rng, opts.sprint);
       const fp = fingerprint(text);
       if (known.has(key(fp))) continue;
+      if (exclusiveConflict(text, opts.others, opts.settings)) continue;
       const meters = parseText(text, dict).meters;
       if (meters < limits[0] || meters > limits[1]) continue;
       return { phase, text, meters, fingerprint: fp, levels: [level], source: 'nova', isNew: true, main_type: phase === 'glavna' && opts.sprint ? 'sprint' : null };
@@ -564,7 +579,7 @@
       : newMode === 'ena' ? [['ogrevalna', 'vaje', 'vaje', 'glavna'][Math.floor(rng() * 4)]] : [];
     const fresh = {};
     newPhases.forEach(p => {
-      const n = suggestNewSet(p, { level: lk, library: opts.library, history, dict: opts.dict, rng, sprint: p === 'glavna' && isSprintMain });
+      const n = suggestNewSet(p, { level: lk, library: opts.library, history, dict: opts.dict, rng, settings, others: Object.values(fresh).map(x => x.text), sprint: p === 'glavna' && isSprintMain });
       if (n) fresh[p] = n;
     });
 
@@ -581,6 +596,7 @@
         if (!v) break;
         chosen.add(v);
         if (keys.has(drillKey(v.fingerprint))) continue; // ista vaja v drugem formatu
+        if (exclusiveConflict(v.text, vs.map(x => x.text), settings)) continue;
         keys.add(drillKey(v.fingerprint));
         vs.push(v);
       }
@@ -681,6 +697,6 @@
     buildDict, parseLine, parseText, toStructure, normalizeText, fingerprint, bVariant,
     estimateMinutes, parseTime, formatTime, libraryFromTrainings, generateTraining, arrangeOrder,
     weekSlots, historyFromTraining, historyLevel, lastUseDays, lastDrillDays, drillKey, setFormat,
-    availableDrills, drillWeight, suggestNewSet, addDays, daysBetween, weekday, mulberry32
+    availableDrills, drillWeight, suggestNewSet, exclusiveConflict, addDays, daysBetween, weekday, mulberry32
   };
 });

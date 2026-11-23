@@ -86,7 +86,7 @@
     },
     {
      "phase": "glavna",
-     "text": "12x50 3+1 @1'\n6x100 K 2+1 @2'",
+     "text": "12x50 5+1 @1'\n6x100 K 2+1 @2'",
      "meters": 1200
     },
     {
@@ -138,7 +138,7 @@
     },
     {
      "phase": "glavna",
-     "text": "4x100 M 1x K PL 1x P 1x K 1x P",
+     "text": "4x100 1x K PL 1x P 1x K 1x P",
      "meters": 400
     },
     {
@@ -171,13 +171,11 @@
     {
      "phase": "vaje",
      "text": "4x50 PL 1x BIONDI 1x 2-2-2",
-     "incomplete": true,
      "meters": 200
     },
     {
      "phase": "vaje",
      "text": "8x25 PL HITLER",
-     "incomplete": true,
      "meters": 200
     },
     {
@@ -569,7 +567,6 @@
     {
      "phase": "vaje",
      "text": "4x50 PL K RRU SHARK 1",
-     "incomplete": true,
      "meters": 200
     },
     {
@@ -584,7 +581,7 @@
     },
     {
      "phase": "glavna",
-     "text": "6x50 KVL @1'\n6x25 KN\n4x50 K STOP @1'\n4x25 25 K! + 25 RAZP",
+     "text": "6x50 KVL @1'\n6x25 KN\n4x50 K STOP @1'\n4x25 1x K! 1x RAZP",
      "meters": 750
     },
     {
@@ -603,7 +600,7 @@
     "B"
    ],
    "notebook_km": 2.1,
-   "reviewed": false,
+   "reviewed": true,
    "items": [
     {
      "phase": "razplavanje",
@@ -632,7 +629,7 @@
     },
     {
      "phase": "glavna",
-     "text": "4x50 KN\n4x50 K @1'\n4x50 KVL @1'\n4x50 K @55\"\n4x50 25 D + 25 RAZP",
+     "text": "4x50 KN @1'10\"\n4x50 K @1'\n4x50 KVL @1'\n4x50 K @55\"\n4x50 25 D + 25 RAZP @1'",
      "meters": 1000
     },
     {
@@ -650,7 +647,7 @@
     "C"
    ],
    "notebook_km": 1.4,
-   "reviewed": false,
+   "reviewed": true,
    "items": [
     {
      "phase": "razplavanje",
@@ -659,8 +656,7 @@
     },
     {
      "phase": "ogrevalna",
-     "text": "4x50 PD ↑3 ↓5",
-     "incomplete": true,
+     "text": "4x50 PD ↑3s ↓5s",
      "meters": 200
     },
     {
@@ -671,7 +667,6 @@
     {
      "phase": "vaje",
      "text": "6x25 PL KZ 25-25",
-     "incomplete": true,
      "meters": 150
     },
     {
@@ -723,13 +718,12 @@
     },
     {
      "phase": "vaje",
-     "text": "8x25 PL ↑PV ↓HN",
-     "incomplete": true,
+     "text": "8x25 PL ↑PV ↓HN ROTACIJA",
      "meters": 200
     },
     {
      "phase": "vaje",
-     "text": "4x50 PL ↑VAJE ↓HN RRU",
+     "text": "4x50 PL ↑VATERPOLO ↓HN RRU",
      "incomplete": true,
      "meters": 200
     },
@@ -745,8 +739,7 @@
     },
     {
      "phase": "glavna",
-     "text": "3x( 100 / 50 / 50 RAZP ) 1x VL 1x K 1x 100 M + 50 S",
-     "incomplete": true,
+     "text": "3x( 100 / 50 / 50 RAZP ) 1x VL 1x K 1x 100 M + 50 STIL",
      "meters": 600
     },
     {
@@ -779,13 +772,14 @@
     },
     {
      "phase": "vaje",
-     "text": "8x25 PL KN",
+     "text": "8x25 PL KN RV",
      "incomplete": true,
      "meters": 200
     },
     {
      "phase": "vaje",
-     "text": "4x50 K RRU PESTI",
+     "text": "4x50 K RRU PESTI/PPDZ",
+     "incomplete": true,
      "meters": 200
     },
     {
@@ -795,7 +789,8 @@
     },
     {
      "phase": "glavna",
-     "text": "4x100 KVL @2'\n4x50 @1'\n4x50 25 D + 25 RAZP",
+     "text": "4x100 KV @2'\n4x50 @1'\n4x50 25 D + 25 RAZP",
+     "incomplete": true,
      "meters": 800
     },
     {
@@ -805,7 +800,8 @@
     },
     {
      "phase": "zakljucek",
-     "text": "10x25 K STOP",
+     "text": "10x25 K STARTI",
+     "incomplete": true,
      "meters": 250
     },
     {
@@ -838,7 +834,7 @@
     },
     {
      "phase": "glavna",
-     "text": "3x100 VL DOLGO\n3x50 VL @55\"\n3x100 PL VISOK KOMOLEC POČASI + 25 N\n3x50 PL 25 DN + 25 N\n3x100 T @2'\n3x50 HITRO @1'",
+     "text": "3x100 VL DOLGO\n3x50 VL @55\"\n3x100 PL 75 VISOK KOMOLEC DOLGO + 25 N\n3x50 PL 25 DN PV + 25 KN\n3x100 T @2'\n3x50 HITRO @1'",
      "incomplete": true,
      "meters": 1350
     },
@@ -881,13 +877,13 @@
     },
     {
      "phase": "vaje",
-     "text": "8x25 PL KN",
+     "text": "8x25 PL KN RV",
      "incomplete": true,
      "meters": 200
     },
     {
      "phase": "vaje",
-     "text": "8x25 PL K 3-3-6",
+     "text": "8x25 PL K 6-3-6",
      "incomplete": true,
      "meters": 200
     },
@@ -940,12 +936,13 @@
     },
     {
      "phase": "vaje",
-     "text": "8x25 PL ↑VATERPOLO ↓H 3-1",
+     "text": "8x25 PL ↑KN RV ↓H 3-1",
+     "incomplete": true,
      "meters": 200
     },
     {
      "phase": "vaje",
-     "text": "4x50 PL K RRU SHARK/RINEŠ",
+     "text": "4x50 PL K RRU SHARK 2/RINEŠ",
      "meters": 200
     },
     {

@@ -125,16 +125,27 @@ Potrjeno in popravljeno v bazi (kjer se razdelek 3 razlikuje, velja ta tabela):
 | 24. 6. C | 50 RAZP pred glavno | 50 RAZP pred glavno in po njej |
 | 24. 6. A | `10x25 PL POČASI + SPRINT` | `10x25 PL PREVAL + SPRINT` |
 
-Potrjeno brez spremembe: 18. 6. glavna je `4x( … )`.
-
-Še odprto (v bazi v stari obliki):
-
-| Trening | V bazi | Branje iz zvezka |
-|---------|--------|------------------|
 | 10. 6. A | `4x50 PL HV HITLER 1x 2-2-2` | `4x50 PL 1x BIONDI 1x 2-2-2` |
 | 10. 6. A | `8x25 PL HITRO` | `8x25 PL HITLER` |
-| 11. 6. A+B | `12x50 3+1` | `12x50 5+1` (?) |
-| 24. 6. C | `16x25: 3xP 1xH, 3xP 1xK` | `3+1 H, 3+1 K, 2+2 H, 2+2 K` (?) |
+| 10. 6. C | `4x100 M 1x K PL …` | `4x100 1x K PL …` (M je pomenil metre) |
+| 11. 6. A+B | `12x50 3+1` | `12x50 5+1` |
+
+Potrjeno brez spremembe: 18. 6. glavna je `4x( … )`; 24. 6. C `16x25` je štirikrat 3+1 (H, K, H, K).
+
+**BIONDI** je skoraj enak kot **ORKA**; v istem treningu nikoli skupaj.
+
+### 2e. Teden 14. 9. (odgovori 23. 11. 2026)
+
+| Zapis | Pomen |
+|-------|-------|
+| `4x50 PL K RRU SHARK 1` (14. 9.) | 4x50; vsota v zvezku je za 200 m previsoka |
+| `4x25 25! 25 RAZP` (14. 9.) | izmenično: ena Max, ena razplavanje |
+| 17. 9. štarti | `4x50 KN @1'10"`, `4x50 25 D + 25 RAZP @1'` |
+| `PD ↑3 ↓5` (16. 9. C) | sekunde drsenja |
+| `KZ 25-25` (16. 9. C) | 25 m ena roka, 25 m druga |
+| `8x25 PL ↑PV ↓HN ROTACIJA` (16. 9. A) | |
+| `4x50 PL ↑VATERPOLO ↓HN RRU` (16. 9. A) | odprto: z `90°`? |
+| `3x( 100 / 50 / 50 RAZP )` (16. 9. A) | 1x VL, 1x K, 1x 100 M + 50 stil (`S` = stil) |
 
 ## 3. Treningi
 
