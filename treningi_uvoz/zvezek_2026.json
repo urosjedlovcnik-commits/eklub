@@ -1406,7 +1406,7 @@
     "B"
    ],
    "notebook_km": 2.4,
-   "reviewed": false,
+   "reviewed": true,
    "items": [
     {
      "phase": "razplavanje",
@@ -1425,8 +1425,7 @@
     },
     {
      "phase": "vaje",
-     "text": "8x25 PL ↑D 5 ZAVES ↓K 2-2",
-     "incomplete": true,
+     "text": "8x25 PL ↑D DIH NA 5 ↓K 2-2",
      "meters": 200
     },
     {
@@ -1450,7 +1449,7 @@
     "B"
    ],
    "notebook_km": 2.1,
-   "reviewed": false,
+   "reviewed": true,
    "items": [
     {
      "phase": "razplavanje",
@@ -1469,8 +1468,7 @@
     },
     {
      "phase": "vaje",
-     "text": "4x50 PL 1x HV 90° 1x HV RAMENA",
-     "incomplete": true,
+     "text": "4x50 PL 1x HV 90° 1x HV ZAVES + RAMENA",
      "meters": 200
     },
     {
@@ -1503,7 +1501,7 @@
     "C"
    ],
    "notebook_km": 1.5,
-   "reviewed": false,
+   "reviewed": true,
    "items": [
     {
      "phase": "razplavanje",
@@ -1512,8 +1510,7 @@
     },
     {
      "phase": "ogrevalna",
-     "text": "4x75 P 1-2/1-3/D",
-     "incomplete": true,
+     "text": "4x75 P 1-2/1-3/PD",
      "meters": 300
     },
     {
@@ -1556,7 +1553,7 @@
     "A"
    ],
    "notebook_km": 2.15,
-   "reviewed": false,
+   "reviewed": true,
    "items": [
     {
      "phase": "razplavanje",
@@ -1570,14 +1567,12 @@
     },
     {
      "phase": "vaje",
-     "text": "10x25 PL ↑KN DR ↓SCULLING HN",
-     "incomplete": true,
+     "text": "10x25 PL ↑KN DR ↓SCULLING KN",
      "meters": 250
     },
     {
      "phase": "vaje",
-     "text": "4x75 DIH 3-5-7",
-     "incomplete": true,
+     "text": "4x75 VL DIH 3-5-7",
      "meters": 300
     },
     {
@@ -1588,7 +1583,6 @@
     {
      "phase": "glavna",
      "text": "5x( 100 T / 25 MAX / 25 RAZP )",
-     "incomplete": true,
      "meters": 750
     },
     {
@@ -1655,7 +1649,7 @@
     "B"
    ],
    "notebook_km": 2.2,
-   "reviewed": false,
+   "reviewed": true,
    "items": [
     {
      "phase": "razplavanje",
@@ -1670,13 +1664,11 @@
     {
      "phase": "vaje",
      "text": "4x50 PL SALTO NA POL",
-     "incomplete": true,
      "meters": 200
     },
     {
      "phase": "vaje",
-     "text": "8x25 DN PV 10 M + DV 2-2",
-     "incomplete": true,
+     "text": "8x25 ↑DN PV 10m + D ↓DV 2-2",
      "meters": 200
     },
     {
@@ -1687,7 +1679,6 @@
     {
      "phase": "glavna",
      "text": "4x25 D\n4x50 @1'\n4x100 KVL @2'\n4x50 @50\"\n4x25 1x D! 1x H",
-     "incomplete": true,
      "meters": 1000
     },
     {
@@ -1705,7 +1696,7 @@
     "C"
    ],
    "notebook_km": 1.5,
-   "reviewed": false,
+   "reviewed": true,
    "items": [
     {
      "phase": "razplavanje",
@@ -1715,7 +1706,6 @@
     {
      "phase": "ogrevalna",
      "text": "4x75 50 PD 3s + 25 H",
-     "incomplete": true,
      "meters": 300
     },
     {
@@ -1730,8 +1720,7 @@
     },
     {
      "phase": "vaje",
-     "text": "4x50 K",
-     "incomplete": true,
+     "text": "4x50 1x 25 K/25 P 1x 50 K",
      "meters": 200
     },
     {
@@ -1768,20 +1757,18 @@
     },
     {
      "phase": "ogrevalna",
-     "text": "16x25 M 4xCT 4xN 4xCT 4xN",
-     "incomplete": true,
+     "text": "16x25 M 4xCT 4xN 4xCT 4xV",
      "meters": 400
     },
     {
      "phase": "vaje",
-     "text": "2x( 8x25 ) 1x DN + SHARK 1 1x RRU PESTI",
+     "text": "2x( 8x25 ) 1x DN + SHARK 1 1x RRU PRSTI",
      "incomplete": true,
      "meters": 400
     },
     {
      "phase": "glavna",
-     "text": "2x( 4x50 KVL ) 1x @1' 1x @50\"\n2x( 2x100 M NOGE DESKA )\n2x200 @3'30\"",
-     "incomplete": true,
+     "text": "2x( 4x50 KVL ) 1x @1' 1x @50\"\n2x( 2x100 M ) 1x NORMALNO 1x OBRATNO\n2x200 @3'30\"",
      "meters": 1200
     },
     {
@@ -1809,12 +1796,14 @@
     },
     {
      "phase": "ogrevalna",
-     "text": "4x100 PL 25 M + 75 M/K",
+     "text": "4x100 PL 25 M + 75 H/K",
+     "incomplete": true,
      "meters": 400
     },
     {
      "phase": "vaje",
-     "text": "12x25 PL 3x D 1x M VSAKIČ DLJE",
+     "text": "12x25 PL 3x D 1x H VSAKIČ DLJE",
+     "incomplete": true,
      "meters": 300
     },
     {
@@ -1840,7 +1829,7 @@
     },
     {
      "phase": "zakljucek",
-     "text": "8x25 V PL",
+     "text": "8x25 V PR",
      "meters": 200
     },
     {
@@ -1921,13 +1910,13 @@
     },
     {
      "phase": "vaje",
-     "text": "8x25 PL DZ L/D",
+     "text": "8x25 PL DV L/D",
      "incomplete": true,
      "meters": 200
     },
     {
      "phase": "vaje",
-     "text": "6x25 H 6-1",
+     "text": "6x25 PL H 6-1",
      "incomplete": true,
      "meters": 150
     },
@@ -1938,7 +1927,7 @@
     },
     {
      "phase": "vaje",
-     "text": "4x25 ROTULJICA",
+     "text": "4x25 METULJČEK",
      "meters": 100
     },
     {
@@ -1970,7 +1959,8 @@
     },
     {
      "phase": "ogrevalna",
-     "text": "4x100 M N/CT",
+     "text": "4x100 M PO 25 N/CT",
+     "incomplete": true,
      "meters": 400
     },
     {
@@ -1980,7 +1970,7 @@
     },
     {
      "phase": "vaje",
-     "text": "4x50 PL 1x H RRU 90° 1x K 3-1",
+     "text": "4x50 PL 1x H RRU 90° 1x H 3-1",
      "meters": 200
     },
     {
@@ -2024,7 +2014,8 @@
     },
     {
      "phase": "vaje",
-     "text": "10x25 V",
+     "text": "10x25 V ML",
+     "incomplete": true,
      "meters": 250
     },
     {
@@ -2045,11 +2036,13 @@
     {
      "phase": "vaje",
      "text": "4x50 PL KN @1'",
+     "incomplete": true,
      "meters": 200
     },
     {
      "phase": "vaje",
-     "text": "4x50 PL 25 D V 3-2 + 25 DN",
+     "text": "4x50 PL 25 DV 3-2 + 25 DN",
+     "incomplete": true,
      "meters": 200
     },
     {
@@ -2144,7 +2137,8 @@
     },
     {
      "phase": "vaje",
-     "text": "4x50 PV 1-3 1-4",
+     "text": "4x50 PV 1-3 1-1-1",
+     "incomplete": true,
      "meters": 200
     },
     {
@@ -2170,6 +2164,7 @@
     {
      "phase": "zakljucek",
      "text": "8x25 1x MAX 1x RAZP",
+     "incomplete": true,
      "meters": 200
     },
     {
@@ -2211,7 +2206,7 @@
     },
     {
      "phase": "vaje",
-     "text": "4x50 PL ↑DN P ↓1-1-2",
+     "text": "4x50 PL ↑DN PR ↓DV 1-1-2",
      "meters": 200
     },
     {
@@ -2221,7 +2216,7 @@
     },
     {
      "phase": "glavna",
-     "text": "4x50 3+1 @1'\n4x75 STOP PO 25 @1'30\"\n4x100 1x K 1x M @2'",
+     "text": "4x50 3+1 @1'\n4x75 STOP PO 25 @1'50\"\n4x100 1x K 1x M @2'",
      "incomplete": true,
      "meters": 900
     },

@@ -88,7 +88,10 @@
     ['PZDZ', 'ponovi zadnji del zavesljaja', 'vaja'],
     ['BIEGNER', 'stegnjene roke', 'vaja'],
     ['VDIHA', 'BREZ VDIHA = poskusiš odplavati 50 m brez vdiha', 'drugo'],
-    ['OBRATNO', 'KZ OBRATNO = dihanje kontra', 'drugo'],
+    ['OBRATNO', 'mešano v obratnem vrstnem redu (NORMALNO / OBRATNO); pri KZ še ni potrjeno', 'drugo'],
+    ['PRSTI', 'RRU: prsti po gladini vode', 'vaja'],
+    ['SALTO', 'SALTO NA POL: salto na pol bazena in nazaj v cilj hitro, ne nadaljuješ naprej', 'vaja'],
+    ['POL', 'glej SALTO NA POL', 'drugo'],
     ['ORKA', 'delfin noge s podvodnim delom zavesljaja', 'vaja'],
     ['ROTACIJA', 'rotacija ramenskega obroča', 'vaja'],
     ['SIMULATOR', '50 m + natanko 10 s + 50 m, simuliran čas tekme', 'vaja'],
@@ -106,7 +109,7 @@
   ].map(([code, meaning, category]) => ({ code, meaning, category, aliases: [], source: 'pregled' }));
 
   // Besede v opisih vaj, ki niso kratice in jih ne označujemo kot neznane.
-  const FILLER = new Set(('VEN ZADNJIH Z NA PO POD ČIM DLJE DALJŠI VIŠJI VODO BREZ DIHANJA DIHANJE VDIHA VSAK VSAKIČ ROKA ROKE UZ ZAVES ' +
+  const FILLER = new Set(('VEN ZADNJIH METULJČEK Z NA PO POD ČIM DLJE DALJŠI VIŠJI VODO BREZ DIHANJA DIHANJE VDIHA VSAK VSAKIČ ROKA ROKE UZ ZAVES ' +
     'ZAVESLJAJI ZAVESLJAJ VISOK KOMOLEC KOMOLCEM POLOŽAJ MENJAMO KONTRA HITRO POČASI TEMPO MEŠANO PRSNO KRAVL ' +
     'HRBTNO DELFIN DESKA DESKO VALČEK LOP RAMENA IN ALI ŠTARTI ŠTART X 1. 2. 3. CT/N/V/CT N/V/CT DO TAKOJ').split(/\s+/));
 
@@ -184,7 +187,7 @@
       }
       const sec = parseTime(t);
       if (sec != null && /['"]/.test(t)) { out.regimes.push({ type: '@', sec, bare: true }); continue; }
-      if (/^\d+\.?$/.test(t) || /^\d+[x×]$/i.test(t) || /^\d+°$/.test(t) || /^\d+s$/i.test(t)) continue;
+      if (/^\d+\.?$/.test(t) || /^\d+[x×]$/i.test(t) || /^\d+°$/.test(t) || /^\d+[sm]$/.test(t)) continue;
       if (/^\d+([+\-/]\d+)+$/.test(t)) { out.params.push(t); continue; }
       const mx = t.match(/^\d+[x×](.+)$/i);
       if (mx) t = mx[1];
@@ -464,7 +467,7 @@
   const NEW_PARTS = {
     A: {
       noge: [['K', 'KN'], ['K', 'KN BOK'], ['K', 'KN SUPERMAN'], ['K', 'KN RV'], ['D', 'DN'], ['D', 'DN BOK'], ['H', 'HN'], ['H', 'HN ROTACIJA']],
-      vaje: [['K', 'KV 2-2'], ['K', 'K RRU PESTI'], ['K', 'K RRU PALEC'], ['K', 'K RRU ZADRGA'], ['K', 'K RRU ŠPRICANJE'], ['K', 'K RRU RINEŠ'], ['K', 'K RRU PPDZ'], ['K', 'K 6-3-6'],
+      vaje: [['K', 'KV 2-2'], ['K', 'K RRU PESTI'], ['K', 'K RRU PALEC'], ['K', 'K RRU ZADRGA'], ['K', 'K RRU ŠPRICANJE'], ['K', 'K RRU RINEŠ'], ['K', 'K RRU PPDZ'], ['K', 'K RRU PRSTI'], ['K', 'K 6-3-6'],
         ['K', 'K SHARK 1'], ['K', 'K SHARK 2'], ['K', 'K VISOK KOMOLEC'], ['K', 'VATERPOLO'], ['K', 'KBD'],
         ['D', 'DV 1-1-2'], ['D', 'DV 2-2-2'], ['D', 'DV 3-3'], ['D', 'DV ORKA'], ['D', 'DV BIONDI'], ['D', 'D DIH NA 1'],
         ['H', 'HV RRU 90°'], ['H', 'HV ROKA VEN'], ['H', 'H 6-1'], ['H', 'H 3-1']],

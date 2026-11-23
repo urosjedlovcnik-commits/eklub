@@ -178,6 +178,22 @@ Potrjeno brez spremembe: 18. 6. glavna je `4x( … )`; 24. 6. C `16x25` je štir
 | `BREZ VDIHA` (7. 10. A) | poskusiš odplavati 50 m brez vdiha |
 | šprinterski trening | več kot 150 m max |
 
+### 2h. Tedna 12. in 19. 10. (odgovori 23. 11. 2026)
+
+| Zapis | Pomen |
+|-------|-------|
+| šprint | štejejo tudi noge max; šele več kot 150 m |
+| `D 5 ZAVES` (12. 10.) | delfin, dihanje na 5 zavesljajev |
+| `HV ZAVES + RAMENA` (15. 10.) | zavesljaji in rotacija druge roke |
+| `PRSNO 1-2, 1-3, D` (14. 10. C) | `D` = drsenje (`PD`) |
+| `SCULLING KN` (14. 10. A) | sculling + kravl noge |
+| `4x75 VL DIH 3-5-7` (14. 10. A) | z VL |
+| `SALTO NA POL` (22. 10.) | salto na pol in nazaj v cilj hitro, ne nadaljuješ naprej |
+| `8x25 ↑DN PV 10m + D ↓DV 2-2` (22. 10.) | 10 m delfin noge pod vodo, nato delfin |
+| `K 25/25/50` (21. 10. C) | enkrat 25 K + 25 P, enkrat 50 K |
+| `2x( 2x100 M )` (21. 10. A) | enkrat normalni, enkrat obratni vrstni red |
+| `RRU PRSTI` (21. 10. A) | prsti po gladini vode |
+
 Kratice, ki sem jih verjetno napačno prebral in so že v šifrantu (čakajo na potrditev): `ZADUŠNICA` = `ZADNJIH 7 DN`, `ROTULJICA` = `METULJČEK`, `ROKA UZ ZAVES` = `ROKA VEN ZAVES`.
 
 ## 3. Treningi
