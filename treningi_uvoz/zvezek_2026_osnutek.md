@@ -144,8 +144,25 @@ Potrjeno brez spremembe: 18. 6. glavna je `4x( … )`; 24. 6. C `16x25` je štir
 | `PD ↑3 ↓5` (16. 9. C) | sekunde drsenja |
 | `KZ 25-25` (16. 9. C) | 25 m ena roka, 25 m druga |
 | `8x25 PL ↑PV ↓HN ROTACIJA` (16. 9. A) | |
-| `4x50 PL ↑VATERPOLO ↓HN RRU` (16. 9. A) | odprto: z `90°`? |
+| `4x50 PL ↑VATERPOLO ↓HN RRU 90°` (16. 9. A) | |
+| `6x25 KN p10"`, `4x25 1x K! 1x RAZP p30"` (14. 9.) | pavze |
 | `3x( 100 / 50 / 50 RAZP )` (16. 9. A) | 1x VL, 1x K, 1x 100 M + 50 stil (`S` = stil) |
+
+### 2f. Teden 21. 9. (odgovori 23. 11. 2026)
+
+| Zapis | Pomen |
+|-------|-------|
+| `RV` | roka ven, 90° (`KN RV`) |
+| `PPDZ` | RRU: ponavljaj prednji del zavesljaja |
+| `4x100 KV` (21. 9.) | `KVL` |
+| `10x25 K ŠTETJE` (21. 9.) | šteje zavesljaje (prej prebrano STOP) |
+| 24. 9. | vsota v zvezku je za 100 m prenizka; glavna je vse od `3x100 VL` do `3x50 HITRO` |
+| `3x100 PL 75 VISOK KOMOLEC DOLGO + 25 N!` (24. 9.) | `!` = noge max |
+| `3x50 PL 25 DN PV + 25 HN` (24. 9.) | odprto: `DN PV` ali `DV PV` |
+| `K 6-3-6` | 6 udarcev na boku, 3 zavesljaji, 6 udarcev na drugem boku (prej `3-3-6`) |
+| `H 3-1` | trije udarci, 1 koordinacija |
+
+Kratice, ki sem jih verjetno napačno prebral in so že v šifrantu (čakajo na potrditev): `ZADUŠNICA` = `ZADNJIH 7 DN`, `ROTULJICA` = `METULJČEK`, `ROKA UZ ZAVES` = `ROKA VEN ZAVES`.
 
 ## 3. Treningi
 

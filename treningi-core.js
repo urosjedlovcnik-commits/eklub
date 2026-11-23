@@ -77,6 +77,9 @@
     ['ŠPRICANJE', 'RRU/vaterpolo: ob koncu potega izpljuskneš vodo', 'vaja'],
     ['GERMANJA', 'pomožna tehnika (podvodni del hrbtnega potega)', 'vaja'],
     ['BIONDI', 'delfin vaja, skoraj enaka kot ORKA; nikoli skupaj z ORKA', 'vaja'],
+    ['RV', 'roka ven, 90° (npr. KN RV)', 'vaja'],
+    ['PPDZ', 'RRU: ponavljaj prednji del zavesljaja', 'vaja'],
+    ['ŠTETJE', 'štetje zavesljajev', 'vaja'],
     ['OBRATNO', 'KZ OBRATNO = dihanje kontra', 'drugo'],
     ['ORKA', 'delfin noge s podvodnim delom zavesljaja', 'vaja'],
     ['ROTACIJA', 'rotacija ramenskega obroča', 'vaja'],
@@ -95,7 +98,7 @@
   ].map(([code, meaning, category]) => ({ code, meaning, category, aliases: [], source: 'pregled' }));
 
   // Besede v opisih vaj, ki niso kratice in jih ne označujemo kot neznane.
-  const FILLER = new Set(('Z NA PO POD ČIM DLJE DALJŠI VIŠJI VODO BREZ DIHANJA DIHANJE VDIHA VSAK VSAKIČ ROKA ROKE UZ ZAVES ' +
+  const FILLER = new Set(('VEN ZADNJIH Z NA PO POD ČIM DLJE DALJŠI VIŠJI VODO BREZ DIHANJA DIHANJE VDIHA VSAK VSAKIČ ROKA ROKE UZ ZAVES ' +
     'ZAVESLJAJI ZAVESLJAJ VISOK KOMOLEC KOMOLCEM POLOŽAJ MENJAMO KONTRA HITRO POČASI TEMPO MEŠANO PRSNO KRAVL ' +
     'HRBTNO DELFIN DESKA DESKO VALČEK LOP RAMENA IN ALI ŠTARTI ŠTART X 1. 2. 3. CT/N/V/CT N/V/CT DO TAKOJ').split(/\s+/));
 
@@ -408,11 +411,11 @@
   // Sestavljene iz potrjenih kratic in oblik, ki jih trener že uporablja. Vedno čakajo na pregled.
   const NEW_PARTS = {
     A: {
-      noge: [['K', 'KN'], ['K', 'KN BOK'], ['K', 'KN SUPERMAN'], ['D', 'DN'], ['D', 'DN BOK'], ['H', 'HN'], ['H', 'HN ROTACIJA']],
-      vaje: [['K', 'KV 2-2'], ['K', 'K RRU PESTI'], ['K', 'K RRU PALEC'], ['K', 'K RRU ZADRGA'], ['K', 'K RRU ŠPRICANJE'], ['K', 'K RRU RINEŠ'],
+      noge: [['K', 'KN'], ['K', 'KN BOK'], ['K', 'KN SUPERMAN'], ['K', 'KN RV'], ['D', 'DN'], ['D', 'DN BOK'], ['H', 'HN'], ['H', 'HN ROTACIJA']],
+      vaje: [['K', 'KV 2-2'], ['K', 'K RRU PESTI'], ['K', 'K RRU PALEC'], ['K', 'K RRU ZADRGA'], ['K', 'K RRU ŠPRICANJE'], ['K', 'K RRU RINEŠ'], ['K', 'K RRU PPDZ'], ['K', 'K 6-3-6'],
         ['K', 'K SHARK 1'], ['K', 'K SHARK 2'], ['K', 'K VISOK KOMOLEC'], ['K', 'VATERPOLO'], ['K', 'KBD'],
         ['D', 'DV 1-1-2'], ['D', 'DV 2-2-2'], ['D', 'DV 3-3'], ['D', 'DV ORKA'], ['D', 'DV BIONDI'], ['D', 'D DIH NA 1'],
-        ['H', 'HV RRU 90°'], ['H', 'HV ROKA UZ ZAVES'], ['H', 'H 6-1']],
+        ['H', 'HV RRU 90°'], ['H', 'HV ROKA VEN'], ['H', 'H 6-1'], ['H', 'H 3-1']],
       formati25: [10, 10, 10, 8, 12], formati50: [4]
     },
     C: {
