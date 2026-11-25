@@ -91,7 +91,8 @@
     const st = (setR.data && setR.data.settings) || {};
     S.settings = Object.assign({}, C.DEFAULT_SETTINGS, st, { levels: Object.assign({}, C.DEFAULT_SETTINGS.levels, st.levels || {}) });
     S.terms = termsR.data || [];
-    S.dbSets = (setsR.data || []).map(s => Object.assign({}, s, { source: 'db', origin: s.source }));
+    // Odtis brez ciljnih časov (starejše vrstice ga imajo shranjenega s časi).
+    S.dbSets = (setsR.data || []).map(s => Object.assign({}, s, { source: 'db', origin: s.source, fingerprint: C.stripTargets(s.fingerprint) }));
     S.dbTrainings = trR.data || [];
 
     if (!S.zvezek) {
@@ -119,7 +120,7 @@
     S.dbTrainings.forEach(t => {
       const lvl = C.historyLevel(t.levels);
       const sprint = C.isSprintTexts((t.training_items || []).map(i => i.text), S.settings);
-      (t.training_items || []).forEach(i => hist.push({ date: t.date, level: lvl, phase: i.phase, fingerprint: i.fingerprint, main_type: i.phase === 'glavna' && sprint ? 'sprint' : null, status: t.status }));
+      (t.training_items || []).forEach(i => hist.push({ date: t.date, level: lvl, phase: i.phase, fingerprint: C.stripTargets(i.fingerprint), main_type: i.phase === 'glavna' && sprint ? 'sprint' : null, status: t.status }));
     });
     hist.push(...pend.history);
     S.history = hist;
@@ -129,7 +130,7 @@
   function mainTypeOf(item) {
     if (item.phase !== 'glavna') return null;
     if (isNewItem(item)) return newTypeOf(item);
-    const s = S.dbSets.find(x => x.id === item.set_id) || S.dbSets.find(x => x.phase === 'glavna' && x.fingerprint === item.fingerprint);
+    const s = S.dbSets.find(x => x.id === item.set_id) || S.dbSets.find(x => x.phase === 'glavna' && x.fingerprint === C.stripTargets(item.fingerprint));
     return s ? s.main_type : null;
   }
 
@@ -510,6 +511,7 @@
       others: card.items.filter((x, j) => j !== idx).map(i => i.text)
     });
     if (!n) { alert('Za to fazo trenutno nimam nove serije.'); return; }
+    if (it.phase === 'glavna') n.text = C.addTargets(n.text, levelKey(card.slot.levels), S.settings);
     const next = { phase: it.phase, text: n.text, set_id: null, source: 'nova', isNew: true, main_type: n.main_type };
     if (card.slot.levels.includes('B') && it.phase === 'glavna') { const b = C.bVariant(n.text, S.settings); next.variantB = b.text; next.variantBNote = b.note; }
     card.items[idx] = next;
@@ -585,8 +587,9 @@
     const total = pool.reduce((a, s) => a + weight(s), 0);
     let r = Math.random() * total, pick = pool[0];
     for (const s of pool) { r -= weight(s); if (r <= 0) { pick = s; break; } }
-    const next = { phase: it.phase, text: pick.text, set_id: pick.source === 'db' ? pick.id : null, source: pick.source, main_type: pick.main_type };
-    if (card.slot.levels.includes('B') && it.phase === 'glavna') { const b = C.bVariant(pick.text, S.settings); next.variantB = b.text; next.variantBNote = b.note; }
+    const text = it.phase === 'glavna' ? C.addTargets(pick.text, lk, S.settings) : pick.text;
+    const next = { phase: it.phase, text, set_id: pick.source === 'db' ? pick.id : null, source: pick.source, main_type: pick.main_type };
+    if (card.slot.levels.includes('B') && it.phase === 'glavna') { const b = C.bVariant(text, S.settings); next.variantB = b.text; next.variantBNote = b.note; }
     card.items[idx] = next;
     card.dirty = true;
     rerenderCard(key);

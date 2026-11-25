@@ -47,7 +47,9 @@
     // Dan v tednu (1 = ponedeljek) -> skupine nivojev, ki imajo vsaka svoj trening.
     day_levels: { 1: [['A', 'B']], 3: [['A'], ['C']], 4: [['A', 'B']] },
     // Privzeti štart glavne serije, če ni zapisan (sekunde po dolžini).
-    default_start_sec: { 50: 60, 75: 90, 100: 120, 200: 210 }
+    default_start_sec: { 50: 60, 75: 90, 100: 120, 200: 210 },
+    // Ciljni časi (kravl) po nivoju in razdalji; B in C jih nimata.
+    target_times: { A: { 50: { T: '38-42', HIT: '33-38' }, 100: { T: '1:18-1:30', HIT: '1:15-1:25' } } }
   };
 
   // Kratice, potrjene v pregledu zvezka 22. 11. 2026, ki še niso v bazi.
@@ -90,7 +92,9 @@
     ['DR', 'delfin roke (KN DR = kravl noge, delfin roke)', 'vaja'],
     ['PR', 'prsno roke (PR DN = prsno roke, delfin noge)', 'vaja'],
     ['PZDZ', 'ponovi zadnji del zavesljaja', 'vaja'],
-    ['STEGR', 'stegnjene roke', 'vaja'],
+    ['STEGR', 'RRU: stegnjene roke', 'vaja'],
+    ['ROKE', 'samo roke, noge popolnoma pri miru', 'izpeljava'],
+    ['KOMB', 'noge: med plavanjem menjaš položaj telesa', 'vaja'],
     ['BREZ VDIHA', 'poskusiš odplavati 50 m brez vdiha', 'drugo'],
     ['5+1', '5 tempo, 1 hitro', 'stopnjevanje'],
     ['6-3-6', '6 udarcev na boku, 3 zavesljaji, 6 udarcev na drugem boku', 'vaja'],
@@ -115,7 +119,7 @@
   ].map(([code, meaning, category]) => ({ code, meaning, category, aliases: [], source: 'pregled' }));
 
   // Besede v opisih vaj, ki niso kratice in jih ne označujemo kot neznane.
-  const FILLER = new Set(('HITER PREHOD USTAVLJANJA HITRI UDARCI HRBET TREBUH GLAVA VODI ZUNAJ S SKOKOM SKOK CELA MANJ VDIHOV POČASNEJE VSE ISTI ŽELJI DLAN PODVODNI PODVODNIM SREDINI STENO KONCU EASY SALTO POL FREK VEN ZADNJIH METULJČEK LEVA DESNA VDIH NAPREJ Z NA PO POD ČIM DLJE DALJŠI VIŠJI VODO BREZ DIHANJA DIHANJE VDIHA VSAK VSAKIČ ROKA ROKE UZ ZAVES ' +
+  const FILLER = new Set(('HITER PREHOD USTAVLJANJA HITRI UDARCI HRBET TREBUH GLAVA VODI ZUNAJ S SKOKOM SKOK CELA MANJ VDIHOV POČASNEJE VSE ISTI ŽELJI DLAN PODVODNI PODVODNIM SREDINI STENO KONCU EASY SALTO POL FREK VEN ZADNJIH METULJČEK LEVA DESNA VDIH NAPREJ Z NA PO POD ČIM DLJE DALJŠI VIŠJI VODO BREZ DIHANJA DIHANJE VDIHA VSAK VSAKIČ ROKA UZ ZAVES ODRIV HRBTU NAZAJ ' +
     'ZAVESLJAJI ZAVESLJAJ VISOK KOMOLEC KOMOLCEM POLOŽAJ MENJAMO KONTRA HITRO POČASI TEMPO MEŠANO PRSNO KRAVL ' +
     'HRBTNO DELFIN DESKA DESKO VALČEK LOP RAMENA IN ALI ŠTARTI ŠTART X 1. 2. 3. CT/N/V/CT N/V/CT DO TAKOJ').split(/\s+/));
 
@@ -198,7 +202,7 @@
       }
       const sec = parseTime(t);
       if (sec != null && /['"]/.test(t)) { out.regimes.push({ type: '@', sec, bare: true }); continue; }
-      if (/^\d+\.?$/.test(t) || /^\d+[x×]$/i.test(t) || /^\d+°$/.test(t) || /^\d+[sm]$/.test(t)) continue;
+      if (/^\d+\.?$/.test(t) || /^\d+[x×]$/i.test(t) || /^\d+°$/.test(t) || /^\d+(-\d+)?[sm]$/.test(t)) continue;
       if (/^\d+([+\-/]\d+)+$/.test(t)) { out.params.push(t); continue; }
       const mx = t.match(/^\d+[x×](.+)$/i);
       if (mx) t = mx[1];
@@ -343,9 +347,45 @@
     };
   }
 
+  // ---------- Ciljni časi (T 38-42, HITRO 1:15-1:25) ----------
+  const TARGET_RE = /(^|[\sxX])(T|TEMPO|HIT|HITRO)\s+(?:\d:\d\d(?:-\d:\d\d)*|\d\d(?:-\d\d)+(?![\d'":])|\d\d(?=\s*(?:$|@|\)|\/|\d+\s*[xX](?:\s|\())))/gim;
+  /** Besedilo brez ciljnih časov; ista serija z drugim ciljnim časom je še vedno ista serija. */
+  function stripTargets(text) { return String(text || '').replace(TARGET_RE, '$1$2'); }
+
+  // Ciljni časi veljajo za kravl: ne za druge tehnike, rekvizite, noge ali skok.
+  const NO_TARGET = /(^|[\s/↑↓+(]|\d[xX])(H|P|D|M|MM|MB[KHPD]|MAD|N|NOGE|VAJE|PL|VL|KVL|KPL|KV|KN|KL|HN|HV|DN|DV|PN|PV|V|L|STIL|VB1T|PR|KR|DR|ROKE|SKOKOM|RAZP|BD|KBD|POČASI|VSAK)(?=$|[\s/+)])/i;
+  function targetsForPiece(piece, times) {
+    const m = piece.match(/^(\s*(?:\d+\s*[xX]\s*)?)(\d+)(?![\d'"xX])(.*)$/);
+    if (!m || !times[m[2]] || /^\s*\d+\s+[A-ZČŠŽ]|[+↑↓!]|\bMAX\b/i.test(m[3])) return piece;
+    // Različice (4x TEMPO 4x HITRO) obravnavaj vsako posebej.
+    const isAlt = g => /^\s\d+\s*[xX]\s*[^\d\s]/.test(g);
+    const segs = m[3].split(/(?=\s\d+\s*[xX]\s*[^\d\s])/);
+    if (segs.length > 1 && !isAlt(segs[0]) && NO_TARGET.test(segs[0])) return piece;
+    const out = segs.map(g => {
+      if (NO_TARGET.test(g)) return g;
+      return g.replace(/(^|\s|\d[xX])(T|TEMPO|HIT|HITRO)(?=\s|$)/i, (all, pre, w, off) => {
+        if (/\d\s*$/.test(g.slice(0, off))) return all; // npr. "VSAK 4. 25 HITRO"
+        const t = times[m[2]][/^T/i.test(w) ? 'T' : 'HIT'];
+        return t ? `${pre}${w} ${t}` : all;
+      });
+    });
+    return m[1] + m[2] + out.join('');
+  }
+  /** Doda privzete ciljne čase glavni seriji, kjer še niso zapisani. */
+  function addTargets(text, level, settings) {
+    const times = ((settings && settings.target_times) || DEFAULT_SETTINGS.target_times)[level];
+    if (!times) return text;
+    return String(text || '').split('\n').map(line => {
+      if (stripTargets(line) !== line) return line;
+      const m = line.match(/^(\s*\d+\s*[xX]\s*\(\s*)(.*?)(\s*\).*)$/);
+      if (m) return m[1] + m[2].split(/(\s+\/\s+)/).map((p, i) => (i % 2 ? p : targetsForPiece(p, times))).join('') + m[3];
+      return targetsForPiece(line, times);
+    }).join('\n');
+  }
+
   // "Povsem enak zapis": velike črke, enotni narekovaji, en presledek, gol čas -> @čas.
   function normalizeText(text) {
-    return cleanQuotes(text).split(/\n/).map(l => l.trim()).filter(Boolean).map(l =>
+    return stripTargets(cleanQuotes(text)).split(/\n/).map(l => l.trim()).filter(Boolean).map(l =>
       l.toUpperCase()
         .replace(/\s+/g, ' ')
         .replace(/@\s+/g, '@')
@@ -372,7 +412,8 @@
       // Vsaka ponovitev ima svojo različico: ko ponovitev odpade, odpade tudi zadnja različica.
       return line !== orig && alt && alt.length === reps && cfg.reps_minus === 1 ? line.slice(0, line.length - alt[alt.length - 1].length) : line;
     }).join('\n');
-    return { text: out, changed, note: changed ? '' : 'ni česa skrajšati: daljši štart ali + PL' };
+    // B nima ciljnih časov.
+    return { text: stripTargets(out), changed, note: changed ? '' : 'ni česa skrajšati: daljši štart ali + PL' };
   }
 
   function estimateMinutes(meters, levelKey, settings) {
@@ -945,7 +986,7 @@
     }
 
     const mk = (phase, set, text) => {
-      const t = text || set.text;
+      const t = text || (phase === 'glavna' ? addTargets(set.text, lk, settings) : set.text);
       return { phase, text: t, set_id: set && set.source === 'db' ? set.id : null, source: set ? set.source : 'fiksno', main_type: set ? set.main_type : null, isNew: !!(set && set.isNew) };
     };
     const items = { warm: [], vaje: [], main: [], zak: [] };
@@ -1009,7 +1050,7 @@
 
   return {
     PHASES, PHASE_LABELS, LIBRARY_PHASES, DEFAULT_SETTINGS, REVIEW_CODES,
-    buildDict, parseLine, parseText, toStructure, normalizeText, fingerprint, bVariant,
+    buildDict, parseLine, parseText, toStructure, normalizeText, fingerprint, stripTargets, addTargets, bVariant,
     estimateMinutes, parseTime, formatTime, libraryFromTrainings, generateTraining, arrangeOrder,
     weekSlots, historyFromTraining, historyLevel, lastUseDays, lastDrillDays, drillKey, setFormat,
     availableDrills, drillWeight, suggestNewSet, exclusiveConflict, exclusiveTooSoon, lastExclusiveDays, tidyText, unevenSides, strokeUse, legsWithoutDrills, maxMeters, longestMaxLine, overMaxDistance, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
