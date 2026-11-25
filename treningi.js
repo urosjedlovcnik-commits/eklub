@@ -72,14 +72,27 @@
     renderDrills();
   }
 
+  // Supabase vrne največ 1000 vrstic na zahtevo, zato beremo po straneh. Poizvedba mora imeti enoličen vrstni red.
+  const PAGE = 1000;
+  async function allRows(query) {
+    const data = [];
+    for (;;) {
+      const r = await query().range(data.length, data.length + PAGE - 1);
+      if (r.error) return r;
+      const rows = r.data || [];
+      data.push(...rows);
+      if (rows.length < PAGE) return { data, error: null };
+    }
+  }
+
   async function loadAll() {
     const tid = S.trainer.id;
     const [codesR, setR, termsR, setsR, trR, drR] = await Promise.all([
       sb.from('training_codes').select('*').eq('active', true).order('category').order('code'),
       sb.from('training_settings').select('settings').eq('trainer_id', tid).maybeSingle(),
       auth.ownTermIds.size ? sb.from('terms').select('*').in('id', Array.from(auth.ownTermIds)) : Promise.resolve({ data: [] }),
-      sb.from('training_sets').select('*').eq('trainer_id', tid).eq('active', true),
-      sb.from('trainings').select('*, training_items(*)').eq('trainer_id', tid).order('date', { ascending: false }),
+      allRows(() => sb.from('training_sets').select('*').eq('trainer_id', tid).eq('active', true).order('id')),
+      allRows(() => sb.from('trainings').select('*, training_items(*)').eq('trainer_id', tid).order('date', { ascending: false }).order('id')),
       sb.from('training_drill_suggestions').select('*').eq('trainer_id', tid).eq('status', 'predlog').order('created_at')
     ]);
     // Brez predlogov stran deluje naprej.
@@ -798,7 +811,7 @@
         const { error } = await sb.from('training_sets').upsert(rows.slice(i, i + 100), { onConflict: 'trainer_id,phase,fingerprint', ignoreDuplicates: true });
         if (error) throw error;
       }
-      const { data: sets, error: es } = await sb.from('training_sets').select('id, phase, fingerprint').eq('trainer_id', S.trainer.id);
+      const { data: sets, error: es } = await allRows(() => sb.from('training_sets').select('id, phase, fingerprint').eq('trainer_id', S.trainer.id).order('id'));
       if (es) throw es;
       const setId = new Map(sets.map(s => [s.phase + '|' + s.fingerprint, s.id]));
       const existing = new Set(S.dbTrainings.map(t => slotKey(t.date, t.levels)));
