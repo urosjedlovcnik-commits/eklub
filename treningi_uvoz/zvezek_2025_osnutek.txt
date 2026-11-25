@@ -1,5 +1,5 @@
-# Lanska sezona 2025/26, prvi sklop 20 slik: OSNUTEK prvega branja (23. 11. 2026).
-# Ni pregledano, ni v bazi, generator tega ne uporablja. Oblika kot zvezek_2026.txt; "?" = negotovo.
+# Lanska sezona 2025/26, prvi sklop 20 slik: pregledan prepis.
+# Pregledano z Urošem in uvoženo v bazo 25. 11. 2026 (brez prepisa 1. 4. 2026). Oblika kot zvezek_2026.txt; "?" = negotovo.
 # Datum 0000-00-NN = trening brez datuma na sliki (NN = zaporedna številka slike).
 # 18. 9. in 15. 10. A imata v zvezku krajšo različico (18. 9.: 12x25 M, 6x50 1x DN 1x DN KR 1x 25 D + 25, 3x100, 3x50, 3x25 = 1,6; 15. 10. A: 6x100 = 2,0).
 # Slike 1-7 in 9 so prebrane povečane 25. 11. 2026.
