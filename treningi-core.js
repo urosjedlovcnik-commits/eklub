@@ -865,6 +865,53 @@
     return null;
   }
 
+  // ---------- Vaje iste tehnike skupaj ----------
+  /** Tehnike, ki jih serija vadi (noge ali vaja); cela tehnika na povratku ne šteje. */
+  function drillStrokes(text) {
+    const out = new Set();
+    String(text || '').split('\n').forEach(l => { const u = strokeUse(l); u.legs.forEach(x => out.add(x)); u.drills.forEach(x => out.add(x)); });
+    return out;
+  }
+
+  /**
+   * Tehnike, katerih vaje niso skupaj: vmes je druga serija ali pa se v mešani seriji
+   * (↑hrbtne noge ↓kravl vaja) vriva vaja druge tehnike, čeprav ima ista tehnika še svojo serijo.
+   */
+  function splitStrokes(texts) {
+    const seq = (texts || []).map(drillStrokes), bad = new Set();
+    'KHDP'.split('').forEach(k => {
+      const idx = seq.map((x, i) => (x.has(k) ? i : -1)).filter(i => i >= 0);
+      if (idx.length < 2) return;
+      if (idx[idx.length - 1] - idx[0] + 1 > idx.length) bad.add(k);
+      const pure = idx.filter(i => seq[i].size === 1), mixed = idx.filter(i => seq[i].size > 1);
+      if (pure.length && mixed.length) bad.add(k);
+    });
+    return Array.from(bad);
+  }
+
+  /** Vrstni red: iste tehnike skupaj, znotraj tehnike najprej noge, nato vaje. */
+  function orderDrills(sets) {
+    if (sets.length < 2 || sets.length > 6) return sets;
+    const legsOnly = sets.map(x => { const u = strokeUse(String(x.text).replace(/\n/g, ' ')); return u.legs.size > 0 && u.drills.size === 0; });
+    const info = sets.map(x => drillStrokes(x.text));
+    const cost = o => {
+      let v = 0;
+      'KHDP'.split('').forEach(k => {
+        const idx = o.map((i, pos) => (info[i].has(k) ? pos : -1)).filter(pos => pos >= 0);
+        if (idx.length > 1) v += 10 * (idx[idx.length - 1] - idx[0] + 1 - idx.length);
+        idx.forEach((a, n) => idx.slice(n + 1).forEach(b => { if (!legsOnly[o[a]] && legsOnly[o[b]]) v += 1; }));
+      });
+      return v;
+    };
+    let best = sets.map((x, i) => i), bc = cost(best);
+    const walk = (head, rest) => {
+      if (!rest.length) { const v = cost(head); if (v < bc) { bc = v; best = head; } return; }
+      rest.forEach((x, i) => walk(head.concat(x), rest.slice(0, i).concat(rest.slice(i + 1))));
+    };
+    if (bc > 0) walk([], best);
+    return best.map(i => sets[i]);
+  }
+
   // ---------- Skupni trening (A in B skupaj) ----------
   /** Ali je serija sestavljena samo iz 50 m dolžin. */
   function onlyFifties(text) {
@@ -950,7 +997,14 @@
     }
     const zak = byPhase('zakljucek');
     const mid = (lv.meters_min + lv.meters_max) / 2;
-    const vajeRange = lk === 'C' ? [2, 4] : [2, 3];
+    // C pred glavno potrebuje več vaj (v zvezku 3–5 serij, okrog 650 m) in krajšo glavno (okrog 300 m).
+    const vajeRange = lk === 'C' ? [3, 5] : [2, 3];
+    const splitMemo = new Map();
+    const splitCount = vs => {
+      const k = vs.map(v => v.fingerprint).join('|');
+      if (!splitMemo.has(k)) splitMemo.set(k, splitStrokes(orderDrills(vs).map(v => v.text)).length);
+      return splitMemo.get(k);
+    };
     const vajeWeight = memo(v => drillWeight(v, history, lk, date, settings));
     const maxM = memo(x => x ? maxMeters(x.text) : 0);
     const warmDays = memo(w => lastUseDays(history, w.fingerprint, lk, 'ogrevalna', date));
@@ -1023,8 +1077,15 @@
       // Glavna serija naj nosi trening: vsaj ~30 % metrov in ne manj kot vse vaje skupaj.
       const vajeM = vs.reduce((a, v) => a + v.meters, 0);
       const block = main ? main.meters + (shortMain && z ? z.meters : 0) : 0;
-      if (main && block < 0.3 * total) score += 6;
-      if (main && vajeM > block) score += 4;
+      if (isC) {
+        if (vajeM < 500) score += (500 - vajeM) / 25;
+        if (main && main.meters > 350) score += (main.meters - 350) / 25;
+      } else {
+        if (main && block < 0.3 * total) score += 6;
+        if (main && vajeM > block) score += 4;
+      }
+      // Vaje iste tehnike naj bodo skupaj, brez druge tehnike vmes.
+      if (score < (best ? best.score : Infinity)) score += 5 * splitCount(vs);
       // 6x50 in drugi redki formati ter več vaj v istem formatu naj bodo izjema.
       const fmts = vs.map(v => setFormat(v.text));
       const fw = settings.vaje_format_weights || {};
@@ -1050,7 +1111,7 @@
     };
     const items = { warm: [], vaje: [], main: [], zak: [] };
     if (best && best.warm) items.warm.push(mk('ogrevalna', best.warm));
-    if (best) best.vs.forEach(v => items.vaje.push(mk('vaje', v)));
+    if (best) orderDrills(best.vs).forEach(v => items.vaje.push(mk('vaje', v)));
     if (best && best.main) items.main.push(mk('glavna', best.main));
     if (best && best.z) items.zak.push(mk('zakljucek', best.z));
 
@@ -1113,6 +1174,6 @@
     buildDict, parseLine, parseText, toStructure, normalizeText, fingerprint, stripTargets, addTargets, bVariant,
     estimateMinutes, parseTime, formatTime, libraryFromTrainings, generateTraining, arrangeOrder,
     weekSlots, historyFromTraining, historyLevel, lastUseDays, lastDrillDays, drillKey, setFormat,
-    availableDrills, drillWeight, suggestNewSet, onlyFifties, jointStatus, exclusiveConflict, exclusiveTooSoon, lastExclusiveDays, tidyText, unevenSides, strokeUse, legsWithoutDrills, maxMeters, longestMaxLine, overMaxDistance, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
+    availableDrills, drillWeight, suggestNewSet, onlyFifties, jointStatus, drillStrokes, splitStrokes, orderDrills, exclusiveConflict, exclusiveTooSoon, lastExclusiveDays, tidyText, unevenSides, strokeUse, legsWithoutDrills, maxMeters, longestMaxLine, overMaxDistance, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
   };
 });

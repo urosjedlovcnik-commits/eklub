@@ -378,6 +378,7 @@
     }
     const tot = cardTotals(card);
     const legWarn = levelKey(slot.levels) === 'C' ? C.legsWithoutDrills(card.items.map(i => i.text)) : [];
+    const split = C.splitStrokes(card.items.filter(i => i.phase === 'vaje').map(i => i.text));
     const statusLabel = card.status === 'predlog' ? 'predlog' : card.status;
     const ji = jointInfo(slot);
     const jointWarn = !card.joint ? [] : [
@@ -393,6 +394,7 @@
       ${card.notes && card.notes.length ? `<div class="tr-chips">${card.notes.map(n => `<span class="tr-chip info">${esc(n)}</span>`).join('')}</div>` : ''}
       ${ji.possible || card.joint ? `<label class="tr-joint"><input type="checkbox" data-act="joint"${card.joint ? ' checked' : ''}> Skupni trening A+B (glavna samo iz 50 m)</label>` : ''}
       ${jointWarn.length ? `<div class="tr-chips">${jointWarn.map(w => `<span class="tr-chip">${esc(w)}</span>`).join('')}</div>` : ''}
+      ${split.length ? `<div class="tr-chips"><span class="tr-chip">Vaje iste tehnike niso skupaj: ${split.map(x => ({ K: 'kravl', H: 'hrbtno', D: 'delfin', P: 'prsno' }[x])).join(', ')}</span></div>` : ''}
       ${legWarn.length ? `<div class="tr-chips"><span class="tr-chip">Noge brez vaj za isto tehniko: ${legWarn.map(x => ({ K: 'kravl', H: 'hrbtno', D: 'delfin', P: 'prsno' }[x])).join(', ')}</span></div>` : ''}
       <div class="tr-items"></div>
       <div class="tr-add">
