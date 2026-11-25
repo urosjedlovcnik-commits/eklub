@@ -80,6 +80,7 @@ Trener izvedeni trening oceni od 1 do 10 (v koledarju ali v Treningih) in označ
 Ocena **8 ali več = zgled**. Če je označen vidik, je zgled samo ta del, sicer cel trening.
 
 - Pred sestavljanjem novega treninga preberi zglede za isti nivo in opombe: `select date, levels, rating, liked_phases, rating_note from trainings where rating >= 8 order by rating desc, date desc`, serije so v `training_items`.
+- Glavnih za A, daljših od 1100 m, po zgradbi ne posnemaj.
 - Zgled posnemaj po zgradbi, ne prepisuj ga: pravili 60 in 21 dni veljata tudi zanj.
 - Nizke ocene z opombo preberi kot odziv in jih po pogovoru s trenerjem vpiši v dnevnik.
 

@@ -46,6 +46,8 @@
     exclusive_gap_days: 28,
     // Trening s to oceno ali višjo je zgled za nove predloge.
     example_min_rating: 8,
+    // Daljših glavnih (m) ne posnemamo po zgradbi, tudi če so zgled.
+    example_main_max: { A: 1100 },
     // Skupni trening A+B: enkrat na mesec ob četrtkih, vsaj toliko dni narazen, glavna samo iz 50 m.
     joint: { weekday: 4, min_gap_days: 21 },
     // Dan v tednu (1 = ponedeljek) -> skupine nivojev, ki imajo vsaka svoj trening.
@@ -900,13 +902,14 @@
   function exampleSets(examples, level, settings) {
     const min = (settings && settings.example_min_rating) || DEFAULT_SETTINGS.example_min_rating;
     const keys = new Map(), mains = [];
+    const maxMain = ((settings && settings.example_main_max) || DEFAULT_SETTINGS.example_main_max)[level] || Infinity;
     (examples || []).filter(e => e.level === level && Number(e.rating) >= min).forEach(e => {
       const liked = (e.liked || []).length ? e.liked : LIBRARY_PHASES;
       (e.items || []).forEach(i => {
         if (!liked.includes(i.phase)) return;
         const k = i.phase + '|' + (i.phase === 'vaje' ? drillKey(fingerprint(i.text)) : fingerprint(i.text));
         keys.set(k, Math.max(keys.get(k) || 0, Number(e.rating)));
-        if (i.phase === 'glavna' && i.text.split('\n').length >= 3) mains.push(stripTargets(i.text));
+        if (i.phase === 'glavna' && i.text.split('\n').length >= 3 && parseText(i.text, new Map()).meters <= maxMain) mains.push(stripTargets(i.text));
       });
     });
     return { keys, mains };
@@ -1051,7 +1054,7 @@
     const exBoost = s => {
       const r = ex.keys.get(s.phase + '|' + (s.phase === 'vaje' ? drillKey(s.fingerprint) : s.fingerprint));
       if (r) return 1 + (r - 6) * 0.5;
-      return s.phase === 'glavna' && s.meters <= 1100 && likedMains.some(m => likeStructure(s.text, m)) ? 1.5 : 1;
+      return s.phase === 'glavna' && s.meters <= (settings.example_main_max[lk] || Infinity) && likedMains.some(m => likeStructure(s.text, m)) ? 1.5 : 1;
     };
     const recencyWeight = memo((s) => {
       const d = lastUseDays(history, s.fingerprint, lk, s.phase, date);
