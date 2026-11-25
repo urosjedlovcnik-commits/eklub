@@ -25,7 +25,7 @@ Različica »glavna takoj« (ogrevalna → glavna → 50 RAZP → vaje) je mogo�
 |---|---|---|
 | Skupaj | 2200–2500 m | 1400–1700 m |
 | Razplavanje | 300 | 200 |
-| Serije vaj | 2–3, pred glavno najpogosteje 2 | 3–5, pred glavno skoraj vedno vsaj 3 |
+| Serije vaj | praviloma 2, tri le občasno | 3–5, pred glavno skoraj vedno vsaj 3 |
 | Metri vaj | okrog 500 | okrog 650 |
 | Glavna | okrog 900, večinoma do 1100 (vsaj ~30 % treninga, več kot vse vaje) | okrog 300, največ ~350 |
 
@@ -44,6 +44,7 @@ Različica »glavna takoj« (ogrevalna → glavna → 50 RAZP → vaje) je mogo�
 - Vaje po strani (BOK, SUPERMAN, RV 90°) potrebujejo sodo število dolžin.
 - ORKA in BIONDI nikoli v istem treningu in vsaj 28 dni narazen.
 - `H 90°` samo po sebi ni vaja: ali `HN 90°` ali `HV RRU 90°`. Na trebuhu so roke spredaj `RS`, na hrbtu `RZ` ali `OT`.
+- `VATERPOLO ŠPRICANJE` ni vaja: ali `VATERPOLO` ali `VATERPOLO STEGR` (stegnjene roke). `ŠPRICANJE` je RRU vaja.
 - `V ML PR` je vedno z malimi lopatkami. `PL` se piše pred HN/HV/KN.
 - Pri novih vajah upoštevaj razdaljo in plavutke iz šifranta (oprema PL / BREZ PL).
 
@@ -67,7 +68,7 @@ Enkrat v koledarskem mesecu ob četrtku, vsaj 3 tedne po prejšnjem. A in B plav
 
 ## Pregled pred oddajo
 
-1. Metri v razponu, razmerje vaje : glavna ustreza nivoju.
+1. Metri v razponu, razmerje vaje : glavna ustreza nivoju. A praviloma dve seriji vaj.
 2. V vaje ene tehnike se v isti seriji ne vriva vaja druge tehnike.
 3. C: vsaj 3 serije vaj pred glavno; noge imajo vaje iste tehnike.
 4. Ponovitve: glavna 60 dni, vaja 21 dni, ORKA/BIONDI 28 dni.
@@ -91,6 +92,8 @@ Ocena **8 ali več = zgled**. Če je označen vidik, je zgled samo ta del, sicer
 | 25. 11. 2026 | A | Hrbtni vaji sta bili ločeni (`↑HN ROTACIJA ↓K 6-3-6`, nato `HV HITLER 1x 2-2-2`), vmes neumestno kravl. Pojasnilo: druga tehnika je lahko vmes, tu pa je bila kravl vaja v isti seriji s hrbtno. | Brez vaje druge tehnike v isti seriji; cela serija vmes je v redu. |
 | 25. 11. 2026 | C | Preveč plavanja celega stila (samo `8x25 HN` in `4x50 HV RRU`, nato `16x25`); pred glavno bi potrebovali še kakšno serijo. | C: vsaj 3 serije vaj, krajša glavna. |
 | 25. 11. 2026 | A | Glavna mu je bila zelo všeč: `6x50 KVL @1'` / `6x50 PL NOGE 1x MAX 1x EASY @1'10"` / `6x50 @50"` / `6x50 KVL @1'`. Opomba: malenkost predolga (1200 m), verjetno bi bilo boljše 4x 5x50. | Zgradba, ki naj se pojavlja: pripomoček → noge → kratek štart → pripomoček, 4x 5x50 (1000 m). |
+| 25. in 26. 11. 2026 | A, A+B | V obeh treningih so tri serije vaj; v večini primerov naj bosta dve. | A: praviloma 2 seriji vaj. |
+| 26. 11. 2026 | A+B | `↑VATERPOLO ŠPRICANJE` ne more biti vaja. | Samo `VATERPOLO` ali `VATERPOLO STEGR`. |
 
 ## Kaj upošteva generator
 

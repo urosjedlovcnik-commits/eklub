@@ -44,6 +44,10 @@
     exclusive_codes: [['ORKA', 'BIONDI']],
     // Te (skoraj enake) vaje naj bodo tudi med treningi vsaj toliko dni narazen.
     exclusive_gap_days: 28,
+    // Kombinacije, ki niso vaja (VATERPOLO je samo ali VATERPOLO STEGR).
+    invalid_drills: ['VATERPOLO ŠPRICANJE'],
+    // Nivo A (in B): praviloma dve seriji vaj; delež treningov s tremi.
+    three_drills_chance: 0.12,
     // Trening s to oceno ali višjo je zgled za nove predloge.
     example_min_rating: 8,
     // Daljše glavne (m) po zgradbi posnemamo le redko, tudi če so zgled.
@@ -89,7 +93,7 @@
     ['RRU', 'roka roka ujame (sklop vaj)', 'vaja'],
     ['PESTI', 'RRU s stisnjeno pestjo', 'vaja'],
     ['PALEC', 'RRU: palec se dotakne stegna in pazduhe', 'vaja'],
-    ['ŠPRICANJE', 'RRU/vaterpolo: ob koncu potega izpljuskneš vodo', 'vaja'],
+    ['ŠPRICANJE', 'RRU: ob koncu potega izpljuskneš vodo (ne pri vaterpolu)', 'vaja'],
     ['GERMANJA', 'pomožna tehnika (podvodni del hrbtnega potega)', 'vaja'],
     ['BIONDI', 'delfin vaja, skoraj enaka kot ORKA; nikoli skupaj z ORKA', 'vaja'],
     ['RV', 'roka ven, 90° (npr. KN RV 90°)', 'vaja'],
@@ -865,7 +869,7 @@
       const halves = text.match(/[↑↓][^↑↓]+/g);
       if (halves && halves.length === 2 && halves[0].slice(1).trim() === halves[1].slice(1).trim()) continue;
       if (exclusiveConflict(text, opts.others, settings)) continue;
-      if (overMaxDistance(text, settings)) continue;
+      if (overMaxDistance(text, settings) || invalidDrill(text, settings)) continue;
       if (phase === 'glavna' && opts.only50 && !onlyFifties(text)) continue;
       if (unevenSides(text)) continue;
       if (opts.date && exclusiveTooSoon(text, history, level, opts.date, settings)) continue;
@@ -931,6 +935,12 @@
     });
     const out = lines.map(l => swap.get(l)).join('\n');
     return out === lines.join('\n') ? null : out;
+  }
+
+  /** Zapis z neveljavno kombinacijo vaj ali null. */
+  function invalidDrill(text, settings) {
+    const t = normalizeText(text).replace(/\s+/g, ' ');
+    return ((settings && settings.invalid_drills) || DEFAULT_SETTINGS.invalid_drills).find(x => t.includes(x)) || null;
   }
 
   // ---------- Vaje iste tehnike skupaj ----------
@@ -1027,7 +1037,7 @@
     const rng = mulberry32(opts.seed != null ? opts.seed : Date.now() % 2147483647);
     const notes = [];
 
-    const lib = (opts.library || []).filter(s => s.active !== false && (s.levels || []).includes(lk) && !overMaxDistance(s.text, settings));
+    const lib = (opts.library || []).filter(s => s.active !== false && (s.levels || []).includes(lk) && !overMaxDistance(s.text, settings) && !invalidDrill(s.text, settings));
     const byPhase = p => lib.filter(s => s.phase === p);
 
     const joint = !!opts.joint;
@@ -1074,7 +1084,8 @@
     const zak = byPhase('zakljucek');
     const mid = (lv.meters_min + lv.meters_max) / 2;
     // C pred glavno potrebuje več vaj (v zvezku 3–5 serij, okrog 650 m) in krajšo glavno (okrog 300 m).
-    const vajeRange = lk === 'C' ? [3, 5] : [2, 3];
+    // A praviloma dve seriji vaj (določeno enkrat na predlog, da metri ne silijo k tretji).
+    const vajeRange = lk === 'C' ? [3, 5] : rng() < settings.three_drills_chance ? [3, 3] : [2, 2];
     const splitMemo = new Map();
     const splitCount = vs => {
       const k = vs.map(v => v.fingerprint).join('|');
@@ -1114,7 +1125,8 @@
     for (let attempt = 0; attempt < 400; attempt++) {
       const main = fresh.glavna || (mains.length ? weightedPick(mains, recencyWeight, rng) : null);
       const warm = fresh.ogrevalna || (ogr.length ? weightedPick(ogr, recencyWeight, rng) : null);
-      const nV = vajeRange[0] + Math.floor(rng() * (vajeRange[1] - vajeRange[0] + 1));
+      // Tri serije pri A samo, če se z njimi izidejo metri.
+      const nV = lk !== 'C' && vajeRange[0] === 3 && rng() < 0.3 ? 2 : vajeRange[0] + Math.floor(rng() * (vajeRange[1] - vajeRange[0] + 1));
       const chosen = new Set();
       const vs = fresh.vaje ? [fresh.vaje] : [];
       const keys = new Set(vs.map(v => drillKey(v.fingerprint)));
@@ -1151,6 +1163,7 @@
       if (total < lv.meters_min) score += (lv.meters_min - total) / 10;
       if (total > lv.meters_max) score += (total - lv.meters_max) / 10;
       // Glavna serija naj nosi trening: vsaj ~30 % metrov in ne manj kot vse vaje skupaj.
+      if (lk !== 'C' && nV < vajeRange[0]) score += 3;
       const vajeM = vs.reduce((a, v) => a + v.meters, 0);
       const block = main ? main.meters + (shortMain && z ? z.meters : 0) : 0;
       if (isC) {
@@ -1250,6 +1263,6 @@
     buildDict, parseLine, parseText, toStructure, normalizeText, fingerprint, stripTargets, addTargets, bVariant,
     estimateMinutes, parseTime, formatTime, libraryFromTrainings, generateTraining, arrangeOrder,
     weekSlots, historyFromTraining, historyLevel, lastUseDays, lastDrillDays, drillKey, setFormat,
-    availableDrills, drillWeight, suggestNewSet, onlyFifties, jointStatus, lineRole, likeStructure, likeMain, exampleSets, EXAMPLE_MAINS, drillStrokes, splitStrokes, orderDrills, exclusiveConflict, exclusiveTooSoon, lastExclusiveDays, tidyText, unevenSides, strokeUse, legsWithoutDrills, maxMeters, longestMaxLine, overMaxDistance, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
+    availableDrills, drillWeight, suggestNewSet, onlyFifties, jointStatus, invalidDrill, lineRole, likeStructure, likeMain, exampleSets, EXAMPLE_MAINS, drillStrokes, splitStrokes, orderDrills, exclusiveConflict, exclusiveTooSoon, lastExclusiveDays, tidyText, unevenSides, strokeUse, legsWithoutDrills, maxMeters, longestMaxLine, overMaxDistance, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
   };
 });

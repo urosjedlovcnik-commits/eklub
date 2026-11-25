@@ -501,6 +501,7 @@
         if (ex !== null && ex < S.settings.exclusive_gap_days) info = `⚠ ORKA/BIONDI pred ${ex} dnevi (vsaj ${S.settings.exclusive_gap_days})`;
       }
     }
+    if (C.invalidDrill(it.text, S.settings)) info = (info ? info + ' · ' : '') + `⚠ ${C.invalidDrill(it.text, S.settings)} ni vaja`;
     if (C.overMaxDistance(it.text, S.settings)) info = (info ? info + ' · ' : '') + `⚠ max razdalja je daljša od ${S.settings.max_distance} m`;
     wrap.innerHTML = `
       <div class="tr-item-head">
@@ -638,7 +639,7 @@
     const hist = historyExcluding(card.slot);
     const used = new Set(card.items.map(i => C.fingerprint(i.text)));
     const others = card.items.filter((x, j) => j !== idx).map(i => i.text);
-    let pool = S.library.filter(s => s.phase === it.phase && (s.levels || []).includes(lk) && !used.has(s.fingerprint) && !C.exclusiveConflict(s.text, others, S.settings) && !C.overMaxDistance(s.text, S.settings));
+    let pool = S.library.filter(s => s.phase === it.phase && (s.levels || []).includes(lk) && !used.has(s.fingerprint) && !C.exclusiveConflict(s.text, others, S.settings) && !C.overMaxDistance(s.text, S.settings) && !C.invalidDrill(s.text, S.settings));
     if (it.phase === 'glavna') {
       if (card.joint) pool = pool.filter(s => C.onlyFifties(s.text));
       if (card.mainMode === 'ne_sprint') pool = pool.filter(s => !C.isSprintMain(s, S.settings));
