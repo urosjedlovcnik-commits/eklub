@@ -874,22 +874,21 @@
   }
 
   /**
-   * Tehnike, katerih vaje niso skupaj: vmes je druga serija ali pa se v mešani seriji
-   * (↑hrbtne noge ↓kravl vaja) vriva vaja druge tehnike, čeprav ima ista tehnika še svojo serijo.
+   * Tehnike, v katere se vriva vaja druge tehnike: mešana serija (↑hrbtne noge ↓kravl vaja),
+   * čeprav ima ista tehnika v treningu še svojo serijo. Cela serija druge tehnike vmes je dovoljena.
    */
   function splitStrokes(texts) {
     const seq = (texts || []).map(drillStrokes), bad = new Set();
     'KHDP'.split('').forEach(k => {
       const idx = seq.map((x, i) => (x.has(k) ? i : -1)).filter(i => i >= 0);
       if (idx.length < 2) return;
-      if (idx[idx.length - 1] - idx[0] + 1 > idx.length) bad.add(k);
       const pure = idx.filter(i => seq[i].size === 1), mixed = idx.filter(i => seq[i].size > 1);
       if (pure.length && mixed.length) bad.add(k);
     });
     return Array.from(bad);
   }
 
-  /** Vrstni red: iste tehnike skupaj, znotraj tehnike najprej noge, nato vaje. */
+  /** Vrstni red (raje, ne nujno): iste tehnike skupaj, znotraj tehnike najprej noge, nato vaje. */
   function orderDrills(sets) {
     if (sets.length < 2 || sets.length > 6) return sets;
     const legsOnly = sets.map(x => { const u = strokeUse(String(x.text).replace(/\n/g, ' ')); return u.legs.size > 0 && u.drills.size === 0; });
@@ -1084,7 +1083,7 @@
         if (main && block < 0.3 * total) score += 6;
         if (main && vajeM > block) score += 4;
       }
-      // Vaje iste tehnike naj bodo skupaj, brez druge tehnike vmes.
+      // V vaje ene tehnike naj se ne vriva vaja druge tehnike.
       if (score < (best ? best.score : Infinity)) score += 5 * splitCount(vs);
       // 6x50 in drugi redki formati ter več vaj v istem formatu naj bodo izjema.
       const fmts = vs.map(v => setFormat(v.text));

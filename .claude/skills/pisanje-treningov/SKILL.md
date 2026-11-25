@@ -35,8 +35,8 @@ Različica »glavna takoj« (ogrevalna → glavna → 50 RAZP → vaje) je mogo�
 
 ## Vaje
 
-- **Vaje iste tehnike so skupaj.** Hrbtne noge, hrbtna vaja in hrbtno cela tehnika si sledijo. Vmes ni serije druge tehnike.
-- **V seriji ↑/↓ ne mešaj vaj dveh tehnik, če ima ena od njiju v treningu še svojo serijo.** Napačno: `↑HN ROTACIJA ↓K 6-3-6`, nato `HV HITLER`. Pravilno: `↑HN ROTACIJA ↓H CT`, nato `HV HITLER`.
+- **V seriji ↑/↓ ali 1x/1x ne mešaj vaj dveh tehnik, če ima ena od njiju v treningu še svojo serijo.** Deluje čudno zastavljeno. Napačno: `↑HN ROTACIJA ↓K 6-3-6`, nato `HV HITLER`. Pravilno: `↑HN ROTACIJA ↓H CT`, nato `HV HITLER`.
+- Cela serija druge tehnike med dvema serijama iste tehnike **je dovoljena** (npr. kravl, delfin, kravl). Raje pa naj bodo iste tehnike skupaj.
 - Znotraj tehnike: najprej noge, nato vaje, nato cela tehnika.
 - Nivo C: če so noge neke tehnike, morajo biti tudi vaje za isto tehniko.
 - Ista vaja se ne ponovi 21 dni, ne glede na število ponovitev.
@@ -68,7 +68,7 @@ Enkrat v koledarskem mesecu ob četrtku, vsaj 3 tedne po prejšnjem. A in B plav
 ## Pregled pred oddajo
 
 1. Metri v razponu, razmerje vaje : glavna ustreza nivoju.
-2. Vaje iste tehnike skupaj, brez vrivanja druge tehnike.
+2. V vaje ene tehnike se v isti seriji ne vriva vaja druge tehnike.
 3. C: vsaj 3 serije vaj pred glavno; noge imajo vaje iste tehnike.
 4. Ponovitve: glavna 60 dni, vaja 21 dni, ORKA/BIONDI 28 dni.
 5. Max: skupaj do 150 m, razen če je šprinterski; v kosu do 100 m.
@@ -78,16 +78,16 @@ Enkrat v koledarskem mesecu ob četrtku, vsaj 3 tedne po prejšnjem. A in B plav
 
 | Datum | Nivo | Odziv trenerja | Sledi |
 |---|---|---|---|
-| 25. 11. 2026 | A | Hrbtni vaji sta bili ločeni (`↑HN ROTACIJA ↓K 6-3-6`, nato `HV HITLER 1x 2-2-2`), vmes neumestno kravl. | Vaje iste tehnike skupaj; brez vaje druge tehnike na povratku. |
+| 25. 11. 2026 | A | Hrbtni vaji sta bili ločeni (`↑HN ROTACIJA ↓K 6-3-6`, nato `HV HITLER 1x 2-2-2`), vmes neumestno kravl. Pojasnilo: druga tehnika je lahko vmes, tu pa je bila kravl vaja v isti seriji s hrbtno. | Brez vaje druge tehnike v isti seriji; cela serija vmes je v redu. |
 | 25. 11. 2026 | C | Preveč plavanja celega stila (samo `8x25 HN` in `4x50 HV RRU`, nato `16x25`); pred glavno bi potrebovali še kakšno serijo. | C: vsaj 3 serije vaj, krajša glavna. |
-| 25. 11. 2026 | A (za potrditev) | Glavna mu je bila zelo všeč: `6x50 KVL @1'` / `6x50 PL NOGE 1x MAX 1x EASY @1'10"` / `6x50 @50"` / `6x50 KVL @1'`. | Zgradba, ki naj se pojavlja: pripomoček → noge → kratek štart → pripomoček, vse po 50 m. |
+| 25. 11. 2026 | A | Glavna mu je bila zelo všeč: `6x50 KVL @1'` / `6x50 PL NOGE 1x MAX 1x EASY @1'10"` / `6x50 @50"` / `6x50 KVL @1'`. | Zgradba, ki naj se pojavlja: pripomoček → noge → kratek štart → pripomoček, vse po 50 m. |
 
 ## Kaj upošteva generator
 
 | Pravilo | V kodi |
 |---|---|
 | Metri, razmerja, ponovitve, šprint, max, ORKA/BIONDI, sode dolžine | da |
-| Vaje iste tehnike skupaj, noge pred vajami (`splitStrokes`, `orderDrills`) | da |
+| Brez mešanja vaj dveh tehnik v seriji (`splitStrokes`); iste tehnike raje skupaj, noge pred vajami (`orderDrills`) | da |
 | C: vsaj 3 serije vaj, okrog 600 m, glavna do ~350 m | da |
 | C: noge imajo vaje iste tehnike | da |
 | Skupni trening, plavutke novih vaj | da |
