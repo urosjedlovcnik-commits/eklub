@@ -2106,7 +2106,19 @@ document.addEventListener('DOMContentLoaded', () => {
         .eq('term_id', termId);
       if (req !== ctRequest) return;
       if (error) { console.warn('Treningi niso na voljo:', error.message); return; }
-      if (!data || !data.length) return;
+      if (!data || !data.length) {
+        // Trening še ni sestavljen: hitri predlog (samo tam, kjer je vidna povezava Treningi).
+        if (trainerAuth?.permissions?.canAccessAdmin) {
+          const q = new URLSearchParams({ datum: ymd, termin: termId, hitro: '1' });
+          const a = document.createElement('a');
+          a.className = 'btn ct-quick';
+          a.href = 'treningi.html?' + q.toString();
+          a.textContent = '⚡ Hitro predlagaj trening';
+          box.appendChild(a);
+          box.hidden = false;
+        }
+        return;
+      }
       const escCt = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
       const order = (l) => l.includes('C') && !l.includes('A') ? 1 : 0;
       data.sort((a, b) => order(a.levels) - order(b.levels));

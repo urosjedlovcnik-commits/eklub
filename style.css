@@ -39,6 +39,7 @@ body{font-family:system-ui, Segoe UI, Roboto, Arial, sans-serif; background:var(
 .composed-training .ct-row{display:grid;grid-template-columns:1fr auto;gap:8px;padding:3px 0;border-top:1px solid #f1f5f9;font-size:14px}
 .composed-training .ct-row.glavna{font-weight:700}
 .composed-training .ct-phase{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);font-weight:600}
+.composed-training .ct-quick{display:block;text-align:center;background:#f59e0b;border-color:#f59e0b;color:#fff;font-weight:700;text-decoration:none;padding:12px}
 .composed-training .ct-nova{color:#b45309}
 .composed-training .ct-text{font-family:ui-monospace,Consolas,monospace;white-space:pre-wrap}
 .composed-training .ct-b{color:#7c3aed;font-family:ui-monospace,Consolas,monospace;white-space:pre-wrap}

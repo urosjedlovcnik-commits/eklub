@@ -115,7 +115,7 @@
   ].map(([code, meaning, category]) => ({ code, meaning, category, aliases: [], source: 'pregled' }));
 
   // Besede v opisih vaj, ki niso kratice in jih ne označujemo kot neznane.
-  const FILLER = new Set(('EASY SALTO POL FREK VEN ZADNJIH METULJČEK LEVA DESNA VDIH NAPREJ Z NA PO POD ČIM DLJE DALJŠI VIŠJI VODO BREZ DIHANJA DIHANJE VDIHA VSAK VSAKIČ ROKA ROKE UZ ZAVES ' +
+  const FILLER = new Set(('HITER PREHOD USTAVLJANJA HITRI UDARCI HRBET TREBUH GLAVA VODI ZUNAJ S SKOKOM SKOK CELA MANJ VDIHOV POČASNEJE VSE ISTI ŽELJI DLAN PODVODNI PODVODNIM SREDINI STENO KONCU EASY SALTO POL FREK VEN ZADNJIH METULJČEK LEVA DESNA VDIH NAPREJ Z NA PO POD ČIM DLJE DALJŠI VIŠJI VODO BREZ DIHANJA DIHANJE VDIHA VSAK VSAKIČ ROKA ROKE UZ ZAVES ' +
     'ZAVESLJAJI ZAVESLJAJ VISOK KOMOLEC KOMOLCEM POLOŽAJ MENJAMO KONTRA HITRO POČASI TEMPO MEŠANO PRSNO KRAVL ' +
     'HRBTNO DELFIN DESKA DESKO VALČEK LOP RAMENA IN ALI ŠTARTI ŠTART X 1. 2. 3. CT/N/V/CT N/V/CT DO TAKOJ').split(/\s+/));
 
@@ -856,6 +856,12 @@
     const vajeWeight = memo(v => drillWeight(v, history, lk, date, settings));
     const maxM = memo(x => x ? maxMeters(x.text) : 0);
     const warmDays = memo(w => lastUseDays(history, w.fingerprint, lk, 'ogrevalna', date));
+
+    // »Nov predlog«: prejšnje glavne serije ne ponudi znova, če obstaja druga.
+    if (opts.avoid && opts.avoid.length) {
+      const alt = mains.filter(s => !opts.avoid.includes(s.fingerprint));
+      if (alt.length) mains = alt;
+    }
 
     // Nove serije: opts.newSets = 'brez' | 'ena' | 'vse'. Izbrane so vnaprej, da se metri izidejo.
     const newMode = opts.newSets || 'brez';

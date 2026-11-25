@@ -44,7 +44,7 @@
     if (typeof redirectRecoveryToResetPage === 'function' && redirectRecoveryToResetPage()) return;
     const ctx = await auth.restoreSession();
     if (!ctx) {
-      window.location.href = 'login.html?return=' + encodeURIComponent('treningi.html');
+      window.location.href = 'login.html?return=' + encodeURIComponent('treningi.html' + window.location.search);
       return;
     }
     sb = auth.supabase;
@@ -60,6 +60,7 @@
     try {
       await loadAll();
       banner(null);
+      await startQuick();
     } catch (e) {
       console.error(e);
       banner('Napaka pri nalaganju: ' + (e.message || e), true);
@@ -155,7 +156,75 @@
     nm.addEventListener('change', () => { try { localStorage.setItem('eklub_nove_serije', nm.value); } catch (e) { /* zasebni način */ } });
   }
 
-  function slotsForWeek() { return C.weekSlots(S.week, S.terms, S.settings); }
+  function slotsForWeek() {
+    if (S.quick) return S.quick.groups.map(levels => ({ date: S.quick.date, term_id: S.quick.term.id, term_label: S.quick.term.label || S.quick.term.id, levels: levels.slice() }));
+    return C.weekSlots(S.week, S.terms, S.settings);
+  }
+
+  // ---------- Hitri predlog (iz koledarja: ?datum=…&termin=…&hitro=1) ----------
+  const QUICK_LEVELS = [['A+B', [['A', 'B']]], ['A', [['A']]], ['C', [['C']]], ['A in C', [['A'], ['C']]], ['A+B in C', [['A', 'B'], ['C']]]];
+
+  async function startQuick() {
+    const q = new URLSearchParams(window.location.search);
+    const date = q.get('datum'), termId = q.get('termin');
+    if (q.get('hitro') !== '1' || !/^\d{4}-\d{2}-\d{2}$/.test(date || '') || !termId) return;
+    let term = S.terms.find(t => t.id === termId);
+    if (!term) {
+      // Nadomeščanje: termin drugega trenerja.
+      const { data, error } = await sb.from('terms').select('*').eq('id', termId).maybeSingle();
+      if (error || !data) { banner('Termina ne najdem, prikazan je cel teden.', true); return; }
+      term = data;
+    }
+    const wd = C.weekday(date);
+    const groups = S.settings.day_levels[wd] || S.settings.day_levels[String(wd)] || [['A', 'B']];
+    S.quick = { date, term, groups };
+    document.body.classList.add('quick');
+    // Na bazenu brez nepregledanih novih serij (★ pri vrstici je še vedno na voljo).
+    $('newSetsMode').value = 'brez';
+    proposeMissing();
+    renderQuickBar();
+  }
+
+  function proposeMissing() {
+    slotsForWeek().forEach(slot => {
+      const key = slotKey(slot.date, slot.levels);
+      if (!savedFor(slot) && !S.cards.has(key)) S.cards.set(key, propose(slot));
+    });
+  }
+
+  function renderQuickBar() {
+    const bar = $('quickBar');
+    if (!S.quick) { bar.hidden = true; return; }
+    const cur = JSON.stringify(S.quick.groups);
+    bar.hidden = false;
+    bar.innerHTML = `<div class="tr-quick"><strong>⚡ Hitri predlog</strong>
+      <label class="tr-sub">Nivoji <select id="quickLevels">${QUICK_LEVELS.map(([n, g], i) => `<option value="${i}"${JSON.stringify(g) === cur ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
+      <button class="btn" id="quickAgain">Drug predlog</button>
+      <button class="btn" id="quickWeek">Cel teden</button>
+      <a class="btn" href="index.html">← Koledar</a></div>`;
+    $('quickLevels').addEventListener('change', (e) => {
+      S.cards.forEach((card, k) => { if (!card.dbId && card.slot.date === S.quick.date) S.cards.delete(k); });
+      S.quick.groups = QUICK_LEVELS[+e.target.value][1];
+      proposeMissing(); renderWeek();
+    });
+    $('quickAgain').addEventListener('click', () => {
+      slotsForWeek().forEach(slot => {
+        if (savedFor(slot)) return;
+        const key = slotKey(slot.date, slot.levels);
+        const avoid = mainPrints(S.cards.get(key));
+        S.cards.delete(key);
+        S.cards.set(key, propose(slot, 'auto', avoid));
+      });
+      renderWeek();
+    });
+    $('quickWeek').addEventListener('click', () => {
+      const date = S.quick.date;
+      S.quick = null;
+      document.body.classList.remove('quick');
+      S.week = mondayOf(date); $('weekDate').value = S.week;
+      renderQuickBar(); renderWeek();
+    });
+  }
 
   function savedFor(slot) {
     return S.dbTrainings.find(t => t.date === slot.date && t.levels.slice().sort().join('') === slot.levels.slice().sort().join(''));
@@ -187,11 +256,13 @@
     return base;
   }
 
-  function propose(slot, mainMode) {
+  const mainPrints = (card) => (card ? card.items.filter(i => i.phase === 'glavna').map(i => C.fingerprint(i.text)) : []);
+
+  function propose(slot, mainMode, avoid) {
     const tr = C.generateTraining({
       date: slot.date, levels: slot.levels, library: S.library, history: historyExcluding(slot),
       settings: S.settings, seed: Math.floor(Math.random() * 1e9), mainMode: mainMode || 'auto',
-      newSets: $('newSetsMode').value, dict: S.dict, drills: S.codes
+      newSets: $('newSetsMode').value, dict: S.dict, drills: S.codes, avoid: avoid || []
     });
     return { slot, dbId: null, status: 'predlog', order_variant: tr.order_variant, items: tr.items, notes: tr.notes, dirty: true, mainMode: mainMode || 'auto' };
   }
@@ -210,7 +281,7 @@
   function renderWeek() {
     const view = $('weekView');
     const slots = slotsForWeek();
-    if (!S.terms.length) {
+    if (!S.terms.length && !S.quick) {
       view.innerHTML = '<p class="tr-empty">Nimaš dodeljenih terminov (trainer_terms).</p>';
       return;
     }
@@ -325,7 +396,7 @@
     }));
     el.querySelector('[data-act=regen]').addEventListener('click', () => {
       if (card.dbId && !confirm('Trening je shranjen. Zamenjam ga z novim predlogom? (V bazi se spremeni šele ob shranjevanju.)')) return;
-      const fresh = propose(slot, el.querySelector('[data-act=mode]').value);
+      const fresh = propose(slot, el.querySelector('[data-act=mode]').value, mainPrints(card));
       fresh.dbId = card.dbId; fresh.status = card.dbId ? card.status : 'predlog';
       S.cards.set(key, fresh); rerenderCard(key);
     });

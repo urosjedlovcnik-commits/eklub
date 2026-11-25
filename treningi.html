@@ -15,6 +15,9 @@
   .tr-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
   .tr-toolbar input[type=date]{width:auto;margin:0}
   .tr-toolbar select,.tr-toolbar input[type=search]{width:auto;margin:0}
+  body.quick #panel-sestavi > .tr-toolbar, body.quick #panel-sestavi > .tr-note{display:none}
+  .tr-quick{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .tr-quick select{width:auto;margin:0}
   .tr-note{font-size:13px;color:var(--mut);margin:4px 0 12px}
   .tr-banner{padding:10px 12px;border-radius:10px;background:#eff6ff;border:1px solid #bfdbfe;font-size:14px;margin-bottom:12px}
   .tr-banner.warn{background:#fff7ed;border-color:#fed7aa}
@@ -34,6 +37,7 @@
   .tr-new{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0 2px}
   .tr-new input{flex:1;min-width:140px;margin:0}
   .tr-count{display:inline-block;min-width:20px;padding:0 6px;border-radius:999px;background:#f59e0b;color:#fff;font-size:12px;text-align:center}
+  .tr-count[hidden]{display:none}
   .tr-drill{background:#fff;border:1px solid var(--border);border-radius:14px;padding:12px;margin-bottom:12px}
   .tr-drill label{font-size:13px;font-weight:600;display:block;margin-top:6px}
   .tr-drill iframe{width:100%;aspect-ratio:16/9;border:0;border-radius:10px;margin-top:8px}
@@ -125,6 +129,7 @@
           </select></label>
       </div>
       <p class="tr-note">Predlog upošteva pravilo 2 mesecev za glavne serije (ločeno za A in C), šprint na 2–3 tedne in ciljne metre. Ista vaja se ne ponovi 3 tedne. Vsako vrstico lahko popraviš, zamenjaš (↻), dobiš zanjo povsem novo serijo (★) ali jo odstraniš. V bazo gre šele, ko klikneš Shrani ali Potrdi.</p>
+      <div id="quickBar" class="tr-banner" hidden></div>
       <div id="weekView"></div>
     </section>
 
