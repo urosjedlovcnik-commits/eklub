@@ -44,6 +44,8 @@
     exclusive_codes: [['ORKA', 'BIONDI']],
     // Te (skoraj enake) vaje naj bodo tudi med treningi vsaj toliko dni narazen.
     exclusive_gap_days: 28,
+    // Skupni trening A+B: enkrat na mesec ob četrtkih, vsaj toliko dni narazen, glavna samo iz 50 m.
+    joint: { weekday: 4, min_gap_days: 21 },
     // Dan v tednu (1 = ponedeljek) -> skupine nivojev, ki imajo vsaka svoj trening.
     day_levels: { 1: [['A', 'B']], 3: [['A'], ['C']], 4: [['A', 'B']] },
     // Privzeti štart glavne serije, če ni zapisan (sekunde po dolžini).
@@ -657,9 +659,12 @@
     if (own.length && rng() < 0.25) {
       const d = one(own), cela = { K: 'K CT', H: 'H CT', D: 'D CT', P: 'P' }[d.stroke];
       const n25 = lk === 'C' ? 8 : 10;
-      const forms = [`8x25 PL ${d.code}`];
-      if (cela) forms.push(`${n25}x25 PL ↑${d.code} ↓${cela}`, `8x25 PL 3x ${d.code} 1x ${cela}`);
-      if (d.distances.includes(50)) forms.push(`4x50 PL ${d.code}`);
+      // Oprema potrjene vaje: PL, BREZ PL ali oboje; brez podatka velja s plavutkami.
+      const eq = d.equipment || [];
+      const pl = eq.includes('BREZ PL') ? (eq.includes('PL') ? one(['PL ', '']) : '') : 'PL ';
+      const forms = [`8x25 ${pl}${d.code}`];
+      if (cela) forms.push(`${n25}x25 ${pl}↑${d.code} ↓${cela}`, `8x25 ${pl}3x ${d.code} 1x ${cela}`);
+      if (d.distances.includes(50)) forms.push(`4x50 ${pl}${d.code}`);
       return one(forms);
     }
     const halves = libraryHalves(opts && opts.library, lk);
@@ -765,6 +770,22 @@
     const pick = (a, n) => { const c = a.slice(), r = []; while (r.length < n && c.length) r.push(c.splice(Math.floor(rng() * c.length), 1)[0]); return r; };
     const uniq = a => a.filter((x, i) => a.indexOf(x) === i).join('\n');
     const sprint = !!(opts && opts.sprint);
+    if (opts && opts.only50 && lk !== 'C') {
+      const st = one([`@1'`, `@1'05"`, `@1'10"`]);
+      const t50 = ['VL', 'K', 'MAD', 'MBK', 'M', 'K STOP', 'K 2+1', 'K DIH 5-7', 'K ČMZ', 'H/K', 'KVL'];
+      const fast50 = [`6x50 25 K! + 25 RAZP ${st}`, `8x50 ↑STIL! ↓RAZP ${st}`, `4x50 25 D! + 25 RAZP ${st}`];
+      const mid50 = [`4x50 K 3+1 ${st}`, `8x50 K 3+1 ${st}`, `6x50 K 5+1 ${st}`, `6x50 MBK ${st}`, `6x50 KVL ${st}`, `8x50 MM ${st}`, `6x50 PL NOGE 1x MAX 1x EASY @1'10"`, `4x50 25 D + 25 K ${st}`, `8x50 4x STOP 1-4 4x RG 4-1 ${st}`];
+      return one(sprint ? [
+        () => uniq([one(mid50), one(fast50), one(fast50)]),
+        () => `4x( 3x50 K T ${st} / 50 K! ${st} / 50 RAZP )`
+      ] : [
+        () => `3x( ${one([5, 6])}x50 ${st} ) ${pick(t50, 3).map(t => '1x ' + t).join(' ')}`,
+        () => `4x( 4x50 ${st} ) ${pick(t50, 4).map(t => '1x ' + t).join(' ')}`,
+        () => uniq(pick(mid50, 3)),
+        () => uniq(pick(mid50, 2)) + `\n50 RAZP\n` + one([`6x50 ${one(t50)} ${st}`, `8x50 ${one(t50)} ${st}`]),
+        () => `${one([4, 5])}x( 3x50 K T ${st} / 50 ${one(['M', 'H', 'D/K'])} ${st} )`
+      ])();
+    }
     if (lk === 'C') {
       const s = () => one(['K', 'H', 'P']);
       return one([
@@ -825,7 +846,7 @@
     if (!limits) return null;
     const make = { vaje: newDrill, ogrevalna: newWarmup, glavna: newMain }[phase];
     for (let i = 0; i < 120; i++) {
-      const text = make(level, rng, { sprint: opts.sprint, library, drills: opts.drills });
+      const text = make(level, rng, { sprint: opts.sprint, only50: opts.only50, library, drills: opts.drills });
       const fp = fingerprint(text);
       if (known.has(key(fp))) continue;
       // Ista vaja na obeh straneh (↑X ↓X, 1x X 1x X) ni smiselna.
@@ -833,6 +854,7 @@
       if (halves && halves.length === 2 && halves[0].slice(1).trim() === halves[1].slice(1).trim()) continue;
       if (exclusiveConflict(text, opts.others, settings)) continue;
       if (overMaxDistance(text, settings)) continue;
+      if (phase === 'glavna' && opts.only50 && !onlyFifties(text)) continue;
       if (unevenSides(text)) continue;
       if (opts.date && exclusiveTooSoon(text, history, level, opts.date, settings)) continue;
       if (phase === 'glavna' && isSprintTexts([text], settings) !== !!opts.sprint) continue;
@@ -841,6 +863,33 @@
       return { phase, text, meters, fingerprint: fp, levels: [level], source: 'nova', isNew: true, main_type: phase === 'glavna' && opts.sprint ? 'sprint' : null };
     }
     return null;
+  }
+
+  // ---------- Skupni trening (A in B skupaj) ----------
+  /** Ali je serija sestavljena samo iz 50 m dolžin. */
+  function onlyFifties(text) {
+    const lines = cleanQuotes(text).split('\n').map(l => l.trim()).filter(Boolean);
+    return lines.length > 0 && lines.every(l => {
+      const g = l.match(/^\d+\s*[xX]\s*\((.*?)\)/);
+      return (g ? g[1] : l).split(/\s\/\s/).every(p => {
+        const m = p.trim().match(/^(?:(\d+)\s*[xX]\s*)?50(?!\d)(.*)$/);
+        // Znotraj 50 m je lahko 25 + 25, ne pa še kakšna dolžina poleg (50 + 50, 1x 100).
+        return !!m && parseText(p.trim(), new Map()).meters === 50 * (+m[1] || 1) && !/(75|100|125|150|200|300|400)/.test(m[2]);
+      });
+    });
+  }
+
+  /**
+   * Skupni trening: četrtek, v tem mesecu ga še ni in od drugih je vsaj min_gap_days dni.
+   * dates: datumi skupnih treningov (shranjenih in predlaganih).
+   */
+  function jointStatus(date, levels, dates, settings) {
+    const j = Object.assign({}, DEFAULT_SETTINGS.joint, (settings && settings.joint) || {});
+    const possible = weekday(date) === j.weekday && levels.includes('A') && levels.includes('B');
+    const others = (dates || []).filter(d => d !== date);
+    const gap = others.length ? Math.min(...others.map(d => Math.abs(daysBetween(d, date)))) : null;
+    const sameMonth = others.some(d => d.slice(0, 7) === date.slice(0, 7));
+    return { possible, gap, sameMonth, tooSoon: gap !== null && gap < j.min_gap_days, due: possible && !sameMonth && (gap === null || gap >= j.min_gap_days) };
   }
 
   function mainAvailability(set, history, level, date, settings) {
@@ -867,7 +916,8 @@
     const lib = (opts.library || []).filter(s => s.active !== false && (s.levels || []).includes(lk) && !overMaxDistance(s.text, settings));
     const byPhase = p => lib.filter(s => s.phase === p);
 
-    let mains = byPhase('glavna').filter(s => mainAvailability(s, history, lk, date, settings).ok);
+    const joint = !!opts.joint;
+    let mains = byPhase('glavna').filter(s => mainAvailability(s, history, lk, date, settings).ok && (!joint || onlyFifties(s.text)));
     const sprintDays = lastSprintDays(history, lk, date);
     const sprintMains = mains.filter(s => isSprintMain(s, settings));
     const mode = opts.mainMode || 'auto';
@@ -916,15 +966,17 @@
     const wantSprint = mode === 'sprint' || (mains.length > 0 && mains.every(s => isSprintMain(s, settings)));
     const noSprint = mode === 'ne_sprint' || (mode === 'auto' && sprintDays !== null && sprintDays < settings.sprint_min_gap_days);
     const needNewSprint = mode === 'sprint' && !mains.length;
-    const newPhases = needNewSprint && newMode !== 'vse' ? ['glavna'] : newMode === 'vse' ? ['ogrevalna', 'vaje', 'glavna']
+    const needNew50 = joint && !mains.length;
+    if (joint) notes.unshift('Skupni trening A+B: glavna serija samo iz 50 m.');
+    const newPhases = (needNewSprint || needNew50) && newMode !== 'vse' ? ['glavna'] : newMode === 'vse' ? ['ogrevalna', 'vaje', 'glavna']
       : newMode === 'ena' ? [['ogrevalna', 'vaje', 'vaje', 'glavna'][Math.floor(rng() * 4)]] : [];
     const fresh = {};
     newPhases.forEach(p => {
-      const n = suggestNewSet(p, { level: lk, library: opts.library, drills: opts.drills, history, dict: opts.dict, rng, settings, date, others: Object.values(fresh).map(x => x.text), sprint: p === 'glavna' && wantSprint });
+      const n = suggestNewSet(p, { level: lk, library: opts.library, drills: opts.drills, history, dict: opts.dict, rng, settings, date, others: Object.values(fresh).map(x => x.text), sprint: p === 'glavna' && wantSprint, only50: joint && p === 'glavna' });
       if (n) fresh[p] = n;
     });
     if (needNewSprint && !fresh.glavna) {
-      mains = byPhase('glavna').filter(s => mainAvailability(s, history, lk, date, settings).ok);
+      mains = byPhase('glavna').filter(s => mainAvailability(s, history, lk, date, settings).ok && (!joint || onlyFifties(s.text)));
       notes.push('Šprinterske serije za ta nivo ni, zato je glavna navadna.');
     }
 
@@ -993,7 +1045,7 @@
     }
 
     const mk = (phase, set, text) => {
-      const t = text || (phase === 'glavna' ? addTargets(set.text, lk, settings) : set.text);
+      const t = text || (phase === 'glavna' ? (joint ? stripTargets(set.text) : addTargets(set.text, lk, settings)) : set.text);
       return { phase, text: t, set_id: set && set.source === 'db' ? set.id : null, source: set ? set.source : 'fiksno', main_type: set ? set.main_type : null, isNew: !!(set && set.isNew) };
     };
     const items = { warm: [], vaje: [], main: [], zak: [] };
@@ -1010,7 +1062,8 @@
     }
     list.push(...items.zak, mk('zakljucno_razplavanje', null, `${best ? best.fin : 50} RAZP`));
 
-    if (levels.includes('B')) {
+    // Na skupnem treningu plavata A in B isto.
+    if (levels.includes('B') && !joint) {
       list.forEach(it => {
         if (it.phase === 'glavna') {
           const b = bVariant(it.text, settings);
@@ -1019,7 +1072,7 @@
         }
       });
     }
-    return { date, levels, order_variant: order, items: list, notes };
+    return { date, levels, joint, order_variant: order, items: list, notes };
   }
 
   function arrangeOrder(items, order) {
@@ -1060,6 +1113,6 @@
     buildDict, parseLine, parseText, toStructure, normalizeText, fingerprint, stripTargets, addTargets, bVariant,
     estimateMinutes, parseTime, formatTime, libraryFromTrainings, generateTraining, arrangeOrder,
     weekSlots, historyFromTraining, historyLevel, lastUseDays, lastDrillDays, drillKey, setFormat,
-    availableDrills, drillWeight, suggestNewSet, exclusiveConflict, exclusiveTooSoon, lastExclusiveDays, tidyText, unevenSides, strokeUse, legsWithoutDrills, maxMeters, longestMaxLine, overMaxDistance, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
+    availableDrills, drillWeight, suggestNewSet, onlyFifties, jointStatus, exclusiveConflict, exclusiveTooSoon, lastExclusiveDays, tidyText, unevenSides, strokeUse, legsWithoutDrills, maxMeters, longestMaxLine, overMaxDistance, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
   };
 });

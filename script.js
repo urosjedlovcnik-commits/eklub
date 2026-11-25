@@ -2101,7 +2101,7 @@ document.addEventListener('DOMContentLoaded', () => {
       box.innerHTML = '';
       const { data, error } = await supabase
         .from('trainings')
-        .select('id, levels, status, total_meters, estimated_minutes, training_items(position, phase, text, meters, level_variants, notes)')
+        .select('id, levels, status, total_meters, estimated_minutes, notes, training_items(position, phase, text, meters, level_variants, notes)')
         .eq('date', ymd)
         .eq('term_id', termId);
       if (req !== ctRequest) return;
@@ -2127,7 +2127,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let soFar = 0;
         const statusLabel = { osnutek: 'osnutek', potrjen: 'potrjen', izveden: 'izveden' }[t.status] || t.status;
         return `<div class="ct-card">
-          <div class="ct-head"><span>Nivo ${escCt(t.levels.join(' + '))}</span><span class="ct-badge ${escCt(t.status)}">${escCt(statusLabel)}</span></div>
+          <div class="ct-head"><span>Nivo ${escCt(t.levels.join(' + '))}${/^SKUPNI\b/.test(t.notes || '') ? ' · skupni trening' : ''}</span><span class="ct-badge ${escCt(t.status)}">${escCt(statusLabel)}</span></div>
           ${items.map(i => {
             const b = i.level_variants && i.level_variants.B && i.level_variants.B.text;
             soFar += i.meters || 0;
@@ -2545,6 +2545,8 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadAllData() {
       setCalendarLoading(true);
       try {
+        // Podrobnosti meseca se nalagajo hkrati z osnovnimi podatki, ne šele za njimi.
+        const details = loadMonthDetailData();
         await Promise.all([
           loadTerms(),
           loadSwimmers(),
@@ -2554,7 +2556,7 @@ document.addEventListener('DOMContentLoaded', () => {
         clearCache();
         renderMonth(false);
         updateCalendarStatusBanner();
-        await loadMonthDetailData();
+        await details;
         clearCache();
         renderMonth(true);
         updateCalendarStatusBanner();

@@ -104,8 +104,7 @@ class TrainerAuthManager {
         this.currentTrainer = trainer;
         this.permissions = this.calculatePermissions(trainer.role || TRAINER_ROLES.TRAINER);
         this.ensureViewModeDefault();
-        await this.loadOwnTermIds();
-        await this.loadSubstituteTermIds();
+        await this.loadTermIds();
         return this.getContext();
     }
 
@@ -123,12 +122,36 @@ class TrainerAuthManager {
         this.currentTrainer = trainer;
         this.permissions = this.calculatePermissions(trainer.role || TRAINER_ROLES.TRAINER);
         this.ensureViewModeDefault();
-        await this.loadOwnTermIds();
-        await this.loadSubstituteTermIds();
+        await this.loadTermIds();
         return this.getContext();
     }
 
+    /** Termini trenerja; če jih je že prinesel profil, dodatne zahteve niso potrebne. */
+    async loadTermIds() {
+        const p = this.profileTerms;
+        this.profileTerms = null;
+        if (p && p.trainerId === this.currentTrainer?.id) {
+            this.ownTermIds = new Set(p.own);
+            this.substituteTermIds = new Set(p.substitute);
+            return;
+        }
+        await Promise.all([this.loadOwnTermIds(), this.loadSubstituteTermIds()]);
+    }
+
     async loadTrainerProfile(user) {
+        this.profileTerms = null;
+        const { data: full, error } = await this.supabase
+            .from('trainers')
+            .select('*, trainer_terms(term_id), trainer_attendance(term_id)')
+            .eq('user_id', user.id)
+            .maybeSingle();
+        if (!error && full) {
+            const { trainer_terms: own, trainer_attendance: sub, ...trainer } = full;
+            if (Array.isArray(own) && Array.isArray(sub)) {
+                this.profileTerms = { trainerId: trainer.id, own: own.map(r => r.term_id), substitute: sub.map(r => r.term_id) };
+            }
+            return trainer;
+        }
         const { data: byUserId } = await this.supabase
             .from('trainers')
             .select('*')
