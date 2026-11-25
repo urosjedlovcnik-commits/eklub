@@ -92,7 +92,9 @@
     ['DR', 'delfin roke (KN DR = kravl noge, delfin roke)', 'vaja'],
     ['PR', 'prsno roke (PR DN = prsno roke, delfin noge)', 'vaja'],
     ['PZDZ', 'ponovi zadnji del zavesljaja', 'vaja'],
-    ['STEGR', 'RRU: stegnjene roke', 'vaja'],
+    ['STEGR', 'stegnjene roke (RRU ali normalna tehnika)', 'vaja'],
+    ['RS', 'roke spredaj (noge na trebuhu)', 'vaja'],
+    ['DZ', 'delfin zavesljaji (npr. tja desna, nazaj leva)', 'vaja'],
     ['ROKE', 'samo roke, noge popolnoma pri miru', 'izpeljava'],
     ['KOMB', 'noge: med plavanjem menjaš položaj telesa', 'vaja'],
     ['BREZ VDIHA', 'poskusiš odplavati 50 m brez vdiha', 'drugo'],
@@ -614,7 +616,7 @@
     A: {
       noge: [['K', 'KN'], ['K', 'KN BOK'], ['K', 'KN SUPERMAN'], ['K', 'KN RV 90°'], ['D', 'DN'], ['D', 'DN BOK'], ['D', 'DN H'], ['H', 'HN'], ['H', 'HN ROTACIJA'], ['H', 'HN RV 90°']],
       vaje: [['K', 'KV 2-2'], ['K', 'K RRU PESTI'], ['K', 'K RRU PALEC'], ['K', 'K RRU ZADRGA'], ['K', 'K RRU ŠPRICANJE'], ['K', 'K RRU RINEŠ'], ['K', 'K RRU PPDZ'], ['K', 'K RRU GLADINA'], ['K', 'K 6-3-6'],
-        ['K', 'K SHARK 1'], ['K', 'K SHARK 2'], ['K', 'K SHARK 3'], ['K', 'K VISOK KOMOLEC'], ['K', 'VATERPOLO'], ['K', 'KZ'], ['K', 'K STEGR'],
+        ['K', 'K SHARK 1'], ['K', 'K SHARK 2'], ['K', 'K SHARK 3'], ['K', 'K VISOK KOMOLEC'], ['K', 'VATERPOLO'], ['K', 'KZ'], ['K', 'K STEGR'], ['K', 'K RRU STEGR'],
         ['D', 'DV 1-1-2'], ['D', 'DV 2-2-2'], ['D', 'DV 3-3'], ['D', 'DV ORKA'], ['D', 'DV BIONDI'], ['D', 'DV 6-1'], ['D', 'D DIH NA 1'], ['D', 'DN KR'],
         ['H', 'HV RRU 90°'], ['H', 'HV ROKA VEN ZAVES'], ['H', 'H 6-1'], ['H', 'H 3-1'], ['H', 'HV HITLER']]
     },
