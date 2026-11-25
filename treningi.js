@@ -101,7 +101,7 @@
       sb.from('training_settings').select('settings').eq('trainer_id', tid).maybeSingle(),
       auth.ownTermIds.size ? sb.from('terms').select('*').in('id', Array.from(auth.ownTermIds)) : Promise.resolve({ data: [] }),
       allRows(() => sb.from('training_sets').select('id, phase, main_type, levels, text, meters, fingerprint, source, active').eq('trainer_id', tid).eq('active', true).order('id')),
-      allRows(() => sb.from('trainings').select('id, term_id, date, levels, status, order_variant, total_meters, notes, training_items(id, position, phase, set_id, text, meters, fingerprint, level_variants, notes)').eq('trainer_id', tid).order('date', { ascending: false }).order('id')),
+      allRows(() => sb.from('trainings').select('id, term_id, date, levels, status, order_variant, total_meters, notes, rating, liked_phases, rating_note, training_items(id, position, phase, set_id, text, meters, fingerprint, level_variants, notes)').eq('trainer_id', tid).order('date', { ascending: false }).order('id')),
       sb.from('training_drill_suggestions').select('*').eq('trainer_id', tid).eq('status', 'predlog').order('created_at')
     ]);
     // Brez predlogov stran deluje naprej.
@@ -121,6 +121,15 @@
     rebuildLibrary();
   }
 
+  const OC = window.TreningOcena;
+  /** Zgledi: treningi z oceno 8 ali več. */
+  function rebuildExamples() {
+    S.examples = S.dbTrainings.filter(OC.isExample).map(t => ({
+      date: t.date, level: C.historyLevel(t.levels), rating: t.rating, liked: t.liked_phases || [],
+      items: (t.training_items || []).map(i => ({ phase: i.phase, text: i.text }))
+    }));
+  }
+
   function rebuildLibrary() {
     const lib = S.dbSets.slice();
     const have = new Set(lib.map(s => s.phase + '|' + s.fingerprint));
@@ -138,6 +147,7 @@
     });
     hist.push(...pend.history);
     S.history = hist;
+    rebuildExamples();
     renderReminder();
   }
 
@@ -296,7 +306,7 @@
     const tr = C.generateTraining({
       date: slot.date, levels: slot.levels, library: S.library, history: historyExcluding(slot),
       settings: S.settings, seed: Math.floor(Math.random() * 1e9), mainMode: mainMode || 'auto',
-      newSets: $('newSetsMode').value, dict: S.dict, drills: S.codes, avoid: avoid || [], joint
+      newSets: $('newSetsMode').value, dict: S.dict, drills: S.codes, avoid: avoid || [], joint, examples: S.examples
     });
     return { slot, dbId: null, status: 'predlog', order_variant: tr.order_variant, items: tr.items, notes: tr.notes, dirty: true, joint, mainMode: mainMode || 'auto' };
   }
@@ -421,7 +431,8 @@
           <button class="btn" data-act="print">Natisni</button>
           ${card.dbId ? '<button class="btn warn" data-act="delete">Izbriši</button>' : ''}
         </div>
-      </div>`;
+      </div>
+      <div data-ocena hidden></div>`;
     const itemsEl = el.querySelector('.tr-items');
     card.items.forEach((it, idx) => itemsEl.appendChild(renderItem(card, it, idx, key)));
     updateRunning(el, card);
@@ -437,6 +448,12 @@
       card.items = C.arrangeOrder(card.items, card.order_variant);
       card.dirty = true; rerenderCard(key);
     }));
+    const dbRow = card.dbId && S.dbTrainings.find(t => t.id === card.dbId);
+    if (OC.canRate(dbRow)) {
+      const oc = el.querySelector('[data-ocena]');
+      oc.hidden = false;
+      OC.render(oc, dbRow, sb, () => rebuildExamples());
+    }
     const jointBox = el.querySelector('[data-act=joint]');
     if (jointBox) jointBox.addEventListener('change', () => {
       if (!card.dbId) {
@@ -560,7 +577,7 @@
     const sprint = it.phase === 'glavna' && (card.mainMode === 'sprint' || (card.mainMode !== 'ne_sprint' && C.isSprintMain(it, S.settings)));
     const n = C.suggestNewSet(it.phase, {
       level: levelKey(card.slot.levels), library: S.library, history: historyExcluding(card.slot), dict: S.dict, drills: S.codes,
-      exclude: card.items.map(i => C.fingerprint(i.text)), sprint, only50: !!card.joint && it.phase === 'glavna', settings: S.settings, date: card.slot.date,
+      exclude: card.items.map(i => C.fingerprint(i.text)), sprint, only50: !!card.joint && it.phase === 'glavna', exampleMains: C.exampleSets(S.examples, levelKey(card.slot.levels), S.settings).mains, settings: S.settings, date: card.slot.date,
       others: card.items.filter((x, j) => j !== idx).map(i => i.text)
     });
     if (!n) { alert('Za to fazo trenutno nimam nove serije.'); return; }
@@ -763,15 +780,19 @@
     if (tabHidden('shranjeni')) return;
     const view = $('savedView');
     if (!S.dbTrainings.length) { view.innerHTML = '<p class="tr-empty">Ni še shranjenih treningov.</p>'; return; }
-    const list = S.dbTrainings.slice(0, 120);
+    const only = $('savedFilter').value;
+    const all = S.dbTrainings.filter(t => only === 'zgledi' ? OC.isExample(t) : only === 'ocenjeni' ? t.rating : true);
+    const list = all.slice(0, 120);
+    const likedText = (t) => (t.liked_phases || []).map(p => (OC.PHASES.find(x => x[0] === p) || [p, p])[1].toLowerCase()).join(', ');
     view.innerHTML = list.map(t => {
       const items = (t.training_items || []).slice().sort((a, b) => a.position - b.position);
       return `<div class="tr-lib-row">
         <div class="tr-item-head"><strong>${DAYS[C.weekday(t.date)]} ${fmtDate(t.date)} · ${esc(t.levels.join('+'))}</strong>
-          <span><span class="tr-badge ${esc(t.status)}">${esc(t.status)}</span> <span class="tr-m">${t.total_meters || ''} m</span>
+          <span>${t.rating ? `<span class="tr-badge${OC.isExample(t) ? ' zgled' : ''}">${OC.isExample(t) ? '★ ' : ''}${t.rating}/10</span> ` : ''}<span class="tr-badge ${esc(t.status)}">${esc(t.status)}</span> <span class="tr-m">${t.total_meters || ''} m</span>
           <button class="tr-ico" data-week="${esc(t.date)}">Odpri</button></span></div>
+        ${t.rating && (likedText(t) || t.rating_note) ? `<div class="tr-sub">${likedText(t) ? 'Najbolj všeč: ' + esc(likedText(t)) : ''}${likedText(t) && t.rating_note ? ' · ' : ''}${esc(t.rating_note || '')}</div>` : ''}
         <pre>${items.map(i => esc(i.text.replace(/\n/g, ' | '))).join('\n')}</pre></div>`;
-    }).join('') + (S.dbTrainings.length > list.length ? `<p class="tr-sub">Prikazanih je zadnjih ${list.length}.</p>` : '');
+    }).join('') + (all.length > list.length ? `<p class="tr-sub">Prikazanih je zadnjih ${list.length}.</p>` : '') || `<p class="tr-empty">${only === 'zgledi' ? 'Ni še treningov z oceno 8 ali več.' : 'Ni še ocenjenih treningov.'}</p>`;
     view.querySelectorAll('[data-week]').forEach(b => b.addEventListener('click', () => {
       S.week = mondayOf(b.dataset.week); $('weekDate').value = S.week; renderWeek();
       document.querySelector('.tr-tab[data-tab=sestavi]').click();
@@ -780,6 +801,7 @@
 
   // ---------- Knjižnica ----------
   function setupLibraryForm() {
+    $('savedFilter').addEventListener('input', () => renderSaved());
     $('newSetPhase').innerHTML = C.LIBRARY_PHASES.map(p => `<option value="${p}">${esc(C.PHASE_LABELS[p])}</option>`).join('');
     $('libPhase').innerHTML = '<option value="">Vse faze</option>' + C.LIBRARY_PHASES.map(p => `<option value="${p}">${esc(C.PHASE_LABELS[p])}</option>`).join('');
     ['libPhase', 'libLevel', 'libSearch'].forEach(id => $(id).addEventListener('input', renderLibrary));

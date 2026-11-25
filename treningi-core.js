@@ -44,6 +44,8 @@
     exclusive_codes: [['ORKA', 'BIONDI']],
     // Te (skoraj enake) vaje naj bodo tudi med treningi vsaj toliko dni narazen.
     exclusive_gap_days: 28,
+    // Trening s to oceno ali višjo je zgled za nove predloge.
+    example_min_rating: 8,
     // Skupni trening A+B: enkrat na mesec ob četrtkih, vsaj toliko dni narazen, glavna samo iz 50 m.
     joint: { weekday: 4, min_gap_days: 21 },
     // Dan v tednu (1 = ponedeljek) -> skupine nivojev, ki imajo vsaka svoj trening.
@@ -770,6 +772,12 @@
     const pick = (a, n) => { const c = a.slice(), r = []; while (r.length < n && c.length) r.push(c.splice(Math.floor(rng() * c.length), 1)[0]); return r; };
     const uniq = a => a.filter((x, i) => a.indexOf(x) === i).join('\n');
     const sprint = !!(opts && opts.sprint);
+    // Zgradba glavnih, ki so bile trenerju všeč.
+    const liked = (EXAMPLE_MAINS[lk] || []).concat((opts && opts.exampleMains) || []);
+    if (!sprint && liked.length && rng() < 0.15) {
+      const t = likeMain(one(liked), opts && opts.library, lk, rng);
+      if (t) return t;
+    }
     if (opts && opts.only50 && lk !== 'C') {
       const st = one([`@1'`, `@1'05"`, `@1'10"`]);
       const t50 = ['VL', 'K', 'MAD', 'MBK', 'M', 'K STOP', 'K 2+1', 'K DIH 5-7', 'K ČMZ', 'H/K', 'KVL'];
@@ -846,7 +854,7 @@
     if (!limits) return null;
     const make = { vaje: newDrill, ogrevalna: newWarmup, glavna: newMain }[phase];
     for (let i = 0; i < 120; i++) {
-      const text = make(level, rng, { sprint: opts.sprint, only50: opts.only50, library, drills: opts.drills });
+      const text = make(level, rng, { sprint: opts.sprint, only50: opts.only50, library, drills: opts.drills, exampleMains: opts.exampleMains });
       const fp = fingerprint(text);
       if (known.has(key(fp))) continue;
       // Ista vaja na obeh straneh (↑X ↓X, 1x X 1x X) ni smiselna.
@@ -863,6 +871,61 @@
       return { phase, text, meters, fingerprint: fp, levels: [level], source: 'nova', isNew: true, main_type: phase === 'glavna' && opts.sprint ? 'sprint' : null };
     }
     return null;
+  }
+
+  // ---------- Zgledi (treningi z oceno 8 ali več) ----------
+  // Glavne, ki so bile trenerju zelo všeč (odzivi pred uvedbo ocen); nove serije posnemajo njihovo zgradbo.
+  const EXAMPLE_MAINS = { A: [`6x50 KVL @1'\n6x50 PL NOGE 1x MAX 1x EASY @1'10"\n6x50 @50"\n6x50 KVL @1'`] };
+
+  /** Vloga vrstice v glavni seriji: pripomoček, noge, kratek štart, druga tehnika, kravl, razplavanje. */
+  function lineRole(line) {
+    const t = ' ' + String(line).toUpperCase() + ' ';
+    if (/ RAZP /.test(t) && !/\+/.test(t)) return 'razp';
+    if (/ (NOGE|[KDHPM]N|N) /.test(t)) return 'noge';
+    if (/ (KVL|VL|MAD|KPL|KL) /.test(t)) return 'pripomocek';
+    if (/ (M|MM|MB[KDP]|H|D|P|STIL) |\d [HDP]\b/.test(t)) return 'tehnika';
+    const m = t.match(/^\s*\d+\s*X\s*(\d+).*@\s*(\d+'\d*"?|\d+"|\d+')/);
+    const def = m && DEFAULT_SETTINGS.default_start_sec[m[1]], st = m && parseTime(m[2].replace(/(\d)"?$/, (x, d) => (/'/.test(m[2]) || /"$/.test(m[2]) ? x : d)));
+    if (def && st && st < def) return 'kratek';
+    return 'kravl';
+  }
+  const mainRoles = (text) => String(text || '').split('\n').filter(l => l.trim()).map(lineRole);
+  /** Ali ima glavna podobno zgradbo kot zgled (vsaj tri vrstice in vse njegove vloge). */
+  function likeStructure(text, example) {
+    const a = mainRoles(text), b = mainRoles(example);
+    return a.length >= 3 && b.length >= 3 && Array.from(new Set(b)).every(r => a.includes(r));
+  }
+
+  /** Zgledi za nivo: examples = [{ date, level, rating, liked, items: [{ phase, text }] }]. Brez označenih vidikov veljajo vse faze. */
+  function exampleSets(examples, level, settings) {
+    const min = (settings && settings.example_min_rating) || DEFAULT_SETTINGS.example_min_rating;
+    const keys = new Map(), mains = [];
+    (examples || []).filter(e => e.level === level && Number(e.rating) >= min).forEach(e => {
+      const liked = (e.liked || []).length ? e.liked : LIBRARY_PHASES;
+      (e.items || []).forEach(i => {
+        if (!liked.includes(i.phase)) return;
+        const k = i.phase + '|' + (i.phase === 'vaje' ? drillKey(fingerprint(i.text)) : fingerprint(i.text));
+        keys.set(k, Math.max(keys.get(k) || 0, Number(e.rating)));
+        if (i.phase === 'glavna' && i.text.split('\n').length >= 3) mains.push(stripTargets(i.text));
+      });
+    });
+    return { keys, mains };
+  }
+
+  /** Nova glavna po zgradbi zgleda: iste vloge in razdalje, druge vrstice iz knjižnice. */
+  function likeMain(example, library, lk, rng) {
+    const lines = example.split('\n').map(l => l.trim()).filter(Boolean);
+    const pool = [];
+    (library || []).filter(x => x.phase === 'glavna' && (x.levels || []).includes(lk)).forEach(x => x.text.split('\n').forEach(l => { if (/^\d+x\d+ .*@/.test(l) && !/\bT \d|štart/i.test(l)) pool.push(stripTargets(l.trim())); }));
+    const swap = new Map();
+    lines.forEach(l => {
+      if (swap.has(l)) return;
+      const m = l.match(/^(\d+)x(\d+) /);
+      const cand = !m || rng() < 0.25 ? [] : pool.filter(x => { const y = x.match(/^(\d+)x(\d+) /); return y[2] === m[2] && x !== l && lineRole(x) === lineRole(l) && !/ \d+x[A-ZČŠŽ]| \d+x /.test(x.slice(y[0].length)); });
+      swap.set(l, cand.length ? cand[Math.floor(rng() * cand.length)].replace(/^\d+x/, m[1] + 'x') : l);
+    });
+    const out = lines.map(l => swap.get(l)).join('\n');
+    return out === lines.join('\n') ? null : out;
   }
 
   // ---------- Vaje iste tehnike skupaj ----------
@@ -982,9 +1045,17 @@
 
     // Uteži se izračunajo enkrat na serijo (zgodovina je dolga, poskusov je 400).
     const memo = fn => { const m = new Map(); return s => { if (!m.has(s)) m.set(s, fn(s)); return m.get(s); }; };
+    // Serije iz zgledov (ocena 8+) in glavne s podobno zgradbo imajo prednost; pravila o ponavljanju ostanejo.
+    const ex = exampleSets(opts.examples, lk, settings);
+    const likedMains = (EXAMPLE_MAINS[lk] || []).concat(ex.mains);
+    const exBoost = s => {
+      const r = ex.keys.get(s.phase + '|' + (s.phase === 'vaje' ? drillKey(s.fingerprint) : s.fingerprint));
+      if (r) return 1 + (r - 6) * 0.5;
+      return s.phase === 'glavna' && likedMains.some(m => likeStructure(s.text, m)) ? 1.5 : 1;
+    };
     const recencyWeight = memo((s) => {
       const d = lastUseDays(history, s.fingerprint, lk, s.phase, date);
-      return d === null ? 40 : Math.min(d, 60) + 1;
+      return (d === null ? 40 : Math.min(d, 60) + 1) * exBoost(s);
     });
 
     const ogr = byPhase('ogrevalna');
@@ -1004,7 +1075,7 @@
       if (!splitMemo.has(k)) splitMemo.set(k, splitStrokes(orderDrills(vs).map(v => v.text)).length);
       return splitMemo.get(k);
     };
-    const vajeWeight = memo(v => drillWeight(v, history, lk, date, settings));
+    const vajeWeight = memo(v => drillWeight(v, history, lk, date, settings) * exBoost(v));
     const maxM = memo(x => x ? maxMeters(x.text) : 0);
     const warmDays = memo(w => lastUseDays(history, w.fingerprint, lk, 'ogrevalna', date));
 
@@ -1025,7 +1096,7 @@
       : newMode === 'ena' ? [['ogrevalna', 'vaje', 'vaje', 'glavna'][Math.floor(rng() * 4)]] : [];
     const fresh = {};
     newPhases.forEach(p => {
-      const n = suggestNewSet(p, { level: lk, library: opts.library, drills: opts.drills, history, dict: opts.dict, rng, settings, date, others: Object.values(fresh).map(x => x.text), sprint: p === 'glavna' && wantSprint, only50: joint && p === 'glavna' });
+      const n = suggestNewSet(p, { level: lk, library: opts.library, drills: opts.drills, history, dict: opts.dict, rng, settings, date, others: Object.values(fresh).map(x => x.text), sprint: p === 'glavna' && wantSprint, only50: joint && p === 'glavna', exampleMains: ex.mains });
       if (n) fresh[p] = n;
     });
     if (needNewSprint && !fresh.glavna) {
@@ -1173,6 +1244,6 @@
     buildDict, parseLine, parseText, toStructure, normalizeText, fingerprint, stripTargets, addTargets, bVariant,
     estimateMinutes, parseTime, formatTime, libraryFromTrainings, generateTraining, arrangeOrder,
     weekSlots, historyFromTraining, historyLevel, lastUseDays, lastDrillDays, drillKey, setFormat,
-    availableDrills, drillWeight, suggestNewSet, onlyFifties, jointStatus, drillStrokes, splitStrokes, orderDrills, exclusiveConflict, exclusiveTooSoon, lastExclusiveDays, tidyText, unevenSides, strokeUse, legsWithoutDrills, maxMeters, longestMaxLine, overMaxDistance, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
+    availableDrills, drillWeight, suggestNewSet, onlyFifties, jointStatus, lineRole, likeStructure, likeMain, exampleSets, EXAMPLE_MAINS, drillStrokes, splitStrokes, orderDrills, exclusiveConflict, exclusiveTooSoon, lastExclusiveDays, tidyText, unevenSides, strokeUse, legsWithoutDrills, maxMeters, longestMaxLine, overMaxDistance, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
   };
 });

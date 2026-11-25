@@ -19,6 +19,7 @@
   body.quick #panel-sestavi > .tr-toolbar, body.quick #panel-sestavi > .tr-note{display:none}
   .tr-quick{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   .tr-quick select{width:auto;margin:0}
+  .tr-badge.zgled{background:#fef3c7;color:#92400e}
   .tr-joint{display:flex;gap:8px;align-items:center;font-weight:600;margin:6px 0}
   .tr-joint input{width:auto;margin:0}
   .tr-note{font-size:13px;color:var(--mut);margin:4px 0 12px}
@@ -137,6 +138,7 @@
     </section>
 
     <section class="tr-panel" id="panel-shranjeni" hidden>
+      <div class="tr-toolbar"><select id="savedFilter" aria-label="Prikaz treningov"><option value="">Vsi treningi</option><option value="zgledi">★ Zgledi (ocena 8 ali več)</option><option value="ocenjeni">Ocenjeni</option></select></div>
       <div id="savedView"></div>
     </section>
 
@@ -177,6 +179,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0"></script>
   <script src="./config.js"></script>
   <script src="./trainer-auth.js"></script>
+  <script src="./treningi-ocena.js"></script>
   <script src="./treningi-core.js"></script>
   <script src="./treningi.js"></script>
 </body>

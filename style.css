@@ -45,6 +45,19 @@ body{font-family:system-ui, Segoe UI, Roboto, Arial, sans-serif; background:var(
 .composed-training .ct-b{color:#7c3aed;font-family:ui-monospace,Consolas,monospace;white-space:pre-wrap}
 .composed-training .ct-m{color:#334155;font-size:13px;white-space:nowrap;text-align:right}
 .composed-training .ct-km{display:block;color:var(--mut);font-size:12px;font-weight:600}
+.oc{margin-top:10px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:#f8fafc}
+.oc[hidden],.oc-more[hidden]{display:none}
+.oc.zgled{background:#fffbeb;border-color:#fcd34d}
+.oc-head{font-size:13px;margin-bottom:6px}
+.oc-state{color:var(--mut);margin-left:6px}
+.oc-nums{display:grid;grid-template-columns:repeat(10,1fr);gap:4px}
+.oc-nums button,.oc-more button{border:1px solid #d1d5db;background:#fff;color:#374151;border-radius:8px;padding:8px 0;font-size:14px;cursor:pointer;min-width:0}
+.oc-more{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px;font-size:13px}
+.oc-more button{padding:6px 12px;border-radius:999px}
+.oc-more input{flex:1 1 180px;width:auto;margin:0}
+.oc button.on{background:var(--pri);border-color:var(--pri);color:#fff;font-weight:700}
+@media(max-width:480px){.oc-nums{grid-template-columns:repeat(5,1fr)}}
+@media print{.oc{display:none}}
 .composed-training .ct-foot{display:flex;justify-content:space-between;margin-top:6px;font-size:13px}
 .calendar-status-banner{max-width:1200px;margin:0 auto 12px;padding:12px 14px;border-radius:10px;font-size:14px;line-height:1.5}
 .calendar-status-banner.warn{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}

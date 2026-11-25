@@ -2101,7 +2101,7 @@ document.addEventListener('DOMContentLoaded', () => {
       box.innerHTML = '';
       const { data, error } = await supabase
         .from('trainings')
-        .select('id, levels, status, total_meters, estimated_minutes, notes, training_items(position, phase, text, meters, level_variants, notes)')
+        .select('id, date, levels, status, total_meters, estimated_minutes, notes, rating, liked_phases, rating_note, training_items(position, phase, text, meters, level_variants, notes)')
         .eq('date', ymd)
         .eq('term_id', termId);
       if (req !== ctRequest) return;
@@ -2137,8 +2137,10 @@ document.addEventListener('DOMContentLoaded', () => {
           }).join('')}
           <div class="ct-foot"><strong>${t.total_meters || items.reduce((a, i) => a + (i.meters || 0), 0)} m${t.estimated_minutes ? ` · ~${t.estimated_minutes} min` : ''}</strong>
             <a href="treningi.html?datum=${escCt(ymd)}">Uredi v Treningih</a></div>
+          ${window.TreningOcena && TreningOcena.canRate(t) ? `<div data-ocena="${escCt(t.id)}"></div>` : ''}
         </div>`;
       }).join('');
+      box.querySelectorAll('[data-ocena]').forEach(el => TreningOcena.render(el, data.find(t => t.id === el.dataset.ocena), supabase));
       box.hidden = false;
     }
 

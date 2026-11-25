@@ -74,6 +74,15 @@ Enkrat v koledarskem mesecu ob četrtku, vsaj 3 tedne po prejšnjem. A in B plav
 5. Max: skupaj do 150 m, razen če je šprinterski; v kosu do 100 m.
 6. Sodo število dolžin pri vajah po strani.
 
+## Ocene in zgledi
+
+Trener izvedeni trening oceni od 1 do 10 (v koledarju ali v Treningih) in označi, kaj mu je bilo najbolj všeč: ogrevalna, vaje, glavna, zaključek.
+Ocena **8 ali več = zgled**. Če je označen vidik, je zgled samo ta del, sicer cel trening.
+
+- Pred sestavljanjem novega treninga preberi zglede za isti nivo in opombe: `select date, levels, rating, liked_phases, rating_note from trainings where rating >= 8 order by rating desc, date desc`, serije so v `training_items`.
+- Zgled posnemaj po zgradbi, ne prepisuj ga: pravili 60 in 21 dni veljata tudi zanj.
+- Nizke ocene z opombo preberi kot odziv in jih po pogovoru s trenerjem vpiši v dnevnik.
+
 ## Dnevnik odzivov
 
 | Datum | Nivo | Odziv trenerja | Sledi |
@@ -91,4 +100,4 @@ Enkrat v koledarskem mesecu ob četrtku, vsaj 3 tedne po prejšnjem. A in B plav
 | C: vsaj 3 serije vaj, okrog 600 m, glavna do ~350 m | da |
 | C: noge imajo vaje iste tehnike | da |
 | Skupni trening, plavutke novih vaj | da |
-| Pogostejša zgradba glavne, ki je bila všeč | ne |
+| Zgradba glavne, ki je bila všeč (`EXAMPLE_MAINS`, `likeMain`), in zgledi z oceno 8+ (`exampleSets`) | da |
