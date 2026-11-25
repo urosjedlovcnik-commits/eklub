@@ -1,6 +1,6 @@
 {
  "source": "zvezek 2026",
- "built": "2026-11-23",
+ "built": "2026-11-25",
  "trainings": [
   {
    "date": "2026-06-08",
@@ -770,7 +770,7 @@
     },
     {
      "phase": "vaje",
-     "text": "8x25 PL KN RV",
+     "text": "8x25 PL KN RV 90°",
      "meters": 200
     },
     {
@@ -870,7 +870,7 @@
     },
     {
      "phase": "vaje",
-     "text": "8x25 PL KN RV",
+     "text": "8x25 PL KN RV 90°",
      "meters": 200
     },
     {
@@ -927,7 +927,7 @@
     },
     {
      "phase": "vaje",
-     "text": "8x25 PL ↑KN RV ↓H 3-1",
+     "text": "8x25 PL ↑KN RV 90° ↓H 3-1",
      "meters": 200
     },
     {
@@ -1273,7 +1273,7 @@
     },
     {
      "phase": "vaje",
-     "text": "8x25 PL K ↑BIEGNER ↓BD",
+     "text": "8x25 PL K ↑STEGR ↓BD",
      "meters": 200
     },
     {
@@ -1762,7 +1762,7 @@
     },
     {
      "phase": "vaje",
-     "text": "2x( 8x25 ) 1x DN + SHARK 1 1x RRU PRSTI",
+     "text": "2x( 8x25 ) 1x DN + SHARK 1 1x RRU GLADINA",
      "meters": 400
     },
     {

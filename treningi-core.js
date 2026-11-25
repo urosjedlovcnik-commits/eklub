@@ -90,13 +90,13 @@
     ['DR', 'delfin roke (KN DR = kravl noge, delfin roke)', 'vaja'],
     ['PR', 'prsno roke (PR DN = prsno roke, delfin noge)', 'vaja'],
     ['PZDZ', 'ponovi zadnji del zavesljaja', 'vaja'],
-    ['BIEGNER', 'stegnjene roke', 'vaja'],
+    ['STEGR', 'stegnjene roke', 'vaja'],
     ['BREZ VDIHA', 'poskusiš odplavati 50 m brez vdiha', 'drugo'],
     ['5+1', '5 tempo, 1 hitro', 'stopnjevanje'],
     ['6-3-6', '6 udarcev na boku, 3 zavesljaji, 6 udarcev na drugem boku', 'vaja'],
     ['3-1', 'H 3-1: trije udarci, 1 koordinacija', 'vaja'],
     ['OBRATNO', 'mešano v obratnem vrstnem redu (NORMALNO / OBRATNO); pri KZ dihanje kontra', 'drugo'],
-    ['PRSTI', 'RRU: prsti po gladini vode', 'vaja'],
+    ['GLADINA', 'RRU GLADINA (kravl): prsti drsijo po gladini vode', 'vaja'],
     ['SALTO NA POL', 'salto na pol bazena in nazaj v cilj hitro, ne nadaljuješ naprej', 'vaja'],
     ['ORKA', 'delfin noge s podvodnim delom zavesljaja', 'vaja'],
     ['ROTACIJA', 'rotacija ramenskega obroča', 'vaja'],
@@ -184,6 +184,7 @@
   function scanTokens(str, dict, out) {
     const toks = String(str || '').replace(/[()]/g, ' ').split(/\s+/).filter(Boolean);
     for (let raw of toks) {
+      if (/^\d+:\d\d(-\d+:\d\d)?$/.test(raw)) { out.params.push(raw); continue; } // ciljni čas, npr. T 1:20
       let t = raw.replace(/^[↑↓]+/, '').replace(/[,;:]+$/, '');
       if (!t || /^[+\-–/↑↓=]+$/.test(t)) continue;
       if (t[0] === '@') {
@@ -463,7 +464,7 @@
   // Vsebina vaje brez števila ponovitev in razdalje: "8X25 PL KN" in "10X25 PL KN" sta ista vaja.
   function drillKey(fp) {
     // KN RV in KN RV 90° sta ista vaja (star in nov zapis).
-    return String(fp || '').split('\n').map(l => l.replace(/^\d+X\s*\d+\s*/, '').replace(/\bRV(?! 90°)/g, 'RV 90°').trim()).join('\n');
+    return String(fp || '').split('\n').map(l => l.replace(/^\d+X\s*\d+\s*/, '').replace(/\bRV(?! 90°)/g, 'RV 90°').replace(/^([KHDP][NVZ]) PL\b/, 'PL $1').trim()).join('\n');
   }
   function setFormat(text) {
     const m = String(text || '').match(/^\s*(\d+)\s*[xX]\s*(\d+)(?![\d'"])/);
@@ -492,6 +493,10 @@
     return (d === null ? 40 : Math.min(d, 60) + 1) * (w == null ? 1 : w);
   }
 
+  /** Zapis po trenerjevem pravilu: PL pred nogami in vajami (4x50 HN PL -> 4x50 PL HN). */
+  function tidyText(text) {
+    return String(text || '').split('\n').map(l => l.replace(/^(\s*\d+\s*[xX]\s*\d+)\s+([KHDP][NVZ])\s+PL\b/, '$1 PL $2')).join('\n');
+  }
   function hasWord(text, word) {
     return String(text || '').toUpperCase().split(/[^A-ZČŠŽĆĐ0-9°]+/).includes(word);
   }
@@ -547,7 +552,7 @@
       .replace(/\s+/g, ' ').replace(/ [KDHP]N [KDP]R(?= )/g, ' ').replace(/ [KDP]R [KDHP]N(?= )/g, ' ');
     const legs = new Set(), drills = new Set();
     (t.match(/ [KHDP]N(?= )/g) || []).forEach(x => legs.add(x[1]));
-    if (/ (KV|KZ|VATERPOLO|SHARK|PACMAN|KBD) | K (RRU|SHARK|6-3-6|VISOK|PACMAN|BIEGNER|STEGR|2-2) /.test(t)) drills.add('K');
+    if (/ (KV|KZ|VATERPOLO|SHARK|PACMAN|KBD) | K (RRU|SHARK|6-3-6|VISOK|PACMAN|STEGR|2-2) /.test(t)) drills.add('K');
     if (/ (HV|HZ) | H (RRU|6-1|3-1|6-3-6|HITLER) /.test(t)) drills.add('H');
     if (/ (DV|DZ|METULJČEK|ORKA|BIONDI) | D (DIH|\d-\d)/.test(t)) drills.add('D');
     if (/ (PV|PD|PPV|KRAJŠANJE) | P (\d-\d|ČIM DLJE|KRAJŠANJE)/.test(t) && !/ [KDH]N PV /.test(t)) drills.add('P');
@@ -567,8 +572,8 @@
   const NEW_PARTS = {
     A: {
       noge: [['K', 'KN'], ['K', 'KN BOK'], ['K', 'KN SUPERMAN'], ['K', 'KN RV 90°'], ['D', 'DN'], ['D', 'DN BOK'], ['D', 'DN H'], ['H', 'HN'], ['H', 'HN ROTACIJA'], ['H', 'HN RV 90°']],
-      vaje: [['K', 'KV 2-2'], ['K', 'K RRU PESTI'], ['K', 'K RRU PALEC'], ['K', 'K RRU ZADRGA'], ['K', 'K RRU ŠPRICANJE'], ['K', 'K RRU RINEŠ'], ['K', 'K RRU PPDZ'], ['K', 'K RRU PRSTI'], ['K', 'K 6-3-6'],
-        ['K', 'K SHARK 1'], ['K', 'K SHARK 2'], ['K', 'K SHARK 3'], ['K', 'K VISOK KOMOLEC'], ['K', 'VATERPOLO'], ['K', 'KZ'], ['K', 'K BIEGNER'],
+      vaje: [['K', 'KV 2-2'], ['K', 'K RRU PESTI'], ['K', 'K RRU PALEC'], ['K', 'K RRU ZADRGA'], ['K', 'K RRU ŠPRICANJE'], ['K', 'K RRU RINEŠ'], ['K', 'K RRU PPDZ'], ['K', 'K RRU GLADINA'], ['K', 'K 6-3-6'],
+        ['K', 'K SHARK 1'], ['K', 'K SHARK 2'], ['K', 'K SHARK 3'], ['K', 'K VISOK KOMOLEC'], ['K', 'VATERPOLO'], ['K', 'KZ'], ['K', 'K STEGR'],
         ['D', 'DV 1-1-2'], ['D', 'DV 2-2-2'], ['D', 'DV 3-3'], ['D', 'DV ORKA'], ['D', 'DV BIONDI'], ['D', 'DV 6-1'], ['D', 'D DIH NA 1'], ['D', 'DN KR'],
         ['H', 'HV RRU 90°'], ['H', 'HV ROKA VEN ZAVES'], ['H', 'H 6-1'], ['H', 'H 3-1'], ['H', 'HV HITLER']]
     },
@@ -1001,6 +1006,6 @@
     buildDict, parseLine, parseText, toStructure, normalizeText, fingerprint, bVariant,
     estimateMinutes, parseTime, formatTime, libraryFromTrainings, generateTraining, arrangeOrder,
     weekSlots, historyFromTraining, historyLevel, lastUseDays, lastDrillDays, drillKey, setFormat,
-    availableDrills, drillWeight, suggestNewSet, exclusiveConflict, exclusiveTooSoon, lastExclusiveDays, unevenSides, strokeUse, legsWithoutDrills, maxMeters, longestMaxLine, overMaxDistance, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
+    availableDrills, drillWeight, suggestNewSet, exclusiveConflict, exclusiveTooSoon, lastExclusiveDays, tidyText, unevenSides, strokeUse, legsWithoutDrills, maxMeters, longestMaxLine, overMaxDistance, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
   };
 });

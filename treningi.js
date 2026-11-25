@@ -387,6 +387,7 @@
       updateTotals(key);
     });
     ta.addEventListener('change', () => {
+      it.text = C.tidyText(it.text);
       if (card.slot.levels.includes('B') && it.phase === 'glavna') { const b = C.bVariant(it.text, S.settings); it.variantB = b.text; it.variantBNote = b.note; }
       rerenderCard(key);
     });
@@ -660,7 +661,7 @@
     };
     $('newSetText').addEventListener('input', prev);
     $('newSetSave').addEventListener('click', async () => {
-      const text = $('newSetText').value.trim();
+      const text = C.tidyText($('newSetText').value.trim());
       const levels = Array.from(document.querySelectorAll('.newSetLevel:checked')).map(c => c.value);
       if (!text || !levels.length) { alert('Vpiši serijo in izberi vsaj en nivo.'); return; }
       try {
