@@ -47,7 +47,8 @@
   .tr-item .tr-b{margin-top:6px}
   .tr-item .tr-b label{font-size:12px;font-weight:700;color:#7c3aed}
   .tr-m{font-size:13px;font-weight:700;color:#334155;white-space:nowrap}
-  .tr-actions{display:flex;gap:4px}
+  .tr-km{display:block;text-align:right;font-size:12px;font-weight:600;color:var(--mut)}
+  .tr-actions{display:flex;gap:4px;align-items:flex-start}
   .tr-ico{border:1px solid var(--border);background:#fff;border-radius:8px;padding:3px 8px;cursor:pointer;font-size:13px}
   .tr-chips{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
   .tr-chip{font-size:11px;padding:1px 7px;border-radius:999px;background:#fee2e2;color:#991b1b}
@@ -78,7 +79,7 @@
     body.printing .auth-bar, body.printing .tr-tabs, body.printing .tr-toolbar, body.printing .tr-note,
     body.printing .tr-banner, body.printing h1, body.printing .tr-panel:not(#panel-sestavi):not(#panel-shranjeni){display:none!important}
     body.printing .tr-card:not(.print-target), body.printing .tr-day:not(:has(.print-target)){display:none!important}
-    body.printing .tr-actions, body.printing .tr-foot .tr-btns, body.printing .tr-add, body.printing .tr-seg, body.printing .tr-chips{display:none!important}
+    body.printing .tr-actions button, body.printing .tr-foot .tr-btns, body.printing .tr-add, body.printing .tr-seg, body.printing .tr-chips{display:none!important}
     body.printing .tr-card{border:0;padding:0}
     body.printing textarea{border:0;resize:none;font-size:16pt;padding:0;overflow:hidden}
   }

@@ -540,6 +540,27 @@
     });
   }
 
+  // Nivo C: če plavamo noge za eno tehniko, plavamo tudi vaje za isto tehniko.
+  function strokeUse(text) {
+    // KN DR, PR DN ipd. so kombinacije rok in nog, ne čiste noge.
+    const t = (' ' + String(text || '').toUpperCase().replace(/[↑↓+\/(),]/g, ' ').replace(/\b\d+X(?=[A-ZČŠŽ])/g, ' ') + ' ')
+      .replace(/\s+/g, ' ').replace(/ [KDHP]N [KDP]R(?= )/g, ' ').replace(/ [KDP]R [KDHP]N(?= )/g, ' ');
+    const legs = new Set(), drills = new Set();
+    (t.match(/ [KHDP]N(?= )/g) || []).forEach(x => legs.add(x[1]));
+    if (/ (KV|KZ|VATERPOLO|SHARK|PACMAN|KBD) | K (RRU|SHARK|6-3-6|VISOK|PACMAN|BIEGNER|STEGR|2-2) /.test(t)) drills.add('K');
+    if (/ (HV|HZ) | H (RRU|6-1|3-1|6-3-6|HITLER) /.test(t)) drills.add('H');
+    if (/ (DV|DZ|METULJČEK|ORKA|BIONDI) | D (DIH|\d-\d)/.test(t)) drills.add('D');
+    if (/ (PV|PD|PPV|KRAJŠANJE) | P (\d-\d|ČIM DLJE|KRAJŠANJE)/.test(t) && !/ [KDH]N PV /.test(t)) drills.add('P');
+    if (/ RRU /.test(t) && !/ (HV|H) RRU /.test(t)) drills.add('K');
+    return { legs, drills };
+  }
+  /** Tehnike, za katere so noge, vaj pa ni. */
+  function legsWithoutDrills(texts) {
+    const legs = new Set(), drills = new Set();
+    texts.forEach(x => String(x || '').split('\n').forEach(l => { const u = strokeUse(l); u.legs.forEach(v => legs.add(v)); u.drills.forEach(v => drills.add(v)); }));
+    return Array.from(legs).filter(v => !drills.has(v));
+  }
+
   // ---------- Nove serije ----------
   // Dva vira: (1) križanje delov serij, ki jih trener že ima v knjižnici (slog se uči sproti z vsakim uvozom),
   // (2) ideje v njegovem slogu iz potrjenih kratic. Vedno čakajo na pregled.
@@ -856,18 +877,32 @@
       const chosen = new Set();
       const vs = fresh.vaje ? [fresh.vaje] : [];
       const keys = new Set(vs.map(v => drillKey(v.fingerprint)));
-      while (vs.length < nV) {
-        const v = weightedPick(vaje, vajeWeight, rng, chosen);
-        if (!v) break;
+      const take = pool => {
+        const v = weightedPick(pool, vajeWeight, rng, chosen);
+        if (!v) return false;
         chosen.add(v);
-        if (keys.has(drillKey(v.fingerprint))) continue; // ista vaja v drugem formatu
-        if (exclusiveConflict(v.text, vs.map(x => x.text), settings)) continue;
+        if (keys.has(drillKey(v.fingerprint))) return true; // ista vaja v drugem formatu
+        if (exclusiveConflict(v.text, vs.map(x => x.text), settings)) return true;
         keys.add(drillKey(v.fingerprint));
         vs.push(v);
+        return true;
+      };
+      const isC = lk === 'C';
+      const texts = () => [warm, main].concat(vs).filter(Boolean).map(x => x.text);
+      let guard = 0;
+      while (guard++ < 40) {
+        const need = isC ? legsWithoutDrills(texts()) : [];
+        if (need.length && vs.length < nV + 2) {
+          // Vaja za tehniko, za katero so v treningu noge, in ki ne doda novih nog brez vaj.
+          if (take(vaje.filter(v => strokeUse(v.text).drills.has(need[0]) && legsWithoutDrills(texts().concat(v.text)).length < need.length))) continue;
+        }
+        if (vs.length >= nV || need.length) break;
+        if (!take(vaje)) break;
       }
       // Kratka glavna serija (npr. SIMULATOR) dobi stransko serijo v zaključku.
-      const shortMain = main && main.meters < (lk === 'C' ? 300 : 600);
-      const z = zak.length && rng() < (shortMain ? 0.85 : 0.35) ? weightedPick(zak, recencyWeight, rng) : null;
+      const shortMain = main && main.meters < (isC ? 300 : 600);
+      let z = zak.length && rng() < (shortMain ? 0.85 : 0.35) ? weightedPick(zak, recencyWeight, rng) : null;
+      if (z && isC && legsWithoutDrills(texts().concat(z.text)).length) z = null;
       const fin = rng() < 0.5 ? 50 : 100;
       const total = lv.warmup_m + (warm ? warm.meters : 0) + vs.reduce((a, v) => a + v.meters, 0) + 50 +
         (main ? main.meters : 0) + (z ? z.meters : 0) + fin;
@@ -885,6 +920,7 @@
       fmts.forEach(f => { if (fw[f] != null && fw[f] < 0.5) score += 0.7; });
       score += fmts.length - new Set(fmts).size;
       if (warm) { const d = warmDays(warm); if (d !== null && d < 14) score += 3; }
+      if (isC && legsWithoutDrills(texts()).length) score += 60;
       // Kadar šprinta ne sme biti, naj tudi vaje in zaključek ne prinesejo čez mejo metrov max.
       if (noSprint && maxM(main) + maxM(z) + maxM(warm) + vs.reduce((a, v) => a + maxM(v), 0) > settings.sprint_max_meters) score += 25;
       score += rng() * 2;
@@ -965,6 +1001,6 @@
     buildDict, parseLine, parseText, toStructure, normalizeText, fingerprint, bVariant,
     estimateMinutes, parseTime, formatTime, libraryFromTrainings, generateTraining, arrangeOrder,
     weekSlots, historyFromTraining, historyLevel, lastUseDays, lastDrillDays, drillKey, setFormat,
-    availableDrills, drillWeight, suggestNewSet, exclusiveConflict, exclusiveTooSoon, lastExclusiveDays, unevenSides, maxMeters, longestMaxLine, overMaxDistance, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
+    availableDrills, drillWeight, suggestNewSet, exclusiveConflict, exclusiveTooSoon, lastExclusiveDays, unevenSides, strokeUse, legsWithoutDrills, maxMeters, longestMaxLine, overMaxDistance, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
   };
 });

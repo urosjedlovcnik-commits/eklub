@@ -237,6 +237,19 @@
 
   function levelKey(levels) { return C.historyLevel(levels); }
 
+  /** 200 -> "0.2", 1250 -> "1.25", 2000 -> "2.0" (kot v zvezku). */
+  const km = (m) => { const t = String(Math.round(m) / 1000); return t.includes('.') ? t : t + '.0'; };
+
+  /** Pod dolžino vsake serije: koliko je odplavano do konca te serije (km). */
+  function updateRunning(el, card) {
+    let soFar = 0;
+    el.querySelectorAll('.tr-items > .tr-item').forEach((row, i) => {
+      if (!card.items[i]) return;
+      soFar += C.parseText(card.items[i].text, S.dict).meters;
+      row.querySelector('.tr-km').textContent = km(soFar);
+    });
+  }
+
   function cardTotals(card) {
     let meters = 0, max = 0;
     card.items.forEach(it => { meters += C.parseText(it.text, S.dict).meters; max += C.maxMeters(it.text); });
@@ -259,6 +272,7 @@
       return el;
     }
     const tot = cardTotals(card);
+    const legWarn = levelKey(slot.levels) === 'C' ? C.legsWithoutDrills(card.items.map(i => i.text)) : [];
     const statusLabel = card.status === 'predlog' ? 'predlog' : card.status;
     el.innerHTML = `
       <div class="tr-card-head">
@@ -267,6 +281,7 @@
         <div><span class="tr-badge ${esc(card.status)}">${esc(statusLabel)}</span>${card.dirty && card.dbId ? ' <span class="tr-badge">neshranjeno</span>' : ''}</div>
       </div>
       ${card.notes && card.notes.length ? `<div class="tr-chips">${card.notes.map(n => `<span class="tr-chip info">${esc(n)}</span>`).join('')}</div>` : ''}
+      ${legWarn.length ? `<div class="tr-chips"><span class="tr-chip">Noge brez vaj za isto tehniko: ${legWarn.map(x => ({ K: 'kravl', H: 'hrbtno', D: 'delfin', P: 'prsno' }[x])).join(', ')}</span></div>` : ''}
       <div class="tr-items"></div>
       <div class="tr-add">
         <select>${C.PHASES.map(p => `<option value="${p}">${esc(C.PHASE_LABELS[p])}</option>`).join('')}</select>
@@ -295,6 +310,7 @@
       </div>`;
     const itemsEl = el.querySelector('.tr-items');
     card.items.forEach((it, idx) => itemsEl.appendChild(renderItem(card, it, idx, key)));
+    updateRunning(el, card);
 
     el.querySelector('[data-act=add]').addEventListener('click', () => {
       const phase = el.querySelector('.tr-add select').value;
@@ -348,7 +364,7 @@
       <div class="tr-item-head">
         <span class="tr-phase">${esc(C.PHASE_LABELS[it.phase])}${info ? ' · ' + esc(info) : ''}</span>
         <span class="tr-actions">
-          <span class="tr-m">${parsed.meters} m</span>
+          <span><span class="tr-m">${parsed.meters} m</span><span class="tr-km" title="Skupaj do konca te serije (km)"></span></span>
           ${C.LIBRARY_PHASES.includes(it.phase) ? '<button class="tr-ico" data-a="swap" title="Zamenjaj iz knjižnice">↻</button>' : ''}
           ${['ogrevalna', 'vaje', 'glavna'].includes(it.phase) ? '<button class="tr-ico" data-a="new" title="Predlagaj povsem novo serijo">★</button>' : ''}
           <button class="tr-ico" data-a="up" title="Gor">↑</button>
@@ -397,6 +413,7 @@
     const card = S.cards.get(key);
     const el = document.querySelector(`.tr-card[data-key="${CSS.escape(key)}"]`);
     if (!card || !el) return;
+    updateRunning(el, card);
     const tot = cardTotals(card);
     const t = el.querySelector('.tr-total');
     t.textContent = tot.meters + ' m';
@@ -485,6 +502,11 @@
     if (it.phase === 'vaje') {
       const keys = new Set(card.items.filter(i => i.phase === 'vaje').map(i => C.drillKey(C.fingerprint(i.text))));
       pool = C.availableDrills(pool, hist, lk, card.slot.date, S.settings).filter(s => !keys.has(C.drillKey(s.fingerprint)));
+    }
+    if (lk === 'C') {
+      // Raje serija, po kateri noge ne ostanejo brez vaj za isto tehniko.
+      const ok = pool.filter(s => !C.legsWithoutDrills(others.concat(s.text)).length);
+      if (ok.length) pool = ok;
     }
     if (!pool.length) { alert('V knjižnici ni druge primerne serije za to fazo. Poskusi s ★ (nova serija).'); return; }
     const weight = s => { if (it.phase === 'vaje') return C.drillWeight(s, hist, lk, card.slot.date, S.settings); const d = C.lastUseDays(hist, s.fingerprint, lk, s.phase, card.slot.date); return d === null ? 40 : Math.min(d, 60) + 1; };

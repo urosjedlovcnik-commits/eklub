@@ -42,7 +42,8 @@ body{font-family:system-ui, Segoe UI, Roboto, Arial, sans-serif; background:var(
 .composed-training .ct-nova{color:#b45309}
 .composed-training .ct-text{font-family:ui-monospace,Consolas,monospace;white-space:pre-wrap}
 .composed-training .ct-b{color:#7c3aed;font-family:ui-monospace,Consolas,monospace;white-space:pre-wrap}
-.composed-training .ct-m{color:#334155;font-size:13px;white-space:nowrap}
+.composed-training .ct-m{color:#334155;font-size:13px;white-space:nowrap;text-align:right}
+.composed-training .ct-km{display:block;color:var(--mut);font-size:12px;font-weight:600}
 .composed-training .ct-foot{display:flex;justify-content:space-between;margin-top:6px;font-size:13px}
 .calendar-status-banner{max-width:1200px;margin:0 auto 12px;padding:12px 14px;border-radius:10px;font-size:14px;line-height:1.5}
 .calendar-status-banner.warn{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}

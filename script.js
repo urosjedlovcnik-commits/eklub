@@ -2089,6 +2089,8 @@ document.addEventListener('DOMContentLoaded', () => {
       glavna: 'Glavna serija', zakljucek: 'Zaključek', zakljucno_razplavanje: 'Zaključno razplavanje'
     };
     let ctRequest = 0;
+    /** 200 -> "0.2", 1250 -> "1.25", 2000 -> "2.0" (kot v zvezku). */
+    const ctKm = (m) => { const t = String(Math.round(m) / 1000); return t.includes('.') ? t : t + '.0'; };
 
     /** Prikaže treninge, sestavljene na podstrani Treningi, za ta termin in dan (RLS: samo lastni). */
     async function renderComposedTraining(ymd, termId) {
@@ -2110,14 +2112,16 @@ document.addEventListener('DOMContentLoaded', () => {
       data.sort((a, b) => order(a.levels) - order(b.levels));
       box.innerHTML = data.map(t => {
         const items = (t.training_items || []).slice().sort((a, b) => a.position - b.position);
+        let soFar = 0;
         const statusLabel = { osnutek: 'osnutek', potrjen: 'potrjen', izveden: 'izveden' }[t.status] || t.status;
         return `<div class="ct-card">
           <div class="ct-head"><span>Nivo ${escCt(t.levels.join(' + '))}</span><span class="ct-badge ${escCt(t.status)}">${escCt(statusLabel)}</span></div>
           ${items.map(i => {
             const b = i.level_variants && i.level_variants.B && i.level_variants.B.text;
+            soFar += i.meters || 0;
             return `<div class="ct-row ${escCt(i.phase)}"><div><span class="ct-phase">${escCt(CT_PHASES[i.phase] || i.phase)}${/^nova(:|\||$)/.test(i.notes || '') ? ' · <span class="ct-nova">★ nova serija</span>' : ''}</span>
               <span class="ct-text">${escCt(i.text)}</span>${b ? `<div class="ct-b">B: ${escCt(b)}</div>` : ''}</div>
-              <span class="ct-m">${i.meters} m</span></div>`;
+              <span class="ct-m">${i.meters} m<span class="ct-km" title="Skupaj do konca te serije (km)">${ctKm(soFar)}</span></span></div>`;
           }).join('')}
           <div class="ct-foot"><strong>${t.total_meters || items.reduce((a, i) => a + (i.meters || 0), 0)} m${t.estimated_minutes ? ` · ~${t.estimated_minutes} min` : ''}</strong>
             <a href="treningi.html?datum=${escCt(ymd)}">Uredi v Treningih</a></div>
