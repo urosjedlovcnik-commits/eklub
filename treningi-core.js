@@ -95,6 +95,8 @@
     ['STEGR', 'stegnjene roke (RRU ali normalna tehnika)', 'vaja'],
     ['POUDAREK PDZ', 'KV: poudarek na prvem (prednjem) delu zavesljaja', 'vaja'],
     ['1-1-1', 'prsno: 1 zavesljaj z eno roko, 1 z drugo, ena cela koordinacija', 'vaja'],
+    ['VAJE HITROSTI', 'v 25 m šprintaš del razdalje: vmes, v cilj ali od štarta', 'vaja'],
+    ['PONOVITEV NAD VODO', 'HN: zavesljaj do konca, roko vrneš ob telo in še enkrat ponoviš', 'vaja'],
     ['RS', 'roke spredaj (noge na trebuhu)', 'vaja'],
     ['DZ', 'delfin zavesljaji (npr. tja desna, nazaj leva)', 'vaja'],
     ['ROKE', 'samo roke, noge popolnoma pri miru', 'izpeljava'],

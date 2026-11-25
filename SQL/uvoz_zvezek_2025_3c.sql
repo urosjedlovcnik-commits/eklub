@@ -1,0 +1,53 @@
+-- Uvoz 16 pregledanih treningov lanske sezone (2026-03-01 do 2026-03-29). Vse ali nič. Zgenerirano s treningi_uvoz/sql_uvoz_2025.js.
+DO $do$
+DECLARE
+  o uuid := (SELECT id FROM public.trainers WHERE email = 'uros.jedlovcnik@gmail.com' LIMIT 1);
+  note text := 'Uvoz iz zvezka 2025/26 (2026-03-01–2026-03-29)';
+  n int; s bigint; l int; k int;
+BEGIN
+  CREATE TEMP TABLE _t ON COMMIT DROP AS
+  SELECT (x->>'d')::date AS d, string_to_array(regexp_replace(x->>'l', '(.)(?=.)', '\1,', 'g'), ',') AS lv,
+         CASE WHEN (x->>'o') = '1' THEN 'glavna_takoj' ELSE 'obicajni' END AS ord, (x->>'m')::int AS m, (x->>'e')::int AS e, x->'i' AS items
+  FROM jsonb_array_elements($j$[{"d":"2026-03-02","l":"AB","o":0,"m":2400,"e":34,"i":[["R","300 RAZP",300],["O","6x75 1x MBP 1x K DIH 2/3/4",450],["V","3x100 PL 25 KV 2-2 + 50 K RRU ŠPRICANJE + 25 DV 2-2-2",300],["V","8x25 PL 1x DN ČIM DLJE POD VODO 1x D",200],["M","50 RAZP",50],["G","5x( 100 T @2' / 50 HITRO @1' / 25 MAX / 25 RAZP )",1000],["K","100 RAZP",100]]},{"d":"2026-03-05","l":"AB","o":1,"m":2300,"e":33,"i":[["R","300 RAZP",300],["O","8x50 MM",400],["G","4x100 VL\n3x100 PL 25 D + 75 K\n2x100 NEGATIVE SPLIT\n100 !",1000],["M","50 RAZP",50],["V","4x50 KV SHARK",200],["V","3x50 DV 2-2-2",150],["V","2x50 TEMPO",100],["V","50 !",50],["K","50 RAZP",50]]},{"d":"2026-03-04","l":"C","o":0,"m":1550,"e":31,"i":[["R","200 RAZP",200],["O","4x75 50 P + 25 K",300],["V","4x50 PL HN 1x RZ 1x OT",200],["V","8x25 PL HZ",200],["V","4x50 H 2x PL 2x BREZ",200],["M","50 RAZP",50],["V","6x25 DN",150],["G","4x50 P @1'30\"",200],["K","50 RAZP",50]]},{"d":"2026-03-04","l":"A","o":0,"m":2300,"e":33,"i":[["R","300 RAZP",300],["O","3x150 PL 25 MBK + 25 K",450],["V","8x25 PL K VISOK KOMOLEC",200],["M","50 RAZP",50],["G","200 VL\n2x100 @1'45\"\n4x50 @50\"\n2x100 @1'45\"\n200 VL",1000],["M","50 RAZP",50],["Z","8x25 V ML PR",200],["K","50 RAZP",50]]},{"d":"2026-03-09","l":"AB","o":1,"m":2500,"e":35,"i":[["R","300 RAZP",300],["O","3x100 25 D + 75 H/P/K",300],["G","3x( 8x50 ) 1x VL @1' 1x 3+1 @1' 1x TEMPO @50\"",1200],["M","50 RAZP",50],["V","12x50 PL 1x 25 N! + 25 RAZP 1x 25 K RRU STEGR + 25 K RRU ZADRGA",600],["K","50 RAZP",50]]},{"d":"2026-03-12","l":"AB","o":0,"m":2400,"e":34,"i":[["R","300 RAZP",300],["O","4x100 M Z ZAMIKOM",400],["G","2x200 VL\n4x100 75 K + 25 D\n8x50 PL @50\"\n16x25 1x D 1x H 1x K! 1x H",1600],["K","100 RAZP",100]]},{"d":"2026-03-11","l":"C","o":0,"m":1550,"e":31,"i":[["R","200 RAZP",200],["O","4x50 25 P + 25 H/K",200],["V","8x25 PL DN MENJAMO POLOŽAJ",200],["V","8x25 PL DZ",200],["V","6x25 PL DV 2-2-1",150],["V","4x25 METULJČEK",100],["M","50 RAZP",50],["G","4x100 1x P 1x 75 P + 25 H 1x 75 P + 25 K 1x P",400],["K","50 RAZP",50]]},{"d":"2026-03-11","l":"A","o":0,"m":2100,"e":30,"i":[["R","300 RAZP",300],["O","8x50 MM OBRATNO",400],["V","12x25 PL 1x DN PV 1x RRU PESTI",300],["M","50 RAZP",50],["G","2x( 200 VL / 100 T / 50 T / 25 D / 25 RAZP )",800],["V","8x25 PACMAN",200],["K","50 RAZP",50]]},{"d":"2026-03-16","l":"AB","o":0,"m":2500,"e":35,"i":[["R","300 RAZP",300],["O","8x50 M 25 V + 25 CT",400],["V","10x50 PL 1x DN 1x DN KR 3x 25 D + 25 H",500],["M","50 RAZP",50],["G","2x( 8x50 4x STOP 1-4 4x RG 4-1 @1' )",800],["M","50 RAZP",50],["Z","300 VL",300],["K","100 RAZP",100]]},{"d":"2026-03-19","l":"AB","o":0,"m":2300,"e":33,"i":[["R","300 RAZP",300],["O","4x125 M VSAKIČ ENA TEHNIKA 50",500],["V","6x50 PL 25 PR DN + 25 PR KN",300],["V","8x25 PL PZDZ",200],["M","50 RAZP",50],["G","3x( 6x50 @1' ) 1x MAD 1x VL 1x TEMPO",900],["K","50 RAZP",50]]},{"d":"2026-03-18","l":"C","o":0,"m":1500,"e":30,"i":[["R","200 RAZP",200],["O","4x75 50 P + 25 H",300],["V","4x50 PL N DESKA",200],["V","4x50 PL KZ Z DESKO",200],["V","4x50 PL K RRU",200],["M","50 RAZP",50],["G","3x100 50 POČASI + 25 HITRO + 25 RAZP",300],["K","50 RAZP",50]]},{"d":"2026-03-18","l":"A","o":0,"m":2200,"e":31,"i":[["R","300 RAZP",300],["O","3x150 MBK PO 50 25 N + 25 CT",450],["G","6x( 4x50 ) 1. NOGE Z DESKO 2. M 3. TEMPO 3x PL 3x BREZ",1200],["M","50 RAZP",50],["Z","6x25 SCULLING",150],["K","50 RAZP",50]]},{"d":"2026-03-23","l":"AB","o":0,"m":2300,"e":33,"i":[["R","300 RAZP",300],["O","4x100 PL 25 M + 75 CT 1x H 1x K",400],["V","6x50 PL 7m PV + HITER OBRAT",300],["V","4x25 PL MAX NOGE PO IZBIRI",100],["M","50 RAZP",50],["G","6x( 100 T @2' / 25! / 25 RAZP ) 1x N 1x CT",900],["M","50 RAZP",50],["Z","6x25 VAJE HITROSTI",150],["K","50 RAZP",50]]},{"d":"2026-03-26","l":"AB","o":0,"m":2350,"e":33,"i":[["R","300 RAZP",300],["O","4x100 M 1x CT 1x N",400],["V","8x50 PL 1x OBRAT + NAZAJ BD 1x HN",400],["V","8x25 PL HN PONOVITEV NAD VODO",200],["M","50 RAZP",50],["G","3x( 3x50 T / 50! / 50 RAZP ) 1x PL 1x VL 1x CT",750],["M","50 RAZP",50],["Z","6x25 VATERPOLO",150],["K","50 RAZP",50]]},{"d":"2026-03-25","l":"C","o":0,"m":1400,"e":28,"i":[["R","200 RAZP",200],["O","25 K + 50 H + 100 P + 50 H + 25 K",250],["V","4x50 PL 25 HN + 25 KN",200],["V","4x50 PL HV 1x 3-1 1x RRU Z",200],["V","8x25 H 4x PL 4x CT",200],["M","50 RAZP",50],["V","8x25 K RRU 3s",200],["K","100 RAZP",100]]},{"d":"2026-03-25","l":"A","o":0,"m":2200,"e":31,"i":[["R","300 RAZP",300],["O","4x75 M VB1T",300],["V","4x75 PL K STOP PO 25",300],["V","4x75 PL 25 K RRU PESTI + 25 K RRU ŠPRICANJE + 25 K RRU STEGR",300],["M","50 RAZP",50],["G","4x75 VL\n4x75 50 T + 25 D\n4x75 50 T + 25!",900],["K","50 RAZP",50]]}]$j$::jsonb) x;
+
+  IF EXISTS (SELECT 1 FROM _t JOIN public.trainings t ON t.trainer_id = o AND t.date = _t.d AND t.levels = _t.lv) THEN
+    RAISE EXCEPTION 'Kateri od treningov je že v bazi';
+  END IF;
+
+  CREATE TEMP TABLE _i ON COMMIT DROP AS
+  SELECT _t.d, _t.lv, (i.ord - 1)::int AS pos,
+         CASE i.v->>0 WHEN 'R' THEN 'razplavanje' WHEN 'O' THEN 'ogrevalna' WHEN 'V' THEN 'vaje' WHEN 'M' THEN 'vmesno_razplavanje'
+                      WHEN 'G' THEN 'glavna' WHEN 'Z' THEN 'zakljucek' WHEN 'K' THEN 'zakljucno_razplavanje' END AS phase,
+         i.v->>1 AS txt, (i.v->>2)::int AS m,
+         coalesce(i.v->>3, replace(replace(upper(i.v->>1), '( ', '('), ' )', ')')) AS fp, i.v->>4 AS b
+  FROM _t CROSS JOIN LATERAL jsonb_array_elements(_t.items) WITH ORDINALITY AS i(v, ord);
+
+  INSERT INTO public.training_sets AS ts (trainer_id, phase, levels, text, structure, meters, fingerprint, source, notes)
+  SELECT o, phase, (SELECT array_agg(DISTINCT u ORDER BY u) FROM _i j, unnest(j.lv) u WHERE j.phase = i.phase AND j.fp = i.fp),
+         min(txt), jsonb_build_object('v', 1, 'meters', min(m)), min(m), fp, 'uvoz', 'zvezek 2025/26'
+  FROM _i i WHERE phase IN ('ogrevalna', 'vaje', 'glavna', 'zakljucek') GROUP BY phase, fp
+  ON CONFLICT (trainer_id, phase, fingerprint) DO UPDATE
+    SET levels = (SELECT array_agg(DISTINCT u ORDER BY u) FROM unnest(ts.levels || excluded.levels) u);
+  GET DIAGNOSTICS k = ROW_COUNT;
+  IF k <> 70 THEN RAISE EXCEPTION 'Serije: %', k; END IF;
+
+  INSERT INTO public.trainings (trainer_id, term_id, date, levels, status, order_variant, total_meters, estimated_minutes, notes)
+  SELECT o, (SELECT te.id FROM public.terms te JOIN public.trainer_terms tt ON tt.term_id = te.id
+              WHERE tt.trainer_id = o AND te.day = extract(isodow FROM _t.d)::int
+                AND _t.d BETWEEN coalesce(te.date_from, _t.d) AND coalesce(te.date_to, _t.d) LIMIT 1),
+         _t.d, _t.lv, 'izveden', _t.ord, _t.m, _t.e, note
+  FROM _t;
+
+  INSERT INTO public.training_items (training_id, position, phase, set_id, text, structure, meters, fingerprint, level_variants)
+  SELECT t.id, i.pos, i.phase,
+         (SELECT x.id FROM public.training_sets x WHERE x.trainer_id = o AND x.phase = i.phase AND x.fingerprint = i.fp),
+         i.txt, jsonb_build_object('v', 1, 'meters', i.m), i.m, i.fp,
+         CASE WHEN i.b IS NULL THEN '{}'::jsonb ELSE jsonb_build_object('B', jsonb_build_object('text', i.b)) END
+  FROM _i i JOIN public.trainings t ON t.trainer_id = o AND t.date = i.d AND t.levels = i.lv AND t.notes = note;
+
+  SELECT count(DISTINCT t.id), count(i.id), sum(i.meters), count(i.set_id) INTO n, k, s, l
+  FROM public.trainings t JOIN public.training_items i ON i.training_id = t.id WHERE t.trainer_id = o AND t.notes = note;
+  IF n <> 16 OR k <> 121 OR s <> 33850 OR l <> 70 THEN
+    RAISE EXCEPTION 'Kontrola: treningov %, postavk %, metrov %, povezanih %', n, k, s, l;
+  END IF;
+END $do$;

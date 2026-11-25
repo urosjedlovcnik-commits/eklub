@@ -17,11 +17,13 @@ BEGIN
     ('RS', 'roke spredaj (noge na trebuhu)', 'vaja'),
     ('DZ', 'delfin zavesljaji (npr. tja desna, nazaj leva)', 'vaja'),
     ('POUDAREK PDZ', 'KV: poudarek na prvem (prednjem) delu zavesljaja', 'vaja'),
-    ('1-1-1', 'prsno: 1 zavesljaj z eno roko, 1 z drugo, ena cela koordinacija', 'vaja')
+    ('1-1-1', 'prsno: 1 zavesljaj z eno roko, 1 z drugo, ena cela koordinacija', 'vaja'),
+    ('VAJE HITROSTI', 'v 25 m šprintaš del razdalje: vmes, v cilj ali od štarta', 'vaja'),
+    ('PONOVITEV NAD VODO', 'HN: zavesljaj do konca, roko vrneš ob telo in še enkrat ponoviš', 'vaja')
   ) AS v(code, meaning, category)
   WHERE NOT EXISTS (SELECT 1 FROM public.training_codes x WHERE lower(x.code) = lower(v.code));
   GET DIAGNOSTICS n = ROW_COUNT;
-  IF n <> 4 THEN RAISE EXCEPTION 'Nove kratice: %', n; END IF;
+  IF n <> 6 THEN RAISE EXCEPTION 'Nove kratice: %', n; END IF;
 
   FOR r IN SELECT * FROM (VALUES
     ('8x25 PL H 90°', '8x25 PL HV RRU 90°', '8X25 PL HV RRU 90°'),
