@@ -575,9 +575,10 @@
   function newItem(card, idx, key) {
     const it = card.items[idx];
     const sprint = it.phase === 'glavna' && (card.mainMode === 'sprint' || (card.mainMode !== 'ne_sprint' && C.isSprintMain(it, S.settings)));
+    const exS = C.exampleSets(S.examples, levelKey(card.slot.levels), S.settings);
     const n = C.suggestNewSet(it.phase, {
       level: levelKey(card.slot.levels), library: S.library, history: historyExcluding(card.slot), dict: S.dict, drills: S.codes,
-      exclude: card.items.map(i => C.fingerprint(i.text)), sprint, only50: !!card.joint && it.phase === 'glavna', exampleMains: C.exampleSets(S.examples, levelKey(card.slot.levels), S.settings).mains, settings: S.settings, date: card.slot.date,
+      exclude: card.items.map(i => C.fingerprint(i.text)), sprint, only50: !!card.joint && it.phase === 'glavna', exampleMains: exS.mains, exampleLong: exS.longMains, settings: S.settings, date: card.slot.date,
       others: card.items.filter((x, j) => j !== idx).map(i => i.text)
     });
     if (!n) { alert('Za to fazo trenutno nimam nove serije.'); return; }

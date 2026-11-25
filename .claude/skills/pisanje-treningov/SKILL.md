@@ -27,7 +27,7 @@ Različica »glavna takoj« (ogrevalna → glavna → 50 RAZP → vaje) je mogo�
 | Razplavanje | 300 | 200 |
 | Serije vaj | 2–3, pred glavno najpogosteje 2 | 3–5, pred glavno skoraj vedno vsaj 3 |
 | Metri vaj | okrog 500 | okrog 650 |
-| Glavna | okrog 900 (vsaj ~30 % treninga, več kot vse vaje) | okrog 300, največ ~350 |
+| Glavna | okrog 900, večinoma do 1100 (vsaj ~30 % treninga, več kot vse vaje) | okrog 300, največ ~350 |
 
 - Ponedeljek in četrtek: A+B skupaj. Sreda: A in C ločeno. B dobi v glavni za 1 ponovitev krajšo različico.
 - Privzeti štarti glavne: 50 @1', 75 @1'30", 100 @2', 200 @3'30". Drugih štartov si ne izmišljaj.
@@ -80,7 +80,7 @@ Trener izvedeni trening oceni od 1 do 10 (v koledarju ali v Treningih) in označ
 Ocena **8 ali več = zgled**. Če je označen vidik, je zgled samo ta del, sicer cel trening.
 
 - Pred sestavljanjem novega treninga preberi zglede za isti nivo in opombe: `select date, levels, rating, liked_phases, rating_note from trainings where rating >= 8 order by rating desc, date desc`, serije so v `training_items`.
-- Glavnih za A, daljših od 1100 m, po zgradbi ne posnemaj.
+- Glavna za A naj bo v večini primerov do 1100 m, občasno (približno vsaka deseta) je lahko tudi daljša. Daljše zglede po zgradbi posnemaj le redko.
 - Zgled posnemaj po zgradbi, ne prepisuj ga: pravili 60 in 21 dni veljata tudi zanj.
 - Nizke ocene z opombo preberi kot odziv in jih po pogovoru s trenerjem vpiši v dnevnik.
 

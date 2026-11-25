@@ -46,8 +46,9 @@
     exclusive_gap_days: 28,
     // Trening s to oceno ali višjo je zgled za nove predloge.
     example_min_rating: 8,
-    // Daljših glavnih (m) ne posnemamo po zgradbi, tudi če so zgled.
+    // Daljše glavne (m) po zgradbi posnemamo le redko, tudi če so zgled.
     example_main_max: { A: 1100 },
+    example_long_chance: 0.15,
     // Skupni trening A+B: enkrat na mesec ob četrtkih, vsaj toliko dni narazen, glavna samo iz 50 m.
     joint: { weekday: 4, min_gap_days: 21 },
     // Dan v tednu (1 = ponedeljek) -> skupine nivojev, ki imajo vsaka svoj trening.
@@ -775,7 +776,8 @@
     const uniq = a => a.filter((x, i) => a.indexOf(x) === i).join('\n');
     const sprint = !!(opts && opts.sprint);
     // Zgradba glavnih, ki so bile trenerju všeč.
-    const liked = (EXAMPLE_MAINS[lk] || []).concat((opts && opts.exampleMains) || []);
+    const longMains = (opts && opts.exampleLong) || [];
+    const liked = longMains.length && rng() < DEFAULT_SETTINGS.example_long_chance ? longMains : (EXAMPLE_MAINS[lk] || []).concat((opts && opts.exampleMains) || []);
     if (!sprint && liked.length && rng() < 0.15) {
       const t = likeMain(one(liked), opts && opts.library, lk, rng);
       if (t) return t;
@@ -856,7 +858,7 @@
     if (!limits) return null;
     const make = { vaje: newDrill, ogrevalna: newWarmup, glavna: newMain }[phase];
     for (let i = 0; i < 120; i++) {
-      const text = make(level, rng, { sprint: opts.sprint, only50: opts.only50, library, drills: opts.drills, exampleMains: opts.exampleMains });
+      const text = make(level, rng, { sprint: opts.sprint, only50: opts.only50, library, drills: opts.drills, exampleMains: opts.exampleMains, exampleLong: opts.exampleLong });
       const fp = fingerprint(text);
       if (known.has(key(fp))) continue;
       // Ista vaja na obeh straneh (↑X ↓X, 1x X 1x X) ni smiselna.
@@ -901,7 +903,7 @@
   /** Zgledi za nivo: examples = [{ date, level, rating, liked, items: [{ phase, text }] }]. Brez označenih vidikov veljajo vse faze. */
   function exampleSets(examples, level, settings) {
     const min = (settings && settings.example_min_rating) || DEFAULT_SETTINGS.example_min_rating;
-    const keys = new Map(), mains = [];
+    const keys = new Map(), mains = [], longMains = [];
     const maxMain = ((settings && settings.example_main_max) || DEFAULT_SETTINGS.example_main_max)[level] || Infinity;
     (examples || []).filter(e => e.level === level && Number(e.rating) >= min).forEach(e => {
       const liked = (e.liked || []).length ? e.liked : LIBRARY_PHASES;
@@ -909,10 +911,10 @@
         if (!liked.includes(i.phase)) return;
         const k = i.phase + '|' + (i.phase === 'vaje' ? drillKey(fingerprint(i.text)) : fingerprint(i.text));
         keys.set(k, Math.max(keys.get(k) || 0, Number(e.rating)));
-        if (i.phase === 'glavna' && i.text.split('\n').length >= 3 && parseText(i.text, new Map()).meters <= maxMain) mains.push(stripTargets(i.text));
+        if (i.phase === 'glavna' && i.text.split('\n').length >= 3) (parseText(i.text, new Map()).meters <= maxMain ? mains : longMains).push(stripTargets(i.text));
       });
     });
-    return { keys, mains };
+    return { keys, mains, longMains };
   }
 
   /** Nova glavna po zgradbi zgleda: iste vloge in razdalje, druge vrstice iz knjižnice. */
@@ -1054,7 +1056,8 @@
     const exBoost = s => {
       const r = ex.keys.get(s.phase + '|' + (s.phase === 'vaje' ? drillKey(s.fingerprint) : s.fingerprint));
       if (r) return 1 + (r - 6) * 0.5;
-      return s.phase === 'glavna' && s.meters <= (settings.example_main_max[lk] || Infinity) && likedMains.some(m => likeStructure(s.text, m)) ? 1.5 : 1;
+      if (s.phase !== 'glavna' || !likedMains.some(m => likeStructure(s.text, m))) return 1;
+      return s.meters <= (settings.example_main_max[lk] || Infinity) ? 1.5 : 1.1;
     };
     const recencyWeight = memo((s) => {
       const d = lastUseDays(history, s.fingerprint, lk, s.phase, date);
@@ -1099,7 +1102,7 @@
       : newMode === 'ena' ? [['ogrevalna', 'vaje', 'vaje', 'glavna'][Math.floor(rng() * 4)]] : [];
     const fresh = {};
     newPhases.forEach(p => {
-      const n = suggestNewSet(p, { level: lk, library: opts.library, drills: opts.drills, history, dict: opts.dict, rng, settings, date, others: Object.values(fresh).map(x => x.text), sprint: p === 'glavna' && wantSprint, only50: joint && p === 'glavna', exampleMains: ex.mains });
+      const n = suggestNewSet(p, { level: lk, library: opts.library, drills: opts.drills, history, dict: opts.dict, rng, settings, date, others: Object.values(fresh).map(x => x.text), sprint: p === 'glavna' && wantSprint, only50: joint && p === 'glavna', exampleMains: ex.mains, exampleLong: ex.longMains });
       if (n) fresh[p] = n;
     });
     if (needNewSprint && !fresh.glavna) {
