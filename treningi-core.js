@@ -875,7 +875,7 @@
 
   // ---------- Zgledi (treningi z oceno 8 ali več) ----------
   // Glavne, ki so bile trenerju zelo všeč (odzivi pred uvedbo ocen); nove serije posnemajo njihovo zgradbo.
-  const EXAMPLE_MAINS = { A: [`6x50 KVL @1'\n6x50 PL NOGE 1x MAX 1x EASY @1'10"\n6x50 @50"\n6x50 KVL @1'`] };
+  const EXAMPLE_MAINS = { A: [`5x50 KVL @1'\n5x50 PL NOGE 1x MAX 1x EASY @1'10"\n5x50 @50"\n5x50 KVL @1'`] };
 
   /** Vloga vrstice v glavni seriji: pripomoček, noge, kratek štart, druga tehnika, kravl, razplavanje. */
   function lineRole(line) {
@@ -1051,7 +1051,7 @@
     const exBoost = s => {
       const r = ex.keys.get(s.phase + '|' + (s.phase === 'vaje' ? drillKey(s.fingerprint) : s.fingerprint));
       if (r) return 1 + (r - 6) * 0.5;
-      return s.phase === 'glavna' && likedMains.some(m => likeStructure(s.text, m)) ? 1.5 : 1;
+      return s.phase === 'glavna' && s.meters <= 1100 && likedMains.some(m => likeStructure(s.text, m)) ? 1.5 : 1;
     };
     const recencyWeight = memo((s) => {
       const d = lastUseDays(history, s.fingerprint, lk, s.phase, date);

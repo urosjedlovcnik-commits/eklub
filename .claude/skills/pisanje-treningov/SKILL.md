@@ -89,7 +89,7 @@ Ocena **8 ali več = zgled**. Če je označen vidik, je zgled samo ta del, sicer
 |---|---|---|---|
 | 25. 11. 2026 | A | Hrbtni vaji sta bili ločeni (`↑HN ROTACIJA ↓K 6-3-6`, nato `HV HITLER 1x 2-2-2`), vmes neumestno kravl. Pojasnilo: druga tehnika je lahko vmes, tu pa je bila kravl vaja v isti seriji s hrbtno. | Brez vaje druge tehnike v isti seriji; cela serija vmes je v redu. |
 | 25. 11. 2026 | C | Preveč plavanja celega stila (samo `8x25 HN` in `4x50 HV RRU`, nato `16x25`); pred glavno bi potrebovali še kakšno serijo. | C: vsaj 3 serije vaj, krajša glavna. |
-| 25. 11. 2026 | A | Glavna mu je bila zelo všeč: `6x50 KVL @1'` / `6x50 PL NOGE 1x MAX 1x EASY @1'10"` / `6x50 @50"` / `6x50 KVL @1'`. | Zgradba, ki naj se pojavlja: pripomoček → noge → kratek štart → pripomoček, vse po 50 m. |
+| 25. 11. 2026 | A | Glavna mu je bila zelo všeč: `6x50 KVL @1'` / `6x50 PL NOGE 1x MAX 1x EASY @1'10"` / `6x50 @50"` / `6x50 KVL @1'`. Opomba: malenkost predolga (1200 m), verjetno bi bilo boljše 4x 5x50. | Zgradba, ki naj se pojavlja: pripomoček → noge → kratek štart → pripomoček, 4x 5x50 (1000 m). |
 
 ## Kaj upošteva generator
 
