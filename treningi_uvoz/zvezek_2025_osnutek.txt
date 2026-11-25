@@ -1,12 +1,14 @@
 # Lanska sezona 2025/26, prvi sklop 20 slik: OSNUTEK prvega branja (23. 11. 2026).
 # Ni pregledano, ni v bazi, generator tega ne uporablja. Oblika kot zvezek_2026.txt; "?" = negotovo.
 # Datum 0000-00-NN = trening brez datuma na sliki (NN = zaporedna številka slike).
+# 18. 9. in 15. 10. A imata v zvezku krajšo različico (18. 9.: 12x25 M, 6x50 1x DN 1x DN KR 1x 25 D + 25, 3x100, 3x50, 3x25 = 1,6; 15. 10. A: 6x100 = 2,0).
+# Slike 1-7 in 9 so prebrane povečane 25. 11. 2026.
 # Slika 8 (16. 10.) je v zvezku prečrtana in ni prepisana. Vrh slike 2 je konec treninga, ki ga na slikah ni.
 
 # 2025-09-18 A,B 2.05
 R 300 RAZP
 O 16x25 M
-V? 10x50 PL 1x DN 1x DN KR 3x 25 D + 25 H
+V 10x50 PL 1x DN 1x DN KR 3x 25 D + 25 H
 VR 50 RAZP
 G 4x100 @1'50"
 G 4x50 @1'20"
@@ -16,8 +18,8 @@ ZR 100 RAZP
 # 0000-00-02 C 1.40
 R 200 RAZP
 O 4x50 25 PD + 25 GERMANJA HN
-V 8x25 PN 3-1 2-1
-V 4x50 PD 1-2
+V? 8x25 PN 3-1 2-1
+V 4x50 1x PD 1x PV 1-2
 VR 50 RAZP
 V 6x25 KN PL BD
 V 6x25 PL KN SUPERMAN
@@ -26,7 +28,7 @@ ZR 50 RAZP
 
 # 0000-00-03 A 2.20
 R 300 RAZP
-O? 6x75 25 MBK + 50 K
+O 6x75 25 MBK + 50 K
 V 10x25 PL ↑DN PV ↓SCULLING
 VR 50 RAZP
 G? 3x( 150 VL / 100 K T / 50 K! / 25 D / 25 RAZP )
@@ -34,17 +36,17 @@ ZR 100 RAZP
 
 # 0000-00-04 A,B 2.20
 R 300 RAZP
-O? 6x50 1x H 1x 25 H + 25 K 1x K
+O 6x50 1x H 1x 25 H + 25 K 1x K
 G 2x( 4x100 @2' ) 3x K 1-3 1x RAZP
 V? 8x50 PL HITRO POD VODO HITER PREHOD
-Z? 4x50 PL 25! + 25 RAZP
-Z? 2x50 25 D! + 25
+Z 4x50 PL 25! + 25 RAZP
+Z 2x50 25! + 25
 ZR 100 RAZP
 
 # 2025-10-08 C 1.45
 R 200 RAZP
 O 4x50 ↑PD 3s ↓PD 5s
-V? 8x25 PL 1x HN ROTACIJA 1x HN RZ
+V? 8x25 PL 1x HN OT ROTACIJA 1x HN RZ
 V? 6x25 PL HZ ↑D ↓L + ROTACIJA
 VR 50 RAZP
 V? 8x25 PL H RRU Z/RRU OT
@@ -62,7 +64,7 @@ G 2x50 H
 G 2x75 PR DN
 G 2x100 K T @2'
 VR 50 RAZP
-V? 8x50 K PL 3x EASY 1x HITRO
+V 8x50 K PL 3x EASY 1x HITRO
 ZR 100 RAZP
 
 # 2025-10-09 A,B 2.30
@@ -75,13 +77,13 @@ G? 300 K VSAK 4. 25 HITRO
 G 200 K HITRI OBRAT
 G 100 M
 G 2x50 32-35" @1'
-G? 2x50 25! + 25
+G 2x50 25! + 25
 ZR 100 RAZP
 
 # 2025-10-15 C 1.30
 R 200 RAZP
 O 8x25 P 1-2 1-3
-V? 6x25 PN NA H
+V 6x25 PN NA H
 V 6x25 GERMANJA 1x PN 1x KN
 VR 50 RAZP
 V? 4x50 PL KN 2x D 2x BD
@@ -93,7 +95,7 @@ ZR 50 RAZP
 R 300 RAZP
 O 8x50 K 1x L/D 1x ČMZ DIH 3
 V? 12x25 PL V 1x D 2-2-1 1x SHARK
-V? 3x100 PL N 1x 50 D + 50 H 1x 50 H + 50 K
+V 3x100 PL N 1x 50 D + 50 H 1x 50 H + 50 K
 VR 50 RAZP
 G? 8x100 1x EASY 1x VSAK OBRAT UDARCI 1x 50 HITRO + 50 POČASI 1x HITRO
 ZR 50 RAZP
@@ -101,7 +103,7 @@ ZR 50 RAZP
 # 0000-00-09 A,B 2.25
 R 300 RAZP
 O 6x75 MBK 1xN 1xV 1xCT
-V? 6x50 PL DN 1x BOK 1x HRBET 1x TREBUH VSAKIČ 10-15 PV
+V 6x50 PL DN 1x BOK 1x HRBET 1x TREBUH VSAKIČ 10-15 PV
 V 6x50 PL 25 K 6-3-6 + 25 PR KN
 VR 50 RAZP
 G 3x100 2x EASY 1x MAX @2'
@@ -109,7 +111,7 @@ G 50 RAZP
 G 3x50 2x EASY 1x MAX @1'15"
 G 50 RAZP
 G 3x25 2x EASY 1x MAX @1'
-G? 75 RAZP
+G 75 RAZP
 ZR 100 RAZP
 
 # 2025-10-22 C 1.40
