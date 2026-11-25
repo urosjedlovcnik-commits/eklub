@@ -18,7 +18,7 @@ fs.readFileSync(path.join(__dirname, file), 'utf8').split(/\r?\n/).forEach(raw =
   if (h) { cur = h[4] && h[1] >= from && h[1] <= to ? { date: h[1], levels: h[2].split(',').sort(), items: [] } : null; if (cur) list.push(cur); last = null; return; }
   if (!cur) return;
   const b = line.match(/^#B (.*)$/);
-  if (b) { cur.items[cur.items.length - 1].b = b[1].replace(/ \/ /g, '\n'); return; }
+  if (b) { cur.items[cur.items.length - 1].b = b[1].replace(/ \/ (?![^(]*\))/g, '\n'); return; }
   if (line.startsWith('#')) return;
   const m = line.match(/^(VR|ZR|R|O|V|G|Z)(\?)?\s+(.*)$/);
   if (!m || m[2]) throw new Error('Neznana ali negotova vrstica: ' + cur.date + ' ' + line);
