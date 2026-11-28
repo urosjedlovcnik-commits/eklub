@@ -72,7 +72,7 @@ Različica »glavna takoj« (ogrevalna → glavna → 50 RAZP → vaje) je mogo�
 
 ## Skupni trening A+B
 
-Enkrat v koledarskem mesecu ob četrtku, vsaj 3 tedne po prejšnjem. A in B plavata isto, glavna je samo iz 50 m dolžin, brez ciljnih časov. **Trening je malo krajši: 2000–2200 m.**
+Enkrat v koledarskem mesecu ob četrtku, vsaj 3 tedne po prejšnjem. A in B plavata isto, glavna je samo iz 50 m dolžin, brez ciljnih časov. **Trening je malo krajši: 2000–2200 m**, zato je glavna največ okrog 1000 m.
 
 ## Pregled pred oddajo
 
