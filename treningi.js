@@ -391,6 +391,7 @@
     const tot = cardTotals(card);
     const legWarn = levelKey(slot.levels) === 'C' ? C.legsWithoutDrills(card.items.map(i => i.text)) : [];
     const split = C.splitStrokes(card.items.filter(i => i.phase === 'vaje').map(i => i.text));
+    const weekIssues = C.weekRuleIssues(card.items.map(i => i.text).filter(t => t.trim()), slot.date, slot.levels, historyExcluding(slot), S.settings);
     const statusLabel = card.status === 'predlog' ? 'predlog' : card.status;
     const ji = jointInfo(slot);
     const jointWarn = !card.joint ? [] : [
@@ -406,6 +407,7 @@
       ${card.notes && card.notes.length ? `<div class="tr-chips">${card.notes.map(n => `<span class="tr-chip info">${esc(n)}</span>`).join('')}</div>` : ''}
       ${ji.possible || card.joint ? `<label class="tr-joint"><input type="checkbox" data-act="joint"${card.joint ? ' checked' : ''}> Skupni trening A+B (glavna samo iz 50 m)</label>` : ''}
       ${jointWarn.length ? `<div class="tr-chips">${jointWarn.map(w => `<span class="tr-chip">${esc(w)}</span>`).join('')}</div>` : ''}
+      ${weekIssues.length ? `<div class="tr-chips">${weekIssues.map(w => `<span class="tr-chip">${esc(w)}</span>`).join('')}</div>` : ''}
       ${split.length ? `<div class="tr-chips"><span class="tr-chip">Mešana serija z vajo druge tehnike, čeprav ima svojo serijo: ${split.map(x => ({ K: 'kravl', H: 'hrbtno', D: 'delfin', P: 'prsno' }[x])).join(', ')}</span></div>` : ''}
       ${legWarn.length ? `<div class="tr-chips"><span class="tr-chip">Noge brez vaj za isto tehniko: ${legWarn.map(x => ({ K: 'kravl', H: 'hrbtno', D: 'delfin', P: 'prsno' }[x])).join(', ')}</span></div>` : ''}
       <div class="tr-items"></div>
@@ -580,7 +582,10 @@
     const hist = historyExcluding(card.slot);
     const used = new Set(card.items.map(i => C.fingerprint(i.text)));
     const others = card.items.filter((x, j) => j !== idx).map(i => i.text);
-    let pool = S.library.filter(s => s.phase === phase && (s.levels || []).includes(lk) && !used.has(s.fingerprint) && !C.exclusiveConflict(s.text, others, S.settings) && !C.overMaxDistance(s.text, S.settings) && !C.invalidDrill(s.text, S.settings));
+    const noApnea = (S.settings.apnea_off_weekdays || C.DEFAULT_SETTINGS.apnea_off_weekdays).includes(C.weekday(card.slot.date));
+    const saltoUsed = C.weeklyOnceUsed(hist, lk, card.slot.date);
+    let pool = S.library.filter(s => s.phase === phase && (s.levels || []).includes(lk) && !used.has(s.fingerprint) && !C.exclusiveConflict(s.text, others, S.settings) && !C.overMaxDistance(s.text, S.settings) && !C.invalidDrill(s.text, S.settings) &&
+      !(noApnea && C.isApnea(s.text)) && !(saltoUsed && /\b(SALTO|PREVAL)\b/.test(s.fingerprint)) && !(C.isApnea(s.text) && C.apneaRepeat(others.concat(s.text), hist, lk)));
     if (phase === 'glavna') {
       if (card.joint) pool = pool.filter(s => C.onlyFifties(s.text));
       if (card.mainMode === 'ne_sprint') pool = pool.filter(s => !C.isSprintMain(s, S.settings));

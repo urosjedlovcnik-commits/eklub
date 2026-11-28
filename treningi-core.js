@@ -46,6 +46,10 @@
     exclusive_gap_days: 28,
     // Kombinacije, ki niso vaja (VATERPOLO je samo ali VATERPOLO STEGR).
     invalid_drills: ['VATERPOLO ŠPRICANJE'],
+    // Apneistične vaje (plavanje pod vodo, brez dihanja) ne na teh dnevih (1 = pon, 4 = čet: večina hodi samo takrat).
+    apnea_off_weekdays: [1, 4],
+    // Salto in preval največ enkrat v tednu (pon–ned) za isti nivo.
+    weekly_once_codes: ['SALTO', 'PREVAL'],
     // Nivo A (in B): praviloma dve seriji vaj; delež treningov s tremi.
     three_drills_chance: 0.12,
     // Trening s to oceno ali višjo je zgled za nove predloge.
@@ -907,6 +911,9 @@
       if (halves && halves.length === 2 && halves[0].slice(1).trim() === halves[1].slice(1).trim()) continue;
       if (exclusiveConflict(text, opts.others, settings)) continue;
       if (overMaxDistance(text, settings) || invalidDrill(text, settings)) continue;
+      if (opts.date && settings.apnea_off_weekdays.includes(weekday(opts.date)) && isApnea(text)) continue;
+      if (opts.date && isWeeklyOnce(text, settings) && weeklyOnceUsed(history, level, opts.date)) continue;
+      if (isApnea(text) && opts.others && apneaRepeat(opts.others.concat(text), history, level)) continue;
       if (phase === 'glavna' && opts.only50 && !onlyFifties(text)) continue;
       if (unevenSides(text)) continue;
       if (opts.date && exclusiveTooSoon(text, history, level, opts.date, settings)) continue;
@@ -987,6 +994,54 @@
   /** Doda PL za ponovitvami, če ga vaja potrebuje (npr. "8x25 KN BOK" -> "8x25 PL KN BOK"). */
   function withFins(text) {
     return needsFins(text) ? String(text).replace(/^(\s*\d+\s*x\s*\d+)\s+/i, '$1 PL ') : text;
+  }
+
+  // ---------- Apneistične vaje in salto ----------
+  /** Vrste apneističnih vaj v zapisu: pv (pod vodo), ppv (prsno pod vodo), bd (brez dihanja). */
+  function apneaKinds(text) {
+    const t = ' ' + normalizeText(text).replace(/[↑↓+\/(),]/g, ' ').replace(/\s+/g, ' ') + ' ';
+    const out = new Set();
+    if (/ \d+ ?M PV | [DKH]N(?: H)? PV | PV [DKH]N | POD VODO | NPV | ZADNJIH \d+ ?M? DN | DN 360 | PODVODN/.test(t)) out.add('pv');
+    if (/ PPV /.test(t)) out.add('ppv');
+    if (/ K?BD | BREZ DIHANJA | BREZ VDIHA /.test(t)) out.add('bd');
+    return out;
+  }
+  const isApnea = (text) => apneaKinds(text).size > 0;
+  const isWeeklyOnce = (text, settings) => ((settings && settings.weekly_once_codes) || DEFAULT_SETTINGS.weekly_once_codes).some(w => hasWord(text, w));
+  const mondayOfIso = (d) => addDays(d, 1 - weekday(d));
+  /** Datum, ko je bil salto/preval že v istem tednu za ta nivo (ali null). */
+  function weeklyOnceUsed(history, level, date) {
+    const mon = mondayOfIso(date), sun = addDays(mon, 6);
+    const h = (history || []).find(x => x.level === level && x.date !== date && x.date >= mon && x.date <= sun && isWeeklyOnce(x.fingerprint));
+    return h ? h.date : null;
+  }
+  /** Ali sta bili ti serij že skupaj v istem treningu (zgled iz preteklosti). */
+  function togetherBefore(fps, history, level) {
+    const byDay = new Map();
+    (history || []).forEach(h => { if (h.level !== level) return; const k = h.date; if (!byDay.has(k)) byDay.set(k, new Set()); byDay.get(k).add(stripTargets(h.fingerprint)); });
+    for (const set of byDay.values()) if (fps.every(f => set.has(f))) return true;
+    return false;
+  }
+  /** Iste vrste apneistična vaja dvakrat v treningu brez zgleda iz preteklosti. */
+  function apneaRepeat(texts, history, level) {
+    const seen = new Map();
+    for (const t of texts) {
+      for (const k of apneaKinds(t)) {
+        if (seen.has(k) && !togetherBefore([fingerprint(seen.get(k)), fingerprint(t)], history, level)) return k;
+        if (!seen.has(k)) seen.set(k, t);
+      }
+    }
+    return null;
+  }
+  /** Opozorila za tedenska pravila na kartici. */
+  function weekRuleIssues(texts, date, levels, history, settings) {
+    const st = Object.assign({}, DEFAULT_SETTINGS, settings || {});
+    const lk = historyLevel(levels), out = [];
+    if (st.apnea_off_weekdays.includes(weekday(date)) && texts.some(isApnea)) out.push('Apneistična vaja (pod vodo / brez dihanja) na ponedeljek ali četrtek.');
+    if (apneaRepeat(texts, history, lk)) out.push('Ista apneistična vaja dvakrat v treningu.');
+    const used = texts.some(t => isWeeklyOnce(t, st)) && weeklyOnceUsed(history, lk, date);
+    if (used) out.push(`Salto ali preval je ta teden že bil (${used.slice(8, 10).replace(/^0/, '')}. ${used.slice(5, 7).replace(/^0/, '')}.).`);
+    return out;
   }
 
   /** Zapis z neveljavno kombinacijo vaj ali null. */
@@ -1089,7 +1144,10 @@
     const rng = mulberry32(opts.seed != null ? opts.seed : Date.now() % 2147483647);
     const notes = [];
 
-    const lib = (opts.library || []).filter(s => s.active !== false && (s.levels || []).includes(lk) && !overMaxDistance(s.text, settings) && !invalidDrill(s.text, settings));
+    const noApnea = settings.apnea_off_weekdays.includes(weekday(date));
+    const noSalto = !!weeklyOnceUsed(history, lk, date);
+    const lib = (opts.library || []).filter(s => s.active !== false && (s.levels || []).includes(lk) && !overMaxDistance(s.text, settings) && !invalidDrill(s.text, settings) &&
+      !(noApnea && isApnea(s.text)) && !(noSalto && isWeeklyOnce(s.text, settings)));
     const byPhase = p => lib.filter(s => s.phase === p);
 
     const joint = !!opts.joint;
@@ -1189,11 +1247,13 @@
         chosen.add(v);
         if (keys.has(drillKey(v.fingerprint))) return true; // ista vaja v drugem formatu
         if (exclusiveConflict(v.text, vs.map(x => x.text), settings)) return true;
+        if (isApnea(v.text) && apneaRepeat(texts().concat(v.text), history, lk)) return true;
         keys.add(drillKey(v.fingerprint));
         vs.push(v);
         return true;
       };
       const isC = lk === 'C';
+      // texts je uporabljen že v take(), zato je definiran pred zanko.
       const texts = () => [warm, main].concat(vs).filter(Boolean).map(x => x.text);
       let guard = 0;
       while (guard++ < 40) {
@@ -1209,6 +1269,7 @@
       const shortMain = main && main.meters < (isC ? 300 : 600);
       let z = zak.length && rng() < (shortMain ? 0.85 : 0.35) ? weightedPick(zak, recencyWeight, rng) : null;
       if (z && isC && legsWithoutDrills(texts().concat(z.text)).length) z = null;
+      if (z && isApnea(z.text) && apneaRepeat(texts().concat(z.text), history, lk)) z = null;
       const fin = rng() < 0.5 ? 50 : 100;
       const total = lv.warmup_m + (warm ? warm.meters : 0) + vs.reduce((a, v) => a + v.meters, 0) + 50 +
         (main ? main.meters : 0) + (z ? z.meters : 0) + fin;
@@ -1316,6 +1377,6 @@
     buildDict, parseLine, parseText, toStructure, normalizeText, fingerprint, stripTargets, addTargets, bVariant,
     estimateMinutes, parseTime, formatTime, libraryFromTrainings, generateTraining, arrangeOrder,
     weekSlots, historyFromTraining, historyLevel, lastUseDays, lastDrillDays, drillKey, setFormat,
-    availableDrills, drillWeight, suggestNewSet, onlyFifties, jointStatus, invalidDrill, needsFins, withFins, needsFins, withFins, lineRole, likeStructure, likeMain, exampleSets, EXAMPLE_MAINS, drillStrokes, splitStrokes, orderDrills, exclusiveConflict, exclusiveTooSoon, lastExclusiveDays, tidyText, unevenSides, strokeUse, legsWithoutDrills, maxMeters, longestMaxLine, overMaxDistance, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
+    availableDrills, drillWeight, suggestNewSet, onlyFifties, jointStatus, apneaKinds, isApnea, apneaRepeat, weeklyOnceUsed, weekRuleIssues, invalidDrill, needsFins, withFins, needsFins, withFins, lineRole, likeStructure, likeMain, exampleSets, EXAMPLE_MAINS, drillStrokes, splitStrokes, orderDrills, exclusiveConflict, exclusiveTooSoon, lastExclusiveDays, tidyText, unevenSides, strokeUse, legsWithoutDrills, maxMeters, longestMaxLine, overMaxDistance, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
   };
 });
