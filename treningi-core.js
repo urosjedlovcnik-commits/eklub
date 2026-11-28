@@ -312,15 +312,23 @@
       const parts = rest.match(/[↑↓][^↑↓]*/g) || [];
       return total * parts.filter(isMaxText).length / parts.length;
     }
-    const alt = rest.match(/\d+\s*x\s*[^\d\s][^]*?(?=\s\d+\s*x\s*[^\d\s]|$)/gi);
+    // Del ponovitve na max: "75 T + 25!" -> 25, "25 K! + 25 RAZP" -> 25, sicer cela dolžina ali nič.
+    const perRep = (txt) => {
+      const segs = txt.split('+').map(x => x.match(/(\d+)(!|\s*$|\s+(?![\d@])[^]*|\s+@[^]*)/)).filter(Boolean);
+      if (segs.length > 1) return segs.reduce((a, x) => a + (isMaxText(x[2]) ? +x[1] : 0), 0);
+      return isMaxText(txt) ? dist : 0;
+    };
+    // Različice po ponovitvah (1x T 1x 75 T + 25!): skupni del pred njimi velja za vse.
+    // Različica: "1x T", "1x 75 T + 25!" (tudi z dolžino za 1x).
+    const alt = rest.match(/(?:^|\s)\d+\s*x\s*(?:\d+\s+)?[^\d\s][^]*?(?=\s\d+\s*x\s*(?:\d+\s+)?[^\d\s]|$)/gi);
     if (alt && alt.length > 1) {
+      alt.forEach((t, k) => { alt[k] = t.trim(); });
+      const base = rest.slice(0, rest.indexOf(alt[0])).trim();
       const n = alt.map(a => parseInt(a, 10));
       const sum = n.reduce((a, b) => a + b, 0);
-      return Math.round(total * alt.reduce((a, t, i) => a + (isMaxText(t) ? n[i] : 0), 0) / sum);
+      return Math.round(reps * alt.reduce((a, t, k) => a + n[k] * perRep((base + ' ' + t.replace(/^\d+\s*x\s*/i, '')).trim()), 0) / sum);
     }
-    const segs = rest.split('+').map(x => x.match(/(\d+)(!|\s*$|\s+(?![\d@])[^]*|\s+@[^]*)/)).filter(Boolean);
-    if (segs.length > 1) return reps * segs.reduce((a, x) => a + (isMaxText(x[2]) ? +x[1] : 0), 0);
-    return total;
+    return reps * perRep(rest.trim());
   }
   /** Koliko metrov v besedilu je max (K!, MAX, SIMULATOR; MAX OBRAT se ne šteje). */
   function maxMeters(text) {
