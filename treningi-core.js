@@ -774,6 +774,40 @@
     return lines.join('\n');
   }
 
+  /** Nov zaključek v trenerjevem slogu (kratke serije, sculling, noge, hitri 25-ki). */
+  function newZak(lk, rng) {
+    const one = a => a[Math.floor(rng() * a.length)];
+    if (lk === 'C') {
+      return one([
+        () => `8x25 1x MAX 1x RAZP`,
+        () => `4x50 DESKA 1x${one(['PN', 'KN'])} 1x${one(['KN', 'HN'])}`,
+        () => `6x25 ${one(['SCULLING', 'PPV', 'K CT', 'H CT'])}`,
+        () => `4x50 ${one(['P', 'K', 'H'])} 25! + 25 RAZP`,
+        () => `8x25 ↑${one(['K', 'H'])} HITRO ↓P`
+      ])();
+    }
+    return one([
+      () => `${one([6, 8])}x25 ${one(['SCULLING', 'POPAJ', 'VATERPOLO', 'KBD', 'PPV', 'ROKE L', 'V ML PR', 'K ŠTETJE', 'VAJE HITROSTI'])}`,
+      () => `8x25 ↑${one(['N!', 'STIL MAX', 'D!', 'K!'])} ↓${one(['H', 'GERMANJA', 'RAZP'])}`,
+      () => `4x50 ${one(['PL 25! + 25 RAZP', 'KN DESKA', 'K/H NA DOLGO', 'PL ↑MAX ↓RAZP'])}`,
+      () => `${one([200, 300])} VL${one(['', ' DOLGO', ' SALTO OBRAT'])}`,
+      () => `2x( 50 MAX / 50 RAZP )`,
+      () => `6x50 ↑PPV ↓GERMANJA`,
+      () => `8x25 1x KBD 1x ${one(['H', 'P', 'D'])}`
+    ])();
+  }
+
+  /** Druga oblika razplavanja enake dolžine (ni serija knjižnice). */
+  function newRazp(phase, meters, rng, current) {
+    const one = a => a[Math.floor(rng() * a.length)];
+    const m = meters || { razplavanje: 300, vmesno_razplavanje: 50, zakljucno_razplavanje: 100 }[phase] || 100;
+    const forms = [`${m} RAZP`, `${m} RAZP POČASI DOLGO`, `${m} RAZP PO ŽELJI`, `${m} RAZP K/H`];
+    if (m >= 100 && m % 50 === 0) forms.push(`${m} RAZP MEŠANO PO 25`, `${m} RAZP ${one(['H', 'K'])} DOLGO`);
+    if (phase === 'razplavanje' && m >= 200) forms.push(`${m} RAZP VSAKIH 50 DRUGA TEHNIKA`, `${m} RAZP ZADNJIH 100 H`);
+    const options = forms.filter(f => f !== String(current || '').trim() && parseText(f, new Map()).meters === m);
+    return options.length ? one(options) : `${m} RAZP`;
+  }
+
   function newMain(lk, rng, opts) {
     const one = a => a[Math.floor(rng() * a.length)];
     const pick = (a, n) => { const c = a.slice(), r = []; while (r.length < n && c.length) r.push(c.splice(Math.floor(rng() * c.length), 1)[0]); return r; };
@@ -857,10 +891,11 @@
     const limits = {
       ogrevalna: level === 'C' ? [200, 300] : [300, 450],
       vaje: [150, 300],
-      glavna: level === 'C' ? [300, 450] : [700, 1250]
+      glavna: level === 'C' ? [300, 450] : [700, 1250],
+      zakljucek: level === 'C' ? [100, 250] : [100, 400]
     }[phase];
     if (!limits) return null;
-    const make = { vaje: newDrill, ogrevalna: newWarmup, glavna: newMain }[phase];
+    const make = { vaje: newDrill, ogrevalna: newWarmup, glavna: newMain, zakljucek: newZak }[phase];
     for (let i = 0; i < 120; i++) {
       const text = make(level, rng, { sprint: opts.sprint, only50: opts.only50, library, drills: opts.drills, exampleMains: opts.exampleMains, exampleLong: opts.exampleLong });
       const fp = fingerprint(text);
@@ -1263,6 +1298,6 @@
     buildDict, parseLine, parseText, toStructure, normalizeText, fingerprint, stripTargets, addTargets, bVariant,
     estimateMinutes, parseTime, formatTime, libraryFromTrainings, generateTraining, arrangeOrder,
     weekSlots, historyFromTraining, historyLevel, lastUseDays, lastDrillDays, drillKey, setFormat,
-    availableDrills, drillWeight, suggestNewSet, onlyFifties, jointStatus, invalidDrill, lineRole, likeStructure, likeMain, exampleSets, EXAMPLE_MAINS, drillStrokes, splitStrokes, orderDrills, exclusiveConflict, exclusiveTooSoon, lastExclusiveDays, tidyText, unevenSides, strokeUse, legsWithoutDrills, maxMeters, longestMaxLine, overMaxDistance, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
+    availableDrills, drillWeight, suggestNewSet, onlyFifties, jointStatus, invalidDrill, newRazp, lineRole, likeStructure, likeMain, exampleSets, EXAMPLE_MAINS, drillStrokes, splitStrokes, orderDrills, exclusiveConflict, exclusiveTooSoon, lastExclusiveDays, tidyText, unevenSides, strokeUse, legsWithoutDrills, maxMeters, longestMaxLine, overMaxDistance, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
   };
 });

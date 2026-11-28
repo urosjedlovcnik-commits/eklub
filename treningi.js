@@ -22,6 +22,8 @@
   };
 
   // ---------- Pomožne ----------
+  // Razplavanja: ponujene dolžine pri dodajanju vrstice.
+  const RAZP_PHASES = { razplavanje: [200, 300, 400], vmesno_razplavanje: [50, 100], zakljucno_razplavanje: [50, 100, 200] };
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const DAYS = ['', 'Ponedeljek', 'Torek', 'Sreda', 'Četrtek', 'Petek', 'Sobota', 'Nedelja'];
@@ -411,6 +413,7 @@
         <select>${C.PHASES.map(p => `<option value="${p}">${esc(C.PHASE_LABELS[p])}</option>`).join('')}</select>
         <button class="tr-ico" data-act="add">+ vrstica</button>
       </div>
+      <div class="tr-pick" hidden></div>
       <div class="tr-foot">
         <div><span class="tr-total ${tot.ok ? 'ok' : 'bad'}">${tot.meters} m</span>
           <span class="tr-sub"> cilj ${tot.lv.meters_min}–${tot.lv.meters_max} m · ~${tot.minutes} min plavanja</span> <span class="tr-sub tr-max">· max ${tot.max} m${tot.sprint ? ' (šprint)' : ''}</span></div>
@@ -437,12 +440,8 @@
     card.items.forEach((it, idx) => itemsEl.appendChild(renderItem(card, it, idx, key)));
     updateRunning(el, card);
 
-    el.querySelector('[data-act=add]').addEventListener('click', () => {
-      const phase = el.querySelector('.tr-add select').value;
-      card.items.push({ phase, text: '', source: 'rocno' });
-      card.items = C.arrangeOrder(card.items, card.order_variant);
-      card.dirty = true; rerenderCard(key);
-    });
+    el.querySelector('[data-act=add]').addEventListener('click', () => openAddPicker(el, card, key));
+    el.querySelector('.tr-add select').addEventListener('change', () => { if (!el.querySelector('.tr-pick').hidden) openAddPicker(el, card, key); });
     el.querySelectorAll('[data-order]').forEach(b => b.addEventListener('click', () => {
       card.order_variant = b.dataset.order;
       card.items = C.arrangeOrder(card.items, card.order_variant);
@@ -507,9 +506,10 @@
       <div class="tr-item-head">
         <span class="tr-phase">${esc(C.PHASE_LABELS[it.phase])}${info ? ' · ' + esc(info) : ''}</span>
         <span class="tr-actions">
+          <button class="tr-ico tr-drag" data-a="drag" title="Povleci gor ali dol" aria-label="Premakni vrstico (povleci)">⠿</button>
           <span><span class="tr-m">${parsed.meters} m</span><span class="tr-km" title="Skupaj do konca te serije (km)"></span></span>
           ${C.LIBRARY_PHASES.includes(it.phase) ? '<button class="tr-ico" data-a="swap" title="Zamenjaj iz knjižnice">↻</button>' : ''}
-          ${['ogrevalna', 'vaje', 'glavna'].includes(it.phase) ? '<button class="tr-ico" data-a="new" title="Predlagaj povsem novo serijo">★</button>' : ''}
+          <button class="tr-ico" data-a="new" title="${RAZP_PHASES[it.phase] ? 'Druga oblika razplavanja' : 'Predlagaj povsem novo serijo'}">★</button>
           <button class="tr-ico" data-a="up" title="Gor">↑</button>
           <button class="tr-ico" data-a="del" title="Odstrani">✕</button>
         </span>
@@ -544,6 +544,7 @@
     if (fresh) fresh.addEventListener('click', () => newItem(card, idx, key));
     const swap = wrap.querySelector('[data-a=swap]');
     if (swap) swap.addEventListener('click', () => swapItem(card, idx, key));
+    wrap.querySelector('[data-a=drag]').addEventListener('pointerdown', (e) => startDrag(e, card, key, wrap));
     wrap.querySelector('[data-a=up]').addEventListener('click', () => {
       if (idx === 0) return;
       [card.items[idx - 1], card.items[idx]] = [card.items[idx], card.items[idx - 1]];
@@ -573,25 +574,80 @@
   }
 
   /** Zamenja vrstico s povsem novo serijo, ki čaka na pregled. */
-  function newItem(card, idx, key) {
-    const it = card.items[idx];
-    const sprint = it.phase === 'glavna' && (card.mainMode === 'sprint' || (card.mainMode !== 'ne_sprint' && C.isSprintMain(it, S.settings)));
+  /** Serije iz knjižnice, ki pridejo v poštev za fazo na kartici (idx = vrstica, ki jo menjaš; -1 = nova vrstica). */
+  function libraryPool(card, phase, idx) {
+    const lk = levelKey(card.slot.levels);
+    const hist = historyExcluding(card.slot);
+    const used = new Set(card.items.map(i => C.fingerprint(i.text)));
+    const others = card.items.filter((x, j) => j !== idx).map(i => i.text);
+    let pool = S.library.filter(s => s.phase === phase && (s.levels || []).includes(lk) && !used.has(s.fingerprint) && !C.exclusiveConflict(s.text, others, S.settings) && !C.overMaxDistance(s.text, S.settings) && !C.invalidDrill(s.text, S.settings));
+    if (phase === 'glavna') {
+      if (card.joint) pool = pool.filter(s => C.onlyFifties(s.text));
+      if (card.mainMode === 'ne_sprint') pool = pool.filter(s => !C.isSprintMain(s, S.settings));
+      if (card.mainMode === 'sprint') pool = pool.filter(s => C.isSprintMain(s, S.settings));
+      pool = pool.filter(s => { const d = C.lastUseDays(hist, s.fingerprint, lk, 'glavna', card.slot.date); return d === null || d >= S.settings.main_repeat_days; });
+    }
+    if (phase === 'vaje') {
+      const keys = new Set(card.items.filter((i, j) => i.phase === 'vaje' && j !== idx).map(i => C.drillKey(C.fingerprint(i.text))));
+      pool = C.availableDrills(pool, hist, lk, card.slot.date, S.settings).filter(s => !keys.has(C.drillKey(s.fingerprint)));
+    }
+    if (lk === 'C') {
+      // Raje serija, po kateri noge ne ostanejo brez vaj za isto tehniko.
+      const ok = pool.filter(s => !C.legsWithoutDrills(others.concat(s.text)).length);
+      if (ok.length) pool = ok;
+    }
+    const last = s => C.lastUseDays(hist, s.fingerprint, lk, s.phase, card.slot.date);
+    const weight = s => { if (phase === 'vaje') return C.drillWeight(s, hist, lk, card.slot.date, S.settings); const d = last(s); return d === null ? 40 : Math.min(d, 60) + 1; };
+    return { pool, weight, last };
+  }
+  function weightedRandom(pool, weight) {
+    const total = pool.reduce((a, s) => a + weight(s), 0);
+    let r = Math.random() * total;
+    for (const s of pool) { r -= weight(s); if (r <= 0) return s; }
+    return pool[0];
+  }
+  /** Vrstica kartice iz serije knjižnice ali nove serije (ciljni časi in različica B kot pri predlogu). */
+  function itemFrom(card, phase, set, isNew) {
+    const lk = levelKey(card.slot.levels);
+    const text = phase !== 'glavna' ? set.text : card.joint ? C.stripTargets(set.text) : C.addTargets(set.text, lk, S.settings);
+    const next = isNew ? { phase, text, set_id: null, source: 'nova', isNew: true, main_type: set.main_type }
+      : { phase, text, set_id: set.source === 'db' ? set.id : null, source: set.source, main_type: set.main_type };
+    if (withB(card, next)) { const b = C.bVariant(text, S.settings); next.variantB = b.text; next.variantBNote = b.note; }
+    return next;
+  }
+  function newSetFor(card, phase, idx, sprintHint) {
+    const sprint = phase === 'glavna' && (card.mainMode === 'sprint' || (card.mainMode !== 'ne_sprint' && !!sprintHint));
     const exS = C.exampleSets(S.examples, levelKey(card.slot.levels), S.settings);
-    const n = C.suggestNewSet(it.phase, {
+    return C.suggestNewSet(phase, {
       level: levelKey(card.slot.levels), library: S.library, history: historyExcluding(card.slot), dict: S.dict, drills: S.codes,
-      exclude: card.items.map(i => C.fingerprint(i.text)), sprint, only50: !!card.joint && it.phase === 'glavna', exampleMains: exS.mains, exampleLong: exS.longMains, settings: S.settings, date: card.slot.date,
+      exclude: card.items.map(i => C.fingerprint(i.text)), sprint, only50: !!card.joint && phase === 'glavna', exampleMains: exS.mains, exampleLong: exS.longMains, settings: S.settings, date: card.slot.date,
       others: card.items.filter((x, j) => j !== idx).map(i => i.text)
     });
+  }
+  function newItem(card, idx, key) {
+    const it = card.items[idx];
+    if (RAZP_PHASES[it.phase]) {
+      // Razplavanje ni serija knjižnice: samo druga oblika enake dolžine.
+      card.items[idx] = { phase: it.phase, text: C.newRazp(it.phase, C.parseText(it.text, S.dict).meters || 0, Math.random, it.text), source: 'rocno' };
+      card.dirty = true;
+      rerenderCard(key);
+      return;
+    }
+    const n = newSetFor(card, it.phase, idx, it.phase === 'glavna' && C.isSprintMain(it, S.settings));
     if (!n) { alert('Za to fazo trenutno nimam nove serije.'); return; }
-    if (it.phase === 'glavna' && !card.joint) n.text = C.addTargets(n.text, levelKey(card.slot.levels), S.settings);
-    const next = { phase: it.phase, text: n.text, set_id: null, source: 'nova', isNew: true, main_type: n.main_type };
-    if (withB(card, it)) { const b = C.bVariant(n.text, S.settings); next.variantB = b.text; next.variantBNote = b.note; }
-    card.items[idx] = next;
+    card.items[idx] = itemFrom(card, it.phase, n, true);
+    card.dirty = true;
+    rerenderCard(key);
+  }
+  function swapItem(card, idx, key) {
+    const it = card.items[idx];
+    const { pool, weight } = libraryPool(card, it.phase, idx);
+    if (!pool.length) { alert('V knjižnici ni druge primerne serije za to fazo. Poskusi s ★ (nova serija).'); return; }
+    card.items[idx] = itemFrom(card, it.phase, weightedRandom(pool, weight), false);
     card.dirty = true;
     rerenderCard(key);
   }
 
-  /** Trener potrdi novo serijo. Pri shranjenem treningu gre takoj v knjižnico, sicer ob shranjevanju. */
   async function approveNew(card, it, key) {
     if (!it.text.trim()) return;
     if (card.dbId && it.id && it.text.trim() === it.savedText) {
@@ -633,42 +689,6 @@
     }));
   }
 
-  function swapItem(card, idx, key) {
-    const it = card.items[idx];
-    const lk = levelKey(card.slot.levels);
-    const hist = historyExcluding(card.slot);
-    const used = new Set(card.items.map(i => C.fingerprint(i.text)));
-    const others = card.items.filter((x, j) => j !== idx).map(i => i.text);
-    let pool = S.library.filter(s => s.phase === it.phase && (s.levels || []).includes(lk) && !used.has(s.fingerprint) && !C.exclusiveConflict(s.text, others, S.settings) && !C.overMaxDistance(s.text, S.settings) && !C.invalidDrill(s.text, S.settings));
-    if (it.phase === 'glavna') {
-      if (card.joint) pool = pool.filter(s => C.onlyFifties(s.text));
-      if (card.mainMode === 'ne_sprint') pool = pool.filter(s => !C.isSprintMain(s, S.settings));
-      if (card.mainMode === 'sprint') pool = pool.filter(s => C.isSprintMain(s, S.settings));
-      pool = pool.filter(s => { const d = C.lastUseDays(hist, s.fingerprint, lk, 'glavna', card.slot.date); return d === null || d >= S.settings.main_repeat_days; });
-    }
-    if (it.phase === 'vaje') {
-      const keys = new Set(card.items.filter(i => i.phase === 'vaje').map(i => C.drillKey(C.fingerprint(i.text))));
-      pool = C.availableDrills(pool, hist, lk, card.slot.date, S.settings).filter(s => !keys.has(C.drillKey(s.fingerprint)));
-    }
-    if (lk === 'C') {
-      // Raje serija, po kateri noge ne ostanejo brez vaj za isto tehniko.
-      const ok = pool.filter(s => !C.legsWithoutDrills(others.concat(s.text)).length);
-      if (ok.length) pool = ok;
-    }
-    if (!pool.length) { alert('V knjižnici ni druge primerne serije za to fazo. Poskusi s ★ (nova serija).'); return; }
-    const weight = s => { if (it.phase === 'vaje') return C.drillWeight(s, hist, lk, card.slot.date, S.settings); const d = C.lastUseDays(hist, s.fingerprint, lk, s.phase, card.slot.date); return d === null ? 40 : Math.min(d, 60) + 1; };
-    const total = pool.reduce((a, s) => a + weight(s), 0);
-    let r = Math.random() * total, pick = pool[0];
-    for (const s of pool) { r -= weight(s); if (r <= 0) { pick = s; break; } }
-    const text = it.phase !== 'glavna' ? pick.text : card.joint ? C.stripTargets(pick.text) : C.addTargets(pick.text, lk, S.settings);
-    const next = { phase: it.phase, text, set_id: pick.source === 'db' ? pick.id : null, source: pick.source, main_type: pick.main_type };
-    if (withB(card, it)) { const b = C.bVariant(text, S.settings); next.variantB = b.text; next.variantBNote = b.note; }
-    card.items[idx] = next;
-    card.dirty = true;
-    rerenderCard(key);
-  }
-
-  // ---------- Shranjevanje ----------
   async function ensureSet(item, levels) {
     if (!C.LIBRARY_PHASES.includes(item.phase) || !item.text.trim()) return null;
     const fp = C.fingerprint(item.text);
@@ -685,6 +705,98 @@
     if (error) throw error;
     S.dbSets.push(Object.assign({}, data, { source: 'db', origin: data.source }));
     return data.id;
+  }
+
+  // ---------- Dodajanje vrstice: izbira serije ----------
+  function openAddPicker(el, card, key) {
+    const box = el.querySelector('.tr-pick');
+    const phase = el.querySelector('.tr-add select').value;
+    const add = (it) => {
+      card.items.push(it);
+      card.items = C.arrangeOrder(card.items, card.order_variant);
+      card.dirty = true; rerenderCard(key);
+    };
+    const empty = () => add({ phase, text: '', source: 'rocno' });
+    box.hidden = false;
+    if (RAZP_PHASES[phase]) {
+      box.innerHTML = `<div class="tr-pick-btns">${RAZP_PHASES[phase].map(m => `<button class="tr-ico" data-m="${m}">${m} RAZP</button>`).join('')}
+        <button class="tr-ico" data-rnew>★ Druga oblika</button> <button class="tr-ico" data-empty>Prazna vrstica</button> <button class="tr-ico" data-close>Prekliči</button></div>`;
+      box.querySelectorAll('[data-m]').forEach(b => b.addEventListener('click', () => add({ phase, text: b.dataset.m + ' RAZP', source: 'rocno' })));
+      box.querySelector('[data-rnew]').addEventListener('click', () => add({ phase, text: C.newRazp(phase, RAZP_PHASES[phase][0], Math.random, ''), source: 'rocno' }));
+    } else {
+      const { pool, weight, last } = libraryPool(card, phase, -1);
+      const sorted = pool.slice().sort((a, b) => weight(b) - weight(a));
+      box.innerHTML = `<div class="tr-pick-btns">
+          <button class="tr-ico" data-rand${pool.length ? '' : ' disabled'}>↻ Naključna iz knjižnice</button>
+          <button class="tr-ico" data-new>★ Nova serija</button>
+          <button class="tr-ico" data-empty>Prazna vrstica</button> <button class="tr-ico" data-close>Prekliči</button></div>
+        <input type="search" placeholder="Išči v knjižnici (${pool.length} primernih) …" aria-label="Išči serijo">
+        <div class="tr-pick-list"></div>`;
+      const list = box.querySelector('.tr-pick-list'), q = box.querySelector('input');
+      const show = () => {
+        const t = q.value.trim().toUpperCase();
+        const rows = sorted.filter(x => !t || x.text.toUpperCase().includes(t)).slice(0, 12);
+        list.innerHTML = rows.map((x, n) => {
+          const d = last(x);
+          return `<button class="tr-pick-row" data-i="${n}"><span>${esc(x.text.replace(/\n/g, ' | '))}</span><span class="tr-sub">${x.meters} m · ${d === null ? 'še ni bila uporabljena' : 'pred ' + d + ' dnevi'}</span></button>`;
+        }).join('') || `<p class="tr-sub">${pool.length ? 'Ni zadetkov.' : 'V knjižnici ni primerne serije za to fazo (pravila o ponavljanju). Izberi ★ ali prazno vrstico.'}</p>`;
+        list.querySelectorAll('[data-i]').forEach(b => b.addEventListener('click', () => add(itemFrom(card, phase, rows[+b.dataset.i], false))));
+      };
+      q.addEventListener('input', show);
+      show();
+      box.querySelector('[data-rand]').addEventListener('click', () => { if (pool.length) add(itemFrom(card, phase, weightedRandom(pool, weight), false)); });
+      const nb = box.querySelector('[data-new]');
+      if (nb) nb.addEventListener('click', () => {
+        const n = newSetFor(card, phase, -1, false);
+        if (!n) { alert('Za to fazo trenutno nimam nove serije.'); return; }
+        add(itemFrom(card, phase, n, true));
+      });
+    }
+    box.querySelector('[data-empty]').addEventListener('click', empty);
+    box.querySelector('[data-close]').addEventListener('click', () => { box.hidden = true; box.innerHTML = ''; });
+  }
+
+  // ---------- Premikanje vrstic z vlečenjem (miška in prst) ----------
+  function startDrag(ev, card, key, wrap) {
+    if (ev.button !== undefined && ev.button !== 0) return;
+    ev.preventDefault();
+    const list = wrap.parentElement;
+    const from = Array.prototype.indexOf.call(list.children, wrap);
+    const handle = ev.currentTarget;
+    let lastY = ev.clientY, raf = 0;
+    wrap.classList.add('tr-dragging');
+    document.body.classList.add('tr-noselect');
+    try { handle.setPointerCapture(ev.pointerId); } catch (e) { /* starejši brskalniki */ }
+    const place = () => {
+      const others = Array.prototype.filter.call(list.children, r => r !== wrap);
+      const before = others.find(r => { const b = r.getBoundingClientRect(); return lastY < b.top + b.height / 2; });
+      if (before) { if (wrap.nextElementSibling !== before) list.insertBefore(wrap, before); } else if (list.lastElementChild !== wrap) list.appendChild(wrap);
+    };
+    const scroll = () => {
+      raf = 0;
+      const edge = 70;
+      if (lastY < edge) window.scrollBy(0, -12); else if (lastY > window.innerHeight - edge) window.scrollBy(0, 12); else return;
+      place();
+      raf = requestAnimationFrame(scroll);
+    };
+    const move = (e) => { lastY = e.clientY; place(); if (!raf) raf = requestAnimationFrame(scroll); };
+    const end = (e) => {
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', end);
+      handle.removeEventListener('pointercancel', end);
+      if (raf) cancelAnimationFrame(raf);
+      document.body.classList.remove('tr-noselect');
+      const to = Array.prototype.indexOf.call(list.children, wrap);
+      if (e.type === 'pointerup' && to !== from && to >= 0) {
+        const [it] = card.items.splice(from, 1);
+        card.items.splice(to, 0, it);
+        card.dirty = true;
+      }
+      rerenderCard(key);
+    };
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', end);
+    handle.addEventListener('pointercancel', end);
   }
 
   async function saveCard(key, status) {
