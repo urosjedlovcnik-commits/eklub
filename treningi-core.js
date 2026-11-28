@@ -46,8 +46,8 @@
     exclusive_gap_days: 28,
     // Kombinacije, ki niso vaja (VATERPOLO je samo ali VATERPOLO STEGR).
     invalid_drills: ['VATERPOLO ŠPRICANJE'],
-    // Apneistične vaje (plavanje pod vodo, brez dihanja) ne na teh dnevih (1 = pon, 4 = čet: večina hodi samo takrat).
-    apnea_off_weekdays: [1, 4],
+    // Apneistične vaje (pod vodo, brez dihanja): v istem tednu samo na enega od teh dni (1 = pon, 4 = čet), ker večina hodi samo takrat.
+    apnea_pair_weekdays: [1, 4],
     // Salto in preval največ enkrat v tednu (pon–ned) za isti nivo.
     weekly_once_codes: ['SALTO', 'PREVAL'],
     // Nivo A (in B): praviloma dve seriji vaj; delež treningov s tremi.
@@ -911,7 +911,7 @@
       if (halves && halves.length === 2 && halves[0].slice(1).trim() === halves[1].slice(1).trim()) continue;
       if (exclusiveConflict(text, opts.others, settings)) continue;
       if (overMaxDistance(text, settings) || invalidDrill(text, settings)) continue;
-      if (opts.date && settings.apnea_off_weekdays.includes(weekday(opts.date)) && isApnea(text)) continue;
+      if (opts.date && isApnea(text) && apneaPairUsed(history, level, opts.date, settings)) continue;
       if (opts.date && isWeeklyOnce(text, settings) && weeklyOnceUsed(history, level, opts.date)) continue;
       if (isApnea(text) && opts.others && apneaRepeat(opts.others.concat(text), history, level)) continue;
       if (phase === 'glavna' && opts.only50 && !onlyFifties(text)) continue;
@@ -1015,6 +1015,15 @@
     const h = (history || []).find(x => x.level === level && x.date !== date && x.date >= mon && x.date <= sun && isWeeklyOnce(x.fingerprint));
     return h ? h.date : null;
   }
+  /** Datum apneistične vaje na drugem od parnih dni (pon/čet) v istem tednu ali null. */
+  function apneaPairUsed(history, level, date, settings) {
+    const days = ((settings && settings.apnea_pair_weekdays) || DEFAULT_SETTINGS.apnea_pair_weekdays);
+    if (!days.includes(weekday(date))) return null;
+    const mon = mondayOfIso(date);
+    const others = days.map(d => addDays(mon, d - 1)).filter(d => d !== date);
+    const h = (history || []).find(x => x.level === level && others.includes(x.date) && isApnea(x.fingerprint));
+    return h ? h.date : null;
+  }
   /** Ali sta bili ti serij že skupaj v istem treningu (zgled iz preteklosti). */
   function togetherBefore(fps, history, level) {
     const byDay = new Map();
@@ -1037,7 +1046,8 @@
   function weekRuleIssues(texts, date, levels, history, settings) {
     const st = Object.assign({}, DEFAULT_SETTINGS, settings || {});
     const lk = historyLevel(levels), out = [];
-    if (st.apnea_off_weekdays.includes(weekday(date)) && texts.some(isApnea)) out.push('Apneistična vaja (pod vodo / brez dihanja) na ponedeljek ali četrtek.');
+    const pair = texts.some(isApnea) && apneaPairUsed(history, lk, date, st);
+    if (pair) out.push(`Apneistična vaja je bila ta teden že ${weekday(pair) === 1 ? 'v ponedeljek' : 'v četrtek'}: ne oba dneva.`);
     if (apneaRepeat(texts, history, lk)) out.push('Ista apneistična vaja dvakrat v treningu.');
     const used = texts.some(t => isWeeklyOnce(t, st)) && weeklyOnceUsed(history, lk, date);
     if (used) out.push(`Salto ali preval je ta teden že bil (${used.slice(8, 10).replace(/^0/, '')}. ${used.slice(5, 7).replace(/^0/, '')}.).`);
@@ -1144,7 +1154,7 @@
     const rng = mulberry32(opts.seed != null ? opts.seed : Date.now() % 2147483647);
     const notes = [];
 
-    const noApnea = settings.apnea_off_weekdays.includes(weekday(date));
+    const noApnea = !!apneaPairUsed(history, lk, date, settings);
     const noSalto = !!weeklyOnceUsed(history, lk, date);
     const lib = (opts.library || []).filter(s => s.active !== false && (s.levels || []).includes(lk) && !overMaxDistance(s.text, settings) && !invalidDrill(s.text, settings) &&
       !(noApnea && isApnea(s.text)) && !(noSalto && isWeeklyOnce(s.text, settings)));
@@ -1377,6 +1387,6 @@
     buildDict, parseLine, parseText, toStructure, normalizeText, fingerprint, stripTargets, addTargets, bVariant,
     estimateMinutes, parseTime, formatTime, libraryFromTrainings, generateTraining, arrangeOrder,
     weekSlots, historyFromTraining, historyLevel, lastUseDays, lastDrillDays, drillKey, setFormat,
-    availableDrills, drillWeight, suggestNewSet, onlyFifties, jointStatus, apneaKinds, isApnea, apneaRepeat, weeklyOnceUsed, weekRuleIssues, invalidDrill, needsFins, withFins, needsFins, withFins, lineRole, likeStructure, likeMain, exampleSets, EXAMPLE_MAINS, drillStrokes, splitStrokes, orderDrills, exclusiveConflict, exclusiveTooSoon, lastExclusiveDays, tidyText, unevenSides, strokeUse, legsWithoutDrills, maxMeters, longestMaxLine, overMaxDistance, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
+    availableDrills, drillWeight, suggestNewSet, onlyFifties, jointStatus, apneaKinds, isApnea, apneaRepeat, apneaPairUsed, weeklyOnceUsed, weekRuleIssues, invalidDrill, needsFins, withFins, needsFins, withFins, lineRole, likeStructure, likeMain, exampleSets, EXAMPLE_MAINS, drillStrokes, splitStrokes, orderDrills, exclusiveConflict, exclusiveTooSoon, lastExclusiveDays, tidyText, unevenSides, strokeUse, legsWithoutDrills, maxMeters, longestMaxLine, overMaxDistance, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
   };
 });

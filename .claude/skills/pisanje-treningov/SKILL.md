@@ -42,7 +42,7 @@ Različica »glavna takoj« (ogrevalna → glavna → 50 RAZP → vaje) je mogo�
 - Ista vaja se ne ponovi 21 dni, ne glede na število ponovitev.
 - 6x50, 8x50 in 10x50 vaj so redkost; raje 10x25, 12x25, 8x25, 6x25, 4x50.
 - Vaje po strani (BOK, SUPERMAN, RV 90°) potrebujejo sodo število dolžin.
-- **Apneistične vaje** (plavanje pod vodo: `10m PV`, `DN PV`, `POD VODO`, `ČIM DLJE POD VODO`, `PPV`, `NPV`, `DN 360`, `ZADNJIH 7 DN`, in brez dihanja `BD`, `KBD`): skoraj nikoli ob ponedeljkih in četrtkih (večina plavalcev hodi samo ta dva dneva). Ne vsak dan v tednu.
+- **Apneistične vaje** (plavanje pod vodo: `10m PV`, `DN PV`, `POD VODO`, `ČIM DLJE POD VODO`, `PPV`, `NPV`, `DN 360`, `ZADNJIH 7 DN`, in brez dihanja `BD`, `KBD`): v istem tednu **ne ob ponedeljku in četrtku hkrati**, le na enega od teh dni (večina plavalcev hodi samo ta dva dneva).
 - V enem treningu se ista apneistična vaja ne ponovi, razen če obstaja enak primer iz preteklosti (obe seriji že skupaj v istem treningu).
 - **Salto in preval največ enkrat v tednu** za isti nivo.
 - ORKA in BIONDI nikoli v istem treningu in vsaj 28 dni narazen.
@@ -103,7 +103,7 @@ Ocena **8 ali več = zgled**. Če je označen vidik, je zgled samo ta del, sicer
 | 25. in 26. 11. 2026 | A, A+B | V obeh treningih so tri serije vaj; v večini primerov naj bosta dve. | A: praviloma 2 seriji vaj. |
 | 26. 11. 2026 | A+B | `↑VATERPOLO ŠPRICANJE` ne more biti vaja. | Samo `VATERPOLO` ali `VATERPOLO STEGR`. |
 | 28. 11. 2026 | vsi | Pri razplavanju ★ ni potrebna. Pri vajah skoraj 100 % uporabljajo plavutke. | Razplavanje samo `N RAZP`; vaje s `PL` razen prsnih in sculling. |
-| 28. 11. 2026 | teden 30. 11.–3. 12. | Dvakrat v tednu salto; skoraj vsak dan plavanje pod vodo. Pod vodo so apneistične vaje: skoraj nikoli pon in čet, v treningu ne dvakrat ista (razen zgled iz preteklosti). | Pravila v poglavju Vaje. |
+| 28. 11. 2026 | teden 30. 11.–3. 12. | Dvakrat v tednu salto; skoraj vsak dan plavanje pod vodo. Pod vodo so apneistične vaje: ne oba dneva pon in čet v istem tednu (popravek: lahko na enega), v treningu ne dvakrat ista (razen zgled iz preteklosti). | Pravila v poglavju Vaje. |
 
 ## Kaj upošteva generator
 
@@ -113,6 +113,6 @@ Ocena **8 ali več = zgled**. Če je označen vidik, je zgled samo ta del, sicer
 | Brez mešanja vaj dveh tehnik v seriji (`splitStrokes`); iste tehnike raje skupaj, noge pred vajami (`orderDrills`) | da |
 | C: vsaj 3 serije vaj, okrog 600 m, glavna do ~350 m | da |
 | C: noge imajo vaje iste tehnike | da |
-| Apneistične vaje (ne pon/čet, ne dvakrat ista), salto enkrat na teden | da |
+| Apneistične vaje (ne pon in čet v istem tednu, ne dvakrat ista), salto enkrat na teden | da |
 | Skupni trening, plavutke novih vaj; vaje s PL (nove dobijo PL, brez PL v knjižnici redko) | da |
 | Zgradba glavne, ki je bila všeč (`EXAMPLE_MAINS`, `likeMain`), in zgledi z oceno 8+ (`exampleSets`) | da |

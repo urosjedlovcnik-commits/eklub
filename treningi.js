@@ -582,7 +582,7 @@
     const hist = historyExcluding(card.slot);
     const used = new Set(card.items.map(i => C.fingerprint(i.text)));
     const others = card.items.filter((x, j) => j !== idx).map(i => i.text);
-    const noApnea = (S.settings.apnea_off_weekdays || C.DEFAULT_SETTINGS.apnea_off_weekdays).includes(C.weekday(card.slot.date));
+    const noApnea = !!C.apneaPairUsed(hist, lk, card.slot.date, S.settings);
     const saltoUsed = C.weeklyOnceUsed(hist, lk, card.slot.date);
     let pool = S.library.filter(s => s.phase === phase && (s.levels || []).includes(lk) && !used.has(s.fingerprint) && !C.exclusiveConflict(s.text, others, S.settings) && !C.overMaxDistance(s.text, S.settings) && !C.invalidDrill(s.text, S.settings) &&
       !(noApnea && C.isApnea(s.text)) && !(saltoUsed && /\b(SALTO|PREVAL)\b/.test(s.fingerprint)) && !(C.isApnea(s.text) && C.apneaRepeat(others.concat(s.text), hist, lk)));
