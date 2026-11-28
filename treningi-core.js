@@ -326,8 +326,8 @@
       // "1x T" pred različicami "75 T + 25!", "50 T + 50!" ni svoja ponovitev, ampak opis vseh (T je v vsaki).
       const word = (t) => t.replace(/^\d+\s*x\s*/i, '').trim().toUpperCase();
       const lead = word(alt[0]);
-      if (/^(T|TEMPO)$/.test(lead) && alt.slice(1).every(t => new RegExp('\b' + lead + '\s*\+').test(word(t)))) alt.shift();
       const base = rest.slice(0, rest.indexOf(alt[0])).trim();
+      if (/^(T|TEMPO)$/.test(lead) && alt.slice(1).every(t => word(t).includes('+') && word(t).split('+')[0].trim().split(/\s+/).pop() === lead)) alt.shift();
       const n = alt.map(a => parseInt(a, 10));
       const sum = n.reduce((a, b) => a + b, 0);
       return Math.round(reps * alt.reduce((a, t, k) => a + n[k] * perRep((base + ' ' + t.replace(/^\d+\s*x\s*/i, '')).trim()), 0) / sum);
