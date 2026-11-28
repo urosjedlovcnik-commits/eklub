@@ -509,7 +509,7 @@
           <button class="tr-ico tr-drag" data-a="drag" title="Povleci gor ali dol" aria-label="Premakni vrstico (povleci)">⠿</button>
           <span><span class="tr-m">${parsed.meters} m</span><span class="tr-km" title="Skupaj do konca te serije (km)"></span></span>
           ${C.LIBRARY_PHASES.includes(it.phase) ? '<button class="tr-ico" data-a="swap" title="Zamenjaj iz knjižnice">↻</button>' : ''}
-          <button class="tr-ico" data-a="new" title="${RAZP_PHASES[it.phase] ? 'Druga oblika razplavanja' : 'Predlagaj povsem novo serijo'}">★</button>
+          ${RAZP_PHASES[it.phase] ? '' : '<button class="tr-ico" data-a="new" title="Predlagaj povsem novo serijo">★</button>'}
           <button class="tr-ico" data-a="up" title="Gor">↑</button>
           <button class="tr-ico" data-a="del" title="Odstrani">✕</button>
         </span>
@@ -626,13 +626,6 @@
   }
   function newItem(card, idx, key) {
     const it = card.items[idx];
-    if (RAZP_PHASES[it.phase]) {
-      // Razplavanje ni serija knjižnice: samo druga oblika enake dolžine.
-      card.items[idx] = { phase: it.phase, text: C.newRazp(it.phase, C.parseText(it.text, S.dict).meters || 0, Math.random, it.text), source: 'rocno' };
-      card.dirty = true;
-      rerenderCard(key);
-      return;
-    }
     const n = newSetFor(card, it.phase, idx, it.phase === 'glavna' && C.isSprintMain(it, S.settings));
     if (!n) { alert('Za to fazo trenutno nimam nove serije.'); return; }
     card.items[idx] = itemFrom(card, it.phase, n, true);
@@ -720,9 +713,8 @@
     box.hidden = false;
     if (RAZP_PHASES[phase]) {
       box.innerHTML = `<div class="tr-pick-btns">${RAZP_PHASES[phase].map(m => `<button class="tr-ico" data-m="${m}">${m} RAZP</button>`).join('')}
-        <button class="tr-ico" data-rnew>★ Druga oblika</button> <button class="tr-ico" data-empty>Prazna vrstica</button> <button class="tr-ico" data-close>Prekliči</button></div>`;
+        <button class="tr-ico" data-empty>Prazna vrstica</button> <button class="tr-ico" data-close>Prekliči</button></div>`;
       box.querySelectorAll('[data-m]').forEach(b => b.addEventListener('click', () => add({ phase, text: b.dataset.m + ' RAZP', source: 'rocno' })));
-      box.querySelector('[data-rnew]').addEventListener('click', () => add({ phase, text: C.newRazp(phase, RAZP_PHASES[phase][0], Math.random, ''), source: 'rocno' }));
     } else {
       const { pool, weight, last } = libraryPool(card, phase, -1);
       const sorted = pool.slice().sort((a, b) => weight(b) - weight(a));

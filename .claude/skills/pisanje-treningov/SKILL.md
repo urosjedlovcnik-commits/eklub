@@ -46,7 +46,12 @@ Različica »glavna takoj« (ogrevalna → glavna → 50 RAZP → vaje) je mogo�
 - `H 90°` samo po sebi ni vaja: ali `HN 90°` ali `HV RRU 90°`. Na trebuhu so roke spredaj `RS`, na hrbtu `RZ` ali `OT`.
 - `VATERPOLO ŠPRICANJE` ni vaja: ali `VATERPOLO` ali `VATERPOLO STEGR` (stegnjene roke). `ŠPRICANJE` je RRU vaja.
 - `V ML PR` je vedno z malimi lopatkami. `PL` se piše pred HN/HV/KN.
-- Pri novih vajah upoštevaj razdaljo in plavutke iz šifranta (oprema PL / BREZ PL).
+- **Vaje se skoraj vedno (~100 %) plavajo s plavutkami: zapiši `PL`.** Izjeme: prsne vaje in noge (P, PN, PD, PPV, GERMANJA), sculling/POPAJ, male lopatke (`V ML PR`) in kadar je izrecno napisano `BREZ`.
+- Pri novih vajah iz šifranta upoštevaj razdaljo in plavutke (oprema PL / BREZ PL).
+
+## Razplavanje
+
+- Razplavanja so vedno samo `N RAZP` (300/200 na začetku, 50 vmes, 50–100 na koncu). Brez različic in brez ★.
 
 ## Glavna serija
 
@@ -94,6 +99,7 @@ Ocena **8 ali več = zgled**. Če je označen vidik, je zgled samo ta del, sicer
 | 25. 11. 2026 | A | Glavna mu je bila zelo všeč: `6x50 KVL @1'` / `6x50 PL NOGE 1x MAX 1x EASY @1'10"` / `6x50 @50"` / `6x50 KVL @1'`. Opomba: malenkost predolga (1200 m), verjetno bi bilo boljše 4x 5x50. | Zgradba, ki naj se pojavlja: pripomoček → noge → kratek štart → pripomoček, 4x 5x50 (1000 m). |
 | 25. in 26. 11. 2026 | A, A+B | V obeh treningih so tri serije vaj; v večini primerov naj bosta dve. | A: praviloma 2 seriji vaj. |
 | 26. 11. 2026 | A+B | `↑VATERPOLO ŠPRICANJE` ne more biti vaja. | Samo `VATERPOLO` ali `VATERPOLO STEGR`. |
+| 28. 11. 2026 | vsi | Pri razplavanju ★ ni potrebna. Pri vajah skoraj 100 % uporabljajo plavutke. | Razplavanje samo `N RAZP`; vaje s `PL` razen prsnih in sculling. |
 
 ## Kaj upošteva generator
 
@@ -103,5 +109,5 @@ Ocena **8 ali več = zgled**. Če je označen vidik, je zgled samo ta del, sicer
 | Brez mešanja vaj dveh tehnik v seriji (`splitStrokes`); iste tehnike raje skupaj, noge pred vajami (`orderDrills`) | da |
 | C: vsaj 3 serije vaj, okrog 600 m, glavna do ~350 m | da |
 | C: noge imajo vaje iste tehnike | da |
-| Skupni trening, plavutke novih vaj | da |
+| Skupni trening, plavutke novih vaj; vaje s PL (nove dobijo PL, brez PL v knjižnici redko) | da |
 | Zgradba glavne, ki je bila všeč (`EXAMPLE_MAINS`, `likeMain`), in zgledi z oceno 8+ (`exampleSets`) | da |

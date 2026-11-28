@@ -897,7 +897,9 @@
     if (!limits) return null;
     const make = { vaje: newDrill, ogrevalna: newWarmup, glavna: newMain, zakljucek: newZak }[phase];
     for (let i = 0; i < 120; i++) {
-      const text = make(level, rng, { sprint: opts.sprint, only50: opts.only50, library, drills: opts.drills, exampleMains: opts.exampleMains, exampleLong: opts.exampleLong });
+      const raw = make(level, rng, { sprint: opts.sprint, only50: opts.only50, library, drills: opts.drills, exampleMains: opts.exampleMains, exampleLong: opts.exampleLong });
+      // Vaje praviloma s plavutkami.
+      const text = phase === 'vaje' ? withFins(raw) : raw;
       const fp = fingerprint(text);
       if (known.has(key(fp))) continue;
       // Ista vaja na obeh straneh (↑X ↓X, 1x X 1x X) ni smiselna.
@@ -970,6 +972,21 @@
     });
     const out = lines.map(l => swap.get(l)).join('\n');
     return out === lines.join('\n') ? null : out;
+  }
+
+  /**
+   * Vaje se skoraj vedno plavajo s plavutkami. Izjeme: prsno (noge, vaje, podvodno), sculling,
+   * male lopatke in zapisi, ki plavutke že omenjajo (PL, BREZ PL, 2x PL 2x BREZ).
+   */
+  function finsExempt(text) {
+    const t = ' ' + normalizeText(text).replace(/[↑↓+\/(),]/g, ' ').replace(/\s+/g, ' ') + ' ';
+    const u = strokeUse(text);
+    return u.drills.has('P') || u.legs.has('P') || / (P|PPV|PD|PN|GERMANJA|SCULLING|POPAJ|ML|BREZ|METULJČEK) /.test(t);
+  }
+  const needsFins = (text) => !/(^|\s)PL(\s|$)/.test(normalizeText(text)) && !finsExempt(text);
+  /** Doda PL za ponovitvami, če ga vaja potrebuje (npr. "8x25 KN BOK" -> "8x25 PL KN BOK"). */
+  function withFins(text) {
+    return needsFins(text) ? String(text).replace(/^(\s*\d+\s*x\s*\d+)\s+/i, '$1 PL ') : text;
   }
 
   /** Zapis z neveljavno kombinacijo vaj ali null. */
@@ -1127,7 +1144,8 @@
       if (!splitMemo.has(k)) splitMemo.set(k, splitStrokes(orderDrills(vs).map(v => v.text)).length);
       return splitMemo.get(k);
     };
-    const vajeWeight = memo(v => drillWeight(v, history, lk, date, settings) * exBoost(v));
+    // Vaje brez plavutk (razen prsnih ipd.) so v zvezku izjema.
+    const vajeWeight = memo(v => drillWeight(v, history, lk, date, settings) * exBoost(v) * (needsFins(v.text) ? 0.2 : 1));
     const maxM = memo(x => x ? maxMeters(x.text) : 0);
     const warmDays = memo(w => lastUseDays(history, w.fingerprint, lk, 'ogrevalna', date));
 
@@ -1298,6 +1316,6 @@
     buildDict, parseLine, parseText, toStructure, normalizeText, fingerprint, stripTargets, addTargets, bVariant,
     estimateMinutes, parseTime, formatTime, libraryFromTrainings, generateTraining, arrangeOrder,
     weekSlots, historyFromTraining, historyLevel, lastUseDays, lastDrillDays, drillKey, setFormat,
-    availableDrills, drillWeight, suggestNewSet, onlyFifties, jointStatus, invalidDrill, newRazp, lineRole, likeStructure, likeMain, exampleSets, EXAMPLE_MAINS, drillStrokes, splitStrokes, orderDrills, exclusiveConflict, exclusiveTooSoon, lastExclusiveDays, tidyText, unevenSides, strokeUse, legsWithoutDrills, maxMeters, longestMaxLine, overMaxDistance, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
+    availableDrills, drillWeight, suggestNewSet, onlyFifties, jointStatus, invalidDrill, needsFins, withFins, needsFins, withFins, lineRole, likeStructure, likeMain, exampleSets, EXAMPLE_MAINS, drillStrokes, splitStrokes, orderDrills, exclusiveConflict, exclusiveTooSoon, lastExclusiveDays, tidyText, unevenSides, strokeUse, legsWithoutDrills, maxMeters, longestMaxLine, overMaxDistance, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
   };
 });
