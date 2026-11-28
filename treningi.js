@@ -587,7 +587,7 @@
     let pool = S.library.filter(s => s.phase === phase && (s.levels || []).includes(lk) && !used.has(s.fingerprint) && !C.exclusiveConflict(s.text, others, S.settings) && !C.overMaxDistance(s.text, S.settings) && !C.invalidDrill(s.text, S.settings) &&
       !(noApnea && C.isApnea(s.text)) && !(saltoUsed && /\b(SALTO|PREVAL)\b/.test(s.fingerprint)) && !(C.isApnea(s.text) && C.apneaRepeat(others.concat(s.text), hist, lk)));
     if (phase === 'glavna') {
-      if (card.joint) pool = pool.filter(s => C.onlyFifties(s.text));
+      if (card.joint) pool = pool.filter(s => C.onlyFifties(s.text) && s.meters <= 1050);
       if (card.mainMode === 'ne_sprint') pool = pool.filter(s => !C.isSprintMain(s, S.settings));
       if (card.mainMode === 'sprint') pool = pool.filter(s => C.isSprintMain(s, S.settings));
       pool = pool.filter(s => { const d = C.lastUseDays(hist, s.fingerprint, lk, 'glavna', card.slot.date); return d === null || d >= S.settings.main_repeat_days; });

@@ -919,7 +919,7 @@
       if (opts.date && exclusiveTooSoon(text, history, level, opts.date, settings)) continue;
       if (phase === 'glavna' && isSprintTexts([text], settings) !== !!opts.sprint) continue;
       const meters = parseText(text, dict).meters;
-      if (meters < limits[0] || meters > limits[1]) continue;
+      if (meters < limits[0] || meters > (phase === 'glavna' && opts.only50 && level !== 'C' ? Math.min(limits[1], 1000) : limits[1])) continue;
       return { phase, text, meters, fingerprint: fp, levels: [level], source: 'nova', isNew: true, main_type: phase === 'glavna' && opts.sprint ? 'sprint' : null };
     }
     return null;
@@ -1169,7 +1169,9 @@
     const byPhase = p => lib.filter(s => s.phase === p);
 
     const joint = !!opts.joint;
-    let mains = byPhase('glavna').filter(s => mainAvailability(s, history, lk, date, settings).ok && (!joint || onlyFifties(s.text)));
+    // Skupni trening: glavna samo iz 50 m in krajša (da trening ostane v 2000–2200 m).
+    const jointMainMax = lv.meters_max - 1150;
+    let mains = byPhase('glavna').filter(s => mainAvailability(s, history, lk, date, settings).ok && (!joint || (onlyFifties(s.text) && s.meters <= jointMainMax)));
     const sprintDays = lastSprintDays(history, lk, date);
     const sprintMains = mains.filter(s => isSprintMain(s, settings));
     const mode = opts.mainMode || 'auto';
@@ -1246,7 +1248,7 @@
       if (n) fresh[p] = n;
     });
     if (needNewSprint && !fresh.glavna) {
-      mains = byPhase('glavna').filter(s => mainAvailability(s, history, lk, date, settings).ok && (!joint || onlyFifties(s.text)));
+      mains = byPhase('glavna').filter(s => mainAvailability(s, history, lk, date, settings).ok && (!joint || (onlyFifties(s.text) && s.meters <= jointMainMax)));
       notes.push('Šprinterske serije za ta nivo ni, zato je glavna navadna.');
     }
 
