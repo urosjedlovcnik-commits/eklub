@@ -23,7 +23,7 @@ Različica »glavna takoj« (ogrevalna → glavna → 50 RAZP → vaje) je mogo�
 
 | | A in B | C |
 |---|---|---|
-| Skupaj | 2200–2500 m | 1400–1700 m |
+| Skupaj | 2200–2500 m (skupni A+B: 2000–2200 m) | 1400–1700 m |
 | Razplavanje | 300 | 200 |
 | Serije vaj | praviloma 2, tri le občasno | 3–5, pred glavno skoraj vedno vsaj 3 |
 | Metri vaj | okrog 500 | okrog 650 |
@@ -72,7 +72,7 @@ Različica »glavna takoj« (ogrevalna → glavna → 50 RAZP → vaje) je mogo�
 
 ## Skupni trening A+B
 
-Enkrat v koledarskem mesecu ob četrtku, vsaj 3 tedne po prejšnjem. A in B plavata isto, glavna je samo iz 50 m dolžin, brez ciljnih časov.
+Enkrat v koledarskem mesecu ob četrtku, vsaj 3 tedne po prejšnjem. A in B plavata isto, glavna je samo iz 50 m dolžin, brez ciljnih časov. **Trening je malo krajši: 2000–2200 m.**
 
 ## Pregled pred oddajo
 
@@ -104,6 +104,7 @@ Ocena **8 ali več = zgled**. Če je označen vidik, je zgled samo ta del, sicer
 | 26. 11. 2026 | A+B | `↑VATERPOLO ŠPRICANJE` ne more biti vaja. | Samo `VATERPOLO` ali `VATERPOLO STEGR`. |
 | 28. 11. 2026 | vsi | Pri razplavanju ★ ni potrebna. Pri vajah skoraj 100 % uporabljajo plavutke. | Razplavanje samo `N RAZP`; vaje s `PL` razen prsnih in sculling. |
 | 28. 11. 2026 | teden 30. 11.–3. 12. | Dvakrat v tednu salto; skoraj vsak dan plavanje pod vodo. Pod vodo so apneistične vaje: ne oba dneva pon in čet v istem tednu (popravek: lahko na enega), v treningu ne dvakrat ista (razen zgled iz preteklosti). | Pravila v poglavju Vaje. |
+| 28. 11. 2026 | A+B skupni | Skupni trening A in B je malo krajši. | 2000–2200 m. |
 
 ## Kaj upošteva generator
 

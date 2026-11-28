@@ -371,7 +371,7 @@
     let meters = 0, max = 0;
     card.items.forEach(it => { meters += C.parseText(it.text, S.dict).meters; max += C.maxMeters(it.text); });
     const lk = levelKey(card.slot.levels);
-    const lv = S.settings.levels[lk];
+    const lv = C.jointLevel(S.settings.levels[lk], card.joint, S.settings);
     return { meters, max, sprint: max > S.settings.sprint_max_meters, minutes: C.estimateMinutes(meters, lk, S.settings), ok: meters >= lv.meters_min && meters <= lv.meters_max, lv };
   }
 

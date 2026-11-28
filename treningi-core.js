@@ -58,7 +58,7 @@
     example_main_max: { A: 1100 },
     example_long_chance: 0.15,
     // Skupni trening A+B: enkrat na mesec ob četrtkih, vsaj toliko dni narazen, glavna samo iz 50 m.
-    joint: { weekday: 4, min_gap_days: 21 },
+    joint: { weekday: 4, min_gap_days: 21, meters_min: 2000, meters_max: 2200 },
     // Dan v tednu (1 = ponedeljek) -> skupine nivojev, ki imajo vsaka svoj trening.
     day_levels: { 1: [['A', 'B']], 3: [['A'], ['C']], 4: [['A', 'B']] },
     // Privzeti štart glavne serije, če ni zapisan (sekunde po dolžini).
@@ -1120,6 +1120,13 @@
     });
   }
 
+  /** Ciljni metri nivoja; skupni trening ima svoj (krajši) razpon. */
+  function jointLevel(lv, joint, settings) {
+    if (!joint) return lv;
+    const j = Object.assign({}, DEFAULT_SETTINGS.joint, (settings && settings.joint) || {});
+    return Object.assign({}, lv, { meters_min: j.meters_min, meters_max: j.meters_max });
+  }
+
   /**
    * Skupni trening: četrtek, v tem mesecu ga še ni in od drugih je vsaj min_gap_days dni.
    * dates: datumi skupnih treningov (shranjenih in predlaganih).
@@ -1148,7 +1155,8 @@
     settings.levels = Object.assign({}, DEFAULT_SETTINGS.levels, (opts.settings || {}).levels || {});
     const levels = opts.levels;
     const lk = historyLevel(levels);
-    const lv = settings.levels[lk];
+    // Skupni trening A+B je malo krajši.
+    const lv = jointLevel(settings.levels[lk], opts.joint, settings);
     const date = opts.date;
     const history = opts.history || [];
     const rng = mulberry32(opts.seed != null ? opts.seed : Date.now() % 2147483647);
@@ -1285,7 +1293,7 @@
         (main ? main.meters : 0) + (z ? z.meters : 0) + fin;
       let score = Math.abs(total - mid) / 50;
       if (total < lv.meters_min) score += (lv.meters_min - total) / 10;
-      if (total > lv.meters_max) score += (total - lv.meters_max) / 10;
+      if (total > lv.meters_max) score += (total - lv.meters_max) / (joint ? 3 : 10);
       // Glavna serija naj nosi trening: vsaj ~30 % metrov in ne manj kot vse vaje skupaj.
       if (lk !== 'C' && nV < vajeRange[0]) score += 3;
       const vajeM = vs.reduce((a, v) => a + v.meters, 0);
@@ -1387,6 +1395,6 @@
     buildDict, parseLine, parseText, toStructure, normalizeText, fingerprint, stripTargets, addTargets, bVariant,
     estimateMinutes, parseTime, formatTime, libraryFromTrainings, generateTraining, arrangeOrder,
     weekSlots, historyFromTraining, historyLevel, lastUseDays, lastDrillDays, drillKey, setFormat,
-    availableDrills, drillWeight, suggestNewSet, onlyFifties, jointStatus, apneaKinds, isApnea, apneaRepeat, apneaPairUsed, weeklyOnceUsed, weekRuleIssues, invalidDrill, needsFins, withFins, needsFins, withFins, lineRole, likeStructure, likeMain, exampleSets, EXAMPLE_MAINS, drillStrokes, splitStrokes, orderDrills, exclusiveConflict, exclusiveTooSoon, lastExclusiveDays, tidyText, unevenSides, strokeUse, legsWithoutDrills, maxMeters, longestMaxLine, overMaxDistance, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
+    availableDrills, drillWeight, suggestNewSet, onlyFifties, jointStatus, jointLevel, apneaKinds, isApnea, apneaRepeat, apneaPairUsed, weeklyOnceUsed, weekRuleIssues, invalidDrill, needsFins, withFins, needsFins, withFins, lineRole, likeStructure, likeMain, exampleSets, EXAMPLE_MAINS, drillStrokes, splitStrokes, orderDrills, exclusiveConflict, exclusiveTooSoon, lastExclusiveDays, tidyText, unevenSides, strokeUse, legsWithoutDrills, maxMeters, longestMaxLine, overMaxDistance, isSprintTexts, isSprintMain, addDays, daysBetween, weekday, mulberry32
   };
 });
